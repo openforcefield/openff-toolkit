@@ -2176,8 +2176,8 @@ class ParameterHandler(_ParameterAttributeHandler):
         Returns
         ---------
         matches : ValenceDict[Tuple[int], ParameterHandler._Match]
-            ``matches[particle_indices]`` is the ``ParameterType`` object
-            matching the tuple of particle indices in ``entity``.
+            ``matches[atom_indices]`` is the ``ParameterType`` object
+            matching the tuple of atom indices in ``entity``.
         """
 
         return self._find_matches(entity, unique=unique)
@@ -2205,8 +2205,8 @@ class ParameterHandler(_ParameterAttributeHandler):
         Returns
         ---------
         matches : `transformed_dict_cls` of ParameterHandlerMatch
-            ``matches[particle_indices]`` is the ``ParameterType`` object
-            matching the tuple of particle indices in ``entity``.
+            ``matches[atom_indices]`` is the ``ParameterType`` object
+            matching the tuple of atom indices in ``entity``.
         """
         logger.debug(f"Finding matches for {self.__class__.__name__}")
 
@@ -2357,12 +2357,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         # the order of atom indices doesn't matter for comparison.
         valence_terms_dict = assigned_terms.__class__()
         for atoms in valence_terms:
-            # try:
-            # valence_terms is a list of TopologyAtom tuples.
-            atom_indices = (topology.particle_index(a) for a in atoms)
-            # except TypeError:
-            #     # valence_terms is a list of TopologyAtom.
-            #     atom_indices = (topology.particle_index(atoms),)
+            atom_indices = (topology.atom_index(a) for a in atoms)
             valence_terms_dict[atom_indices] = atoms
 
         # Check that both valence dictionaries have the same keys (i.e. terms).
@@ -3257,8 +3252,8 @@ class LibraryChargeHandler(_NonbondedHandler):
         Returns
         ---------
         matches : ValenceDict[Tuple[int], ParameterHandler._Match]
-            ``matches[particle_indices]`` is the ``ParameterType`` object
-            matching the tuple of particle indices in ``entity``.
+            ``matches[atom_indices]`` is the ``ParameterType`` object
+            matching the tuple of atom indices in ``entity``.
         """
 
         return self._find_matches(
@@ -3382,8 +3377,8 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         Returns
         ---------
         matches : ValenceDict[Tuple[int], ParameterHandler._Match]
-            ``matches[particle_indices]`` is the ``ParameterType`` object
-            matching the tuple of particle indices in ``entity``.
+            ``matches[atom_indices]`` is the ``ParameterType`` object
+            matching the tuple of atom indices in ``entity``.
         """
         matches = self._find_matches(
             entity, transformed_dict_cls=TagSortedDict, unique=unique

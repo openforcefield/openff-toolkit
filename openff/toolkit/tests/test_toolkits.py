@@ -1734,7 +1734,7 @@ class TestOpenEyeToolkitWrapper:
         expected_error = (
             "Bond order model 'not a real bond order model' is not supported by "
             "OpenEyeToolkitWrapper. Supported models are "
-            "\['am1-wiberg', 'am1-wiberg-elf10', 'pm3-wiberg', 'pm3-wiberg-elf10'\]"
+            r"\['am1-wiberg', 'am1-wiberg-elf10', 'pm3-wiberg', 'pm3-wiberg-elf10'\]"
         )
 
         with pytest.raises(ValueError, match=expected_error):
