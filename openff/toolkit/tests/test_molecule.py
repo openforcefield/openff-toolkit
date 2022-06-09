@@ -3730,6 +3730,7 @@ class TestHierarchies:
         ):
             offmol.add_hierarchy_scheme([("chain_id",)], "chains")
 
+    @requires_rdkit  # TODO: This test should NOT require RDKit
     def test_add_default_hierarchy_schemes(self):
         """Test add_default_hierarchy_schemes and its kwargs"""
         offmol = Molecule.from_polymer_pdb(
