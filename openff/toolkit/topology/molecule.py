@@ -1337,7 +1337,8 @@ class FrozenMolecule(Serializable):
         atom organisation schemes common to other biomolecular software, such as
         "residues" or "chains" (see :ref:`userguide_hierarchy`). Hierarchy
         schemes allow iteration over groups of atoms according to their
-        metadata. For more information, see :class:`openff.toolkit.topology.molecule.HierarchyScheme`.
+        metadata. For more information, see
+        :class:`~openff.toolkit.topology.molecule.HierarchyScheme`.
 
         If a ``Molecule`` with the default hierarchy schemes
         changes, :meth:`Molecule.perceive_hierarchy()` must be called before
@@ -1392,8 +1393,7 @@ class FrozenMolecule(Serializable):
         atoms. Atoms are grouped by the values in their ``atom.properties``
         dictionary; any atoms with the same values for the keys given in the
         ``uniqueness_criteria`` argument will be in the same group. These groups
-        have the type :class:`HierarchyElement \
-        <openff.toolkit.topology.molecule.HierarchyElement>`.
+        have the type :class:`~openff.toolkit.topology.molecule.HierarchyElement`.
 
         Hierarchy schemes are not updated dynamically; if a ``Molecule`` with
         hierarchy schemes changes, :meth:`Molecule.perceive_hierarchy()` must
@@ -1401,8 +1401,8 @@ class FrozenMolecule(Serializable):
         may be incorrect.
 
         Hierarchy schemes allow iteration over groups of atoms according to
-        their metadata. For more information, see :class:`HierarchyScheme \
-        <openff.toolkit.topology.molecule.HierarchyScheme>`.
+        their metadata. For more information, see
+        :class:`~openff.toolkit.topology.molecule.HierarchyScheme`.
 
         Parameters
         ----------
@@ -1443,8 +1443,8 @@ class FrozenMolecule(Serializable):
         The hierarchy schemes available on the molecule.
 
         Hierarchy schemes allow iteration over groups of atoms according to
-        their metadata. For more information, see :class:`HierarchyScheme \
-        <openff.toolkit.topology.molecule.HierarchyScheme>`.
+        their metadata. For more information, see
+        :class:`~openff.toolkit.topology.molecule.HierarchyScheme`.
 
         Returns
         -------
@@ -1458,8 +1458,8 @@ class FrozenMolecule(Serializable):
         Remove an existing ``HierarchyScheme`` specified by its iterator name.
 
         Hierarchy schemes allow iteration over groups of atoms according to
-        their metadata. For more information, see :class:`HierarchyScheme \
-        <openff.toolkit.topology.molecule.HierarchyScheme>`.
+        their metadata. For more information, see
+        :class:`~openff.toolkit.topology.molecule.HierarchyScheme`.
 
         Parameters
         ----------
@@ -1480,8 +1480,8 @@ class FrozenMolecule(Serializable):
         schemes.
 
         Hierarchy schemes allow iteration over groups of atoms according to
-        their metadata. For more information, see :class:`HierarchyScheme \
-        <openff.toolkit.topology.molecule.HierarchyScheme>`.
+        their metadata. For more information, see
+        :class:`~openff.toolkit.topology.molecule.HierarchyScheme`.
 
         Parameters
         ----------
