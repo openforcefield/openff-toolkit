@@ -4,6 +4,8 @@ from openff.toolkit.topology.molecule import (
     FrozenMolecule,
     Molecule,
     Particle,
+    HierarchyScheme,
+    HierarchyElement,
 )
 from openff.toolkit.topology.topology import (
     DuplicateUniqueMoleculeError,
@@ -36,4 +38,6 @@ __all__ = [
     "Topology",
     "UnsortedDict",
     "ValenceDict",
+    "HierarchyScheme",
+    "HierarchyElement",
 ]

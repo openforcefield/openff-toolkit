@@ -35,7 +35,7 @@ including offering serialization to a variety of standard formats (including [XM
     Bond
     ValenceDict
     ImproperDict
-    ~molecule.HierarchyScheme
-    ~molecule.HierarchyElement
+    HierarchyScheme
+    HierarchyElement
 :::
 
