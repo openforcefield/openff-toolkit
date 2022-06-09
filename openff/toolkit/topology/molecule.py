@@ -1261,7 +1261,6 @@ class FrozenMolecule(Serializable):
                 new_hier_scheme.add_hierarchy_element(
                     element_dict["identifier"], element_dict["particle_indices"]
                 )
-            self._expose_hierarchy_scheme(iter_name)
 
     def __repr__(self):
         """Return a summary of this molecule; SMILES if valid, Hill formula if not."""
@@ -1471,8 +1470,6 @@ class FrozenMolecule(Serializable):
                 f"because no HierarchyScheme with that iterator name exists"
             )
         self._hierarchy_schemes.pop(iter_name)
-        if hasattr(self, iter_name):
-            delattr(self, iter_name)
 
     def update_hierarchy_schemes(self, iter_names=None):
         """
@@ -1496,11 +1493,19 @@ class FrozenMolecule(Serializable):
         for iter_name in iter_names:
             hierarchy_scheme = self._hierarchy_schemes[iter_name]
             hierarchy_scheme.perceive_hierarchy()
-            self._expose_hierarchy_scheme(iter_name)
 
-    def _expose_hierarchy_scheme(self, iter_name):
-        assert iter_name in self._hierarchy_schemes
-        setattr(self, iter_name, self._hierarchy_schemes[iter_name].hierarchy_elements)
+    def __getattr__(self, name: str):
+        """If a requested attribute is not found, check the hierarchy schemes"""
+        if name in self._hierarchy_schemes:
+            return self._hierarchy_schemes[name].hierarchy_elements
+        else:
+            raise AttributeError(
+                f"'{self.__class__.__name__}' object has no attribute {name!r}"
+            )
+
+    def __dir__(self):
+        """Add the hierarchy scheme iterator names to dir"""
+        return list(self._hierarchy_schemes.keys()) + list(super().__dir__())
 
     def to_smiles(
         self,
