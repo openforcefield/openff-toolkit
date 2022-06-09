@@ -3778,7 +3778,7 @@ class TestHierarchies:
             str(dipeptide_hierarchy_perceived.residues[0])
             == "HierarchyElement ('None', 1, 'ACE') of iterator 'residues' containing 6 atom(s)"
         )
-        assert dipeptide_hierarchy_perceived.residues[0].chain == "None"
+        assert dipeptide_hierarchy_perceived.residues[0].chain_id == "None"
         assert dipeptide_hierarchy_perceived.residues[0].residue_name == "ACE"
         assert dipeptide_hierarchy_perceived.residues[0].residue_number == 1
         assert set(dipeptide_hierarchy_perceived.residues[0].atom_indices) == set(
@@ -3789,7 +3789,7 @@ class TestHierarchies:
             str(dipeptide_hierarchy_perceived.residues[1])
             == "HierarchyElement ('None', 2, 'ALA') of iterator 'residues' containing 11 atom(s)"
         )
-        assert dipeptide_hierarchy_perceived.residues[1].chain == "None"
+        assert dipeptide_hierarchy_perceived.residues[1].chain_id == "None"
         assert dipeptide_hierarchy_perceived.residues[1].residue_name == "ALA"
         assert dipeptide_hierarchy_perceived.residues[1].residue_number == 2
         assert set(dipeptide_hierarchy_perceived.residues[1].atom_indices) == set(
@@ -3810,7 +3810,7 @@ class TestHierarchies:
         dipeptide_hierarchy_perceived = create_dipeptide()
 
         for atom in dipeptide_hierarchy_perceived.atoms:
-            atom.metadata["chain"] = "A"
+            atom.metadata["chain_id"] = "A"
         assert ("A", 1, "ACE") != dipeptide_hierarchy_perceived.residues[0].identifier
         dipeptide_hierarchy_perceived.perceive_hierarchy()
         assert ("A", 1, "ACE") == dipeptide_hierarchy_perceived.residues[0].identifier
