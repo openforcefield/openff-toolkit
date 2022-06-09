@@ -3626,7 +3626,7 @@ class TestHierarchies:
             )
         assert len(dipeptide_residues_perceived.hierarchy_schemes) == 3
 
-        # perceive_hierarchy() was called by add_hierarchy_scheme
+        # update_hierarchy_schemes() was called by add_hierarchy_scheme
         assert dipeptide_residues_perceived.res_by_num[0].residue_number == 1
         # Delete the hierarchyscheme and ensure that the iterators are no longer available
         dipeptide_residues_perceived.delete_hierarchy_scheme("res_by_num")
@@ -3692,7 +3692,7 @@ class TestHierarchies:
     def test_hierarchy_perceived_dipeptide(self):
         """Test populating and accessing HierarchyElements"""
         from openff.toolkit.tests.create_molecules import (
-            dipeptide_hierarchy_perceived as create_dipeptide,
+            dipeptide_hierarchy_added as create_dipeptide,
         )
 
         dipeptide_hierarchy_perceived = create_dipeptide()
@@ -3727,7 +3727,7 @@ class TestHierarchies:
     def test_hierarchy_perceived_information_propagation(self):
         """Ensure that updating atom metadata doesn't update the iterators until the hierarchy is re-perceived"""
         from openff.toolkit.tests.create_molecules import (
-            dipeptide_hierarchy_perceived as create_dipeptide,
+            dipeptide_hierarchy_added as create_dipeptide,
         )
 
         dipeptide_hierarchy_perceived = create_dipeptide()
@@ -3735,5 +3735,5 @@ class TestHierarchies:
         for atom in dipeptide_hierarchy_perceived.atoms:
             atom.metadata["chain"] = "A"
         assert ("A", 1, "ACE") != dipeptide_hierarchy_perceived.residues[0].identifier
-        dipeptide_hierarchy_perceived.perceive_hierarchy()
+        dipeptide_hierarchy_perceived.update_hierarchy_schemes()
         assert ("A", 1, "ACE") == dipeptide_hierarchy_perceived.residues[0].identifier

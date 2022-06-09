@@ -14,9 +14,9 @@ from openff.toolkit.tests.create_molecules import (
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
-    cyx_hierarchy_perceived,
+    cyx_hierarchy_added,
     dipeptide,
-    dipeptide_hierarchy_perceived,
+    dipeptide_hierarchy_added,
     dipeptide_residues_perceived,
     ethane_from_smiles,
     ethene_from_smiles,
@@ -1087,8 +1087,23 @@ class TestTopology:
         ]
         # Ensure that adding molecules WITH hierarchy perceived DOES give the
         # topology residues and chains to iterate over
-        top.add_molecule(dipeptide_hierarchy_perceived())
-        top.add_molecule(cyx_hierarchy_perceived())
+        top.add_molecule(dipeptide_hierarchy_added())
+        top.add_molecule(cyx_hierarchy_added())
+        residues = list(top.hierarchy_iterator("residues"))
+        chains = list(top.hierarchy_iterator("chains"))
+        assert [res.identifier for res in residues] == [
+            ("None", 1, "ACE"),
+            ("None", 2, "ALA"),
+            ("None", 1, "ACE"),
+            ("None", 2, "ALA"),
+            ("None", 4, "ACE"),
+            ("None", 5, "CYS"),
+            ("None", 6, "NME"),
+        ]
+        assert len(chains) == 1
+        # Haven't changed anything, so updating hierarchy schemes should give
+        # same results
+        top.molecule(3).update_hierarchy_schemes()
         residues = list(top.hierarchy_iterator("residues"))
         chains = list(top.hierarchy_iterator("chains"))
         assert [res.identifier for res in residues] == [

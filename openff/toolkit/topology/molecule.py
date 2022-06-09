@@ -1341,7 +1341,7 @@ class FrozenMolecule(Serializable):
         :class:`~openff.toolkit.topology.molecule.HierarchyScheme`.
 
         If a ``Molecule`` with the default hierarchy schemes
-        changes, :meth:`Molecule.perceive_hierarchy()` must be called before
+        changes, :meth:`Molecule.update_hierarchy_schemes()` must be called before
         the residues or chains are iterated over again or else the iteration may
         be incorrect.
 
@@ -1396,7 +1396,7 @@ class FrozenMolecule(Serializable):
         have the type :class:`~openff.toolkit.topology.molecule.HierarchyElement`.
 
         Hierarchy schemes are not updated dynamically; if a ``Molecule`` with
-        hierarchy schemes changes, :meth:`Molecule.perceive_hierarchy()` must
+        hierarchy schemes changes, :meth:`Molecule.update_hierarchy_schemes()` must
         be called before the scheme is iterated over again or else the grouping
         may be incorrect.
 
@@ -1434,7 +1434,7 @@ class FrozenMolecule(Serializable):
             iterator_name,
         )
         self._hierarchy_schemes[iterator_name] = new_hier_scheme
-        self.perceive_hierarchy([iterator_name])
+        self.update_hierarchy_schemes([iterator_name])
         return new_hier_scheme
 
     @property
@@ -1474,7 +1474,7 @@ class FrozenMolecule(Serializable):
         if hasattr(self, iter_name):
             delattr(self, iter_name)
 
-    def perceive_hierarchy(self, iter_names=None):
+    def update_hierarchy_schemes(self, iter_names=None):
         """
         Infer a hierarchy from atom metadata according to the existing hierarchy
         schemes.
@@ -5450,7 +5450,7 @@ class HierarchyScheme:
     ``Atom.properties`` attribute.
 
     Hierarchy schemes are not updated dynamically; if a ``Molecule`` with
-    hierarchy schemes changes, :meth:`Molecule.perceive_hierarchy()` must
+    hierarchy schemes changes, :meth:`Molecule.update_hierarchy_schemes()` must
     be called before the scheme is iterated over again or else the grouping
     may be incorrect.
 
