@@ -875,8 +875,8 @@ class TestMolecule:
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_create_from_serialized(self, molecule):
-        """Test standard constructor taking the output of __getstate__()."""
-        serialized_molecule = molecule.__getstate__()
+        """Test standard constructor taking the output of Molecule.to_dict()."""
+        serialized_molecule = molecule.to_dict()
         molecule_copy = Molecule(serialized_molecule)
         assert molecule == molecule_copy
 
