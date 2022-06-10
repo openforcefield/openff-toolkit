@@ -15,21 +15,6 @@ class IncompatibleUnitError(OpenFFToolkitException):
     """
 
 
-class MissingDependencyError(OpenFFToolkitException, ImportError):
-    """
-    Exception for when an optional dependency is needed but not installed
-
-    """
-
-    def __init__(self, package_name):
-        self.msg = (
-            f"Missing dependency {package_name}. Try installing it "
-            f"with\n\n$ conda install {package_name} -c conda-forge"
-        )
-
-        super().__init__(self.msg)
-
-
 class MissingPackageError(OpenFFToolkitException):
     """This function requires a package that is not installed."""
 

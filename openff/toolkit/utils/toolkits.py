@@ -27,7 +27,6 @@ __all__ = (
     "DEFAULT_CHARGE_MODEL",
     "ALLOWED_CHARGE_MODELS",
     "IncompatibleUnitError",
-    "MissingDependencyError",
     "MissingPackageError",
     "ToolkitUnavailableException",
     "LicenseError",
@@ -81,7 +80,6 @@ from openff.toolkit.utils.exceptions import (
     InvalidToolkitError,
     InvalidToolkitRegistryError,
     LicenseError,
-    MissingDependencyError,
     MissingPackageError,
     SMILESParseError,
     ToolkitUnavailableException,
@@ -132,7 +130,7 @@ for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits:
             any_toolkits = True
             break
 
-if not any_toolkits:
+if not any_toolkits:  # pragma: no cover
     from openff.toolkit.utils import all_subclasses
 
     msg = "WARNING: No basic cheminformatics toolkits are available.\n"
