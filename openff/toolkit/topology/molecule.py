@@ -1327,7 +1327,7 @@ class FrozenMolecule(Serializable):
         self.add_hierarchy_scheme(
             ("chain_id", "residue_number", "residue_name"), "residues"
         )
-        self.add_hierarchy_scheme(uniqueness_criteria=("chain_id",), iterator_name"chains")
+        self.add_hierarchy_scheme(uniqueness_criteria=("chain_id",), iterator_name="chains")
         self.perceive_hierarchy()
 
     def add_hierarchy_scheme(
