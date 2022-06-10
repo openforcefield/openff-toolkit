@@ -46,6 +46,7 @@ import networkx as nx
 import numpy as np
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
+from openff.utilities.exceptions import MissingOptionalDependencyError
 from packaging import version
 
 import openff.toolkit
@@ -69,11 +70,7 @@ from openff.toolkit.utils.toolkits import (
     ToolkitWrapper,
     UndefinedStereochemistryError,
 )
-from openff.toolkit.utils.utils import (
-    MissingDependencyError,
-    get_data_file_path,
-    requires_package,
-)
+from openff.toolkit.utils.utils import get_data_file_path, requires_package
 
 if TYPE_CHECKING:
     from openff.units.unit import Quantity
@@ -4129,7 +4126,7 @@ class FrozenMolecule(Serializable):
 
         Raises
         --------
-        MissingDependencyError
+        MissingOptionalDependencyError
             If qcelemental is not installed, the qcschema can not be validated.
         InvalidConformerError
             No conformer found at the given index.
@@ -5037,7 +5034,7 @@ class Molecule(FrozenMolecule):
             try:
                 import nglview as nv
             except ImportError:
-                raise MissingDependencyError("nglview")
+                raise MissingOptionalDependencyError("nglview")
 
             if width is not None or height is not None:
                 # TODO: More specific exception
@@ -5218,7 +5215,7 @@ class Molecule(FrozenMolecule):
                     smarts_idx
                 ]
 
-    def _ipython_display_(self):
+    def _ipython_display_(self):  # pragma: no cover
         from IPython.display import display
 
         try:

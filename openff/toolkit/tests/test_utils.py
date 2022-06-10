@@ -5,26 +5,7 @@ Tests for utility methods
 
 import os
 
-import pytest
 from openff.units import unit
-
-
-def test_requires_package():
-    """Test the @requires_package decorator"""
-    from openff.toolkit.utils.utils import MissingDependencyError, requires_package
-
-    @requires_package("numpy")
-    def fn_installed():
-        pass
-
-    fn_installed()
-
-    @requires_package("foobar")
-    def fn_missing():
-        pass
-
-    with pytest.raises(MissingDependencyError, match="foobar"):
-        fn_missing()
 
 
 def test_subclasses():
