@@ -230,6 +230,71 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         raise NotImplementedError(
             "Cannot create Molecule from {} object".format(type(obj))
         )
+    def _polymer_openmm_topology_to_offmol(self, omm_top, substructure_dictionary):
+        oemol = self._polymer_openmm_topology_to_oemol(omm_top)
+        oemol = self._add_chemical_info(oemol, substructure_dictionary)
+        offmol = self.from_openeye(oemol)
+        return offmol
+
+    def _add_chemical_info(
+        self,
+        oemol,
+        substructure_library,
+    ):
+        """
+        Parameters
+        ----------
+        oemol : oechem.OEMol
+            Currently invalid (bond orders and charge) Molecule
+        substructure_library : dict{str:list[str, list[str]]}
+            A dictionary of substructures. substructure_library[aa_name] = list[tagged SMARTS, list[atom_names]]
+
+        Returns
+        -------
+        oemol : oechem.OEMol
+            a copy of the original molecule with charges and bond order added
+        """
+        pass
+
+    def _polymer_openmm_topology_to_oemol(self, omm_top):
+        from openeye import oechem
+        oemol = oechem.OEMol()
+        # Add atoms
+        off_to_oe_idx = {}  # {off_idx : oe_idx}
+        oemol_atoms = list()  # list of corresponding oemol atoms
+        for atom in omm_top.atoms():
+            oeatom = oemol.NewAtom(atom.element.atomic_number)
+            oemol_atoms.append(oeatom)
+            off_to_oe_idx[atom.molecule_atom_index] = oeatom.GetIdx()
+
+        # Add bonds
+        oemol_bonds = list()  # list of corresponding oemol bonds
+        for bond in omm_top.bonds():
+            atom1_index = bond[0].index
+            atom2_index = bond[1].index
+            oebond = oemol.NewBond(oemol_atoms[atom1_index], oemol_atoms[atom2_index])
+            oemol_bonds.append(oebond)
+        return oemol
+
+    @staticmethod
+    def _fuzzy_query(query):
+        """return a copy of Query which is less specific:
+        - ignore aromaticity and hybridization of atoms (i.e. [#6] not C)
+        - ignore bond orders
+        - ignore formal charges
+        """
+        from openeye import oechem
+        from openff.toolkit.typing.chemistry import SMIRKSParsingError
+
+        qmol = oechem.OEQMol()
+        status = oechem.OEParseSmarts(qmol, query)
+
+        if not status:
+            raise SMIRKSParsingError(
+                f"OpenEye Toolkit was unable to parse SMIRKS {query}"
+            )
+        for atom in qmol.GetAtoms():
+            atom.SetFormalCharge(0)
 
     def from_file(
         self, file_path, file_format, allow_undefined_stereo=False, _cls=None
