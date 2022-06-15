@@ -1294,6 +1294,10 @@ class FrozenMolecule(Serializable):
         # TODO the doc string did not match the previous function what matching should this method do?
         return Molecule.are_isomorphic(self, other, return_atom_map=False)[0]
 
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        return cls(self.to_dict())
+
     def add_default_hierarchy_schemes(self, overwrite_existing=True):
         """
         Adds `chain` and `residue` hierarchy schemes.
