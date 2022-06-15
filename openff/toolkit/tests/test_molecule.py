@@ -3312,7 +3312,7 @@ class TestMoleculeResiduePerception:
     def test_perceive_residues_natoms_t4(self, strict_chirality):
         """Test number of atoms matched for residue perception of free from of
         T4 lysozyme."""
-        offmol = Molecule.from_file(get_data_file_path("proteins/T4-protein.sdf"))
+        offmol = Molecule.from_file(get_data_file_path("proteins/T4-protein.pdb"))
         # Perceive residue substructures
         offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
