@@ -3312,7 +3312,7 @@ class TestMoleculeResiduePerception:
     def test_perceive_residues_natoms_t4(self, strict_chirality):
         """Test number of atoms matched for residue perception of free from of
         T4 lysozyme."""
-        offmol = Molecule.from_file(get_data_file_path("proteins/T4-protein.pdb"))
+        offmol = Molecule.from_file(get_data_file_path("proteins/T4-protein.sdf"))
         # Perceive residue substructures
         offmol.perceive_residues(strict_chirality=strict_chirality)
         counter = 0  # matched atom counter
@@ -3555,7 +3555,7 @@ class TestMoleculeFromPDB:
     def test_from_t4_to_topology(self):
         """Ensure a large protein can be converted into a `Topology`. See #1319."""
         Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/T4-protein.sdf")
+            get_data_file_path("proteins/T4-protein.pdb")
         ).to_topology()
 
 
