@@ -3770,8 +3770,10 @@ class TestHierarchies:
         offmol.delete_hierarchy_scheme("chains")
         offmol.add_hierarchy_scheme(("residue_number", "residue_name"), "residues")
         # Make sure that the non-default "residues" iterator that we just added
-        # doesn't have "chains" as a uniqueness criterion
-        assert "chain" not in offmol.hierarchy_schemes["residues"].uniqueness_criteria
+        # doesn't have "chain_id" as a uniqueness criterion
+        assert (
+            "chain_id" not in offmol.hierarchy_schemes["residues"].uniqueness_criteria
+        )
         # Test that the overwrite_existing kwarg has the right behavior
         with pytest.raises(HierarchySchemeWithIteratorNameAlreadyRegisteredException):
             offmol.add_default_hierarchy_schemes(overwrite_existing=False)
@@ -3779,8 +3781,20 @@ class TestHierarchies:
         # Run add_default_hierarchy_schemes with overwrite_existing set to its default value,
         # which should overwrite the "residues" iterator we just defined
         offmol.add_default_hierarchy_schemes()
-        # Ensure that the new residues iterator DOES have "chain" as a uniqueness criterion
-        assert "chain" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
+        # Ensure that the new residues iterator DOES have the correct uniqueness criterion
+        assert (
+            "residue_name" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
+        )
+        assert (
+            "residue_number" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
+        )
+        assert "chain_id" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
+        assert [*offmol.residues][0].residue_name == "ACE"
+        assert [*offmol.residues][0].residue_number == "1"
+        assert [*offmol.residues][0].chain_id == " "
+
+        assert "chain_id" in offmol.hierarchy_schemes["chains"].uniqueness_criteria
+        assert [*offmol.chains][0].chain_id == " "
 
     def test_hierarchy_perceived_dipeptide(self):
         """Test populating and accessing HierarchyElements"""
@@ -3794,7 +3808,7 @@ class TestHierarchies:
             str(dipeptide_hierarchy_perceived.residues[0])
             == "HierarchyElement ('None', 1, 'ACE') of iterator 'residues' containing 6 atom(s)"
         )
-        assert dipeptide_hierarchy_perceived.residues[0].chain == "None"
+        assert dipeptide_hierarchy_perceived.residues[0].chain_id == "None"
         assert dipeptide_hierarchy_perceived.residues[0].residue_name == "ACE"
         assert dipeptide_hierarchy_perceived.residues[0].residue_number == 1
         assert set(dipeptide_hierarchy_perceived.residues[0].atom_indices) == set(
@@ -3805,7 +3819,7 @@ class TestHierarchies:
             str(dipeptide_hierarchy_perceived.residues[1])
             == "HierarchyElement ('None', 2, 'ALA') of iterator 'residues' containing 11 atom(s)"
         )
-        assert dipeptide_hierarchy_perceived.residues[1].chain == "None"
+        assert dipeptide_hierarchy_perceived.residues[1].chain_id == "None"
         assert dipeptide_hierarchy_perceived.residues[1].residue_name == "ALA"
         assert dipeptide_hierarchy_perceived.residues[1].residue_number == 2
         assert set(dipeptide_hierarchy_perceived.residues[1].atom_indices) == set(
@@ -3826,7 +3840,7 @@ class TestHierarchies:
         dipeptide_hierarchy_perceived = create_dipeptide()
 
         for atom in dipeptide_hierarchy_perceived.atoms:
-            atom.metadata["chain"] = "A"
+            atom.metadata["chain_id"] = "A"
         assert ("A", 1, "ACE") != dipeptide_hierarchy_perceived.residues[0].identifier
         dipeptide_hierarchy_perceived.perceive_hierarchy()
         assert ("A", 1, "ACE") == dipeptide_hierarchy_perceived.residues[0].identifier
