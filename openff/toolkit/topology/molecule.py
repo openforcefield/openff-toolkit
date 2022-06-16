@@ -1463,9 +1463,9 @@ class FrozenMolecule(Serializable):
 
     def __getattr__(self, name: str):
         """If a requested attribute is not found, check the hierarchy schemes"""
-        if name in self._hierarchy_schemes:
-            return self._hierarchy_schemes[name].hierarchy_elements
-        else:
+        try:
+            return self.__dict__["_hierarchy_schemes"][name].hierarchy_elements
+        except KeyError:
             raise AttributeError(
                 f"'{self.__class__.__name__}' object has no attribute {name!r}"
             )
