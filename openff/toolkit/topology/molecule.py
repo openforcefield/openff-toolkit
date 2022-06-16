@@ -1223,11 +1223,13 @@ class FrozenMolecule(Serializable):
         for iter_name, hierarchy_scheme_dict in molecule_dict[
             "hierarchy_schemes"
         ].items():
-            new_hier_scheme = self.add_hierarchy_scheme(
+            new_hier_scheme = HierarchyScheme(
+                self,
                 hierarchy_scheme_dict["uniqueness_criteria"],
                 iter_name,
             )
-            # hierarchy_scheme = self._hierarchy_schemes[iter_name]
+            self._hierarchy_schemes[iter_name] = new_hier_scheme
+
             for element_dict in hierarchy_scheme_dict["hierarchy_elements"]:
                 new_hier_scheme.add_hierarchy_element(
                     element_dict["identifier"], element_dict["atom_indices"]
