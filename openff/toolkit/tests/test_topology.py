@@ -1093,11 +1093,19 @@ class TestTopology:
             ("None", 2, "ALA"),
             ("None", 1, "ACE"),
             ("None", 2, "ALA"),
+            ("None", 1, "ACE"),
+            ("None", 2, "CYS"),
+            ("None", 3, "NME"),
             ("None", 4, "ACE"),
             ("None", 5, "CYS"),
             ("None", 6, "NME"),
         ]
-        assert len(chains) == 1
+        # First chain hierarchy element is from dipeptide_hierarchy_added,
+        # second is from cyx_hierarchy_added. Both have the same uniqueness
+        # identifier; unclear that this behaviour is desired --- Perhaps
+        # Topology.hierarchy_iterator should consolidate hierarchy elements from
+        # different molecules?
+        assert len(chains) == 2
         # Haven't changed anything, so updating hierarchy schemes should give
         # same results
         top.molecule(3).update_hierarchy_schemes()
@@ -1108,11 +1116,14 @@ class TestTopology:
             ("None", 2, "ALA"),
             ("None", 1, "ACE"),
             ("None", 2, "ALA"),
+            ("None", 1, "ACE"),
+            ("None", 2, "CYS"),
+            ("None", 3, "NME"),
             ("None", 4, "ACE"),
             ("None", 5, "CYS"),
             ("None", 6, "NME"),
         ]
-        assert len(chains) == 1
+        assert len(chains) == 2
 
 
 class TestAddTopology:
