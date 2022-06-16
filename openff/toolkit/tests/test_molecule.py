@@ -876,8 +876,8 @@ class TestMolecule:
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_create_from_serialized(self, molecule):
-        """Test standard constructor taking the output of __getstate__()."""
-        serialized_molecule = molecule.__getstate__()
+        """Test standard constructor taking the output of Molecule.to_dict()."""
+        serialized_molecule = molecule.to_dict()
         molecule_copy = Molecule(serialized_molecule)
         assert molecule == molecule_copy
 
@@ -1856,7 +1856,7 @@ class TestMolecule:
                 assert isomer.n_conformers == 0
 
             mol = Molecule.from_smiles(
-                "Cl/C=C\Cl", toolkit_registry=toolkit, allow_undefined_stereo=True
+                r"Cl/C=C\Cl", toolkit_registry=toolkit, allow_undefined_stereo=True
             )
             isomers = mol.enumerate_stereoisomers(
                 undefined_only=True, rationalise=False
@@ -1865,7 +1865,7 @@ class TestMolecule:
             assert isomers == []
 
             mol = Molecule.from_smiles(
-                "Cl/C=C\Cl", toolkit_registry=toolkit, allow_undefined_stereo=True
+                r"Cl/C=C\Cl", toolkit_registry=toolkit, allow_undefined_stereo=True
             )
             isomers = mol.enumerate_stereoisomers(
                 undefined_only=False, rationalise=False
@@ -2292,11 +2292,29 @@ class TestMolecule:
         ):
             Molecule.from_mapped_smiles("[Cl:1][Cl]", toolkit_registry=toolkit_class())
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_n_particles(self, molecule):
-        """Test n_particles property"""
-        n_particles = sum([1 for particle in molecule.particles])
-        assert n_particles == molecule.n_particles
+    def test_deprecated_api_points(self):
+        """Ensure that some of the API deprecated circa v0.11.0 still exist."""
+        from openff.toolkit.topology.molecule import MoleculeDeprecationWarning
+
+        molecule = Molecule.from_smiles("O")
+
+        with pytest.warns(
+            MoleculeDeprecationWarning,
+            match="Molecule.particles is deprecated. Use Molecule.atoms instead.",
+        ):
+            assert len(molecule.particles) == 3
+
+        with pytest.warns(
+            MoleculeDeprecationWarning,
+            match="Molecule.n_particles is deprecated. Use Molecule.n_atoms instead.",
+        ):
+            assert molecule.n_particles == 3
+
+        with pytest.warns(
+            MoleculeDeprecationWarning,
+            match="Molecule.particle_index is deprecated. Use Molecule.atom_index instead.",
+        ):
+            assert molecule.particle_index(molecule.atom(0)) == 0
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_n_atoms(self, molecule):
@@ -2407,7 +2425,7 @@ class TestMolecule:
         assert n_14_pairs == benzene.n_propers - 3
 
         for pair in benzene.nth_degree_neighbors(n_degrees=3):
-            assert pair[0].molecule_particle_index < pair[1].molecule_particle_index
+            assert pair[0].molecule_atom_index < pair[1].molecule_atom_index
 
     @pytest.mark.parametrize(
         ("smiles", "n_degrees", "num_pairs"),
@@ -3151,6 +3169,27 @@ class TestMoleculeVisualization:
         molecule = Molecule().from_smiles("CCO")
         molecule._ipython_display_()
 
+    def test_get_coordinates(self):
+        from openff.toolkit.utils.viz import _OFFTrajectoryNGLView
+
+        molecule = Molecule.from_smiles(
+            "C1CC2=C3C(=CC=C2)C(=CN3C1)[C@H]4[C@@H](C(=O)NC4=O)C5=CNC6=CC=CC=C65"
+        )
+        molecule.generate_conformers(n_conformers=3)
+
+        trajectory = _OFFTrajectoryNGLView(molecule)
+
+        np.testing.assert_allclose(trajectory.get_coordinates(), molecule.conformers[0])
+        np.testing.assert_allclose(
+            trajectory.get_coordinates(0), molecule.conformers[0]
+        )
+        np.testing.assert_allclose(
+            trajectory.get_coordinates(1), molecule.conformers[1]
+        )
+
+        with pytest.raises(IndexError, match="too high"):
+            trajectory.get_coordinates(100000)
+
 
 @pytest.mark.parametrize("strict_chirality", (True, False))
 class TestMoleculeResiduePerception:
@@ -3284,6 +3323,8 @@ class TestMoleculeResiduePerception:
         assert counter == offmol.n_atoms
 
 
+# TODO: Remove when not dependent on RDKit
+@requires_rdkit
 class TestMoleculeFromPDB:
     """
     Test creation of cheminformatics-rich openff Molecule from PDB files.
@@ -3294,11 +3335,15 @@ class TestMoleculeFromPDB:
         """Test off Molecule contains expected number of atoms from T4 pdb."""
         # We expect/know the molecule contains this number of atoms
         expected_n_atoms = 2634
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/T4-protein.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/T4-protein.pdb")
+        )
         assert offmol.n_atoms == expected_n_atoms
 
     def test_molecule_from_pdb_mainchain_ala_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_ALA.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA.pdb")
+        )
         assert offmol.n_atoms == 22
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C)C(=O)NC")
         assert offmol.is_isomorphic_with(
@@ -3306,7 +3351,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_ala_tripeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+        )
         assert offmol.n_atoms == 32
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C)C(=O)N[C@H](C)C(=O)NC")
         assert offmol.is_isomorphic_with(
@@ -3314,7 +3361,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_cterm_ala_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/CTerminal_ALA.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/CTerminal_ALA.pdb")
+        )
         assert offmol.n_atoms == 17
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C)C(=O)[O-]")
         assert offmol.is_isomorphic_with(
@@ -3322,7 +3371,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_cterm_ala_tripeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/CTerminal_ALA_ALA.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/CTerminal_ALA_ALA.pdb")
+        )
         assert offmol.n_atoms == 27
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C)C(=O)N[C@H](C)C(=O)[O-]")
         assert offmol.is_isomorphic_with(
@@ -3330,7 +3381,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_nterm_ala_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/NTerminal_ALA.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/NTerminal_ALA.pdb")
+        )
         assert offmol.n_atoms == 18
         expected_mol = Molecule.from_smiles("[N+]([H])([H])([H])[C@H](C)C(=O)NC")
         assert offmol.is_isomorphic_with(
@@ -3338,7 +3391,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_arg_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_ARG.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ARG.pdb")
+        )
         assert offmol.n_atoms == 36
         expected_mol = Molecule.from_smiles(
             "CC(=O)N[C@H](CCCNC(N)=[N+]([H])[H])C(=O)NC"
@@ -3348,7 +3403,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_cterm_arg_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/CTerminal_ARG.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/CTerminal_ARG.pdb")
+        )
         assert offmol.n_atoms == 31
         expected_mol = Molecule.from_smiles(
             "CC(=O)N[C@H](CCCNC(N)=[N+]([H])([H]))C(=O)[O-]"
@@ -3358,7 +3415,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_cys_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_CYS.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_CYS.pdb")
+        )
         assert offmol.n_atoms == 23
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CS)C(=O)NC")
         assert offmol.is_isomorphic_with(
@@ -3366,7 +3425,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_cyx_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_CYX.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_CYX.pdb")
+        )
         assert offmol.n_atoms == 44
         expected_mol = Molecule.from_smiles(
             "CC(=O)N[C@H](CSSC[C@H](NC(=O)C)C(=O)NC)C(=O)NC"
@@ -3376,7 +3437,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_hid_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_HID.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_HID.pdb")
+        )
         assert offmol.n_atoms == 29
         assert offmol.total_charge == 0 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 0
@@ -3387,7 +3450,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_hie_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_HIE.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_HIE.pdb")
+        )
         assert offmol.n_atoms == 29
         assert offmol.total_charge == 0 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 0
@@ -3398,7 +3463,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_hip_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_HIP.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_HIP.pdb")
+        )
         assert offmol.n_atoms == 30
         assert offmol.total_charge == 1 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 0
@@ -3410,7 +3477,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_trp_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_TRP.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_TRP.pdb")
+        )
         assert offmol.n_atoms == 36
         assert offmol.total_charge == 0 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 6
@@ -3425,7 +3494,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_cterminal_trp_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/CTerminal_TRP.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/CTerminal_TRP.pdb")
+        )
         assert offmol.n_atoms == 31
         assert offmol.total_charge == -1 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 6
@@ -3440,7 +3511,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_nterminal_trp_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/NTerminal_TRP.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/NTerminal_TRP.pdb")
+        )
         assert offmol.n_atoms == 32
         assert offmol.total_charge == 1 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 6
@@ -3457,7 +3530,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_pro_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_PRO.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_PRO.pdb")
+        )
         assert offmol.n_atoms == 26
         assert offmol.total_charge == 0 * unit.elementary_charge
         expected_mol = Molecule.from_smiles("CC(=O)N1[C@H](CCC1)C(=O)NC")
@@ -3670,9 +3745,12 @@ class TestHierarchies:
         ):
             offmol.add_hierarchy_scheme([("chain_id",)], "chains")
 
+    @requires_rdkit  # TODO: This test should NOT require RDKit
     def test_add_default_hierarchy_schemes(self):
         """Test add_default_hierarchy_schemes and its kwargs"""
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_ALA.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA.pdb")
+        )
         offmol.delete_hierarchy_scheme("residues")
         offmol.delete_hierarchy_scheme("chains")
         offmol.add_hierarchy_scheme(("residue_number", "residue_name"), "residues")
@@ -3699,30 +3777,30 @@ class TestHierarchies:
 
         assert (
             str(dipeptide_hierarchy_perceived.residues[0])
-            == "HierarchyElement ('None', 1, 'ACE') of iterator 'residues' containing 6 particle(s)"
+            == "HierarchyElement ('None', 1, 'ACE') of iterator 'residues' containing 6 atom(s)"
         )
         assert dipeptide_hierarchy_perceived.residues[0].chain == "None"
         assert dipeptide_hierarchy_perceived.residues[0].residue_name == "ACE"
         assert dipeptide_hierarchy_perceived.residues[0].residue_number == 1
-        assert set(dipeptide_hierarchy_perceived.residues[0].particle_indices) == set(
+        assert set(dipeptide_hierarchy_perceived.residues[0].atom_indices) == set(
             range(6)
         )
 
         assert (
             str(dipeptide_hierarchy_perceived.residues[1])
-            == "HierarchyElement ('None', 2, 'ALA') of iterator 'residues' containing 11 particle(s)"
+            == "HierarchyElement ('None', 2, 'ALA') of iterator 'residues' containing 11 atom(s)"
         )
         assert dipeptide_hierarchy_perceived.residues[1].chain == "None"
         assert dipeptide_hierarchy_perceived.residues[1].residue_name == "ALA"
         assert dipeptide_hierarchy_perceived.residues[1].residue_number == 2
-        assert set(dipeptide_hierarchy_perceived.residues[1].particle_indices) == set(
+        assert set(dipeptide_hierarchy_perceived.residues[1].atom_indices) == set(
             range(6, 17)
         )
 
         for residue in dipeptide_hierarchy_perceived.residues:
-            for particle in residue.particles:
-                assert particle.metadata["residue_name"] == residue.residue_name
-                assert particle.metadata["residue_number"] == residue.residue_number
+            for atom in residue.atoms:
+                assert atom.metadata["residue_name"] == residue.residue_name
+                assert atom.metadata["residue_number"] == residue.residue_number
 
     def test_hierarchy_perceived_information_propagation(self):
         """Ensure that updating atom metadata doesn't update the iterators until the hierarchy is re-perceived"""
