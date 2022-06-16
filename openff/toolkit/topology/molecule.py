@@ -5479,7 +5479,7 @@ class HierarchyScheme:
         self.uniqueness_criteria = uniqueness_criteria
         self.iterator_name = iterator_name
 
-        self.hierarchy_elements = list()
+        self.hierarchy_elements: List[HierarchyElement] = list()
 
     def to_dict(self):
         """
