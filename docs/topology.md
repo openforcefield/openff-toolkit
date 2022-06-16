@@ -33,13 +33,9 @@ including offering serialization to a variety of standard formats (including [XM
     Particle
     Atom
     Bond
-    VirtualSite
-    VirtualParticle
-    BondChargeVirtualSite
-    MonovalentLonePairVirtualSite
-    DivalentLonePairVirtualSite
-    TrivalentLonePairVirtualSite
     ValenceDict
     ImproperDict
+    HierarchyScheme
+    HierarchyElement
 :::
 

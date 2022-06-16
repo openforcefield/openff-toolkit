@@ -181,9 +181,9 @@ class Atom(Particle):
 
        * Should ``Atom`` objects be immutable or mutable?
        * Do we want to support the addition of arbitrary additional properties,
-        such as floating point quantities (e.g. ``charge``), integral quantities (such as ``id`` or ``serial``
-        index in a PDB file),
-        or string labels (such as Lennard-Jones types)?
+         such as floating point quantities (e.g. ``charge``), integral
+         quantities (such as ``id`` or ``serial`` index in a PDB file),
+         or string labels (such as Lennard-Jones types)?
 
     .. todo :: Allow atoms to have associated properties.
 
@@ -1223,16 +1223,17 @@ class FrozenMolecule(Serializable):
         for iter_name, hierarchy_scheme_dict in molecule_dict[
             "hierarchy_schemes"
         ].items():
-            new_hier_scheme = self.add_hierarchy_scheme(
+            new_hier_scheme = HierarchyScheme(
+                self,
                 hierarchy_scheme_dict["uniqueness_criteria"],
                 iter_name,
             )
-            # hierarchy_scheme = self._hierarchy_schemes[iter_name]
+            self._hierarchy_schemes[iter_name] = new_hier_scheme
+
             for element_dict in hierarchy_scheme_dict["hierarchy_elements"]:
                 new_hier_scheme.add_hierarchy_element(
                     element_dict["identifier"], element_dict["atom_indices"]
                 )
-            self._expose_hierarchy_scheme(iter_name)
 
     def __repr__(self):
         """Return a summary of this molecule; SMILES if valid, Hill formula if not."""
@@ -1300,29 +1301,54 @@ class FrozenMolecule(Serializable):
 
     def add_default_hierarchy_schemes(self, overwrite_existing=True):
         """
-        Adds `chain` and `residue` hierarchy schemes.
+        Adds ``chain`` and ``residue`` hierarchy schemes.
+
+        The Open Force Field Toolkit has no native understanding of hierarchical
+        atom organisation schemes common to other biomolecular software, such as
+        "residues" or "chains" (see :ref:`userguide_hierarchy`). Hierarchy
+        schemes allow iteration over groups of atoms according to their
+        metadata. For more information, see
+        :class:`~openff.toolkit.topology.molecule.HierarchyScheme`.
+
+        If a ``Molecule`` with the default hierarchy schemes
+        changes, :meth:`Molecule.update_hierarchy_schemes()` must be called before
+        the residues or chains are iterated over again or else the iteration may
+        be incorrect.
 
         Parameters
         ----------
         overwrite_existing : bool, default=True
-            Whether to overwrite existing instances of the `residue` and `chain` hierarchy schemes. If this is
-            False and either of the hierarchy schemes are already defined on this molecule, an exception will
-            be raised.
+            Whether to overwrite existing instances of the `residue` and `chain`
+            hierarchy schemes. If this is ``False`` and either of the hierarchy
+            schemes are already defined on this molecule, an exception will be
+            raised.
 
         Raises
         ------
         HierarchySchemeWithIteratorNameAlreadyRegisteredException
+            When ``overwrite_existing=False`` and either the ``chains`` or
+            ``residues`` hierarchy scheme is already configured.
         """
+        self._add_chain_hierarchy_scheme(overwrite_existing=overwrite_existing)
+        self._add_residue_hierarchy_scheme(overwrite_existing=overwrite_existing)
+
+    def _add_chain_hierarchy_scheme(self, overwrite_existing=True):
+        """Add ``chain`` hierarchy scheme."""
         if overwrite_existing:
             if "chains" in self._hierarchy_schemes.keys():
                 self.delete_hierarchy_scheme("chains")
+
+        self.add_hierarchy_scheme(("chain",), "chains")
+
+    def _add_residue_hierarchy_scheme(self, overwrite_existing=True):
+        """Add ``residue`` hierarchy scheme."""
+        if overwrite_existing:
             if "residues" in self._hierarchy_schemes.keys():
                 self.delete_hierarchy_scheme("residues")
 
         self.add_hierarchy_scheme(
             ("chain", "residue_number", "residue_name"), "residues"
         )
-        self.add_hierarchy_scheme(("chain",), "chains")
 
     def add_hierarchy_scheme(
         self,
@@ -1332,17 +1358,39 @@ class FrozenMolecule(Serializable):
         """
         Use the molecule's metadata to facilitate iteration over its atoms.
 
+        This method will add an attribute with the name given by the
+        ``iterator_name`` argument that provides an iterator over groups of
+        atoms. Atoms are grouped by the values in their ``atom.properties``
+        dictionary; any atoms with the same values for the keys given in the
+        ``uniqueness_criteria`` argument will be in the same group. These groups
+        have the type :class:`~openff.toolkit.topology.molecule.HierarchyElement`.
+
+        Hierarchy schemes are not updated dynamically; if a ``Molecule`` with
+        hierarchy schemes changes, :meth:`Molecule.update_hierarchy_schemes()` must
+        be called before the scheme is iterated over again or else the grouping
+        may be incorrect.
+
+        Hierarchy schemes allow iteration over groups of atoms according to
+        their metadata. For more information, see
+        :class:`~openff.toolkit.topology.molecule.HierarchyScheme`.
+
         Parameters
         ----------
         uniqueness_criteria : tuple of str
+            The names of ``Atom`` metadata entries that define this scheme. An
+            atom belongs to a ``HierarchyElement`` only if its metadata has the
+            same values for these criteria as the other atoms in the
+            ``HierarchyElement``.
+
         iterator_name : str
-            Name of the iterator that will be exposed to access the HierarchyElements generated
-            by this scheme
+            Name of the iterator that will be exposed to access the hierarchy
+            elements generated by this scheme.
 
         Returns
         -------
         new_hier_scheme : openff.toolkit.topology.HierarchyScheme
             The newly created HierarchyScheme
+
         """
         if iterator_name in self._hierarchy_schemes:
             msg = (
@@ -1356,12 +1404,17 @@ class FrozenMolecule(Serializable):
             iterator_name,
         )
         self._hierarchy_schemes[iterator_name] = new_hier_scheme
+        self.update_hierarchy_schemes([iterator_name])
         return new_hier_scheme
 
     @property
     def hierarchy_schemes(self) -> Dict[str, "HierarchyScheme"]:
         """
         The hierarchy schemes available on the molecule.
+
+        Hierarchy schemes allow iteration over groups of atoms according to
+        their metadata. For more information, see
+        :class:`~openff.toolkit.topology.molecule.HierarchyScheme`.
 
         Returns
         -------
@@ -1374,6 +1427,10 @@ class FrozenMolecule(Serializable):
         """
         Remove an existing ``HierarchyScheme`` specified by its iterator name.
 
+        Hierarchy schemes allow iteration over groups of atoms according to
+        their metadata. For more information, see
+        :class:`~openff.toolkit.topology.molecule.HierarchyScheme`.
+
         Parameters
         ----------
         iter_name : str
@@ -1384,19 +1441,22 @@ class FrozenMolecule(Serializable):
                 f"because no HierarchyScheme with that iterator name exists"
             )
         self._hierarchy_schemes.pop(iter_name)
-        if hasattr(self, iter_name):
-            delattr(self, iter_name)
 
-    def perceive_hierarchy(self, iter_names=None):
+    def update_hierarchy_schemes(self, iter_names=None):
         """
-        Infer a hierarchy from atom metadata according to the existing hierarchy schemes.
+        Infer a hierarchy from atom metadata according to the existing hierarchy
+        schemes.
+
+        Hierarchy schemes allow iteration over groups of atoms according to
+        their metadata. For more information, see
+        :class:`~openff.toolkit.topology.molecule.HierarchyScheme`.
 
         Parameters
         ----------
         iter_names : Iterable of str, Optional
-            Only perceive hierarchy for HierarchySchemes that expose these iterator names.
-            If not provided, all known hierarchies will be perceived, overwriting previous
-            results if applicable.
+            Only perceive hierarchy for HierarchySchemes that expose these
+            iterator names. If not provided, all known hierarchies will be
+            perceived, overwriting previous results if applicable.
         """
         if iter_names is None:
             iter_names = self._hierarchy_schemes.keys()
@@ -1404,11 +1464,19 @@ class FrozenMolecule(Serializable):
         for iter_name in iter_names:
             hierarchy_scheme = self._hierarchy_schemes[iter_name]
             hierarchy_scheme.perceive_hierarchy()
-            self._expose_hierarchy_scheme(iter_name)
 
-    def _expose_hierarchy_scheme(self, iter_name):
-        assert iter_name in self._hierarchy_schemes
-        setattr(self, iter_name, self._hierarchy_schemes[iter_name].hierarchy_elements)
+    def __getattr__(self, name: str):
+        """If a requested attribute is not found, check the hierarchy schemes"""
+        try:
+            return self.__dict__["_hierarchy_schemes"][name].hierarchy_elements
+        except KeyError:
+            raise AttributeError(
+                f"'{self.__class__.__name__}' object has no attribute {name!r}"
+            )
+
+    def __dir__(self):
+        """Add the hierarchy scheme iterator names to dir"""
+        return list(self._hierarchy_schemes.keys()) + list(super().__dir__())
 
     def to_smiles(
         self,
@@ -2322,14 +2390,14 @@ class FrozenMolecule(Serializable):
         For more supported charge methods and details, see the corresponding
         methods in each toolkit wrapper:
 
-        - :meth:`OpenEyeToolkitWrapper.assign_partial_charges
-            <openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.assign_partial_charges>`
-        - :meth:`RDKitToolkitWrapper.assign_partial_charges
-            <openff.toolkit.utils.toolkits.RDKitToolkitWrapper.assign_partial_charges>`
-        - :meth:`AmberToolsToolkitWrapper.assign_partial_charges
-            <openff.toolkit.utils.toolkits.AmberToolsToolkitWrapper.assign_partial_charges>`
-        - :meth:`BuiltInToolkitWrapper.assign_partial_charges
-            <openff.toolkit.utils.toolkits.BuiltInToolkitWrapper.assign_partial_charges>`
+        - :meth:`OpenEyeToolkitWrapper.assign_partial_charges \
+          <openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.assign_partial_charges>`
+        - :meth:`RDKitToolkitWrapper.assign_partial_charges \
+          <openff.toolkit.utils.toolkits.RDKitToolkitWrapper.assign_partial_charges>`
+        - :meth:`AmberToolsToolkitWrapper.assign_partial_charges \
+          <openff.toolkit.utils.toolkits.AmberToolsToolkitWrapper.assign_partial_charges>`
+        - :meth:`BuiltInToolkitWrapper.assign_partial_charges \
+          <openff.toolkit.utils.toolkits.BuiltInToolkitWrapper.assign_partial_charges>`
 
         Parameters
         ----------
@@ -3304,9 +3372,10 @@ class FrozenMolecule(Serializable):
 
         .. todo ::
 
-           * Do we want to generalize ``query`` to allow other kinds of queries, such as mdtraj DSL,
-           pymol selections, atom index slices, etc? We could call it ``topology.matches(query)`` instead of
-           ``chemical_environment_matches``
+           * Do we want to generalize ``query`` to allow other kinds of queries,
+             such as mdtraj DSL, pymol selections, atom index slices, etc? We
+             could call it ``topology.matches(query)`` instead of
+             ``chemical_environment_matches``
 
         """
         # Resolve to SMIRKS if needed
@@ -3658,21 +3727,33 @@ class FrozenMolecule(Serializable):
         cls, file_path: Union[str, TextIO], toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
     ):
         """
-        Loads a polymer from a PDB file. Currently only supports proteins with canonical amino acids that are
-        either uncapped or capped by ACE/NME groupe,
-        but may later be extended to handle other common polymers, or accept user-defined polymer templates.
+        Loads a polymer from a PDB file.
+
+        Currently only supports proteins with canonical amino acids that are
+        either uncapped or capped by ACE/NME groups, but may later be extended
+        to handle other common polymers, or accept user-defined polymer
+        templates.
+
+        Metadata such as residues, chains, and atom names are recorded in the
+        ``Atom.properties`` attribute, which is a dictionary mapping from
+        strings like "residue" to the appropriate value. ``from_polymer_pdb``
+        returns a molecule that can be iterated over with the ``.residues`` and
+        ``.chains`` attributes, as well as the usual ``.atoms``.
 
         This method proceeds in the following order:
 
-        * Loads the polymer substructure template file
-        * Loads the PDB into an OpenMM PDBFile object (openmm.app.PDBFile)
+        * Loads the polymer substructure template file (distributed with the
+          OpenFF Toolkit)
+        * Loads the PDB into an OpenMM :class:`openmm.app.PDBFile` object
         * Turns OpenMM topology into a temporarily invalid rdkit Molecule
-        * Calls Molecule.from_polymer_pdb._add_chemical_info, which:
-            * For each substructure loaded from the substructure template file:e
-                * Uses rdkit to find matches between the substructure and the molecule
-                * For any matches, assigns the atom formal charge and bond order info from the substructure
-                  to the rdkit molecule, then marks the atoms and bonds as having been assigned so they can not
-                  be overwritten by subsequent isomorphisms
+        * Adds chemical information to the molecule:
+            * For each substructure loaded from the substructure template file
+                * Uses rdkit to find matches between the substructure and the
+                  molecule
+                * For any matches, assigns the atom formal charge and bond order
+                  info from the substructure to the rdkit molecule, then marks
+                  the atoms and bonds as having been assigned so they can not be
+                  overwritten by subsequent isomorphisms
         * Take coordinates from the OpenMM Topology and add them as a conformer
         * Convert the rdkit Molecule to OpenFF
 
@@ -3720,7 +3801,6 @@ class FrozenMolecule(Serializable):
             offmol.atoms[i].metadata["residue_number"] = atom.residue.id
             offmol.atoms[i].metadata["chain_id"] = atom.residue.chain.id
         offmol.add_default_hierarchy_schemes()
-        offmol.perceive_hierarchy()
 
         return offmol
 
@@ -5121,10 +5201,13 @@ class Molecule(FrozenMolecule):
 
     def perceive_residues(self, substructure_file_path=None, strict_chirality=True):
         """
-        Perceive a polymer's residues and fill each atom's metadata accordingly.
+        Perceive a polymer's residues and permit iterating over them.
 
         Perceives residues by matching substructures in the current molecule
-        with a substructure dictionary file, using SMARTS.
+        with a substructure dictionary file, using SMARTS, and assigns residue
+        names and numbers to atom metadata. It then constructs a residue hierarchy
+        scheme to allow iterating over residues.
+
 
         Parameters
         ----------
@@ -5212,6 +5295,9 @@ class Molecule(FrozenMolecule):
                 self.atoms[atom_idx].metadata["atom_name"] = match_dict["atom_names"][
                     smarts_idx
                 ]
+
+        # Now add the residue hierarchy scheme
+        self._add_residue_hierarchy_scheme()
 
     def _ipython_display_(self):  # pragma: no cover
         from IPython.display import display
@@ -5327,18 +5413,49 @@ def _nth_degree_neighbors_from_graphlike(
 
 
 class HierarchyScheme:
-    def __init__(self, parent, uniqueness_criteria, iterator_name):
+    """
+    Perceives hierarchy elements from the metadata of atoms in a ``Molecule``.
+
+    The Open Force Field Toolkit has no native understanding of hierarchical
+    atom organisation schemes common to other biomolecular software, such as
+    "residues" or "chains" (see :ref:`userguide_hierarchy`). To facilitate
+    iterating over groups of atoms, a ``HierarchyScheme`` can be used to collect
+    atoms into ``HierarchyElements``, groups of atoms that share the same
+    values for certain metadata elements. Metadata elements are stored in the
+    ``Atom.properties`` attribute.
+
+    Hierarchy schemes are not updated dynamically; if a ``Molecule`` with
+    hierarchy schemes changes, :meth:`Molecule.update_hierarchy_schemes()` must
+    be called before the scheme is iterated over again or else the grouping
+    may be incorrect.
+
+    A ``HierarchyScheme`` contains the information needed to perceive
+    ``HierarchyElement`` objects from a ``Molecule`` containing atoms with
+    metadata.
+    """
+
+    def __init__(
+        self,
+        parent: FrozenMolecule,
+        uniqueness_criteria: Union[Tuple[str], List[str]],
+        iterator_name: str,
+    ):
         """
-        A HierarchyScheme contains the information needed to perceive HierarchyElements from a
-        Molecule containing atoms with metadata
+        Create a new hierarchy scheme for iterating over groups of atoms.
 
         Parameters
         ----------
-        parent : openff.toolkit.topology.FrozenMolecule
-        uniqueness_criteria : tuple of str
-        iterator_name : str
-            Name of the iterator that will be exposed to access the HierarchyElements generated
-            by this scheme
+
+        parent
+            The ``Molecule`` to which this scheme belongs.
+        uniqueness_criteria
+            The names of ``Atom`` metadata entries that define this scheme. An
+            atom belongs to a ``HierarchyElement`` only if its metadata has the
+            same values for these criteria as the other atoms in the
+            ``HierarchyElement``.
+        iterator_name
+            The name of the iterator that will be exposed to access the hierarchy
+            elements generated by this scheme
         """
         if (type(uniqueness_criteria) is not list) and (
             type(uniqueness_criteria) is not tuple
@@ -5366,7 +5483,7 @@ class HierarchyScheme:
         self.uniqueness_criteria = uniqueness_criteria
         self.iterator_name = iterator_name
 
-        self.hierarchy_elements = list()
+        self.hierarchy_elements: List[HierarchyElement] = list()
 
     def to_dict(self):
         """
@@ -5382,15 +5499,19 @@ class HierarchyScheme:
 
     def perceive_hierarchy(self):
         """
-        Groups the atoms of the parent of this HierarchyScheme according to their
-        metadata, and creates HierarchyElements suitable for iteration over the parent.
-        Atoms missing the metadata fields in this HierarchyScheme's
-        uniqueness_criteria tuple will have those spots populated with the string 'None'.
+        Prepare the parent ``Molecule`` for iteration according to this scheme.
 
-        This method overwrites the HierarchyScheme's `hierarchy_elements` attribute in place.
-        The HierarchyElements in this HierarchyScheme's `hierarchy_elements` attribute are STATIC -
-        That is, they are updated only when `perceive_hierarchy` is run, NOT on-the-fly when
-        atom metadata is modified.
+        Groups the atoms of the parent of this ``HierarchyScheme`` according to
+        their metadata, and creates ``HierarchyElement`` objects suitable for
+        iteration over the parent. Atoms missing the metadata fields in
+        this object's ``uniqueness_criteria`` tuple will have those spots
+        populated with the string ``'None'``.
+
+        This method overwrites the scheme's ``hierarchy_elements`` attribute in
+        place. Each ``HierarchyElement`` in the scheme's `hierarchy_elements`
+        attribute is `static` --- that is, it is updated only when
+        `perceive_hierarchy()` is called, and `not` on-the-fly when atom
+        metadata is modified.
         """
         from collections import defaultdict
 
@@ -5417,13 +5538,17 @@ class HierarchyScheme:
     def add_hierarchy_element(self, identifier, atom_indices):
         """
         Instantiate a new HierarchyElement belonging to this HierarchyScheme.
+
         This is the main way to instantiate new HierarchyElements.
 
         Parameters
         ----------
         identifier : tuple of str and int
-            uniqueness tuple
+            Tuple of metadata values (not keys) that define the uniqueness
+            criteria for this element
         atom_indices : iterable int
+            The indices of atoms in ``scheme.parent`` that are in this
+            element
         """
         new_hier_ele = HierarchyElement(self, identifier, atom_indices)
         self.hierarchy_elements.append(new_hier_ele)
@@ -5451,12 +5576,23 @@ class HierarchyScheme:
 
 
 class HierarchyElement:
+    """An element in a metadata hierarchy scheme, such as a residue or chain."""
+
     def __init__(self, scheme, identifier, atom_indices):
         """
+        Create a new hierarchy element.
+
+        Parameters
+        ----------
+
         scheme : HierarchyScheme
+            The scheme to which this ``HierarchyElement`` belongs
         id : tuple of str and int
-            uniqueness tuple
-        atom_indices : iterable of int
+            Tuple of metadata values (not keys) that define the uniqueness
+            criteria for this element
+        atom_indices : iterable int
+            The indices of particles in ``scheme.parent`` that are in this
+            element
         """
         self.scheme = scheme
         self.identifier = identifier
@@ -5495,7 +5631,7 @@ class HierarchyElement:
         return self.parent.atoms[self.atom_indices[index]]
 
     @property
-    def parent(self):
+    def parent(self) -> FrozenMolecule:
         return self.scheme.parent
 
     def __str__(self):
