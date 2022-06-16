@@ -3551,6 +3551,7 @@ class TestMoleculeFromPDB:
         raise NotImplementedError
 
     # TODO: Remove decorator when OpenEye implementation is back online
+    @pytest.mark.slow
     @requires_rdkit
     def test_from_t4_to_topology(self):
         """Ensure a large protein can be converted into a `Topology`. See #1319."""
