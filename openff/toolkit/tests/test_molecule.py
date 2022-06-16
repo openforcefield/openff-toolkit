@@ -3550,6 +3550,15 @@ class TestMoleculeFromPDB:
         """Test to check the metadata from T4 pdb is filled correctly."""
         raise NotImplementedError
 
+    # TODO: Remove decorator when OpenEye implementation is back online
+    @pytest.mark.slow
+    @requires_rdkit
+    def test_from_t4_to_topology(self):
+        """Ensure a large protein can be converted into a `Topology`. See #1319."""
+        Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/T4-protein.pdb")
+        ).to_topology()
+
 
 class MyMol(FrozenMolecule):
     """
