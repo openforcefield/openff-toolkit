@@ -875,8 +875,8 @@ class TestMolecule:
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_create_from_serialized(self, molecule):
-        """Test standard constructor taking the output of __getstate__()."""
-        serialized_molecule = molecule.__getstate__()
+        """Test standard constructor taking the output of Molecule.to_dict()."""
+        serialized_molecule = molecule.to_dict()
         molecule_copy = Molecule(serialized_molecule)
         assert molecule == molecule_copy
 
@@ -3168,6 +3168,27 @@ class TestMoleculeVisualization:
         molecule = Molecule().from_smiles("CCO")
         molecule._ipython_display_()
 
+    def test_get_coordinates(self):
+        from openff.toolkit.utils.viz import _OFFTrajectoryNGLView
+
+        molecule = Molecule.from_smiles(
+            "C1CC2=C3C(=CC=C2)C(=CN3C1)[C@H]4[C@@H](C(=O)NC4=O)C5=CNC6=CC=CC=C65"
+        )
+        molecule.generate_conformers(n_conformers=3)
+
+        trajectory = _OFFTrajectoryNGLView(molecule)
+
+        np.testing.assert_allclose(trajectory.get_coordinates(), molecule.conformers[0])
+        np.testing.assert_allclose(
+            trajectory.get_coordinates(0), molecule.conformers[0]
+        )
+        np.testing.assert_allclose(
+            trajectory.get_coordinates(1), molecule.conformers[1]
+        )
+
+        with pytest.raises(IndexError, match="too high"):
+            trajectory.get_coordinates(100000)
+
 
 @pytest.mark.parametrize("strict_chirality", (True, False))
 class TestMoleculeResiduePerception:
@@ -3528,6 +3549,15 @@ class TestMoleculeFromPDB:
     def test_from_pdb_t4_atom_metadata(self):
         """Test to check the metadata from T4 pdb is filled correctly."""
         raise NotImplementedError
+
+    # TODO: Remove decorator when OpenEye implementation is back online
+    @pytest.mark.slow
+    @requires_rdkit
+    def test_from_t4_to_topology(self):
+        """Ensure a large protein can be converted into a `Topology`. See #1319."""
+        Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/T4-protein.pdb")
+        ).to_topology()
 
 
 class MyMol(FrozenMolecule):

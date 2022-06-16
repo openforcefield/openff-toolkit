@@ -24,7 +24,6 @@ __all__ = [
     "convert_0_1_smirnoff_to_0_2",
     "convert_0_2_smirnoff_to_0_3",
     "get_molecule_parameterIDs",
-    "remove_subsets_from_list",
 ]
 import contextlib
 import functools
@@ -34,48 +33,9 @@ from typing import List, Tuple, Union
 import numpy as np
 import pint
 from openff.units import unit
-
-from openff.toolkit.utils.exceptions import MissingDependencyError
+from openff.utilities import requires_package
 
 logger = logging.getLogger(__name__)
-
-
-def requires_package(package_name):
-    """
-    Helper function to denote that a funciton requires some optional
-    dependency. A function decorated with this decorator will raise
-    `MissingDependencyError` if the package is not found by
-    `importlib.import_module()`.
-
-    Parameters
-    ----------
-    package_name : str
-        The directory path to enter within the context
-
-    Raises
-    ------
-    MissingDependencyError
-
-    """
-
-    def inner_decorator(function):
-        @functools.wraps(function)
-        def wrapper(*args, **kwargs):
-            import importlib
-
-            try:
-                importlib.import_module(package_name)
-            except (ImportError, ModuleNotFoundError):
-                package_name_corrected = package_name.replace(".", "-")
-                raise MissingDependencyError(package_name_corrected)
-            except Exception as e:
-                raise e
-
-            return function(*args, **kwargs)
-
-        return wrapper
-
-    return inner_decorator
 
 
 def inherit_docstrings(cls):
@@ -207,59 +167,6 @@ def quantity_to_string(input_quantity: unit.Quantity) -> str:
     return str(input_quantity)
 
 
-def _quantity_to_string(input_quantity):
-    import numpy as np
-
-    if input_quantity is None:
-        return None
-    unitless_value = input_quantity.value_in_unit(input_quantity.unit)
-    # The string representation of a numpy array doesn't have commas and breaks the
-    # parser, thus we convert any arrays to list here
-    if isinstance(unitless_value, np.ndarray):
-        unitless_value = list(unitless_value)
-    unit_string = unit_to_string(input_quantity.unit)
-    output_string = "{} * {}".format(unitless_value, unit_string)
-    return output_string
-
-
-def _ast_eval(node):
-    """
-    Performs an algebraic syntax tree evaluation of a unit.
-
-    Parameters
-    ----------
-    node : An ast parsing tree node
-    """
-    import ast
-    import operator as op
-
-    operators = {
-        ast.Add: op.add,
-        ast.Sub: op.sub,
-        ast.Mult: op.mul,
-        ast.Div: op.truediv,
-        ast.Pow: op.pow,
-        ast.BitXor: op.xor,
-        ast.USub: op.neg,
-    }
-
-    if isinstance(node, ast.Num):  # <number>
-        return node.n
-    elif isinstance(node, ast.BinOp):  # <left> <operator> <right>
-        return operators[type(node.op)](_ast_eval(node.left), _ast_eval(node.right))
-    elif isinstance(node, ast.UnaryOp):  # <operator> <operand> e.g., -1
-        return operators[type(node.op)](_ast_eval(node.operand))
-    elif isinstance(node, ast.Name):
-        # see if this is a openmm unit
-        b = getattr(unit, node.id)
-        return b
-    # TODO: This was a quick hack that surprisingly worked. We should validate this further.
-    elif isinstance(node, ast.List):
-        return ast.literal_eval(node)
-    else:
-        raise TypeError(node)
-
-
 def string_to_unit(unit_string):
     """
     Deserializes a openff.units.unit.Quantity from a string representation, for
@@ -300,29 +207,6 @@ def string_to_quantity(quantity_string) -> Union[str, int, float, unit.Quantity]
         return quantity.m
     else:
         return quantity
-
-
-def _string_to_quantity(quantity_string):
-    """
-    Takes a string representation of a quantity and returns a openmm.unit.Quantity
-
-    Parameters
-    ----------
-    quantity_string : str
-        The quantity to deserialize
-
-    Returns
-    -------
-    output_quantity : openmm.unit.Quantity
-        The deserialized quantity
-    """
-    if quantity_string is None:
-        return None
-    # This can be the exact same as string_to_unit
-    import ast
-
-    output_quantity = _ast_eval(ast.parse(quantity_string, mode="eval").body)
-    return output_quantity
 
 
 def convert_all_strings_to_quantity(smirnoff_data):
@@ -1038,28 +922,3 @@ def sort_smirnoff_dict(data):
             # Handle metadata or the bottom of a recursive dict
             sorted_dict[key] = val
     return sorted_dict
-
-
-def remove_subsets_from_list(some_list):
-    """
-    Remove overlapping sublists (subsets) from given list.
-
-    Parameters
-    __________
-    some_list : list
-        List of objects to remove subsets from.
-
-    Returns
-    _______
-    unique_sets : set
-        Set containing only the unique subsets.
-    """
-    some_set = set(some_list)
-    remove_set = set()
-    for element in some_set:
-        for other_element in some_set:
-            is_subset = set(element).issubset(other_element)
-            if element != other_element and is_subset:
-                remove_set.add(element)
-    unique_sets = some_set - remove_set
-    return unique_sets

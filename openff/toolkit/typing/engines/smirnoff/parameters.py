@@ -198,13 +198,6 @@ def _allow_only(allowed_values):
     return _value_checker
 
 
-def _compute_lj_sigma(
-    sigma: Optional[unit.Quantity], rmin_half: Optional[unit.Quantity]
-) -> unit.Quantity:
-
-    return sigma if sigma is not None else (2.0 * rmin_half / (2.0 ** (1.0 / 6.0)))  # type: ignore
-
-
 def _validate_units(attr, value: Union[str, unit.Quantity], units: unit.Unit):
     value = object_to_quantity(value)
 
@@ -2313,97 +2306,6 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         return smirnoff_data
 
-    # TODO: Interchange needs this (so maybe it should be moved there)
-    @classmethod
-    def _check_all_valence_terms_assigned(
-        cls,
-        assigned_terms,
-        topology,
-        valence_terms,
-        exception_cls=UnassignedValenceParameterException,
-    ):
-        """Check that all valence terms have been assigned and print a user-friendly error message.
-        Parameters
-        ----------
-        assigned_terms : ValenceDict
-            Atom index tuples defining added valence terms.
-        topology : Topology
-            The topology that matching was performed on.
-        valence_terms :  Iterable[Iterable[Atom]]
-            Atom tuples defining topological valence terms.
-        exception_cls : UnassignedValenceParameterException
-            A specific exception class to raise to allow catching only specific
-            types of errors.
-        Raises
-        ------
-        exception : exception_cls
-            An exception with a customizable type. As documented in the Parameters section, this defaults
-            to UnassignedValenceParameterException.
-        """
-        # Provided there are no duplicates in either list,
-        # or something weird like a bond has been added to
-        # a torsions list - this should work just fine I think.
-        # If we expect either of those assumptions to be incorrect,
-        # (i.e len(not_found_terms) > 0) we have bigger issues
-        # in the code and should be catching those cases elsewhere!
-        # The fact that we graph match all topol molecules to ref
-        # molecules should avoid the len(not_found_terms) > 0 case.
-
-        if len(assigned_terms) == len(valence_terms):
-            return
-
-        # Convert the valence term to a valence dictionary to make sure
-        # the order of atom indices doesn't matter for comparison.
-        valence_terms_dict = assigned_terms.__class__()
-        for atoms in valence_terms:
-            atom_indices = (topology.atom_index(a) for a in atoms)
-            valence_terms_dict[atom_indices] = atoms
-
-        # Check that both valence dictionaries have the same keys (i.e. terms).
-        assigned_terms_set = set(assigned_terms.keys())
-        valence_terms_set = set(valence_terms_dict.keys())
-        unassigned_terms = valence_terms_set.difference(assigned_terms_set)
-        not_found_terms = assigned_terms_set.difference(valence_terms_set)
-
-        # Raise an error if there are unassigned terms.
-        err_msg = ""
-
-        if len(unassigned_terms) > 0:
-
-            unassigned_atom_tuples = []
-
-            unassigned_str = ""
-            for unassigned_tuple in unassigned_terms:
-                unassigned_str += "\n- Topology indices " + str(unassigned_tuple)
-                unassigned_str += ": names and elements "
-
-                unassigned_atoms = []
-
-                # Pull and add additional helpful info on missing terms
-                for atom_idx in unassigned_tuple:
-                    atom = topology.atom(atom_idx)
-                    unassigned_atoms.append(atom)
-                    unassigned_str += f"({atom.name} {atom.symbol}), "
-                unassigned_atom_tuples.append(tuple(unassigned_atoms))
-            err_msg += (
-                "{parameter_handler} was not able to find parameters for the following valence terms:\n"
-                "{unassigned_str}"
-            ).format(parameter_handler=cls.__name__, unassigned_str=unassigned_str)
-        if len(not_found_terms) > 0:
-            if err_msg != "":
-                err_msg += "\n"
-            not_found_str = "\n- ".join([str(x) for x in not_found_terms])
-            err_msg += (
-                "{parameter_handler} assigned terms that were not found in the topology:\n"
-                "- {not_found_str}"
-            ).format(parameter_handler=cls.__name__, not_found_str=not_found_str)
-        if err_msg != "":
-            err_msg += "\n"
-            exception = exception_cls(err_msg)
-            exception.unassigned_topology_atom_tuples = unassigned_atom_tuples
-            exception.handler_class = cls
-            raise exception
-
     def _check_attributes_are_equal(
         self, other, identical_attrs=(), tolerance_attrs=(), tolerance=1e-6
     ):
@@ -2976,15 +2878,6 @@ class vdWHandler(_NonbondedHandler):
             tolerance=self._SCALETOL,
         )
 
-    def _apply_switching_function(self, force):
-        """Apply a switching function to a NonbondedForce if self.switch_width is nonzero."""
-        from openff.units.openmm import to_openmm
-
-        if self.switch_width.m > 0:
-            switching_distance = to_openmm(self.cutoff - self.switch_width)
-            force.setSwitchingDistance(switching_distance)
-            force.setUseSwitchingFunction(True)
-
 
 class ElectrostaticsHandler(_NonbondedHandler):
     """Handles SMIRNOFF ``<Electrostatics>`` tags.
@@ -3173,51 +3066,6 @@ class ElectrostaticsHandler(_NonbondedHandler):
             tolerance_attrs=float_attrs_to_compare + unit_attrs_to_compare,
             tolerance=self._SCALETOL,
         )
-
-    def assign_charge_from_molecules(self, molecule, charge_mols):
-        """
-        Given an input molecule, checks against a list of molecules for an isomorphic match. If found, assigns
-        partial charges from the match to the input molecule.
-
-        Parameters
-        ----------
-        molecule : an openff.toolkit.topology.FrozenMolecule
-            The molecule to have partial charges assigned if a match is found.
-        charge_mols : list of [openff.toolkit.topology.FrozenMolecule]
-            A list of molecules with charges already assigned.
-
-        Returns
-        -------
-        match_found : bool
-            Whether a match was found. If True, the input molecule will have been modified in-place.
-        """
-        # Check each charge_mol for whether it's isomorphic to the input molecule
-        for charge_mol in charge_mols:
-            ismorphic, topology_atom_map = Molecule.are_isomorphic(
-                molecule,
-                charge_mol,
-                return_atom_map=True,
-                aromatic_matching=True,
-                formal_charge_matching=True,
-                bond_order_matching=True,
-                atom_stereochemistry_matching=True,
-                bond_stereochemistry_matching=True,
-            )
-            # if they are isomorphic then use the mapping
-            if ismorphic:
-                # Take the first valid atom indexing map
-                # Set the partial charges
-                # Make a copy of the charge molecule's charges array (this way it's the right shape)
-                temp_mol_charges = copy.deepcopy(
-                    unit.Quantity(charge_mol.partial_charges)
-                )
-                for charge_idx, ref_idx in topology_atom_map.items():
-                    temp_mol_charges[charge_idx] = charge_mol.partial_charges[ref_idx]
-                molecule.partial_charges = temp_mol_charges
-                return True
-
-        # If no match was found, return False
-        return False
 
 
 class LibraryChargeHandler(_NonbondedHandler):

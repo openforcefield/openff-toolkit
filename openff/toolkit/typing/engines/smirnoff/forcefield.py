@@ -349,7 +349,7 @@ class ForceField:
         from packaging.version import parse
 
         # Use PEP-440 compliant version number comparison, if requested
-        if not self.disable_version_check:
+        if self.disable_version_check:
             pass
         else:
             if (
@@ -603,93 +603,6 @@ class ForceField:
         """
         return [*self._parameter_handlers.keys()]
 
-    # TODO: Do we want to make this optional?
-
-    @staticmethod
-    def _check_for_missing_valence_terms(
-        name, topology, assigned_terms, topological_terms
-    ):
-        """
-        Check to ensure there are no missing valence terms in the given topology, identifying potential gaps in
-        parameter coverage.
-
-        .. warning :: This API is experimental and subject to change.
-
-        Parameters
-        ----------
-        name : str
-            Name of the calling force Handler
-        topology : openff.toolkit.topology.Topology
-            The Topology object
-        assigned_terms : iterable of ints or int tuples
-            Atom index tuples defining added valence terms
-        topological_terms : iterable of atoms or atom tuples
-            Atom tuples defining topological valence atomsets to which forces should be assigned
-
-        """
-        # Convert assigned terms and topological terms to lists
-        assigned_terms = [item for item in assigned_terms]
-        topological_terms = [item for item in topological_terms]
-
-        def ordered_tuple(atoms):
-            atoms = list(atoms)
-            if atoms[0] < atoms[-1]:
-                return tuple(atoms)
-            else:
-                return tuple(reversed(atoms))
-
-        try:
-            topology_set = set(
-                [
-                    ordered_tuple(atom.index for atom in atomset)
-                    for atomset in topological_terms
-                ]
-            )
-            assigned_set = set(
-                [
-                    ordered_tuple(index for index in atomset)
-                    for atomset in assigned_terms
-                ]
-            )
-        except TypeError:
-            topology_set = set([atom.index for atom in topological_terms])
-            assigned_set = set([atomset[0] for atomset in assigned_terms])
-
-        def render_atoms(atomsets):
-            msg = ""
-            for atomset in atomsets:
-                msg += f"{atomset:30} :"
-                try:
-                    for atom_index in atomset:
-                        atom = atoms[atom_index]
-                        msg += f" {atom.residue.index:5} {atom.residue.name:3} {atom.name:3}"
-                except TypeError:
-                    atom = atoms[atomset]
-                    msg += (
-                        f" {atom.residue.index:5} {atom.residue.name:3} {atom.name:3}"
-                    )
-
-                msg += "\n"
-            return msg
-
-        if set(assigned_set) != set(topology_set):
-            # Form informative error message
-            msg = f"{name}: Mismatch between valence terms added and topological terms expected.\n"
-            atoms = [atom for atom in topology.atoms]
-            if len(assigned_set.difference(topology_set)) > 0:
-                msg += "Valence terms created that are not present in Topology:\n"
-                msg += render_atoms(assigned_set.difference(topology_set))
-            if len(topology_set.difference(assigned_set)) > 0:
-                msg += "Topological atom sets not assigned parameters:\n"
-                msg += render_atoms(topology_set.difference(assigned_set))
-            msg += "topology_set:\n"
-            msg += str(topology_set) + "\n"
-            msg += "assigned_set:\n"
-            msg += str(assigned_set) + "\n"
-            raise Exception(
-                msg
-            )  # TODO: Should we raise a more specific exception here?
-
     def get_parameter_handler(
         self, tagname, handler_kwargs=None, allow_cosmetic_attributes=False
     ):
@@ -922,6 +835,7 @@ class ForceField:
             )
 
         self._check_smirnoff_version_compatibility(str(version))
+
         # Convert 0.1 spec files to 0.3 SMIRNOFF data format by converting
         # from 0.1 spec to 0.2, then 0.2 to 0.3
         if packaging.version.parse(str(version)) == packaging.version.parse("0.1"):
@@ -1158,39 +1072,6 @@ class ForceField:
             discard_cosmetic_attributes=discard_cosmetic_attributes
         )
         io_handler.to_file(filename, smirnoff_data)
-
-    def _resolve_parameter_handler_order(self):
-        """Resolve the order in which ParameterHandler objects should execute to satisfy constraints.
-
-        Returns
-        -------
-        Iterable of ParameterHandlers
-            The ParameterHandlers in this ForceField, in the order that they should be called to satisfy constraints.
-        """
-
-        # Create a DAG expressing dependencies
-        import networkx as nx
-
-        G = nx.DiGraph()
-        for tagname, parameter_handler in self._parameter_handlers.items():
-            G.add_node(tagname)
-        for tagname, parameter_handler in self._parameter_handlers.items():
-            if parameter_handler._DEPENDENCIES is not None:
-                for dependency in parameter_handler._DEPENDENCIES:
-                    G.add_edge(dependency._TAGNAME, parameter_handler._TAGNAME)
-
-        # Ensure there are no loops in handler order
-        if not (nx.is_directed_acyclic_graph(G)):
-            raise RuntimeError(
-                "Unable to resolve order in which to run ParameterHandlers. Dependencies do not form "
-                "a directed acyclic graph."
-            )
-        # Resolve order
-        ordered_parameter_handlers = list()
-        for tagname in nx.topological_sort(G):
-            if tagname in self._parameter_handlers:
-                ordered_parameter_handlers.append(self._parameter_handlers[tagname])
-        return ordered_parameter_handlers
 
     # TODO: Should we also accept a Molecule as an alternative to a Topology?
     @requires_package("openmm")

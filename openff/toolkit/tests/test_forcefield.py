@@ -58,6 +58,7 @@ from openff.toolkit.utils.exceptions import (
     SMIRNOFFAromaticityError,
     SMIRNOFFSpecError,
     SMIRNOFFSpecUnimplementedError,
+    SMIRNOFFVersionError,
 )
 
 XML_FF_GENERICS = """<?xml version='1.0' encoding='ASCII'?>
@@ -916,6 +917,18 @@ class TestForceField:
     def test_get_available_force_fields_loadable(self, full_path, force_field_file):
         """Ensure get_available_force_fields returns load-able files"""
         ForceField(force_field_file)
+
+    def test_load_bad_version(self):
+        with pytest.raises(SMIRNOFFVersionError, match="99.3"):
+            ForceField(
+                "test_forcefields/unsupported_smirnoff_version.offxml",
+                disable_version_check=False,
+            )
+
+        ForceField(
+            "test_forcefields/unsupported_smirnoff_version.offxml",
+            disable_version_check=True,
+        )
 
     def test_create_forcefield_no_args(self):
         """Test empty constructor"""

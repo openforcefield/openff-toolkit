@@ -46,6 +46,7 @@ import networkx as nx
 import numpy as np
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
+from openff.utilities.exceptions import MissingOptionalDependencyError
 from packaging import version
 
 import openff.toolkit
@@ -69,11 +70,7 @@ from openff.toolkit.utils.toolkits import (
     ToolkitWrapper,
     UndefinedStereochemistryError,
 )
-from openff.toolkit.utils.utils import (
-    MissingDependencyError,
-    get_data_file_path,
-    requires_package,
-)
+from openff.toolkit.utils.utils import get_data_file_path, requires_package
 
 if TYPE_CHECKING:
     from openff.units.unit import Quantity
@@ -901,9 +898,9 @@ class FrozenMolecule(Serializable):
 
         >>> molecule = FrozenMolecule(rdmol)
 
-        Create a molecule from a serialized molecule object:
+        Convert the molecule into a dictionary and back again:
 
-        >>> serialized_molecule = molecule.__getstate__()
+        >>> serialized_molecule = molecule.to_dict()
         >>> molecule_copy = Molecule(serialized_molecule)
 
         """
@@ -937,8 +934,8 @@ class FrozenMolecule(Serializable):
                 # TODO: This will need to be updated once FrozenMolecules and Molecules are significantly different
                 self._copy_initializer(other)
                 loaded = True
-            if isinstance(other, OrderedDict) and not loaded:
-                self.__setstate__(other)
+            if isinstance(other, dict) and not loaded:
+                self._initialize_from_dict(other)
                 loaded = True
 
             # Check through the toolkit registry to find a compatible wrapper for loading
@@ -1247,12 +1244,6 @@ class FrozenMolecule(Serializable):
             return description + f" with bad SMILES and Hill formula '{hill}'"
         return description + f" and SMILES '{smiles}'"
 
-    def __getstate__(self):
-        return self.to_dict()
-
-    def __setstate__(self, state):
-        return self._initialize_from_dict(state)
-
     def _initialize(self):
         """
         Clear the contents of the current molecule.
@@ -1302,6 +1293,10 @@ class FrozenMolecule(Serializable):
         # updated to use the new isomorphic checking method, with full matching
         # TODO the doc string did not match the previous function what matching should this method do?
         return Molecule.are_isomorphic(self, other, return_atom_map=False)[0]
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        return cls(self.to_dict())
 
     def add_default_hierarchy_schemes(self, overwrite_existing=True):
         """
@@ -4131,7 +4126,7 @@ class FrozenMolecule(Serializable):
 
         Raises
         --------
-        MissingDependencyError
+        MissingOptionalDependencyError
             If qcelemental is not installed, the qcschema can not be validated.
         InvalidConformerError
             No conformer found at the given index.
@@ -4846,9 +4841,9 @@ class Molecule(FrozenMolecule):
 
         >>> molecule = Molecule(rdmol)
 
-        Create a molecule from a serialized molecule object:
+        Convert the molecule into a dictionary and back again:
 
-        >>> serialized_molecule = molecule.__getstate__()
+        >>> serialized_molecule = molecule.to_dict()
         >>> molecule_copy = Molecule(serialized_molecule)
 
         .. todo ::
@@ -5039,7 +5034,7 @@ class Molecule(FrozenMolecule):
             try:
                 import nglview as nv
             except ImportError:
-                raise MissingDependencyError("nglview")
+                raise MissingOptionalDependencyError("nglview")
 
             if width is not None or height is not None:
                 # TODO: More specific exception
@@ -5220,7 +5215,7 @@ class Molecule(FrozenMolecule):
                     smarts_idx
                 ]
 
-    def _ipython_display_(self):
+    def _ipython_display_(self):  # pragma: no cover
         from IPython.display import display
 
         try:
