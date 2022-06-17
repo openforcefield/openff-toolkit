@@ -345,6 +345,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         from openeye import oechem
         from openff.toolkit.typing.chemistry import SMIRKSParsingError
 
+        # TODO: Can we instead use OEQMol and OEPartsSmarts here?
+        #  Jeff wasn't able to get that path working, the QMol/SS matching
+        #  didn't behave correctly when set to AtomicNumber
         qmol = oechem.OEMol()
         status = oechem.OEParseSmiles(
             qmol,
