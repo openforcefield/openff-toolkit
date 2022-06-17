@@ -230,10 +230,11 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         raise NotImplementedError(
             "Cannot create Molecule from {} object".format(type(obj))
         )
+
     def _polymer_openmm_topology_to_offmol(self, omm_top, substructure_dictionary):
         oemol = self._polymer_openmm_topology_to_oemol(omm_top)
         oemol = self._add_chemical_info(oemol, substructure_dictionary)
-        offmol = self.from_openeye(oemol)
+        offmol = self.from_openeye(oemol, allow_undefined_stereo=True)
         return offmol
 
     def _add_chemical_info(
@@ -254,18 +255,76 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         oemol : oechem.OEMol
             a copy of the original molecule with charges and bond order added
         """
-        pass
+
+        already_assigned_nodes = set()
+        already_assigned_edges = set()
+
+        for res_name in substructure_library:
+            # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes
+            # so it just does the biggest substructures first
+            sorted_substructure_smarts = sorted(
+                substructure_library[res_name], key=len, reverse=True
+            )
+            for substructure_smarts in sorted_substructure_smarts:
+                ss = self._fuzzy_query(substructure_smarts)
+                for match in ss.Match(oemol, True):
+                    match_mol_atom_indices = [
+                        at.GetIdx() for at in match.GetTargetAtoms()
+                    ]
+                    if any(
+                        m in already_assigned_nodes for m in match_mol_atom_indices
+                    ) and (res_name not in ["PEPTIDE_BOND", "DISULFIDE"]):
+                        continue
+
+                    for substructure_atom, mol_atom in zip(
+                        match.GetPatternAtoms(), match.GetTargetAtoms()
+                    ):
+                        mol_atom.SetFormalCharge(substructure_atom.GetFormalCharge())
+                        already_assigned_nodes.add(mol_atom.GetIdx())
+                    for substructure_bond, mol_bond in zip(
+                        match.GetPatternBonds(), match.GetTargetBonds()
+                    ):
+                        mol_bond.SetOrder(substructure_bond.GetOrder())
+                        already_assigned_edges.add(
+                            tuple(sorted([mol_bond.GetBgnIdx(), mol_bond.GetEndIdx()]))
+                        )
+
+        oemol_n_atoms = len([*oemol.GetAtoms()])
+        if not (len(already_assigned_nodes) == oemol_n_atoms):
+            unassigned_atom_indices = set(range(oemol_n_atoms)) - already_assigned_nodes
+            unassigned_atom_indices = sorted(list(unassigned_atom_indices))
+            print(unassigned_atom_indices)
+            # print(
+            #     [
+            #         rdkit_mol.GetAtomWithIdx(i).GetPDBResidueInfo().GetResidueName()
+            #         for i in unassigned_atom_indices
+            #     ]
+            # )
+        oemol_n_bonds = len([*oemol.GetBonds()])
+
+        all_bonds = set(
+            [
+                tuple(sorted([bond.GetBgnIdx(), bond.GetEndIdx()]))
+                for bond in oemol.GetBonds()
+            ]
+        )
+
+        if all_bonds != already_assigned_edges:
+            print("Bonds were unassigned:")
+            print(len(all_bonds), len(already_assigned_edges))
+            for bond in sorted(all_bonds - already_assigned_edges):
+                print(bond)
+        return oemol
 
     def _polymer_openmm_topology_to_oemol(self, omm_top):
         from openeye import oechem
+
         oemol = oechem.OEMol()
         # Add atoms
-        off_to_oe_idx = {}  # {off_idx : oe_idx}
         oemol_atoms = list()  # list of corresponding oemol atoms
         for atom in omm_top.atoms():
             oeatom = oemol.NewAtom(atom.element.atomic_number)
             oemol_atoms.append(oeatom)
-            off_to_oe_idx[atom.molecule_atom_index] = oeatom.GetIdx()
 
         # Add bonds
         oemol_bonds = list()  # list of corresponding oemol bonds
@@ -286,15 +345,18 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         from openeye import oechem
         from openff.toolkit.typing.chemistry import SMIRKSParsingError
 
-        qmol = oechem.OEQMol()
-        status = oechem.OEParseSmarts(qmol, query)
+        qmol = oechem.OEMol()
+        status = oechem.OEParseSmiles(
+            qmol,
+            query,
+        )
 
         if not status:
             raise SMIRKSParsingError(
                 f"OpenEye Toolkit was unable to parse SMIRKS {query}"
             )
-        for atom in qmol.GetAtoms():
-            atom.SetFormalCharge(0)
+        ss = oechem.OESubSearch(qmol, oechem.OEExprOpts_AtomicNumber, 0)
+        return ss
 
     def from_file(
         self, file_path, file_format, allow_undefined_stereo=False, _cls=None

@@ -3658,7 +3658,6 @@ class FrozenMolecule(Serializable):
 
     @classmethod
     @requires_package("openmm")
-    @requires_package("rdkit")
     def from_polymer_pdb(
         cls, file_path: Union[str, TextIO], toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
     ):
