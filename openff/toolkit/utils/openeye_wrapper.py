@@ -343,6 +343,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         - ignore formal charges
         """
         from openeye import oechem
+
         from openff.toolkit.typing.chemistry import SMIRKSParsingError
 
         # TODO: Can we instead use OEQMol and OEPartsSmarts here?
