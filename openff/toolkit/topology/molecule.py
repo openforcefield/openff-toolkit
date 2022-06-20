@@ -1223,9 +1223,9 @@ class FrozenMolecule(Serializable):
         for iter_name, hierarchy_scheme_dict in molecule_dict[
             "hierarchy_schemes"
         ].items():
-            # It's important that we do NOT call `add_hierarchy_scheme` here, since we 
+            # It's important that we do NOT call `add_hierarchy_scheme` here, since we
             # need to deserialize these HierarchyElements exactly as they were serialized,
-            # even if that conflicts with the current values in atom metadata. 
+            # even if that conflicts with the current values in atom metadata.
             new_hier_scheme = HierarchyScheme(
                 self,
                 hierarchy_scheme_dict["uniqueness_criteria"],
