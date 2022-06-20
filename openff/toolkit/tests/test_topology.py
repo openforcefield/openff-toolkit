@@ -14,9 +14,9 @@ from openff.toolkit.tests.create_molecules import (
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
-    cyx_hierarchy_perceived,
+    cyx_hierarchy_added,
     dipeptide,
-    dipeptide_hierarchy_perceived,
+    dipeptide_hierarchy_added,
     dipeptide_residues_perceived,
     ethane_from_smiles,
     ethene_from_smiles,
@@ -1068,21 +1068,29 @@ class TestTopology:
         top = Topology()
         # Ensure that an empty topology has no residues defined
         residues = list(top.hierarchy_iterator("residues"))
-        assert len(residues) == 0
+        assert residues == []
         # Ensure that a topology with no metadata has no residues defined
         top.add_molecule(dipeptide())
         residues = list(top.hierarchy_iterator("residues"))
-        assert len(residues) == 0
-        # Ensure that a topology with metadata, but no hierarchy perception has no residues defined
+        assert residues == []
+        # Ensure that a topology with residues perceived has residues but not chains
         top.add_molecule(dipeptide_residues_perceived())
         residues = list(top.hierarchy_iterator("residues"))
-        assert len(residues) == 0
-        # Ensure that adding molecules WITH hierarchy perceived DOES give the topology residues to iterate over
-        top.add_molecule(dipeptide_hierarchy_perceived())
-        top.add_molecule(cyx_hierarchy_perceived())
+        chains = list(top.hierarchy_iterator("chains"))
+        assert chains == []
+        assert [res.identifier for res in residues] == [
+            ("None", 1, "ACE"),
+            ("None", 2, "ALA"),
+        ]
+        # Ensure that adding molecules WITH hierarchy perceived DOES give the
+        # topology residues and chains to iterate over
+        top.add_molecule(dipeptide_hierarchy_added())
+        top.add_molecule(cyx_hierarchy_added())
         residues = list(top.hierarchy_iterator("residues"))
-        assert len(residues) == 8
-        expected_ids = [
+        chains = list(top.hierarchy_iterator("chains"))
+        assert [res.identifier for res in residues] == [
+            ("None", 1, "ACE"),
+            ("None", 2, "ALA"),
             ("None", 1, "ACE"),
             ("None", 2, "ALA"),
             ("None", 1, "ACE"),
@@ -1092,8 +1100,30 @@ class TestTopology:
             ("None", 5, "CYS"),
             ("None", 6, "NME"),
         ]
-        for expected_id, residue in zip(expected_ids, residues):
-            assert expected_id == residue.identifier
+        # First chain hierarchy element is from dipeptide_hierarchy_added,
+        # second is from cyx_hierarchy_added. Both have the same uniqueness
+        # identifier; unclear that this behaviour is desired --- Perhaps
+        # Topology.hierarchy_iterator should consolidate hierarchy elements from
+        # different molecules?
+        assert len(chains) == 2
+        # Haven't changed anything, so updating hierarchy schemes should give
+        # same results
+        top.molecule(3).update_hierarchy_schemes()
+        residues = list(top.hierarchy_iterator("residues"))
+        chains = list(top.hierarchy_iterator("chains"))
+        assert [res.identifier for res in residues] == [
+            ("None", 1, "ACE"),
+            ("None", 2, "ALA"),
+            ("None", 1, "ACE"),
+            ("None", 2, "ALA"),
+            ("None", 1, "ACE"),
+            ("None", 2, "CYS"),
+            ("None", 3, "NME"),
+            ("None", 4, "ACE"),
+            ("None", 5, "CYS"),
+            ("None", 6, "NME"),
+        ]
+        assert len(chains) == 2
 
 
 class TestAddTopology:

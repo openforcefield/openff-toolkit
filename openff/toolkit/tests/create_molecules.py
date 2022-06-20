@@ -318,10 +318,9 @@ def dipeptide_residues_perceived():
     return dipeptide_residues_perceived
 
 
-def dipeptide_hierarchy_perceived():
+def dipeptide_hierarchy_added():
     dipeptide_hierarchy_perceived = Molecule(dipeptide_residues_perceived())
     dipeptide_hierarchy_perceived.add_default_hierarchy_schemes()
-    dipeptide_hierarchy_perceived.perceive_hierarchy()
     return dipeptide_hierarchy_perceived
 
 
@@ -336,10 +335,9 @@ def cyx_residues_perceived():
     return cyx_residues_perceived
 
 
-def cyx_hierarchy_perceived():
+def cyx_hierarchy_added():
     cyx_hierarchy_perceived = Molecule(cyx_residues_perceived())
     cyx_hierarchy_perceived.add_default_hierarchy_schemes()
-    cyx_hierarchy_perceived.perceive_hierarchy()
     return cyx_hierarchy_perceived
 
 
