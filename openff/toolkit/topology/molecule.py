@@ -1356,7 +1356,7 @@ class FrozenMolecule(Serializable):
 
         This method will add an attribute with the name given by the
         ``iterator_name`` argument that provides an iterator over groups of
-        atoms. Atoms are grouped by the values in their ``atom.properties``
+        atoms. Atoms are grouped by the values in their ``atom.metadata``
         dictionary; any atoms with the same values for the keys given in the
         ``uniqueness_criteria`` argument will be in the same group. These groups
         have the type :class:`~openff.toolkit.topology.molecule.HierarchyElement`.
