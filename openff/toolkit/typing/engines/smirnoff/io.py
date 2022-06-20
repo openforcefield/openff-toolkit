@@ -125,7 +125,8 @@ class XMLParameterIOHandler(ParameterIOHandler):
             raw_data = source.read()
         except AttributeError:
             # This raises FileNotFoundError if the file doesn't exist.
-            raw_data = open(source).read()
+            with open(source) as source_obj:
+                raw_data = source_obj.read()
 
         # Parse the data in string format.
         return self.parse_string(raw_data)
