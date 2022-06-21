@@ -13,8 +13,9 @@ dependencies:
   - nglview
   - notebook
   - gromacs >=2021=nompi*
-  - lammps
-  - openff-amber-ff-ports >=0.0.2
+  # Add back when LAMMPS export is better
+  # lammps
+  - openff-amber-ff-ports >=0.0.3
   - ambertools
   - qcelemental
   - qcportal
@@ -33,6 +34,7 @@ dependencies:
   # Some others that will be pulled down by an Interchange conda package
   - openff-utilities
   - openff-units >=0.1.6
+  - panedr
   - pip:
     # Replace with conda package when 0.2.0 is released
     - git+https://github.com/openforcefield/openff-interchange.git@main
