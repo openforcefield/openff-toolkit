@@ -1497,7 +1497,7 @@ class TestProperTorsionType:
         the indices are not consecutive and a SMIRNOFFSpecError is raised
         """
         with pytest.raises(
-            SMIRNOFFSpecError, match="Unexpected kwarg \(phase3: 31 deg\)*."
+            SMIRNOFFSpecError, match=r"Unexpected kwarg \(phase3: 31 deg\)*."
         ):
             ProperTorsionHandler.ProperTorsionType(
                 smirks="[*:1]-[*:2]-[*:3]-[*:4]",
@@ -1632,7 +1632,7 @@ class TestProperTorsionType:
         AND we are doing bond order interpolation
         """
         with pytest.raises(
-            SMIRNOFFSpecError, match="Unexpected kwarg \(k3_bondorder1*."
+            SMIRNOFFSpecError, match=r"Unexpected kwarg \(k3_bondorder1*."
         ):
             ProperTorsionHandler.ProperTorsionType(
                 smirks="[*:1]-[*:2]-[*:3]-[*:4]",
@@ -1730,6 +1730,18 @@ class TestvdWHandler:
         assert vdw_handler.get_parameter({"smirks": "[*:1]"})[0].id == "n99"
         assert vdw_handler.get_parameter({"smirks": "[#1:1]"})[0].id == "n00"
 
+    def test_set_invalid_scale_factor(self):
+        handler = vdWHandler(version=0.3)
+
+        with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale12"):
+            handler.scale12 = 0.1
+
+        with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale13"):
+            handler.scale13 = 0.1
+
+        with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale15"):
+            handler.scale15 = 0.1
+
 
 class TestvdWType:
     """
@@ -1799,6 +1811,18 @@ class TestElectrostaticsHandler:
             match="unexpected periodic potential",
         ):
             handler.periodic_potential = "PPPM"
+
+    def test_set_invalid_scale_factor(self):
+        handler = ElectrostaticsHandler(version=0.4)
+
+        with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale12"):
+            handler.scale12 = 0.1
+
+        with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale13"):
+            handler.scale13 = 0.1
+
+        with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale15"):
+            handler.scale15 = 0.1
 
 
 class TestElectrostaticsHandlerUpconversion:

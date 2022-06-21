@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding='ASCII'?>
+<SMIRNOFF version="99.3" aromaticity_model="OEAroModel_MDL">
+  <vdW version="0.3" potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" switch_width="1.0 * angstroms" cutoff="9.0 * angstroms" method="cutoff">
+    <Atom smirks="[*:1]" id="n1" sigma="0.1* nanometers" epsilon="0.5* kilojoules_per_mole" />
+  </vdW>
+  <Electrostatics version="0.4" periodic_potential="Ewald3D-ConductingBoundary" nonperiodic_potential="Coulomb" exception_potential="Coulomb" scale12="0.0" scale13="0.0" scale14="0.833333" scale15="1.0"/>
+  <ChargeIncrementModel version="0.4" number_of_conformers="1" partial_charge_method="zeros">
+  </ChargeIncrementModel>
+</SMIRNOFF>

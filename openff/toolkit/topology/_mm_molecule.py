@@ -65,10 +65,6 @@ class _SimpleMolecule:
         return len(self.atoms)
 
     @property
-    def n_particles(self) -> int:
-        return len(self.atoms)
-
-    @property
     def n_bonds(self) -> int:
         return len(self.bonds)
 
@@ -94,16 +90,6 @@ class _SimpleMolecule:
             for atom in bond.atoms:
                 if atom is atom2:
                     return bond
-
-    def particle(self, index) -> int:
-        return self.atom(index)
-
-    @property
-    def particles(self):
-        return self.atoms
-
-    def particle_index(self, particle) -> int:
-        return self.atom_index(particle)
 
     @property
     def angles(self):
@@ -399,7 +385,7 @@ class _SimpleAtom:
 
     @property
     def molecule(self):
-        """The ``Molecule`` this particle is part of."""
+        """The ``Molecule`` this atom is part of."""
         return self._molecule
 
     @property
@@ -418,10 +404,6 @@ class _SimpleAtom:
 
     @property
     def molecule_atom_index(self) -> int:
-        return self.molecule.atoms.index(self)
-
-    @property
-    def molecule_particle_index(self) -> int:
         return self.molecule.atoms.index(self)
 
     def to_dict(self) -> Dict[str, Union[Dict, str, int]]:

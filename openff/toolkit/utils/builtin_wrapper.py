@@ -3,7 +3,6 @@ Built-in ToolkitWrapper for very basic functionality. Intended for testing and n
 """
 __all__ = ("BuiltInToolkitWrapper",)
 
-import numpy as np
 from openff.units import unit
 
 from openff.toolkit.utils import base_wrapper
@@ -123,16 +122,15 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
                 strict_n_conformers=strict_n_conformers,
             )
 
-        partial_charges = unit.Quantity(
-            np.zeros((molecule.n_particles)), unit.elementary_charge
-        )
-        if partial_charge_method == "zeroes":
-            pass
-        elif partial_charge_method == "formal_charge":
-            for part_idx, particle in enumerate(molecule.particles):
-                partial_charges[part_idx] = particle.formal_charge
+        if partial_charge_method == "zeros":
+            partial_charges = [0.0] * molecule.n_atoms
 
-        molecule.partial_charges = partial_charges
+        elif partial_charge_method == "formal_charge":
+            partial_charges = [float(atom.formal_charge.m) for atom in molecule.atoms]
+
+        molecule.partial_charges = unit.Quantity(
+            partial_charges, unit.elementary_charge
+        )
 
         if normalize_partial_charges:
             molecule._normalize_partial_charges()
