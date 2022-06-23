@@ -127,8 +127,14 @@ jobs:
             NB_ARGS+=" --ignore=examples/using_smirnoff_with_amber_protein_forcefield"
           fi
 
-          # Working on in #1325 ...
+          # Working on in #1325
           NB_ARGS+=" --ignore=examples/virtual_sites/vsite_showcase.ipynb"
+
+          # openmmforcefields incompatible with new toolkit
+          NB_ARGS+=" --ignore=examples/external/swap_existing_ligand_parameters_with_openmmforcefields.ipynb"
+
+          # JM will do some smithing on this before 0.11.0 release
+          NB_ARGS+=" --ignore=examples/toolkit_showcase/toolkit_showcase.ipynb"
 
           pytest $NB_ARGS examples
 
