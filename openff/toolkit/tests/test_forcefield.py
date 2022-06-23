@@ -3909,9 +3909,17 @@ class TestForceFieldParameterAssignment:
             if isinstance(f, openmm.HarmonicBondForce)
         ][0]
 
+        kj_mol_nm2 = openmm_unit.kilojoule_per_mole / openmm_unit.nanometer**2
+
         for idx in range(default_bond_force.getNumBonds()):
-            assert default_bond_force.getBondParameters(idx) == pytest.approx(
-                mod_bond_force.getBondParameters(idx)
+            # atom1_index, atom2_index, length (nm), k (kj/mol/nm2)
+            default = default_bond_force.getBondParameters(idx)
+            modified = mod_bond_force.getBondParameters(idx)
+            assert default[2].value_in_unit(openmm_unit.nanometer) == pytest.approx(
+                modified[2].value_in_unit(openmm_unit.nanometer)
+            )
+            assert default[3].value_in_unit(kj_mol_nm2) == pytest.approx(
+                modified[3].value_in_unit(kj_mol_nm2)
             )
 
         for bond1, bond2 in zip(omm_sys_top.bonds, mod_omm_sys_top.bonds):
