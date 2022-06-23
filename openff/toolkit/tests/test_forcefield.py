@@ -3910,9 +3910,9 @@ class TestForceFieldParameterAssignment:
         ][0]
 
         for idx in range(default_bond_force.getNumBonds()):
-            assert default_bond_force.getBondParameters(
-                idx
-            ) == mod_bond_force.getBondParameters(idx)
+            assert default_bond_force.getBondParameters(idx) == pytest.approx(
+                mod_bond_force.getBondParameters(idx)
+            )
 
         for bond1, bond2 in zip(omm_sys_top.bonds, mod_omm_sys_top.bonds):
             # 'approx()' because https://github.com/openforcefield/openff-toolkit/issues/994
