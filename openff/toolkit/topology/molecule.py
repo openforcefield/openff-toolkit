@@ -2444,6 +2444,26 @@ class FrozenMolecule(Serializable):
         openff.toolkit.utils.toolkits.AmberToolsToolkitWrapper.assign_partial_charges
         openff.toolkit.utils.toolkits.BuiltInToolkitWrapper.assign_partial_charges
         """
+
+        # Raise a warning when users try to apply these charge methods to "large" molecules
+        WARN_LARGE_MOLECULES: Set[str] = {
+            "am1bcc",
+            "am1bccelf10",
+            "am1-mulliken",
+            "am1bccnosymspt",
+            "am1elf10",
+        }
+
+        if partial_charge_method in WARN_LARGE_MOLECULES:
+            if self.n_atoms > 150:
+                warnings.warn(
+                    f"Warning! Partial charge method '{partial_charge_method}' is not designed "
+                    "for use on large (i.e. > 150 atoms) molecule and may crash or take hours to "
+                    f"run on this molecule (found {self.n_atoms} atoms). For more, see "
+                    "https://docs.openforcefield.org/projects/toolkit/en/topology-biopolymer-refactor/faq.html"
+                    "#parameterizing-my-system-which-contains-a-large-molecule-is-taking-forever-whats-wrong",
+                )
+
         if isinstance(toolkit_registry, ToolkitRegistry):
             # We may need to try several toolkitwrappers to find one
             # that supports the desired partial charge method, so we
