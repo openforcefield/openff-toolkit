@@ -2458,7 +2458,7 @@ class FrozenMolecule(Serializable):
             if self.n_atoms > 150:
                 warnings.warn(
                     f"Warning! Partial charge method '{partial_charge_method}' is not designed "
-                    "for use on large (i.e. > 150 atoms) molecule and may crash or take hours to "
+                    "for use on large (i.e. > 150 atoms) molecules and may crash or take hours to "
                     f"run on this molecule (found {self.n_atoms} atoms). For more, see "
                     "https://docs.openforcefield.org/projects/toolkit/en/topology-biopolymer-refactor/faq.html"
                     "#parameterizing-my-system-which-contains-a-large-molecule-is-taking-forever-whats-wrong",
