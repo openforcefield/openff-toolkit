@@ -123,14 +123,19 @@ jobs:
             NB_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             NB_ARGS+=" --ignore=examples/conformer_energies"
             NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
+            # Remove when #1322 is merged
+            NB_ARGS+=" --ignore=examples/using_smirnoff_with_amber_protein_forcefield"
           fi
-          NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs/export_with_interchange.ipynb"
-          # https://github.com/openforcefield/openff-toolkit/pull/1232#issuecomment-1080889858
-          NB_ARGS+=" --ignore=examples/toolkit_showcase/toolkit_showcase.ipynb"
-          NB_ARGS+=" --ignore=examples/swap_amber_parameters/swap_existing_ligand_parameters_with_openmmforcefields.ipynb"
 
-          # REMOVE THIS LINE BEFORE 0.11.0 RELEASE
+          # Working on in #1325
           NB_ARGS+=" --ignore=examples/virtual_sites/vsite_showcase.ipynb"
+
+          # openmmforcefields incompatible with new toolkit
+          NB_ARGS+=" --ignore=examples/external/swap_amber_parameters/swap_existing_ligand_parameters_with_openmmforcefields.ipynb"
+
+          # JM will do some smithing on this before 0.11.0 release
+          NB_ARGS+=" --ignore=examples/toolkit_showcase/toolkit_showcase.ipynb"
+
           pytest $NB_ARGS examples
 
       - name: Codecov
