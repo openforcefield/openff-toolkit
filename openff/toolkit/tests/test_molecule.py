@@ -55,6 +55,7 @@ from openff.toolkit.utils.exceptions import (
     IncompatibleUnitError,
     InvalidConformerError,
     UnsupportedFileTypeError,
+    MissingChemistryFromPolymerError,
 )
 from openff.toolkit.utils.toolkits import (
     AmberToolsToolkitWrapper,
@@ -3541,11 +3542,12 @@ class TestMoleculeFromPDB:
     def test_molecule_from_pdb_error_no_hydrogens(self):
         """Test that a PDB without hydrogens raises a descriptive error"""
         with pytest.raises(
-            ValueError,
+            MissingChemistryFromPolymerError,
             match=(
-                r"This PDB does not include all explicit hydrogens\. The OpenFF "
-                + r"Toolkit requires that all atoms be present in the input to "
-                + r"avoid incorrectly guessing the user's intent\. "
+                r"dThere are no hydrogens in the input\. The OpenFF Toolkit "
+                + r"requires explicit hydrogens to avoid ambiguities in "
+                + r"protonation state or bond order\. Try generating hydrogens "
+                + r"with another package and trying again\."
             ),
         ):
             offmol = Molecule.from_polymer_pdb(
@@ -3553,13 +3555,15 @@ class TestMoleculeFromPDB:
             )
 
     def test_molecule_from_pdb_error_non_canonical_aa(self):
-        """Test that a PDB without hydrogens raises a descriptive error"""
+        """Test that a PDB with an NCAA raises a descriptive error"""
         with pytest.raises(
-            ValueError,
+            MissingChemistryFromPolymerError,
             match=(
-                r"Residue .* could not be identified\. The OpenFF Toolkit  "
-                + r"currently supports only the 20 'canonical' amino acid "
-                + r"residues\. "
+                r"dThe following residue names with unassigned atoms were "
+                + r"not found in the substructure library. While the OpenFF "
+                + r"Toolkit identifies residues by matching chemical substructures "
+                + r"rather than by residue name, it currently only supports the "
+                + r"20 'canonical' amino acids\.\n\s*DYE"
             ),
         ):
             offmol = Molecule.from_polymer_pdb(
@@ -3567,13 +3571,15 @@ class TestMoleculeFromPDB:
             )
 
     def test_molecule_from_pdb_error_two_chains(self):
-        """Test that a PDB without hydrogens raises a descriptive error"""
+        """Test that a PDB with two chains raises a clear error"""
         with pytest.raises(
-            ValueError,
+            MissingChemistryFromPolymerError,
             match=(
-                r"This PDB appears to consist of two chains\. The OpenFF "
-                + r"only supports single-molecule PDB files\. Please split the "
-                + r"file into individual chains and load each seperately\."
+                r"The input has multiple chain identifiers\. The OpenFF Toolkit "
+                + r"only supports single-molecule PDB files, and residue "
+                + r"assignment can get very confused when multiple molecules are "
+                + r"present\. Please split the file into individual chains and "
+                + r"load each seperately\."
             ),
         ):
             offmol = Molecule.from_polymer_pdb(

@@ -10,7 +10,9 @@ import importlib
 import itertools
 import logging
 import tempfile
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from collections import defaultdict
+from typing import TYPE_CHECKING, DefaultDict, Dict, List, Optional, Set, Tuple
+from warnings import resetwarnings
 
 import numpy as np
 from cachetools import LRUCache, cached
@@ -25,6 +27,7 @@ from openff.toolkit.utils.exceptions import (
     SMILESParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
+    MissingChemistryFromPolymerError,
 )
 
 if TYPE_CHECKING:
@@ -262,6 +265,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         -------
         rdkit_mol : rdkit.Chem.Mol
             a copy of the original molecule with charges and bond order added
+
+        Raises
+        ------
+        MissingChemistryFromPolymerError
+            Raised when bonds or atoms in ``rdkit_mol`` are missing from the
+            substructure library
         """
         from rdkit import Chem
 
@@ -270,6 +279,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Therefore it's hard to know if we've missed any edges...
         # Notably assumes all bonds *between* fragments are single
         already_assigned_edges = set()
+
+        # Keeping track of which atoms are matched where will help us with error
+        # messages
+        matches = defaultdict(list)
 
         mol = Chem.Mol(rdkit_mol)
 
@@ -290,6 +303,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 # info is added to `mol`. If we use the same rdkit molecule for search AND info addition,
                 # then single bonds may no longer be present for subsequent overlapping matches.
                 for match in rdkit_mol.GetSubstructMatches(fuzzy, maxMatches=0):
+                    for i in match:
+                        matches[i].append(res_name)
+
                     if any(m in already_assigned_nodes for m in match) and (
                         res_name not in ["PEPTIDE_BOND", "DISULFIDE"]
                     ):
@@ -310,30 +326,25 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         b2.SetBondType(b.GetBondType())
                         already_assigned_edges.add(tuple(sorted([x, y])))
 
-        if not (len(already_assigned_nodes) == rdkit_mol.GetNumAtoms()):
-            unassigned_atom_indices = (
-                set(range(rdkit_mol.GetNumAtoms())) - already_assigned_nodes
-            )
-            unassigned_atom_indices = sorted(list(unassigned_atom_indices))
-            print(unassigned_atom_indices)
-            print(
-                [
-                    rdkit_mol.GetAtomWithIdx(i).GetPDBResidueInfo().GetResidueName()
-                    for i in unassigned_atom_indices
-                ]
-            )
+        unassigned_atoms = sorted(
+            set(range(rdkit_mol.GetNumAtoms())) - already_assigned_nodes
+        )
         all_bonds = set(
             [
                 tuple(sorted([bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()]))
                 for bond in rdkit_mol.GetBonds()
             ]
         )
+        unassigned_bonds = sorted(all_bonds - already_assigned_edges)
 
-        if all_bonds != already_assigned_edges:
-            print("Bonds were unassigned:")
-            print(len(all_bonds), len(already_assigned_edges))
-            for bond in sorted(all_bonds - already_assigned_edges):
-                print(bond)
+        if unassigned_atoms or unassigned_bonds:
+            raise MissingChemistryFromPolymerError(
+                substructure_library=substructure_library,
+                rdmol=rdkit_mol,
+                unassigned_atoms=unassigned_atoms,
+                unassigned_bonds=unassigned_bonds,
+                matches=matches,
+            )
 
         # assert len(already_assigned_edges) == len(omm_topology_G.edges)
 
