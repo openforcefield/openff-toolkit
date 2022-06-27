@@ -3538,6 +3538,48 @@ class TestMoleculeFromPDB:
             expected_mol, atom_stereochemistry_matching=False
         )
 
+    def test_molecule_from_pdb_error_no_hydrogens(self):
+        """Test that a PDB without hydrogens raises a descriptive error"""
+        with pytest.raises(
+            ValueError,
+            match=(
+                r"This PDB does not include all explicit hydrogens\. The OpenFF "
+                + r"Toolkit requires that all atoms be present in the input to "
+                + r"avoid incorrectly guessing the user's intent\. "
+            ),
+        ):
+            offmol = Molecule.from_polymer_pdb(
+                get_data_file_path("proteins/MainChain_ALA_ALA_no_hydrogens.pdb")
+            )
+
+    def test_molecule_from_pdb_error_non_canonical_aa(self):
+        """Test that a PDB without hydrogens raises a descriptive error"""
+        with pytest.raises(
+            ValueError,
+            match=(
+                r"Residue .* could not be identified\. The OpenFF Toolkit  "
+                + r"currently supports only the 20 'canonical' amino acid "
+                + r"residues\. "
+            ),
+        ):
+            offmol = Molecule.from_polymer_pdb(
+                get_data_file_path("proteins/fluoresceine_dyed_helix_capped.pdb")
+            )
+
+    def test_molecule_from_pdb_error_two_chains(self):
+        """Test that a PDB without hydrogens raises a descriptive error"""
+        with pytest.raises(
+            ValueError,
+            match=(
+                r"This PDB appears to consist of two chains\. The OpenFF "
+                + r"only supports single-molecule PDB files\. Please split the "
+                + r"file into individual chains and load each seperately\."
+            ),
+        ):
+            offmol = Molecule.from_polymer_pdb(
+                get_data_file_path("proteins/TwoChains_ALA_CYS.pdb")
+            )
+
     @pytest.mark.xfail()
     def test_from_pdb_t4_n_residues(self):
         """Test number of residues when creating Molecule from T4 PDB"""
