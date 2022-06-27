@@ -1,5 +1,5 @@
-from typing import DefaultDict, Optional, List, Tuple, Set, Any, Dict, Union
 from collections import defaultdict
+from typing import Any, DefaultDict, Dict, List, Optional, Set, Tuple, Union
 
 
 class OpenFFToolkitException(Exception):

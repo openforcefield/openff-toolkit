@@ -23,11 +23,11 @@ from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ConformerGenerationError,
+    MissingChemistryFromPolymerError,
     NotAttachedToMoleculeError,
     SMILESParseError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
-    MissingChemistryFromPolymerError,
 )
 
 if TYPE_CHECKING:

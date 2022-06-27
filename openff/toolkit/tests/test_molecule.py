@@ -54,8 +54,8 @@ from openff.toolkit.utils.exceptions import (
     ConformerGenerationError,
     IncompatibleUnitError,
     InvalidConformerError,
-    UnsupportedFileTypeError,
     MissingChemistryFromPolymerError,
+    UnsupportedFileTypeError,
 )
 from openff.toolkit.utils.toolkits import (
     AmberToolsToolkitWrapper,
