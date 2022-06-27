@@ -332,9 +332,9 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
             *self.missing_hydrogens_hint(),
             *self.multiple_chains_hint(),
             *self.unknown_residue_hint(),
+            *self.assigned_residue_name_mismatch_hint(),
             *self.unassigned_atoms_hint(),
             *self.unassigned_bonds_hint(),
-            *self.assigned_residue_name_mismatch_hint(),
         ]
 
         super().__init__("\n".join(message))
