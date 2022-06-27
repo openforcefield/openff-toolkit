@@ -403,8 +403,8 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
                 "Hint: There are no hydrogens in the input. The OpenFF Toolkit "
                 + "requires explicit hydrogens to avoid ambiguities in protonation "
                 + "state or bond order. Try generating hydrogens with another package "
-                + "and trying again."
-                ""
+                + "and trying again.",
+                "",
             ]
         return []
 
