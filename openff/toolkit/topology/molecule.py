@@ -56,6 +56,7 @@ from openff.toolkit.utils.exceptions import (
     IncompatibleUnitError,
     InvalidAtomMetadataError,
     InvalidConformerError,
+    MultipleMoleculesInPDBError,
     SmilesParsingError,
     UnsupportedFileTypeError,
 )
@@ -3754,7 +3755,8 @@ class FrozenMolecule(Serializable):
         Currently only supports proteins with canonical amino acids that are
         either uncapped or capped by ACE/NME groups, but may later be extended
         to handle other common polymers, or accept user-defined polymer
-        templates.
+        templates. Only one polymer chain may be present in the PDB file, and it
+        must be the only molecule present.
 
         Metadata such as residues, chains, and atom names are recorded in the
         ``Atom.properties`` attribute, which is a dictionary mapping from
@@ -3824,7 +3826,31 @@ class FrozenMolecule(Serializable):
             offmol.atoms[i].metadata["chain_id"] = atom.residue.chain.id
         offmol.add_default_hierarchy_schemes()
 
+        if len(offmol.chains) > 1:
+            raise MultipleMoleculesInPDBError(
+                "This PDB has multiple chain identifiers. The OpenFF Toolkit "
+                + "requires that only one polymer chain is present in a PDB, "
+                + "and that it is the only molecule present. Try splitting "
+                + "each polymer chain into its own PDB with another tool, and "
+                + "import any small molecules with Topology.from_pdb_and_smiles."
+            )
+        if offmol._has_multiple_molecules():
+            raise MultipleMoleculesInPDBError(
+                "This PDB has multiple molecules. The OpenFF Toolkit "
+                + "requires that only one polymer chain is present in a PDB, "
+                + "and that it is the only molecule present. Try splitting "
+                + "each polymer chain into its own PDB with another tool, and "
+                + "import any small molecules with Topology.from_pdb_and_smiles."
+            )
+
         return offmol
+
+    def _has_multiple_molecules(self) -> bool:
+        import networkx as nx
+
+        graph = self.to_networkx()
+        num_disconnected_subgraphs = sum(1 for _ in nx.connected_components(graph))
+        return num_disconnected_subgraphs > 1
 
     def _to_xyz_file(self, file_path):
         """

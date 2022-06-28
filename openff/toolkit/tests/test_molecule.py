@@ -55,6 +55,7 @@ from openff.toolkit.utils.exceptions import (
     IncompatibleUnitError,
     InvalidConformerError,
     MissingChemistryFromPolymerError,
+    MultipleMoleculesInPDBError,
     UnsupportedFileTypeError,
 )
 from openff.toolkit.utils.toolkits import (
@@ -3544,7 +3545,7 @@ class TestMoleculeFromPDB:
         with pytest.raises(
             MissingChemistryFromPolymerError,
             match=(
-                r"dThere are no hydrogens in the input\. The OpenFF Toolkit "
+                r"There are no hydrogens in the input\. The OpenFF Toolkit "
                 + r"requires explicit hydrogens to avoid ambiguities in "
                 + r"protonation state or bond order\. Try generating hydrogens "
                 + r"with another package and trying again\."
@@ -3559,7 +3560,7 @@ class TestMoleculeFromPDB:
         with pytest.raises(
             MissingChemistryFromPolymerError,
             match=(
-                r"dThe following residue names with unassigned atoms were "
+                r"The following residue names with unassigned atoms were "
                 + r"not found in the substructure library. While the OpenFF "
                 + r"Toolkit identifies residues by matching chemical substructures "
                 + r"rather than by residue name, it currently only supports the "
@@ -3573,17 +3574,49 @@ class TestMoleculeFromPDB:
     def test_molecule_from_pdb_error_two_chains(self):
         """Test that a PDB with two chains raises a clear error"""
         with pytest.raises(
-            MissingChemistryFromPolymerError,
+            MultipleMoleculesInPDBError,
             match=(
-                r"The input has multiple chain identifiers\. The OpenFF Toolkit "
-                + r"only supports single-molecule PDB files, and residue "
-                + r"assignment can get very confused when multiple molecules are "
-                + r"present\. Please split the file into individual chains and "
-                + r"load each seperately\."
+                r"This PDB has multiple chain identifiers. The OpenFF Toolkit "
+                + r"requires that only one polymer chain is present in a PDB, "
+                + r"and that it is the only molecule present\. Try splitting "
+                + r"each polymer chain into its own PDB with another tool, and "
+                + r"import any small molecules with Topology\.from_pdb_and_smiles\."
             ),
         ):
             offmol = Molecule.from_polymer_pdb(
                 get_data_file_path("proteins/TwoChains_ALA_CYS.pdb")
+            )
+
+    def test_molecule_from_pdb_error_two_polymers(self):
+        """Test that a PDB with two capped polymers but no chain IDs raises a clear error"""
+        with pytest.raises(
+            MultipleMoleculesInPDBError,
+            match=(
+                r"This PDB has multiple molecules. The OpenFF Toolkit "
+                + r"requires that only one polymer chain is present in a PDB, "
+                + r"and that it is the only molecule present\. Try splitting "
+                + r"each polymer chain into its own PDB with another tool, and "
+                + r"import any small molecules with Topology\.from_pdb_and_smiles\."
+            ),
+        ):
+            offmol = Molecule.from_polymer_pdb(
+                get_data_file_path("proteins/TwoMol_ALA_CYS.pdb")
+            )
+
+    def test_molecule_from_pdb_error_crystal_waters(self):
+        """Test that a PDB with two chains raises a clear error"""
+        with pytest.raises(
+            MultipleMoleculesInPDBError,
+            match=(
+                r"This PDB has multiple molecules. The OpenFF Toolkit "
+                + r"requires that only one polymer chain is present in a PDB, "
+                + r"and that it is the only molecule present\. Try splitting "
+                + r"each polymer chain into its own PDB with another tool, and "
+                + r"import any small molecules with Topology\.from_pdb_and_smiles\."
+            ),
+        ):
+            offmol = Molecule.from_polymer_pdb(
+                get_data_file_path("proteins/Chignolin_with_waters.pdb")
             )
 
     @pytest.mark.xfail()

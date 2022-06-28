@@ -302,6 +302,10 @@ class UnsupportedKeywordArgumentsError(OpenFFToolkitException, ValueError):
     """Error raised when an unexpected keyword argument is passed to `ForceField.create_openmm_system`."""
 
 
+class MultipleMoleculesInPDBError(OpenFFToolkitException):
+    """Error raised when a multiple molecules are found when one was expected"""
+
+
 class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
     """
     Error raised when a bond or atom in a polymer could not be assigned chemical information.
@@ -333,17 +337,17 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
             *self.multiple_chains_hint(),
             *self.unknown_residue_hint(),
             *self.assigned_residue_name_mismatch_hint(),
-            *self.unassigned_atoms_hint(),
-            *self.unassigned_bonds_hint(),
+            *self.unassigned_atoms_err(),
+            *self.unassigned_bonds_err(),
         ]
 
         super().__init__("\n".join(message))
 
-    def unassigned_atoms_hint(self) -> List[str]:
+    def unassigned_atoms_err(self) -> List[str]:
         if self.unassigned_atoms and self.rdmol:
             return [
                 (
-                    f"The following {len(self.unassigned_atoms)} atoms exist in the input "
+                    f"Error: The following {len(self.unassigned_atoms)} atoms exist in the input "
                     + f"but could not be assigned chemical information from the "
                     + f"substructure library:"
                 ),
@@ -357,7 +361,7 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
             ]
         return []
 
-    def unassigned_bonds_hint(self) -> List[str]:
+    def unassigned_bonds_err(self) -> List[str]:
         if not (self.unassigned_bonds and self.unassigned_atoms and self.rdmol):
             return []
 
@@ -377,9 +381,9 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
         if unassigned_bonds_with_assigned_atoms:
             return [
                 (
-                    f"The following {len(unassigned_bonds_with_assigned_atoms)} bonds exist in the input "
-                    + f"but could not be assigned chemical information from the "
-                    + f"substructure library:"
+                    f"Error: The following {len(unassigned_bonds_with_assigned_atoms)} "
+                    + f"bonds exist in the input but could not be assigned "
+                    + f"chemical information from the substructure library:"
                 ),
                 *(
                     f"    Bond between atom {i_a: >5} ({self.rdmol.GetAtomWithIdx(i_a).GetSymbol()}) "
@@ -424,7 +428,7 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
 
             if unknown_resnames:
                 return [
-                    "The following residue names with unassigned atoms were not "
+                    "Hint: The following residue names with unassigned atoms were not "
                     + "found in the substructure library. While the OpenFF Toolkit "
                     + "identifies residues by matching chemical substructures rather "
                     + "than by residue name, it currently only supports the 20 "
@@ -440,7 +444,7 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
         )
         if len(chains) > 1:
             return [
-                "The input has multiple chain identifiers. The OpenFF Toolkit "
+                "Hint: The input has multiple chain identifiers. The OpenFF Toolkit "
                 + "only supports single-molecule PDB files, and residue "
                 + "assignment can get very confused when multiple molecules are "
                 + "present. Please split the file into individual chains and "
@@ -474,7 +478,7 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
 
         if residues:
             return [
-                "The following residues have atoms that were assigned a name "
+                "Hint: The following residues have atoms that were assigned a name "
                 + "that does not match the residue name in the input, or could "
                 + "not be assigned at all. This may indicate that atoms are "
                 + "missing from the input or some other error. The OpenFF "
