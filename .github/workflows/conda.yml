@@ -28,7 +28,7 @@ jobs:
       PACKAGE: openff-toolkit
 
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3.0.2
 
       - uses: conda-incubator/setup-miniconda@v2.1.1
         name: Vanilla install from conda
