@@ -3323,8 +3323,6 @@ class TestMoleculeResiduePerception:
         assert counter == offmol.n_atoms
 
 
-# TODO: Remove when not dependent on RDKit
-@requires_rdkit
 class TestMoleculeFromPDB:
     """
     Test creation of cheminformatics-rich openff Molecule from PDB files.
