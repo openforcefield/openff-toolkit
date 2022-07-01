@@ -293,14 +293,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         if not (len(already_assigned_nodes) == oemol_n_atoms):
             unassigned_atom_indices = set(range(oemol_n_atoms)) - already_assigned_nodes
             unassigned_atom_indices = sorted(list(unassigned_atom_indices))
+            print('Atoms were unassigned:')
             print(unassigned_atom_indices)
-            # print(
-            #     [
-            #         rdkit_mol.GetAtomWithIdx(i).GetPDBResidueInfo().GetResidueName()
-            #         for i in unassigned_atom_indices
-            #     ]
-            # )
-        oemol_n_bonds = len([*oemol.GetBonds()])
 
         all_bonds = set(
             [
@@ -346,9 +340,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         from openff.toolkit.typing.chemistry import SMIRKSParsingError
 
-        # TODO: Can we instead use OEQMol and OEPartsSmarts here?
-        #  Jeff wasn't able to get that path working, the QMol/SS matching
-        #  didn't behave correctly when set to AtomicNumber
+        #  Jeff wasn't able to get this working with OEQMol and OEParseSmarts,
+        #  the QMol/SS matching didn't behave correctly when set to AtomicNumber
         qmol = oechem.OEMol()
         status = oechem.OEParseSmiles(
             qmol,
