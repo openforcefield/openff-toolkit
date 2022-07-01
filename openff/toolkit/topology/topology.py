@@ -1443,6 +1443,8 @@ class Topology(Serializable):
         openmm_topology : openmm.app.Topology
             An OpenMM Topology object
         """
+        # TODO: MT needs to write a virtual sites section of the Interchange user guide.
+        #       Once that exists, the last note in this docstring should link to that.
         from openmm import app
 
         from openff.toolkit.topology.molecule import Bond
