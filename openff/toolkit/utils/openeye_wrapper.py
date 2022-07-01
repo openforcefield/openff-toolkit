@@ -293,7 +293,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         if not (len(already_assigned_nodes) == oemol_n_atoms):
             unassigned_atom_indices = set(range(oemol_n_atoms)) - already_assigned_nodes
             unassigned_atom_indices = sorted(list(unassigned_atom_indices))
-            print('Atoms were unassigned:')
+            print("Atoms were unassigned:")
             print(unassigned_atom_indices)
 
         all_bonds = set(
