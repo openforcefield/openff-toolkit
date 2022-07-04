@@ -12,7 +12,6 @@ import logging
 import tempfile
 from collections import defaultdict
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
-from warnings import resetwarnings
 
 import numpy as np
 from cachetools import LRUCache, cached
