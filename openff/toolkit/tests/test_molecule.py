@@ -54,8 +54,8 @@ from openff.toolkit.utils.exceptions import (
     ConformerGenerationError,
     IncompatibleUnitError,
     InvalidConformerError,
-    UnassignedChemistryInPDBError,
     MultipleMoleculesInPDBError,
+    UnassignedChemistryInPDBError,
     UnsupportedFileTypeError,
 )
 from openff.toolkit.utils.toolkits import (
