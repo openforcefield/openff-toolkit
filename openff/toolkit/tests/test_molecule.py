@@ -3551,7 +3551,7 @@ class TestMoleculeFromPDB:
                 + r"with another package and trying again\."
             ),
         ):
-            offmol = Molecule.from_polymer_pdb(
+            Molecule.from_polymer_pdb(
                 get_data_file_path("proteins/MainChain_ALA_ALA_no_hydrogens.pdb")
             )
 
@@ -3567,7 +3567,7 @@ class TestMoleculeFromPDB:
                 + r"20 'canonical' amino acids\.\n\s*DYE"
             ),
         ):
-            offmol = Molecule.from_polymer_pdb(
+            Molecule.from_polymer_pdb(
                 get_data_file_path("proteins/fluoresceine_dyed_helix_capped.pdb")
             )
 
@@ -3585,7 +3585,7 @@ class TestMoleculeFromPDB:
                 + r"    Input residue ALA#0003 has misnamed atoms H01, H02, H03"
             ),
         ):
-            offmol = Molecule.from_polymer_pdb(
+            Molecule.from_polymer_pdb(
                 get_data_file_path("proteins/CTerminal_ALA_ALA_misnamedH.pdb")
             )
 
@@ -3600,7 +3600,7 @@ class TestMoleculeFromPDB:
                 + r"topology later."
             ),
         ):
-            offmol = Molecule.from_polymer_pdb(
+            Molecule.from_polymer_pdb(
                 get_data_file_path("proteins/T4_protein_waters.pdb")
             )
 
@@ -3616,7 +3616,7 @@ class TestMoleculeFromPDB:
                 + r"import any small molecules with Topology\.from_pdb_and_smiles\."
             ),
         ):
-            offmol = Molecule.from_polymer_pdb(
+            Molecule.from_polymer_pdb(
                 get_data_file_path("proteins/TwoChains_ALA_CYS.pdb")
             )
 
@@ -3632,9 +3632,7 @@ class TestMoleculeFromPDB:
                 + r"import any small molecules with Topology\.from_pdb_and_smiles\."
             ),
         ):
-            offmol = Molecule.from_polymer_pdb(
-                get_data_file_path("proteins/TwoMol_ALA_CYS.pdb")
-            )
+            Molecule.from_polymer_pdb(get_data_file_path("proteins/TwoMol_ALA_CYS.pdb"))
 
     @pytest.mark.xfail()
     def test_from_pdb_t4_n_residues(self):

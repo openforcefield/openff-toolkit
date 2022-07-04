@@ -4,10 +4,9 @@ from typing import (
     Dict,
     List,
     Optional,
-    Set,
     Tuple,
-    Union,
     Mapping,
+    Set,
 )
 
 if TYPE_CHECKING:
@@ -375,8 +374,8 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
             return [
                 (
                     f"Error: The following {len(self.unassigned_atoms)} atoms exist in the input "
-                    + f"but could not be assigned chemical information from the "
-                    + f"substructure library:"
+                    + "but could not be assigned chemical information from the "
+                    + "substructure library:"
                 ),
                 *(
                     f"    Atom {i: >5} ({self._atoms[i].element.symbol}) in residue "
@@ -408,8 +407,8 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
             return [
                 (
                     f"Error: The following {len(unassigned_bonds_with_assigned_atoms)} "
-                    + f"bonds exist in the input but could not be assigned "
-                    + f"chemical information from the substructure library:"
+                    + "bonds exist in the input but could not be assigned "
+                    + "chemical information from the substructure library:"
                 ),
                 *(
                     f"    Bond between atom {i_a: >5} ({self._atoms[i_a].element.symbol}) "
