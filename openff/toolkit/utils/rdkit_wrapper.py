@@ -22,7 +22,7 @@ from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ConformerGenerationError,
-    MissingChemistryFromPolymerError,
+    UnassignedChemistryInPDBError,
     NotAttachedToMoleculeError,
     SMILESParseError,
     ToolkitUnavailableException,
@@ -340,7 +340,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         unassigned_bonds = sorted(all_bonds - already_assigned_edges)
 
         if unassigned_atoms or unassigned_bonds:
-            raise MissingChemistryFromPolymerError(
+            raise UnassignedChemistryInPDBError(
                 substructure_library=substructure_library,
                 omm_top=omm_top,
                 unassigned_atoms=unassigned_atoms,

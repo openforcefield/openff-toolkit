@@ -310,7 +310,7 @@ class MultipleMoleculesInPDBError(OpenFFToolkitException):
     """Error raised when a multiple molecules are found when one was expected"""
 
 
-class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
+class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
     """
     Error raised when a bond or atom in a polymer could not be assigned chemical information.
     """

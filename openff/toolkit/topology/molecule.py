@@ -3747,7 +3747,9 @@ class FrozenMolecule(Serializable):
     @classmethod
     @requires_package("openmm")
     def from_polymer_pdb(
-        cls, file_path: Union[str, TextIO], toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
+        cls,
+        file_path: Union[str, TextIO],
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
         Loads a polymer from a PDB file.
@@ -3757,6 +3759,13 @@ class FrozenMolecule(Serializable):
         to handle other common polymers, or accept user-defined polymer
         templates. Only one polymer chain may be present in the PDB file, and it
         must be the only molecule present.
+
+        Connectivity and bond orders are assigned by matching SMARTS codes for
+        the supported residues against atom names. The PDB file must include
+        all atoms with the correct standard atom names described in the
+        `PDB Chemical Component Dictionary <https://www.wwpdb.org/data/ccd>`_.
+        Residue names are used to assist trouble-shooting failed assignments,
+        but are not used in the actual assignment process.
 
         Metadata such as residues, chains, and atom names are recorded in the
         ``Atom.properties`` attribute, which is a dictionary mapping from
@@ -3770,14 +3779,16 @@ class FrozenMolecule(Serializable):
           OpenFF Toolkit)
         * Loads the PDB into an OpenMM :class:`openmm.app.PDBFile` object
         * Turns OpenMM topology into a temporarily invalid rdkit Molecule
-        * Adds chemical information to the molecule:
-            * For each substructure loaded from the substructure template file
-                * Uses rdkit to find matches between the substructure and the
-                  molecule
-                * For any matches, assigns the atom formal charge and bond order
-                  info from the substructure to the rdkit molecule, then marks
-                  the atoms and bonds as having been assigned so they can not be
-                  overwritten by subsequent isomorphisms
+        * Adds chemical information to the molecule; for each substructure
+          loaded from the substructure template file:
+
+          * Uses rdkit to find matches between the substructure and the
+            molecule
+          * For any matches, assigns the atom formal charge and bond order
+            info from the substructure to the rdkit molecule, then marks
+            the atoms and bonds as having been assigned so they can not be
+            overwritten by subsequent isomorphisms
+
         * Take coordinates from the OpenMM Topology and add them as a conformer
         * Convert the rdkit Molecule to OpenFF
 
@@ -3791,6 +3802,18 @@ class FrozenMolecule(Serializable):
         Returns
         -------
         molecule : openff.toolkit.topology.Molecule
+
+        Raises
+        ------
+
+        UnassignedChemistryInPDBError
+            If an atom or bond could not be assigned; the exception will
+            provide a detailed diagnostic of what went wrong.
+
+        MultipleMoleculesInPDBError
+            If all atoms and bonds could be assigned, but the PDB includes
+            multiple chains or molecules.
+
         """
         import openmm.unit as openmm_unit
         from openmm.app import PDBFile

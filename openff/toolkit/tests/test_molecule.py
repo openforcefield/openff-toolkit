@@ -54,7 +54,7 @@ from openff.toolkit.utils.exceptions import (
     ConformerGenerationError,
     IncompatibleUnitError,
     InvalidConformerError,
-    MissingChemistryFromPolymerError,
+    UnassignedChemistryInPDBError,
     MultipleMoleculesInPDBError,
     UnsupportedFileTypeError,
 )
@@ -3543,7 +3543,7 @@ class TestMoleculeFromPDB:
     def test_molecule_from_pdb_error_no_hydrogens(self):
         """Test that a PDB without hydrogens raises a descriptive error"""
         with pytest.raises(
-            MissingChemistryFromPolymerError,
+            UnassignedChemistryInPDBError,
             match=(
                 r"There are no hydrogens in the input\. The OpenFF Toolkit "
                 + r"requires explicit hydrogens to avoid ambiguities in "
@@ -3558,7 +3558,7 @@ class TestMoleculeFromPDB:
     def test_molecule_from_pdb_error_non_canonical_aa(self):
         """Test that a PDB with an NCAA raises a descriptive error"""
         with pytest.raises(
-            MissingChemistryFromPolymerError,
+            UnassignedChemistryInPDBError,
             match=(
                 r"The following residue names with unassigned atoms were "
                 + r"not found in the substructure library. While the OpenFF "
@@ -3574,7 +3574,7 @@ class TestMoleculeFromPDB:
     def test_molecule_from_pdb_error_misnamed_hydrogens(self):
         """Test that a PDB with two chains raises a clear error"""
         with pytest.raises(
-            MissingChemistryFromPolymerError,
+            UnassignedChemistryInPDBError,
             match=(
                 r"Hint: The following residues have the right numbers of the "
                 + r"right elements to match a substructure with the same name as "
@@ -3592,7 +3592,7 @@ class TestMoleculeFromPDB:
     def test_molecule_from_pdb_error_crystal_waters(self):
         """Test that a PDB with two chains raises a clear error"""
         with pytest.raises(
-            MissingChemistryFromPolymerError,
+            UnassignedChemistryInPDBError,
             match=(
                 r"Note: 'HOH' is a residue code for water. You may have "
                 + r"crystallographic waters in your PDB file. Please remove "
