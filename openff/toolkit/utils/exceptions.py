@@ -1,8 +1,19 @@
-from collections import defaultdict
-from typing import TYPE_CHECKING, DefaultDict, Dict, List, Optional, Set, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    DefaultDict,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    Mapping,
+)
 
 if TYPE_CHECKING:
     from openmm.app import Topology as OpenMMTopology
+    from openmm.app import Atom as OpenMMAtom
+    from openmm.app import Residue as OpenMMResidue
 
 
 class OpenFFToolkitException(Exception):
@@ -317,7 +328,7 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
     def __init__(
         self,
         msg: Optional[str] = None,
-        substructure_library: Optional[Dict[str, List[Union[str, List[str]]]]] = None,
+        substructure_library: Optional[Dict[str, Dict[str, List[str]]]] = None,
         omm_top: Optional["OpenMMTopology"] = None,
         unassigned_bonds: Optional[List[Tuple[int, int]]] = None,
         unassigned_atoms: Optional[List[int]] = None,
@@ -325,9 +336,8 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
     ):
         if omm_top is not None:
             self.omm_top = omm_top
-            self._atoms = list(omm_top.atoms())
-            self._bonds = list(omm_top.bonds())
-            self._chains = list(omm_top.chains())
+            self._atoms: List["OpenMMAtom"] = list(omm_top.atoms())
+            self._bonds: List[Tuple["OpenMMAtom", "OpenMMAtom"]] = list(omm_top.bonds())
 
         self.substructure_library = substructure_library
         self.unassigned_bonds = [] if unassigned_bonds is None else unassigned_bonds
@@ -343,6 +353,7 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
         message += [
             *self.missing_hydrogens_hint(),
             *self.multiple_chains_hint(),
+            *self.mismatched_atom_names_hint(),
             *self.unknown_residue_hint(),
             *self.assigned_residue_name_mismatch_hint(),
             *self.unassigned_atoms_err(),
@@ -449,7 +460,7 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
         return []
 
     def multiple_chains_hint(self) -> List[str]:
-        if len(self._chains) > 1:
+        if self.omm_top.getNumChains() > 1:
             return [
                 "Hint: The input has multiple chain identifiers. The OpenFF Toolkit "
                 + "only supports single-molecule PDB files, and residue "
@@ -462,17 +473,19 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
         return []
 
     def assigned_residue_name_mismatch_hint(self) -> List[str]:
+        from collections import defaultdict
+
         if not self.matches:
             return []
 
         # Construct a map from input residues to assigned resnames
-        residues = defaultdict(set)
+        residues: Mapping[Tuple[str, str], Set[str]] = defaultdict(set)
         for atom in self.omm_top.atoms():
-            input_resname = atom.residue.name
-            input_resnum = atom.residue.id
+            input_resname: str = atom.residue.name
+            input_resnum: str = atom.residue.id
             matched_resnames = self.matches[atom.index]
             # Only the first match is assigned, so throw out the others
-            assigned_resname = next(iter(matched_resnames), None)
+            assigned_resname = next(iter(matched_resnames), "No match")
 
             residues[(input_resname, input_resnum)].add(assigned_resname)
 
@@ -483,24 +496,94 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
             if set([input_resname]) != assigned_resnames
         }
 
+        if "HOH" in (name for (name, _) in residues.keys()):
+            solvent_note = [
+                "Note: 'HOH' is a residue code for water. You may have "
+                + "crystallographic waters in your PDB file. Please remove "
+                + "these before proceeding; they can be added back to the "
+                + "topology later."
+            ]
+        else:
+            solvent_note = [""]
+
         if residues:
             return [
-                "Hint: The following residues have atoms that were assigned a name "
-                + "that does not match the residue name in the input, or could "
-                + "not be assigned at all. This may indicate that atoms are "
+                "Hint: The following residues were assigned names that do not "
+                + "match the residue name in the input, or could not be assigned "
+                + "residue names at all. This may indicate that atoms are "
                 + "missing from the input or some other error. The OpenFF "
                 + "Toolkit requires all atoms, including hydrogens, to be "
                 + "explicit in the input to avoid ambiguities in protonation "
                 + "state or bond order:",
                 *(
                     (
-                        f"    Input residue {self.fmt_residue(resname, resnum)} "
-                        + f"matched substructures {assigned_resnames}"
+                        f"    Input residue {self.fmt_residue(resname, int(resnum))} "
+                        + f"contains atoms matching substructures {assigned_resnames}"
                     )
                     for (
                         resname,
                         resnum,
                     ), assigned_resnames in residues.items()
+                ),
+                *solvent_note,
+                "",
+            ]
+
+        return []
+
+    def mismatched_atom_names_hint(self) -> List[str]:
+        from collections import defaultdict
+        from openff.toolkit import Molecule
+
+        if not (self.omm_top and self.substructure_library):
+            return []
+
+        # Collect all the unassigned atoms by residue
+        unassigned_residues: Mapping[OpenMMResidue, List[OpenMMAtom]] = defaultdict(
+            list
+        )
+        for i in self.unassigned_atoms:
+            atom = self._atoms[i]
+            res: OpenMMResidue = atom.residue
+            unassigned_residues[res].append(atom)
+
+        # Mark residues that don't have the right number and elements of atoms
+        # by clearing their atoms lists
+        for res, atoms in unassigned_residues.items():
+            try:
+                library_res = self.substructure_library[res.name]
+            except KeyError:
+                # Residue is not in substructure library at all!
+                atoms.clear()
+                continue
+            for smiles, names in library_res.items():
+                offmol = Molecule.from_smiles(smiles, allow_undefined_stereo=True)
+                library_elements = sorted(atom.symbol for atom in offmol.atoms)
+                residue_elements = sorted(atom.element.symbol for atom in res.atoms())
+                if library_elements == residue_elements:
+                    # Prune the atoms down to just those whose names don't match
+                    atoms[:] = [atom for atom in atoms if atom.name not in names]
+                    # We're done with this residue
+                    break
+            else:
+                # smiles for loop did not break, so clear the atom list
+                atoms.clear()
+        misnamed = {res: atoms for res, atoms in unassigned_residues.items() if atoms}
+
+        if misnamed:
+            return [
+                "Hint: The following residues have the right numbers of the "
+                + "right elements to match a substructure with the same name as "
+                + "the input residue, but did not match. This most likely "
+                + "suggests that their atom names do not match those in the "
+                + "substructure library. Try renaming misnamed atoms according "
+                + "to the PDB Chemical Component Dictionary.",
+                *(
+                    (
+                        f"    Input residue {self.fmt_residue(res.name, int(res.id))} "
+                        + f"has misnamed atoms {', '.join(a.name for a in atoms)}"
+                    )
+                    for res, atoms in misnamed.items()
                 ),
                 "",
             ]

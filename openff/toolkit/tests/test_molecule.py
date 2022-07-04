@@ -3571,6 +3571,39 @@ class TestMoleculeFromPDB:
                 get_data_file_path("proteins/fluoresceine_dyed_helix_capped.pdb")
             )
 
+    def test_molecule_from_pdb_error_misnamed_hydrogens(self):
+        """Test that a PDB with two chains raises a clear error"""
+        with pytest.raises(
+            MissingChemistryFromPolymerError,
+            match=(
+                r"Hint: The following residues have the right numbers of the "
+                + r"right elements to match a substructure with the same name as "
+                + r"the input residue, but did not match\. This most likely "
+                + r"suggests that their atom names do not match those in the "
+                + r"substructure library\. Try renaming misnamed atoms according "
+                + r"to the PDB Chemical Component Dictionary\.\n"
+                + r"    Input residue ALA#0003 has misnamed atoms H01, H02, H03"
+            ),
+        ):
+            offmol = Molecule.from_polymer_pdb(
+                get_data_file_path("proteins/CTerminal_ALA_ALA_misnamedH.pdb")
+            )
+
+    def test_molecule_from_pdb_error_crystal_waters(self):
+        """Test that a PDB with two chains raises a clear error"""
+        with pytest.raises(
+            MissingChemistryFromPolymerError,
+            match=(
+                r"Note: 'HOH' is a residue code for water. You may have "
+                + r"crystallographic waters in your PDB file. Please remove "
+                + r"these before proceeding; they can be added back to the "
+                + r"topology later."
+            ),
+        ):
+            offmol = Molecule.from_polymer_pdb(
+                get_data_file_path("proteins/T4_protein_waters.pdb")
+            )
+
     def test_molecule_from_pdb_error_two_chains(self):
         """Test that a PDB with two chains raises a clear error"""
         with pytest.raises(
@@ -3601,22 +3634,6 @@ class TestMoleculeFromPDB:
         ):
             offmol = Molecule.from_polymer_pdb(
                 get_data_file_path("proteins/TwoMol_ALA_CYS.pdb")
-            )
-
-    def test_molecule_from_pdb_error_crystal_waters(self):
-        """Test that a PDB with two chains raises a clear error"""
-        with pytest.raises(
-            MultipleMoleculesInPDBError,
-            match=(
-                r"This PDB has multiple molecules. The OpenFF Toolkit "
-                + r"requires that only one polymer chain is present in a PDB, "
-                + r"and that it is the only molecule present\. Try splitting "
-                + r"each polymer chain into its own PDB with another tool, and "
-                + r"import any small molecules with Topology\.from_pdb_and_smiles\."
-            ),
-        ):
-            offmol = Molecule.from_polymer_pdb(
-                get_data_file_path("proteins/Chignolin_with_waters.pdb")
             )
 
     @pytest.mark.xfail()
