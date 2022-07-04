@@ -1,5 +1,8 @@
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, List, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, DefaultDict, Dict, List, Optional, Set, Tuple, Union
+
+if TYPE_CHECKING:
+    from openmm.app import Topology as OpenMMTopology
 
 
 class OpenFFToolkitException(Exception):
@@ -315,12 +318,17 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
         self,
         msg: Optional[str] = None,
         substructure_library: Optional[Dict[str, List[Union[str, List[str]]]]] = None,
-        rdmol: Optional[Any] = None,
+        omm_top: Optional["OpenMMTopology"] = None,
         unassigned_bonds: Optional[List[Tuple[int, int]]] = None,
         unassigned_atoms: Optional[List[int]] = None,
         matches: Optional[DefaultDict[int, List[str]]] = None,
     ):
-        self.rdmol = rdmol
+        if omm_top is not None:
+            self.omm_top = omm_top
+            self._atoms = list(omm_top.atoms())
+            self._bonds = list(omm_top.bonds())
+            self._chains = list(omm_top.chains())
+
         self.substructure_library = substructure_library
         self.unassigned_bonds = [] if unassigned_bonds is None else unassigned_bonds
         self.unassigned_atoms = [] if unassigned_atoms is None else unassigned_atoms
@@ -343,8 +351,16 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
 
         super().__init__("\n".join(message))
 
+    def residue_of_atom_as_str(self, atom_index: int) -> str:
+        res = self._atoms[atom_index].residue
+        return self.fmt_residue(res.name, res.id)
+
+    @staticmethod
+    def fmt_residue(name: str, num: int) -> str:
+        return f"{name}#{num:0>4}"
+
     def unassigned_atoms_err(self) -> List[str]:
-        if self.unassigned_atoms and self.rdmol:
+        if self.unassigned_atoms and self.omm_top:
             return [
                 (
                     f"Error: The following {len(self.unassigned_atoms)} atoms exist in the input "
@@ -352,9 +368,8 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
                     + f"substructure library:"
                 ),
                 *(
-                    f"    Atom {i: >5} ({self.rdmol.GetAtomWithIdx(i).GetSymbol()}) in residue "
-                    + f"{self.rdmol.GetAtomWithIdx(i).GetPDBResidueInfo().GetResidueName()}#"
-                    + f"{self.rdmol.GetAtomWithIdx(i).GetPDBResidueInfo().GetResidueNumber():0>4}"
+                    f"    Atom {i: >5} ({self._atoms[i].element.symbol}) in residue "
+                    + f"{self.residue_of_atom_as_str(i)}"
                     for i in self.unassigned_atoms
                 ),
                 "",
@@ -362,7 +377,7 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
         return []
 
     def unassigned_bonds_err(self) -> List[str]:
-        if not (self.unassigned_bonds and self.unassigned_atoms and self.rdmol):
+        if not (self.unassigned_bonds and self.unassigned_atoms and self.omm_top):
             return []
 
         unassigned_bonds_with_assigned_atoms = [
@@ -386,12 +401,10 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
                     + f"chemical information from the substructure library:"
                 ),
                 *(
-                    f"    Bond between atom {i_a: >5} ({self.rdmol.GetAtomWithIdx(i_a).GetSymbol()}) "
-                    + f"in {self.rdmol.GetAtomWithIdx(i_a).GetPDBResidueInfo().GetResidueName()}"
-                    + f"#{self.rdmol.GetAtomWithIdx(i_a).GetPDBResidueInfo().GetResidueNumber():0>4} "
-                    + f"and atom {i_b: >5} ({self.rdmol.GetAtomWithIdx(i_b).GetSymbol()}) "
-                    + f"in {self.rdmol.GetAtomWithIdx(i_b).GetPDBResidueInfo().GetResidueName()}"
-                    + f"#{self.rdmol.GetAtomWithIdx(i_b).GetPDBResidueInfo().GetResidueNumber():0>4}"
+                    f"    Bond between atom {i_a: >5} ({self._atoms[i_a].element.symbol}) "
+                    + f"in {self.residue_of_atom_as_str(i_a)} "
+                    + f"and atom {i_b: >5} ({self._atoms[i_b].element.symbol}) "
+                    + f"in {self.residue_of_atom_as_str(i_b)}"
                     for i_a, i_b in unassigned_bonds_with_assigned_atoms
                 ),
                 *elided_bonds_hint,
@@ -400,9 +413,7 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
         return []
 
     def missing_hydrogens_hint(self) -> List[str]:
-        if self.rdmol and all(
-            atom.GetSymbol() != "H" for atom in self.rdmol.GetAtoms()
-        ):
+        if self.omm_top and all(atom.element.symbol != "H" for atom in self._atoms):
             return [
                 "Hint: There are no hydrogens in the input. The OpenFF Toolkit "
                 + "requires explicit hydrogens to avoid ambiguities in protonation "
@@ -413,10 +424,9 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
         return []
 
     def unknown_residue_hint(self) -> List[str]:
-        if self.substructure_library and self.rdmol:
+        if self.substructure_library and self.omm_top:
             unassigned_resnames = [
-                self.rdmol.GetAtomWithIdx(i).GetPDBResidueInfo().GetResidueName()
-                for i in self.unassigned_atoms
+                self._atoms[i].residue.name for i in self.unassigned_atoms
             ]
             unknown_resnames = set(
                 [
@@ -439,10 +449,7 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
         return []
 
     def multiple_chains_hint(self) -> List[str]:
-        chains = set(
-            atom.GetPDBResidueInfo().GetChainId() for atom in self.rdmol.GetAtoms()
-        )
-        if len(chains) > 1:
+        if len(self._chains) > 1:
             return [
                 "Hint: The input has multiple chain identifiers. The OpenFF Toolkit "
                 + "only supports single-molecule PDB files, and residue "
@@ -460,10 +467,10 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
 
         # Construct a map from input residues to assigned resnames
         residues = defaultdict(set)
-        for atom in self.rdmol.GetAtoms():
-            input_resname = atom.GetPDBResidueInfo().GetResidueName()
-            input_resnum = atom.GetPDBResidueInfo().GetResidueNumber()
-            matched_resnames = self.matches[atom.GetIdx()]
+        for atom in self.omm_top.atoms():
+            input_resname = atom.residue.name
+            input_resnum = atom.residue.id
+            matched_resnames = self.matches[atom.index]
             # Only the first match is assigned, so throw out the others
             assigned_resname = next(iter(matched_resnames), None)
 
@@ -487,12 +494,12 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
                 + "state or bond order:",
                 *(
                     (
-                        f"    Input residue {input_resname}#{input_resnum:0>4} "
+                        f"    Input residue {self.fmt_residue(resname, resnum)} "
                         + f"matched substructures {assigned_resnames}"
                     )
                     for (
-                        input_resname,
-                        input_resnum,
+                        resname,
+                        resnum,
                     ), assigned_resnames in residues.items()
                 ),
                 "",

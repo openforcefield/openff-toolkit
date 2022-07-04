@@ -241,14 +241,15 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             raise InvalidConformerError("The PDB and SMILES structures do not match.")
 
     def _polymer_openmm_topology_to_offmol(self, omm_top, substructure_dictionary):
-        rdkit_mol = self._polymer_openmm_topology_to_rdmol(omm_top)
-        rdkit_mol = self._add_chemical_info(rdkit_mol, substructure_dictionary)
+        rdkit_mol = self._polymer_openmm_topology_to_rdmol(
+            omm_top, substructure_dictionary
+        )
         offmol = self.from_rdkit(rdkit_mol)
         return offmol
 
-    def _add_chemical_info(
+    def _polymer_openmm_topology_to_rdmol(
         self,
-        rdkit_mol,
+        omm_top,
         substructure_library,
     ):
         """
@@ -284,11 +285,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # messages
         matches = defaultdict(list)
 
+        rdkit_mol = self._get_connectivity_from_openmm_top(omm_top)
         mol = Chem.Mol(rdkit_mol)
 
         for res_name in substructure_library:
             # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes
             # so it just does the biggest substructures first
+            # NOTE: If this changes, MissingChemistryFromPolymerError needs to be updated too
             sorted_substructure_smarts = sorted(
                 substructure_library[res_name], key=len, reverse=True
             )
@@ -340,17 +343,15 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         if unassigned_atoms or unassigned_bonds:
             raise MissingChemistryFromPolymerError(
                 substructure_library=substructure_library,
-                rdmol=rdkit_mol,
+                omm_top=omm_top,
                 unassigned_atoms=unassigned_atoms,
                 unassigned_bonds=unassigned_bonds,
                 matches=matches,
             )
 
-        # assert len(already_assigned_edges) == len(omm_topology_G.edges)
-
         return mol
 
-    def _polymer_openmm_topology_to_rdmol(self, omm_top):
+    def _get_connectivity_from_openmm_top(self, omm_top):
         from rdkit import Chem
 
         # convert openmm topology to rdkit Molecule
