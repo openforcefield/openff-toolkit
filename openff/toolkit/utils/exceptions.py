@@ -1,18 +1,9 @@
-from typing import (
-    TYPE_CHECKING,
-    DefaultDict,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Mapping,
-    Set,
-)
+from typing import TYPE_CHECKING, DefaultDict, Dict, List, Mapping, Optional, Set, Tuple
 
 if TYPE_CHECKING:
-    from openmm.app import Topology as OpenMMTopology
     from openmm.app import Atom as OpenMMAtom
     from openmm.app import Residue as OpenMMResidue
+    from openmm.app import Topology as OpenMMTopology
 
 
 class OpenFFToolkitException(Exception):
@@ -532,6 +523,7 @@ class MissingChemistryFromPolymerError(OpenFFToolkitException, ValueError):
 
     def mismatched_atom_names_hint(self) -> List[str]:
         from collections import defaultdict
+
         from openff.toolkit import Molecule
 
         if not (self.omm_top and self.substructure_library):
