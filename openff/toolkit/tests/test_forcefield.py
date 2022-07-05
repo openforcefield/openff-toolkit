@@ -879,12 +879,25 @@ class TestForceField:
             "smirnoff99Frosst-1.1.0.offxml",
             "openff-1.0.0.offxml",
             "openff_unconstrained-1.0.0.offxml",
-            "openff-1.1.0.offxml",
-            "openff-1.2.0.offxml",
+            "openff-1.3.0.offxml",
+            "openff-2.0.0.offxml",
+            "ff14sb_off_impropers_0.0.3.offxml",
         ]
 
         for ff in expected_force_fields:
             assert ff in available_force_fields
+
+    @pytest.mark.parametrize("full_path", [(True, False)])
+    @pytest.mark.parametrize("force_field_file", [*get_available_force_fields()])
+    def test_get_available_force_fields_loadable(self, full_path, force_field_file):
+        """Ensure get_available_force_fields returns load-able files"""
+        if "ff14sb" in force_field_file and "off_imp" not in force_field_file:
+            pytest.skip(
+                "Only the variants of the ff14SB port with SMIRNOFF-style impropers "
+                "can be loaded by the toolkit by default. Those with Amber-style impropers"
+                "require AmberImproperTorsionHandler."
+            )
+        ForceField(force_field_file)
 
     def test_force_field_case(self):
         """Ensure forcefield paths are loaded in a case-insensitive manner"""
@@ -911,12 +924,6 @@ class TestForceField:
             OSError, match="Source force-field.offxml could not be read."
         ):
             ForceField("force-field.offxml")
-
-    @pytest.mark.parametrize("full_path", [(True, False)])
-    @pytest.mark.parametrize("force_field_file", [*get_available_force_fields()])
-    def test_get_available_force_fields_loadable(self, full_path, force_field_file):
-        """Ensure get_available_force_fields returns load-able files"""
-        ForceField(force_field_file)
 
     def test_load_bad_version(self):
         with pytest.raises(SMIRNOFFVersionError, match="99.3"):

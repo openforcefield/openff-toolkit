@@ -1,6 +1,8 @@
 name: test
 channels:
   - openeye
+  - conda-forge/label/openff-interchange_rc
+  - conda-forge/label/openff-toolkit_rc
   - conda-forge
 dependencies:
     # Base depends
@@ -13,6 +15,7 @@ dependencies:
   - openff-forcefields
   - openff-units >=0.1.6
   - openff-utilities >=0.1.5
+  - openff-interchange-base >=0.2.0rc1
   - smirnoff99Frosst
   - numpy
   - networkx
@@ -49,4 +52,3 @@ dependencies:
     - types-toml
     - types-PyYAML
     - mongo-types
-    - git+https://github.com/openforcefield/openff-interchange.git@main
