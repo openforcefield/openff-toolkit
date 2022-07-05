@@ -3851,9 +3851,9 @@ class FrozenMolecule(Serializable):
 
         if len(offmol.chains) > 1:
             raise MultipleMoleculesInPDBError(
-                "This PDB has multiple chain identifiers. The OpenFF Toolkit "
-                + "requires that only one polymer chain is present in a PDB, "
-                + "and that it is the only molecule present. Try splitting "
+                "Multiple polymer chains were detected in the input. The OpenFF "
+                + "Toolkit requires that only one polymer chain is present in a "
+                + "PDB, and that it is the only molecule present. Try splitting "
                 + "each polymer chain into its own PDB with another tool, and "
                 + "import any small molecules with Topology.from_pdb_and_smiles."
             )
