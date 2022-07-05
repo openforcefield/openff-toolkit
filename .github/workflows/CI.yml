@@ -76,7 +76,7 @@ jobs:
       - name: Install environment with ${{ env.JOBNAME }}
         uses: conda-incubator/setup-miniconda@v2.1.1
         with:
-          python-version: ${{ matrix.cfg.python-version }}
+          python-version: ${{ matrix.python-version }}
           activate-environment: test
           environment-file: devtools/conda-envs/${{ env.ENVFILE }}.yaml
           auto-activate-base: false
