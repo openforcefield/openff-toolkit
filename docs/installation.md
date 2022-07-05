@@ -72,7 +72,7 @@ Note that this may update other packages or install new packages if the most rec
 
 ## Installing from source
 
-The OpenFF Toolkit has a lot of dependencies, so we strongly encourage installation with a package manager. The [developer's guide](install_dev) describes setting up a development environment. If you're sure you want to install from source, check the [`conda-forge` recipe](https://github.com/conda-forge/openff-toolkit-feedstock/blob/master/recipe/meta.yaml) for current dependencies, install them, download and extract the source distribution from [GitHub](https://github.com/openforcefield/openff-toolkit/releases), and then run `setup.py`:
+The OpenFF Toolkit has a lot of dependencies, so we strongly encourage installation with a package manager. The [developer's guide](install_dev) describes setting up a development environment. If you're sure you want to install from source, check the [`conda-forge` recipe](https://github.com/conda-forge/openff-toolkit-feedstock/blob/main/recipe/meta.yaml) for current dependencies, install them, download and extract the source distribution from [GitHub](https://github.com/openforcefield/openff-toolkit/releases), and then run `setup.py`:
 
 ```shell-session
 $ cd openff-toolkit

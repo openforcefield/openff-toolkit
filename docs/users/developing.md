@@ -47,14 +47,14 @@ Cosmetic attribute
 Continuous Integration (CI)
 : Tests that run frequently while the code is undergoing changes, ensuring that the codebase still installs and has the intended behavior.
   Currently, we use a service called [GitHub Actions](https://github.com/features/actions) for this.
-  CI jobs run every time a commit is made to the `master` branch of the `openff-toolkit` GitHub repository or in a PR opened against it.
+  CI jobs run every time a commit is made to the `main` branch of the `openff-toolkit` GitHub repository or in a PR opened against it.
   These runs start by booting virtual machines that mimic brand new Linux and macOS computers.
   They then follow build instructions (see the `.github/workflows/CI.yml` file) to install the toolkit.
   After installing the OpenFF Toolkit and its dependencies, these virtual machines run our test suite.
   If the tests all pass, the build "passes" (returns a green check mark on GitHub).
 
-  If all the tests for a specific change to the `master` branch return green, then we know that the change has not broken the toolkit's existing functionality.
-  When proposing code changes, we ask that contributors open a Pull Request (PR) on GitHub to merge their changes into the `master` branch.
+  If all the tests for a specific change to the `main` branch return green, then we know that the change has not broken the toolkit's existing functionality.
+  When proposing code changes, we ask that contributors open a Pull Request (PR) on GitHub to merge their changes into the `main` branch.
   When a pull request is open, CI will run on the latest set of proposed changes and indicate whether they are safe to merge through status checks, summarized as a green check mark or red cross.
 
 CodeCov
@@ -330,7 +330,7 @@ Currently, two are employed:
 1. [Black](https://black.readthedocs.io/), the uncompromising code formatter, automatically formats code with a consistent style.
 1. [isort](https://timothycrosley.github.io/isort/), sorts imports
 
-There is a step in CI that uses these tools to check for a consistent style (see the file [`.github/workflows/lint.yml`](https://github.com/openforcefield/openff-toolkit/blob/master/.github/workflows/lint.yml)).
+There is a step in CI that uses these tools to check for a consistent style (see the file [`.github/workflows/lint.yml`](https://github.com/openforcefield/openff-toolkit/blob/main/.github/workflows/lint.yml)).
 These checks will use the most recent versions of each linter.
 To ensure that changes follow these standards, you can install and run these tools locally:
 
