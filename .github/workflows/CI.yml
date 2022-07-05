@@ -104,7 +104,7 @@ jobs:
           # Interchange is installed with conda. Un-comment this when testing
           # against a conda build of Interchange. (It may also be pulled down
           # by `openmmforcefields` and should be removed in that case a well.)
-          # conda remove --force openff-toolkit openff-toolkit-base
+          conda remove --force openff-toolkit openff-toolkit-base
           python setup.py develop --no-deps
 
       - name: Install test plugins
