@@ -437,6 +437,16 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
                 ]
             )
 
+            if "HOH" in unknown_resnames:
+                solvent_note = [
+                    "Note: 'HOH' is a residue code for water. You may have "
+                    + "crystallographic waters in your PDB file. Please remove "
+                    + "these before proceeding; they can be added back to the "
+                    + "topology later."
+                ]
+            else:
+                solvent_note = [""]
+
             if unknown_resnames:
                 return [
                     "Hint: The following residue names with unassigned atoms were not "
@@ -445,6 +455,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
                     + "than by residue name, it currently only supports the 20 "
                     + "'canonical' amino acids.",
                     *(f"    {resname}" for resname in unknown_resnames),
+                    *solvent_note,
                     "",
                 ]
         return []
@@ -486,16 +497,6 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
             if set([input_resname]) != assigned_resnames
         }
 
-        if "HOH" in (name for (name, _) in residues.keys()):
-            solvent_note = [
-                "Note: 'HOH' is a residue code for water. You may have "
-                + "crystallographic waters in your PDB file. Please remove "
-                + "these before proceeding; they can be added back to the "
-                + "topology later."
-            ]
-        else:
-            solvent_note = [""]
-
         if residues:
             return [
                 "Hint: The following residues were assigned names that do not "
@@ -515,7 +516,6 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
                         resnum,
                     ), assigned_resnames in residues.items()
                 ),
-                *solvent_note,
                 "",
             ]
 
