@@ -3348,6 +3348,16 @@ class TestMoleculeFromPDB:
             expected_mol, atom_stereochemistry_matching=False
         )
 
+        with NamedTemporaryFile(suffix="pdb") as iofile:
+            offmol.to_file(iofile.name, file_format="pdb")
+            offmol2 = Molecule.from_polymer_pdb(iofile.name)
+        assert offmol.is_isomorphic_with(offmol2)
+        assert np.allclose(
+            offmol2.conformers[0].m_as(unit.angstrom),
+            offmol2.conformers[0].m_as(unit.angstrom),
+            atol=0.01,
+        )
+
     def test_molecule_from_pdb_mainchain_ala_tripeptide(self):
         offmol = Molecule.from_polymer_pdb(
             get_data_file_path("proteins/MainChain_ALA_ALA.pdb")

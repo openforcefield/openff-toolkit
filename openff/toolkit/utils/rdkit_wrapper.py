@@ -2027,7 +2027,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 res = rdatom.GetPDBResidueInfo()
 
             atom_has_any_metadata = False
-
+            # RDKit is very naive about PDB atom names - Needs them to be exactly
+            # 4 characters or the columns won't comply with PDB specification
+            res.SetName(atom.name.center(4)[:4])
             if "residue_name" in atom.metadata:
                 atom_has_any_metadata = True
                 res.SetResidueName(atom.metadata["residue_name"])
