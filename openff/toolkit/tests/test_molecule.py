@@ -3634,6 +3634,41 @@ class TestMoleculeFromPDB:
         ):
             Molecule.from_polymer_pdb(get_data_file_path("proteins/TwoMol_SER_CYS.pdb"))
 
+    def test_unproc_pdb_4w51_errors(self):
+        """Test that a file fresh from the PDB gives all the right hints when it fails to load"""
+        with pytest.raises(
+            UnassignedChemistryInPDBError,
+            match="".join(
+                [
+                    "Some bonds or atoms in the input could not be identified.",
+                    "\n\n",
+                    "Hint: There are no hydrogens in the input. The OpenFF Toolkit ",
+                    "requires explicit hydrogens to avoid ambiguities in protonation ",
+                    "state or bond order. Try generating hydrogens with another ",
+                    "package and trying again.",
+                    "\n\n",
+                    "Hint: The input has multiple chain identifiers. The OpenFF ",
+                    "Toolkit only supports single-molecule PDB files, and residue ",
+                    "assignment can get very confused when multiple molecules are ",
+                    "present. Please split the file into individual chains and load ",
+                    "each seperately.",
+                    "\n\n",
+                    "Hint: The following residue names with unassigned atoms were ",
+                    "not found in the substructure library. While the OpenFF Toolkit ",
+                    "identifies residues by matching chemical substructures rather ",
+                    "than by residue name, it currently only supports the 20 ",
+                    "'canonical' amino acids.\n",
+                    "    EPE\n    HOH\n",
+                    "Note: 'HOH' is a residue code for water. You may have ",
+                    "crystallographic waters in your PDB file. Please remove these ",
+                    "before proceeding; they can be added back to the topology later.",
+                ]
+            ),
+        ):
+            Molecule.from_polymer_pdb(
+                get_data_file_path("proteins/T4-protein-unprocessed-4w51.pdb")
+            )
+
     @pytest.mark.xfail()
     def test_from_pdb_t4_n_residues(self):
         """Test number of residues when creating Molecule from T4 PDB"""
