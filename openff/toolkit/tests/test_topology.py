@@ -14,9 +14,9 @@ from openff.toolkit.tests.create_molecules import (
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
-    cyx_hierarchy_perceived,
+    cyx_hierarchy_added,
     dipeptide,
-    dipeptide_hierarchy_perceived,
+    dipeptide_hierarchy_added,
     dipeptide_residues_perceived,
     ethane_from_smiles,
     ethene_from_smiles,
@@ -31,6 +31,7 @@ from openff.toolkit.tests.utils import (
     requires_rdkit,
 )
 from openff.toolkit.topology import (
+    Atom,
     ImproperDict,
     Molecule,
     TagSortedDict,
@@ -45,10 +46,12 @@ from openff.toolkit.utils import (
     RDKitToolkitWrapper,
 )
 from openff.toolkit.utils.exceptions import (
+    AtomNotInTopologyError,
     DuplicateUniqueMoleculeError,
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
     MissingUniqueMoleculesError,
+    MoleculeNotInTopologyError,
 )
 
 
@@ -104,7 +107,6 @@ class TestTopology:
         assert topology.n_molecules == 0
         assert topology.n_atoms == 0
         assert topology.n_bonds == 0
-        assert topology.n_particles == 0
         assert topology.box_vectors is None
         assert not topology.is_periodic
         assert len(topology.constrained_atom_pairs.items()) == 0
@@ -128,6 +130,28 @@ class TestTopology:
                 match=f"Topology.{old_iterator} is deprecated. Use Topology.{key} instead.",
             ):
                 assert len([*getattr(topology, old_iterator)]) == 0
+
+        # Some particle-related methods are deprecated for reasons other than the `TopologyX` deprecation
+        with pytest.warns(
+            TopologyDeprecationWarning,
+            match="Topology.n_particles is deprecated. Use Topology.n_atoms instead.",
+        ):
+            assert topology.n_particles == 0
+
+        with pytest.warns(
+            TopologyDeprecationWarning,
+            match="Topology.particles is deprecated. Use Topology.atoms instead.",
+        ):
+            assert len([*topology.particles]) == 0
+
+        topology = Molecule.from_smiles("O").to_topology()
+        first_atom = [*topology.atoms][0]
+
+        with pytest.warns(
+            TopologyDeprecationWarning,
+            match="Topology.particle_index is deprecated. Use Topology.atom_index instead.",
+        ):
+            assert topology.particle_index(first_atom) == 0
 
     def test_reinitialization_box_vectors(self):
         topology = Topology()
@@ -197,7 +221,6 @@ class TestTopology:
         assert topology.n_molecules == 1
         assert topology.n_atoms == 8
         assert topology.n_bonds == 7
-        assert topology.n_particles == 8
         assert topology.box_vectors is None
         assert len(topology.constrained_atom_pairs.items()) == 0
 
@@ -205,7 +228,6 @@ class TestTopology:
         assert topology.n_molecules == 2
         assert topology.n_atoms == 16
         assert topology.n_bonds == 14
-        assert topology.n_particles == 16
         assert topology.box_vectors is None
         assert len(topology.constrained_atom_pairs.items()) == 0
 
@@ -245,6 +267,32 @@ class TestTopology:
 
         with pytest.raises(Exception):
             topology.atom(8)
+
+    def test_atom_index(self):
+        topology = create_ethanol().to_topology()
+
+        for index in range(topology.n_atoms):
+            atom = topology.atom(index)
+            assert topology.atom_index(atom) == index
+
+        ghost_atom = Atom(atomic_number=1, formal_charge=0, is_aromatic=False)
+
+        with pytest.raises(AtomNotInTopologyError):
+            topology.atom_index(ghost_atom)
+
+    def test_molecule_index(self):
+        molecules = [Molecule.from_smiles("CCO"), Molecule.from_smiles("O")]
+
+        topology = Topology.from_molecules(molecules)
+
+        for index in range(topology.n_molecules):
+            molecule = topology.molecule(index)
+            assert topology.molecule_index(molecule) == index
+
+        ghost_molecule = Molecule.from_smiles("N")
+
+        with pytest.raises(MoleculeNotInTopologyError):
+            topology.molecule_index(ghost_molecule)
 
     def test_atom_element_properties(self):
         """
@@ -1020,21 +1068,29 @@ class TestTopology:
         top = Topology()
         # Ensure that an empty topology has no residues defined
         residues = list(top.hierarchy_iterator("residues"))
-        assert len(residues) == 0
+        assert residues == []
         # Ensure that a topology with no metadata has no residues defined
         top.add_molecule(dipeptide())
         residues = list(top.hierarchy_iterator("residues"))
-        assert len(residues) == 0
-        # Ensure that a topology with metadata, but no hierarchy perception has no residues defined
+        assert residues == []
+        # Ensure that a topology with residues perceived has residues but not chains
         top.add_molecule(dipeptide_residues_perceived())
         residues = list(top.hierarchy_iterator("residues"))
-        assert len(residues) == 0
-        # Ensure that adding molecules WITH hierarchy perceived DOES give the topology residues to iterate over
-        top.add_molecule(dipeptide_hierarchy_perceived())
-        top.add_molecule(cyx_hierarchy_perceived())
+        chains = list(top.hierarchy_iterator("chains"))
+        assert chains == []
+        assert [res.identifier for res in residues] == [
+            ("None", 1, "ACE"),
+            ("None", 2, "ALA"),
+        ]
+        # Ensure that adding molecules WITH hierarchy perceived DOES give the
+        # topology residues and chains to iterate over
+        top.add_molecule(dipeptide_hierarchy_added())
+        top.add_molecule(cyx_hierarchy_added())
         residues = list(top.hierarchy_iterator("residues"))
-        assert len(residues) == 8
-        expected_ids = [
+        chains = list(top.hierarchy_iterator("chains"))
+        assert [res.identifier for res in residues] == [
+            ("None", 1, "ACE"),
+            ("None", 2, "ALA"),
             ("None", 1, "ACE"),
             ("None", 2, "ALA"),
             ("None", 1, "ACE"),
@@ -1044,8 +1100,30 @@ class TestTopology:
             ("None", 5, "CYS"),
             ("None", 6, "NME"),
         ]
-        for expected_id, residue in zip(expected_ids, residues):
-            assert expected_id == residue.identifier
+        # First chain hierarchy element is from dipeptide_hierarchy_added,
+        # second is from cyx_hierarchy_added. Both have the same uniqueness
+        # identifier; unclear that this behaviour is desired --- Perhaps
+        # Topology.hierarchy_iterator should consolidate hierarchy elements from
+        # different molecules?
+        assert len(chains) == 2
+        # Haven't changed anything, so updating hierarchy schemes should give
+        # same results
+        top.molecule(3).update_hierarchy_schemes()
+        residues = list(top.hierarchy_iterator("residues"))
+        chains = list(top.hierarchy_iterator("chains"))
+        assert [res.identifier for res in residues] == [
+            ("None", 1, "ACE"),
+            ("None", 2, "ALA"),
+            ("None", 1, "ACE"),
+            ("None", 2, "ALA"),
+            ("None", 1, "ACE"),
+            ("None", 2, "CYS"),
+            ("None", 3, "NME"),
+            ("None", 4, "ACE"),
+            ("None", 5, "CYS"),
+            ("None", 6, "NME"),
+        ]
+        assert len(chains) == 2
 
 
 class TestAddTopology:
@@ -1123,7 +1201,7 @@ class TestTopologySerialization:
     @pytest.fixture
     def oleic_acid(self):
         """Simple floppy molecule that can be assured to have multiple conformers"""
-        return Molecule.from_smiles("CCCCCCCC\C=C/CCCCCCCC(O)=O")
+        return Molecule.from_smiles(r"CCCCCCCC\C=C/CCCCCCCC(O)=O")
 
     @pytest.mark.parametrize(("with_conformers"), [True, False])
     @pytest.mark.parametrize(("n_molecules"), [1, 2])

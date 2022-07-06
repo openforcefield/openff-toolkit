@@ -104,12 +104,13 @@ myst_enable_extensions = [
     "replacements",
     "deflist",
 ]
+myst_heading_anchors = 3
 
 # Myst NB settings
 # Execute all notebooks on build
-jupyter_execute_notebooks = "force"
+nb_execution_mode = "force"
 # List of notebooks NOT to execute (use output stored in notebook instead)
-execution_excludepatterns = []
+nb_execution_excludepatterns = []
 
 
 # sphinx-notfound-page

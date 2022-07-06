@@ -238,46 +238,168 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
             raise InvalidConformerError("The PDB and SMILES structures do not match.")
 
-    def _smarts_to_networkx(self, substructure_smarts):
-        import networkx as nx
+    def _polymer_openmm_topology_to_offmol(self, omm_top, substructure_dictionary):
+        rdkit_mol = self._polymer_openmm_topology_to_rdmol(omm_top)
+        rdkit_mol = self._add_chemical_info(rdkit_mol, substructure_dictionary)
+        offmol = self.from_rdkit(rdkit_mol)
+        return offmol
+
+    def _add_chemical_info(
+        self,
+        rdkit_mol,
+        substructure_library,
+    ):
+        """
+        Parameters
+        ----------
+        rdkit_mol : rdkit.Chem.Mol
+            Currently invalid (bond orders and charge) Molecule
+        substructure_library : dict{str:list[str, list[str]]}
+            A dictionary of substructures. substructure_library[aa_name] = list[tagged SMARTS, list[atom_names]]
+        toolkit_registry = ToolkitWrapper or ToolkitRegistry. Default = None
+            Either a ToolkitRegistry, ToolkitWrapper
+
+        Returns
+        -------
+        rdkit_mol : rdkit.Chem.Mol
+            a copy of the original molecule with charges and bond order added
+        """
         from rdkit import Chem
 
-        rdmol = Chem.MolFromSmarts(substructure_smarts)
+        already_assigned_nodes = set()
+        # TODO: We currently assume all single and modify a few
+        # Therefore it's hard to know if we've missed any edges...
+        # Notably assumes all bonds *between* fragments are single
+        already_assigned_edges = set()
 
-        _bondtypes = {
-            # 0: Chem.BondType.AROMATIC,
-            Chem.BondType.SINGLE: 1,
-            Chem.BondType.AROMATIC: 1.5,
-            Chem.BondType.DOUBLE: 2,
-            Chem.BondType.TRIPLE: 3,
-            Chem.BondType.QUADRUPLE: 4,
-            Chem.BondType.QUINTUPLE: 5,
-            Chem.BondType.HEXTUPLE: 6,
-        }
-        rdmol_G = nx.Graph()
-        for atom in rdmol.GetAtoms():
-            atomic_number = atom.GetAtomicNum()
+        mol = Chem.Mol(rdkit_mol)
 
-            rdmol_G.add_node(
-                atom.GetIdx(),
-                atomic_number=atomic_number,
-                formal_charge=atom.GetFormalCharge(),
-                map_index=atom.GetAtomMapNum(),
+        for res_name in substructure_library:
+            # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes
+            # so it just does the biggest substructures first
+            sorted_substructure_smarts = sorted(
+                substructure_library[res_name], key=len, reverse=True
             )
-        for bond in rdmol.GetBonds():
-            bond_type = bond.GetBondType()
-            # All bonds in the graph should have been explicitly assigned by this point.
-            if bond_type == Chem.rdchem.BondType.UNSPECIFIED:
-                raise SMILESParseError(
-                    f"A bond in {substructure_smarts} has an unspecified bond order"
-                )
+            for substructure_smarts in sorted_substructure_smarts:
+                # this is the molecule as defined in template
+                ref = Chem.MolFromSmarts(substructure_smarts)
+                # then create a looser definition for pattern matching...
+                # be lax about double bonds and chirality
+                fuzzy = self._fuzzy_query(ref)
 
-            rdmol_G.add_edge(
-                bond.GetBeginAtomIdx(),
-                bond.GetEndAtomIdx(),
-                bond_order=_bondtypes[bond_type],
+                # It's important that we do the substructure search on `rdkit_mol`, but the chemical
+                # info is added to `mol`. If we use the same rdkit molecule for search AND info addition,
+                # then single bonds may no longer be present for subsequent overlapping matches.
+                for match in rdkit_mol.GetSubstructMatches(fuzzy, maxMatches=0):
+                    if any(m in already_assigned_nodes for m in match) and (
+                        res_name not in ["PEPTIDE_BOND", "DISULFIDE"]
+                    ):
+                        continue
+                    already_assigned_nodes.update(match)
+
+                    for atom_i, j in zip(ref.GetAtoms(), match):
+                        atom_j = mol.GetAtomWithIdx(j)
+                        # copy over chirality
+                        if atom_i.GetChiralTag():
+                            mol.GetAtomWithIdx(j).SetChiralTag(atom_i.GetChiralTag())
+                        atom_j.SetFormalCharge(atom_i.GetFormalCharge())
+
+                    for b in ref.GetBonds():
+                        x = match[b.GetBeginAtomIdx()]
+                        y = match[b.GetEndAtomIdx()]
+                        b2 = mol.GetBondBetweenAtoms(x, y)
+                        b2.SetBondType(b.GetBondType())
+                        already_assigned_edges.add(tuple(sorted([x, y])))
+
+        if not (len(already_assigned_nodes) == rdkit_mol.GetNumAtoms()):
+            unassigned_atom_indices = (
+                set(range(rdkit_mol.GetNumAtoms())) - already_assigned_nodes
             )
-        return rdmol_G
+            unassigned_atom_indices = sorted(list(unassigned_atom_indices))
+            print(unassigned_atom_indices)
+            print(
+                [
+                    rdkit_mol.GetAtomWithIdx(i).GetPDBResidueInfo().GetResidueName()
+                    for i in unassigned_atom_indices
+                ]
+            )
+        all_bonds = set(
+            [
+                tuple(sorted([bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()]))
+                for bond in rdkit_mol.GetBonds()
+            ]
+        )
+
+        if all_bonds != already_assigned_edges:
+            print("Bonds were unassigned:")
+            print(len(all_bonds), len(already_assigned_edges))
+            for bond in sorted(all_bonds - already_assigned_edges):
+                print(bond)
+
+        # assert len(already_assigned_edges) == len(omm_topology_G.edges)
+
+        return mol
+
+    def _polymer_openmm_topology_to_rdmol(self, omm_top):
+        from rdkit import Chem
+
+        # convert openmm topology to rdkit Molecule
+        # all bonds initially SINGLE, all charge initially neutral
+        rwmol = Chem.RWMol()
+        for atom in omm_top.atoms():
+            idx = rwmol.AddAtom(Chem.Atom(atom.element.atomic_number))
+            res = Chem.AtomPDBResidueInfo()
+            res.SetResidueName(atom.residue.name)
+            res.SetResidueNumber(int(atom.residue.id))
+            res.SetChainId(atom.residue.chain.id)
+            rwatom = rwmol.GetAtomWithIdx(idx)
+            rwatom.SetPDBResidueInfo(res)
+        # we're fully explicit
+        for atom in rwmol.GetAtoms():
+            atom.SetNoImplicit(True)
+        for bond in omm_top.bonds():
+            rwmol.AddBond(bond[0].index, bond[1].index, Chem.BondType.SINGLE)
+
+        # conf = Chem.Conformer()
+        # for i, pos in enumerate(omm_top.getPositions()):
+        #     conf.SetAtomPosition(i, list(pos.value_in_unit(pos.unit)))
+        # rwmol.AddConformer(conf)
+
+        return rwmol
+
+    @staticmethod
+    def _fuzzy_query(query):
+        """return a copy of Query which is less specific:
+        - ignore aromaticity and hybridization of atoms (i.e. [#6] not C)
+        - ignore bond orders
+        - ignore formal charges
+        """
+        from rdkit import Chem
+
+        # it's tricky from the Python API to properly edit queries,
+        # but you can do SetQuery on Atoms/Bonds to edit them quite powerfully
+        generic = Chem.MolFromSmarts("**")
+        generic_bond = generic.GetBondWithIdx(0)
+        # N.B. This isn't likely to be an active
+        generic_mol = (
+            Chem.MolFromSmarts(  # TODO: optimisation, create this once somewhere
+                "".join("[#{}]".format(i + 1) for i in range(112))
+            )
+        )
+
+        fuzzy = Chem.Mol(query)
+        for a in fuzzy.GetAtoms():
+            a.SetFormalCharge(0)
+            a.SetQuery(
+                generic_mol.GetAtomWithIdx(a.GetAtomicNum() - 1)
+            )  # i.e. H looks up atom 0 in our generic mol
+            a.SetNoImplicit(True)
+        for b in fuzzy.GetBonds():
+            b.SetIsAromatic(False)
+            b.SetBondType(Chem.rdchem.BondType.SINGLE)
+            b.SetQuery(generic_bond)
+
+        return fuzzy
 
     def _assign_aromaticity_and_stereo_from_3d(self, offmol):
         from rdkit import Chem
@@ -915,7 +1037,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         _cls=None,
         make_carboxylic_acids_cis=False,
     ):
-        r"""
+        """
         Generate molecule conformers using RDKit.
 
         .. warning :: This API is experimental and subject to change.
@@ -1918,7 +2040,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 res = rdatom.GetPDBResidueInfo()
 
             atom_has_any_metadata = False
-
+            # RDKit is very naive about PDB atom names - Needs them to be exactly
+            # 4 characters or the columns won't comply with PDB specification
+            res.SetName(atom.name.center(4)[:4])
             if "residue_name" in atom.metadata:
                 atom_has_any_metadata = True
                 res.SetResidueName(atom.metadata["residue_name"])

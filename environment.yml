@@ -3,17 +3,17 @@ name: binder-env
 channels:
   - conda-forge
   - defaults
-  - bioconda
 dependencies:
   # Let conda pull in the toolkit and its deps
   - openff-toolkit
-
   # Optional(-ish) dependencies used in example(s)
   - nglview
   - qcelemental
   - qcportal
   - qcengine
   - openmmforcefields
-  - openff-interchange >=0.1.2
-  - gromacs
+  - openff-amber-ff-ports >=0.0.2
+  - gromacs >=2021=nompi*
   - lammps
+  - pip:
+    - git+https://github.com/openforcefield/openff-interchange.git@main

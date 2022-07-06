@@ -8,7 +8,7 @@ dependencies:
     - pip
     # readthedocs dependencies
     - myst-nb
-    - myst-parser>=0.13.6
+    - myst-parser>=0.14
     - docutils
     - sphinx-notfound-page
     - sphinx>=4.4,<5

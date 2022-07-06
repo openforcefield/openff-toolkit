@@ -41,6 +41,7 @@ from openff.toolkit.topology import NotBondedError
 from openff.toolkit.topology.molecule import (
     Atom,
     FrozenMolecule,
+    HierarchyElement,
     HierarchySchemeNotFoundException,
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
     InvalidAtomMetadataError,
@@ -875,8 +876,8 @@ class TestMolecule:
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_create_from_serialized(self, molecule):
-        """Test standard constructor taking the output of __getstate__()."""
-        serialized_molecule = molecule.__getstate__()
+        """Test standard constructor taking the output of Molecule.to_dict()."""
+        serialized_molecule = molecule.to_dict()
         molecule_copy = Molecule(serialized_molecule)
         assert molecule == molecule_copy
 
@@ -1855,7 +1856,7 @@ class TestMolecule:
                 assert isomer.n_conformers == 0
 
             mol = Molecule.from_smiles(
-                "Cl/C=C\Cl", toolkit_registry=toolkit, allow_undefined_stereo=True
+                r"Cl/C=C\Cl", toolkit_registry=toolkit, allow_undefined_stereo=True
             )
             isomers = mol.enumerate_stereoisomers(
                 undefined_only=True, rationalise=False
@@ -1864,7 +1865,7 @@ class TestMolecule:
             assert isomers == []
 
             mol = Molecule.from_smiles(
-                "Cl/C=C\Cl", toolkit_registry=toolkit, allow_undefined_stereo=True
+                r"Cl/C=C\Cl", toolkit_registry=toolkit, allow_undefined_stereo=True
             )
             isomers = mol.enumerate_stereoisomers(
                 undefined_only=False, rationalise=False
@@ -2291,11 +2292,29 @@ class TestMolecule:
         ):
             Molecule.from_mapped_smiles("[Cl:1][Cl]", toolkit_registry=toolkit_class())
 
-    @pytest.mark.parametrize("molecule", mini_drug_bank())
-    def test_n_particles(self, molecule):
-        """Test n_particles property"""
-        n_particles = sum([1 for particle in molecule.particles])
-        assert n_particles == molecule.n_particles
+    def test_deprecated_api_points(self):
+        """Ensure that some of the API deprecated circa v0.11.0 still exist."""
+        from openff.toolkit.topology.molecule import MoleculeDeprecationWarning
+
+        molecule = Molecule.from_smiles("O")
+
+        with pytest.warns(
+            MoleculeDeprecationWarning,
+            match="Molecule.particles is deprecated. Use Molecule.atoms instead.",
+        ):
+            assert len(molecule.particles) == 3
+
+        with pytest.warns(
+            MoleculeDeprecationWarning,
+            match="Molecule.n_particles is deprecated. Use Molecule.n_atoms instead.",
+        ):
+            assert molecule.n_particles == 3
+
+        with pytest.warns(
+            MoleculeDeprecationWarning,
+            match="Molecule.particle_index is deprecated. Use Molecule.atom_index instead.",
+        ):
+            assert molecule.particle_index(molecule.atom(0)) == 0
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_n_atoms(self, molecule):
@@ -2406,7 +2425,7 @@ class TestMolecule:
         assert n_14_pairs == benzene.n_propers - 3
 
         for pair in benzene.nth_degree_neighbors(n_degrees=3):
-            assert pair[0].molecule_particle_index < pair[1].molecule_particle_index
+            assert pair[0].molecule_atom_index < pair[1].molecule_atom_index
 
     @pytest.mark.parametrize(
         ("smiles", "n_degrees", "num_pairs"),
@@ -3150,6 +3169,27 @@ class TestMoleculeVisualization:
         molecule = Molecule().from_smiles("CCO")
         molecule._ipython_display_()
 
+    def test_get_coordinates(self):
+        from openff.toolkit.utils.viz import _OFFTrajectoryNGLView
+
+        molecule = Molecule.from_smiles(
+            "C1CC2=C3C(=CC=C2)C(=CN3C1)[C@H]4[C@@H](C(=O)NC4=O)C5=CNC6=CC=CC=C65"
+        )
+        molecule.generate_conformers(n_conformers=3)
+
+        trajectory = _OFFTrajectoryNGLView(molecule)
+
+        np.testing.assert_allclose(trajectory.get_coordinates(), molecule.conformers[0])
+        np.testing.assert_allclose(
+            trajectory.get_coordinates(0), molecule.conformers[0]
+        )
+        np.testing.assert_allclose(
+            trajectory.get_coordinates(1), molecule.conformers[1]
+        )
+
+        with pytest.raises(IndexError, match="too high"):
+            trajectory.get_coordinates(100000)
+
 
 @pytest.mark.parametrize("strict_chirality", (True, False))
 class TestMoleculeResiduePerception:
@@ -3293,19 +3333,35 @@ class TestMoleculeFromPDB:
         """Test off Molecule contains expected number of atoms from T4 pdb."""
         # We expect/know the molecule contains this number of atoms
         expected_n_atoms = 2634
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/T4-protein.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/T4-protein.pdb")
+        )
         assert offmol.n_atoms == expected_n_atoms
 
     def test_molecule_from_pdb_mainchain_ala_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_ALA.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA.pdb")
+        )
         assert offmol.n_atoms == 22
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C)C(=O)NC")
         assert offmol.is_isomorphic_with(
             expected_mol, atom_stereochemistry_matching=False
         )
 
+        with NamedTemporaryFile(suffix="pdb") as iofile:
+            offmol.to_file(iofile.name, file_format="pdb")
+            offmol2 = Molecule.from_polymer_pdb(iofile.name)
+        assert offmol.is_isomorphic_with(offmol2)
+        assert np.allclose(
+            offmol2.conformers[0].m_as(unit.angstrom),
+            offmol2.conformers[0].m_as(unit.angstrom),
+            atol=0.01,
+        )
+
     def test_molecule_from_pdb_mainchain_ala_tripeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+        )
         assert offmol.n_atoms == 32
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C)C(=O)N[C@H](C)C(=O)NC")
         assert offmol.is_isomorphic_with(
@@ -3313,7 +3369,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_cterm_ala_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/CTerminal_ALA.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/CTerminal_ALA.pdb")
+        )
         assert offmol.n_atoms == 17
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C)C(=O)[O-]")
         assert offmol.is_isomorphic_with(
@@ -3321,7 +3379,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_cterm_ala_tripeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/CTerminal_ALA_ALA.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/CTerminal_ALA_ALA.pdb")
+        )
         assert offmol.n_atoms == 27
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C)C(=O)N[C@H](C)C(=O)[O-]")
         assert offmol.is_isomorphic_with(
@@ -3329,7 +3389,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_nterm_ala_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/NTerminal_ALA.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/NTerminal_ALA.pdb")
+        )
         assert offmol.n_atoms == 18
         expected_mol = Molecule.from_smiles("[N+]([H])([H])([H])[C@H](C)C(=O)NC")
         assert offmol.is_isomorphic_with(
@@ -3337,7 +3399,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_arg_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_ARG.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ARG.pdb")
+        )
         assert offmol.n_atoms == 36
         expected_mol = Molecule.from_smiles(
             "CC(=O)N[C@H](CCCNC(N)=[N+]([H])[H])C(=O)NC"
@@ -3347,7 +3411,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_cterm_arg_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/CTerminal_ARG.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/CTerminal_ARG.pdb")
+        )
         assert offmol.n_atoms == 31
         expected_mol = Molecule.from_smiles(
             "CC(=O)N[C@H](CCCNC(N)=[N+]([H])([H]))C(=O)[O-]"
@@ -3357,7 +3423,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_cys_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_CYS.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_CYS.pdb")
+        )
         assert offmol.n_atoms == 23
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CS)C(=O)NC")
         assert offmol.is_isomorphic_with(
@@ -3365,7 +3433,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_cyx_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_CYX.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_CYX.pdb")
+        )
         assert offmol.n_atoms == 44
         expected_mol = Molecule.from_smiles(
             "CC(=O)N[C@H](CSSC[C@H](NC(=O)C)C(=O)NC)C(=O)NC"
@@ -3375,7 +3445,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_hid_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_HID.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_HID.pdb")
+        )
         assert offmol.n_atoms == 29
         assert offmol.total_charge == 0 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 0
@@ -3386,7 +3458,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_hie_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_HIE.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_HIE.pdb")
+        )
         assert offmol.n_atoms == 29
         assert offmol.total_charge == 0 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 0
@@ -3397,7 +3471,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_hip_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_HIP.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_HIP.pdb")
+        )
         assert offmol.n_atoms == 30
         assert offmol.total_charge == 1 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 0
@@ -3409,7 +3485,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_trp_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_TRP.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_TRP.pdb")
+        )
         assert offmol.n_atoms == 36
         assert offmol.total_charge == 0 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 6
@@ -3424,7 +3502,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_cterminal_trp_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/CTerminal_TRP.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/CTerminal_TRP.pdb")
+        )
         assert offmol.n_atoms == 31
         assert offmol.total_charge == -1 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 6
@@ -3439,7 +3519,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_nterminal_trp_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/NTerminal_TRP.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/NTerminal_TRP.pdb")
+        )
         assert offmol.n_atoms == 32
         assert offmol.total_charge == 1 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 6
@@ -3456,7 +3538,9 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_pro_dipeptide(self):
-        offmol = Molecule.from_pdb(get_data_file_path("proteins/MainChain_PRO.pdb"))
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_PRO.pdb")
+        )
         assert offmol.n_atoms == 26
         assert offmol.total_charge == 0 * unit.elementary_charge
         expected_mol = Molecule.from_smiles("CC(=O)N1[C@H](CCC1)C(=O)NC")
@@ -3474,6 +3558,15 @@ class TestMoleculeFromPDB:
     def test_from_pdb_t4_atom_metadata(self):
         """Test to check the metadata from T4 pdb is filled correctly."""
         raise NotImplementedError
+
+    # TODO: Remove decorator when OpenEye implementation is back online
+    @pytest.mark.slow
+    @requires_rdkit
+    def test_from_t4_to_topology(self):
+        """Ensure a large protein can be converted into a `Topology`. See #1319."""
+        Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/T4-protein.pdb")
+        ).to_topology()
 
 
 class MyMol(FrozenMolecule):
@@ -3591,8 +3684,9 @@ class TestHierarchies:
         assert "ALA" == dipeptide_residues_perceived.atoms[10].metadata["residue_name"]
         assert 2 == dipeptide_residues_perceived.atoms[10].metadata["residue_number"]
 
+        assert isinstance(dipeptide_residues_perceived.residues[0], HierarchyElement)
         with pytest.raises(AttributeError):
-            type(dipeptide_residues_perceived.residues[0])
+            type(dipeptide_residues_perceived.chains[0])
 
     def test_add_delete_hierarchy_scheme(self):
         """Test adding and removing HierarchySchemes to/from molecules"""
@@ -3602,17 +3696,17 @@ class TestHierarchies:
 
         dipeptide_residues_perceived = create_dipeptide()
 
-        assert len(dipeptide_residues_perceived.hierarchy_schemes) == 0
+        assert len(dipeptide_residues_perceived.hierarchy_schemes) == 1
         dipeptide_residues_perceived.add_hierarchy_scheme(
             ("residue_number",), "res_by_num"
         )
-        assert len(dipeptide_residues_perceived.hierarchy_schemes) == 1
+        assert len(dipeptide_residues_perceived.hierarchy_schemes) == 2
 
         # Redundant hier schemes are OK as long as their iter name is different
         dipeptide_residues_perceived.add_hierarchy_scheme(
             ("residue_number",), "res_by_num2"
         )
-        assert len(dipeptide_residues_perceived.hierarchy_schemes) == 2
+        assert len(dipeptide_residues_perceived.hierarchy_schemes) == 3
 
         # Redundant hier schemes are NOT OK if their iter name is already used
         with pytest.raises(
@@ -3622,20 +3716,13 @@ class TestHierarchies:
             dipeptide_residues_perceived.add_hierarchy_scheme(
                 ("residue_number",), "res_by_num"
             )
-        assert len(dipeptide_residues_perceived.hierarchy_schemes) == 2
+        assert len(dipeptide_residues_perceived.hierarchy_schemes) == 3
 
-        with pytest.raises(AttributeError):
-            dipeptide_residues_perceived.res_by_num[0]
-
-        dipeptide_residues_perceived.perceive_hierarchy(["res_by_num"])
-
+        # update_hierarchy_schemes() was called by add_hierarchy_scheme
         assert dipeptide_residues_perceived.res_by_num[0].residue_number == 1
-        # Since we only perceived res_by_num above, residues should not be defined
-        with pytest.raises(AttributeError):
-            dipeptide_residues_perceived.residues[0]
         # Delete the hierarchyscheme and ensure that the iterators are no longer available
         dipeptide_residues_perceived.delete_hierarchy_scheme("res_by_num")
-        assert len(dipeptide_residues_perceived.hierarchy_schemes) == 1
+        assert len(dipeptide_residues_perceived.hierarchy_schemes) == 2
         with pytest.raises(AttributeError):
             dipeptide_residues_perceived.res_by_num[0]
         with pytest.raises(
@@ -3647,51 +3734,115 @@ class TestHierarchies:
         ):
             dipeptide_residues_perceived.delete_hierarchy_scheme("res_by_num")
 
+    def test_add_hierarchy_scheme(self):
+        """Test all behaviors of Molecule.add_hierarchy_scheme"""
+        offmol = Molecule()
+
+        # Raise an error if iterator name isn't a string, even if it's hashable
+        with pytest.raises(
+            TypeError, match="'iterator_name' kwarg must be a string, received 1"
+        ):
+            offmol.add_hierarchy_scheme(("chain", "residue_number", "residue_name"), 1)
+
+        # Ensure that the uniqueness criteria kwarg is some sort of iterable
+        with pytest.raises(
+            TypeError,
+            match="'uniqueness_criteria' kwarg must be a list or a tuple of strings, received 'residue_number'",
+        ):
+            offmol.add_hierarchy_scheme("residue_number", "residues")
+        # Providing uniqueness_criteria as a list is OK
+        offmol.add_hierarchy_scheme(
+            ["chain", "residue_number", "residue_name"], "residues"
+        )
+
+        # Ensure that the items in the uniqueness_criteria are strings
+        with pytest.raises(
+            TypeError,
+            match="Each item in the 'uniqueness_criteria' kwarg must be a string, received [(]'chain_id',[)]",
+        ):
+            offmol.add_hierarchy_scheme([("chain_id",)], "chains")
+
+    @requires_rdkit  # TODO: This test should NOT require RDKit
+    def test_add_default_hierarchy_schemes(self):
+        """Test add_default_hierarchy_schemes and its kwargs"""
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA.pdb")
+        )
+        offmol.delete_hierarchy_scheme("residues")
+        offmol.delete_hierarchy_scheme("chains")
+        offmol.add_hierarchy_scheme(("residue_number", "residue_name"), "residues")
+        # Make sure that the non-default "residues" iterator that we just added
+        # doesn't have "chain_id" as a uniqueness criterion
+        assert (
+            "chain_id" not in offmol.hierarchy_schemes["residues"].uniqueness_criteria
+        )
+        # Test that the overwrite_existing kwarg has the right behavior
+        with pytest.raises(HierarchySchemeWithIteratorNameAlreadyRegisteredException):
+            offmol.add_default_hierarchy_schemes(overwrite_existing=False)
+
+        # Run add_default_hierarchy_schemes with overwrite_existing set to its default value,
+        # which should overwrite the "residues" iterator we just defined
+        offmol.add_default_hierarchy_schemes()
+        # Ensure that the new residues iterator DOES have the correct uniqueness criterion
+        assert (
+            "residue_name" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
+        )
+        assert (
+            "residue_number" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
+        )
+        assert "chain_id" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
+        assert [*offmol.residues][0].residue_name == "ACE"
+        assert [*offmol.residues][0].residue_number == "1"
+        assert [*offmol.residues][0].chain_id == " "
+
+        assert "chain_id" in offmol.hierarchy_schemes["chains"].uniqueness_criteria
+        assert [*offmol.chains][0].chain_id == " "
+
     def test_hierarchy_perceived_dipeptide(self):
         """Test populating and accessing HierarchyElements"""
         from openff.toolkit.tests.create_molecules import (
-            dipeptide_hierarchy_perceived as create_dipeptide,
+            dipeptide_hierarchy_added as create_dipeptide,
         )
 
         dipeptide_hierarchy_perceived = create_dipeptide()
 
         assert (
             str(dipeptide_hierarchy_perceived.residues[0])
-            == "HierarchyElement ('None', 1, 'ACE') of iterator 'residues' containing 6 particle(s)"
+            == "HierarchyElement ('None', 1, 'ACE') of iterator 'residues' containing 6 atom(s)"
         )
-        assert dipeptide_hierarchy_perceived.residues[0].chain == "None"
+        assert dipeptide_hierarchy_perceived.residues[0].chain_id == "None"
         assert dipeptide_hierarchy_perceived.residues[0].residue_name == "ACE"
         assert dipeptide_hierarchy_perceived.residues[0].residue_number == 1
-        assert set(dipeptide_hierarchy_perceived.residues[0].particle_indices) == set(
+        assert set(dipeptide_hierarchy_perceived.residues[0].atom_indices) == set(
             range(6)
         )
 
         assert (
             str(dipeptide_hierarchy_perceived.residues[1])
-            == "HierarchyElement ('None', 2, 'ALA') of iterator 'residues' containing 11 particle(s)"
+            == "HierarchyElement ('None', 2, 'ALA') of iterator 'residues' containing 11 atom(s)"
         )
-        assert dipeptide_hierarchy_perceived.residues[1].chain == "None"
+        assert dipeptide_hierarchy_perceived.residues[1].chain_id == "None"
         assert dipeptide_hierarchy_perceived.residues[1].residue_name == "ALA"
         assert dipeptide_hierarchy_perceived.residues[1].residue_number == 2
-        assert set(dipeptide_hierarchy_perceived.residues[1].particle_indices) == set(
+        assert set(dipeptide_hierarchy_perceived.residues[1].atom_indices) == set(
             range(6, 17)
         )
 
         for residue in dipeptide_hierarchy_perceived.residues:
-            for particle in residue.particles:
-                assert particle.metadata["residue_name"] == residue.residue_name
-                assert particle.metadata["residue_number"] == residue.residue_number
+            for atom in residue.atoms:
+                assert atom.metadata["residue_name"] == residue.residue_name
+                assert atom.metadata["residue_number"] == residue.residue_number
 
     def test_hierarchy_perceived_information_propagation(self):
         """Ensure that updating atom metadata doesn't update the iterators until the hierarchy is re-perceived"""
         from openff.toolkit.tests.create_molecules import (
-            dipeptide_hierarchy_perceived as create_dipeptide,
+            dipeptide_hierarchy_added as create_dipeptide,
         )
 
         dipeptide_hierarchy_perceived = create_dipeptide()
 
         for atom in dipeptide_hierarchy_perceived.atoms:
-            atom.metadata["chain"] = "A"
+            atom.metadata["chain_id"] = "A"
         assert ("A", 1, "ACE") != dipeptide_hierarchy_perceived.residues[0].identifier
-        dipeptide_hierarchy_perceived.perceive_hierarchy()
+        dipeptide_hierarchy_perceived.update_hierarchy_schemes()
         assert ("A", 1, "ACE") == dipeptide_hierarchy_perceived.residues[0].identifier

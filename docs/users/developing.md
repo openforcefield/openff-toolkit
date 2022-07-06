@@ -47,14 +47,14 @@ Cosmetic attribute
 Continuous Integration (CI)
 : Tests that run frequently while the code is undergoing changes, ensuring that the codebase still installs and has the intended behavior.
   Currently, we use a service called [GitHub Actions](https://github.com/features/actions) for this.
-  CI jobs run every time a commit is made to the `master` branch of the `openff-toolkit` GitHub repository or in a PR opened against it.
+  CI jobs run every time a commit is made to the `main` branch of the `openff-toolkit` GitHub repository or in a PR opened against it.
   These runs start by booting virtual machines that mimic brand new Linux and macOS computers.
   They then follow build instructions (see the `.github/workflows/CI.yml` file) to install the toolkit.
   After installing the OpenFF Toolkit and its dependencies, these virtual machines run our test suite.
   If the tests all pass, the build "passes" (returns a green check mark on GitHub).
 
-  If all the tests for a specific change to the `master` branch return green, then we know that the change has not broken the toolkit's existing functionality.
-  When proposing code changes, we ask that contributors open a Pull Request (PR) on GitHub to merge their changes into the `master` branch.
+  If all the tests for a specific change to the `main` branch return green, then we know that the change has not broken the toolkit's existing functionality.
+  When proposing code changes, we ask that contributors open a Pull Request (PR) on GitHub to merge their changes into the `main` branch.
   When a pull request is open, CI will run on the latest set of proposed changes and indicate whether they are safe to merge through status checks, summarized as a green check mark or red cross.
 
 CodeCov
@@ -142,7 +142,6 @@ Extend this class to add a support for a new force or energy term to the toolkit
 
 Each `ParameterHandler`-derived class MUST implement the following methods and define the following attributes:
 
-- `create_force(self, system, topology, **kwargs)`: takes an OpenMM `System` and a OpenFF `Topology` as input, as well as optional keyword arguments, and modifies the `System` to contain the appropriate parameters.
 - Class members `ParameterAttributes`: These correspond to the header-level attributes in a SMIRNOFF data source.
 For example, the `Bonds` tag in the SMIRNOFF spec has an optional `fractional_bondorder_method` field, which corresponds to the line  `fractional_bondorder_method = ParameterAttribute(default=None)` in the `BondHandler` class definition.
 The `ParameterAttribute` and `IndexedParameterAttribute` classes offer considerable flexibility for validating inputs.
@@ -168,8 +167,6 @@ Each `ParameterHandler`-derived class MAY implement:
     This function is used when a `ForceField` is attempted to be constructed from *multiple* SMIRNOFF data sources, and it is necessary to check that two sections with the same tag name can be combined in a sane way.
     For example, if the user instructed two `vdW` sections to be read, but the sections defined different vdW potentials, then this function should raise an Exception indicating that there is no safe way to combine the parameters.
     The default implementation of this function should suffice for most developers.
-  - `postprocess_system`: operates identically to `create_force`, but is run after each ParameterHandlers' `create_force` has already been called.
-    The default implementation of this method simply does nothing, and should suffice for most developers.
 
 ### `ParameterType`
 [`ParameterType`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterType) is a base class for the SMIRKS-based parameters of a `ParameterHandler`.
@@ -333,7 +330,7 @@ Currently, two are employed:
 1. [Black](https://black.readthedocs.io/), the uncompromising code formatter, automatically formats code with a consistent style.
 1. [isort](https://timothycrosley.github.io/isort/), sorts imports
 
-There is a step in CI that uses these tools to check for a consistent style (see the file [`.github/workflows/lint.yml`](https://github.com/openforcefield/openff-toolkit/blob/master/.github/workflows/lint.yml)).
+There is a step in CI that uses these tools to check for a consistent style (see the file [`.github/workflows/lint.yml`](https://github.com/openforcefield/openff-toolkit/blob/main/.github/workflows/lint.yml)).
 These checks will use the most recent versions of each linter.
 To ensure that changes follow these standards, you can install and run these tools locally:
 

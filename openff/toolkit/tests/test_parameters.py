@@ -705,7 +705,7 @@ class TestParameterHandler:
             _MAX_SUPPORTED_SECTION_VERSION = Version("2")
 
         my_ph = MyPHSubclass(version=1.234)
-        assert my_ph.to_dict()["version"] == Version("1.234")
+        assert my_ph.to_dict()["version"] == str(Version("1.234"))
 
     def test_add_delete_cosmetic_attributes(self):
         """Test ParameterHandler.to_dict() function when some parameters are in
@@ -800,6 +800,17 @@ class TestParameterHandler:
         params = bh.get_parameter({"id": "b1", "smirks": "[#1:1]-[#6:2]"})
 
         assert len(params) == 1
+
+    def test_create_force(self):
+        class MyParameterHandler(ParameterHandler):
+            pass
+
+        handler = MyParameterHandler(version=0.3)
+
+        with pytest.raises(
+            NotImplementedError, match="no longer create OpenMM forces."
+        ):
+            handler.create_force()
 
 
 class TestParameterList:
@@ -1421,6 +1432,45 @@ class TestBondHandler:
         # This comparison should pass, since the potentials defined above are compatible
         bh1.check_handler_compatibility(bh2)
 
+    def test_am1_wiberg_combine_error(self):
+        """Reproduce issue #719 and a suggested fix."""
+        v3 = BondHandler(version=0.3)
+        v4 = BondHandler(version=0.4)
+
+        v3.add_parameter(
+            parameter=BondHandler.BondType(
+                smirks="[#6:1]-[*:2]",
+                length=1.0 * unit.angstrom,
+                k=5 * unit.kilocalorie / unit.mole / unit.angstrom**2,
+            )
+        )
+
+        v4.add_parameter(
+            parameter=BondHandler.BondType(
+                smirks="[#8:1]-[*:2]",
+                length=2.0 * unit.angstrom,
+                k=5 * unit.kilocalorie / unit.mole / unit.angstrom**2,
+            )
+        )
+
+        ff_v3 = ForceField()
+        ff_v4 = ForceField()
+
+        ff_v3.register_parameter_handler(v3)
+        ff_v4.register_parameter_handler(v4)
+
+        with pytest.raises(
+            IncompatibleParameterError,
+            match="This likely results from mixing bond handlers",
+        ):
+            ff_v3._load_smirnoff_data(ff_v4._to_smirnoff_data())
+
+        # Simulate a user following the recommendation to switch a
+        # version 0.3 BondHandler to use 'AM1-Wiberg'
+        ff_v3["Bonds"].fractional_bondorder_method = "AM1-Wiberg"
+
+        ff_v3._load_smirnoff_data(ff_v4._to_smirnoff_data())
+
 
 class TestProperTorsionType:
     """Tests for the ProperTorsionType class."""
@@ -1486,7 +1536,7 @@ class TestProperTorsionType:
         the indices are not consecutive and a SMIRNOFFSpecError is raised
         """
         with pytest.raises(
-            SMIRNOFFSpecError, match="Unexpected kwarg \(phase3: 31 deg\)*."
+            SMIRNOFFSpecError, match=r"Unexpected kwarg \(phase3: 31 deg\)*."
         ):
             ProperTorsionHandler.ProperTorsionType(
                 smirks="[*:1]-[*:2]-[*:3]-[*:4]",
@@ -1621,7 +1671,7 @@ class TestProperTorsionType:
         AND we are doing bond order interpolation
         """
         with pytest.raises(
-            SMIRNOFFSpecError, match="Unexpected kwarg \(k3_bondorder1*."
+            SMIRNOFFSpecError, match=r"Unexpected kwarg \(k3_bondorder1*."
         ):
             ProperTorsionHandler.ProperTorsionType(
                 smirks="[*:1]-[*:2]-[*:3]-[*:4]",
@@ -1694,28 +1744,6 @@ class TestProperTorsionHandler:
 
 
 class TestvdWHandler:
-    def test_create_force_defaults(self):
-        """Test that create_force works on a vdWHandler with all default values"""
-        import openmm
-
-        # Create a dummy topology containing only argon and give it a set of
-        # box vectors.
-        topology = Molecule.from_smiles("[Ar]").to_topology()
-        topology.box_vectors = unit.Quantity(numpy.eye(3) * 20, unit.angstrom)
-
-        # create a VdW handler with only parameters for argon.
-        vdw_handler = vdWHandler(version=0.3)
-        vdw_handler.add_parameter(
-            {
-                "smirks": "[#18:1]",
-                "epsilon": 1.0 * unit.kilojoules / unit.mole,
-                "sigma": 1.0 * unit.angstrom,
-            }
-        )
-
-        omm_sys = openmm.System()
-        vdw_handler.create_force(omm_sys, topology)
-
     def test_add_param_str(self):
         """
         Ensure that string input is supported, given the added complication that the
@@ -1741,75 +1769,23 @@ class TestvdWHandler:
         assert vdw_handler.get_parameter({"smirks": "[*:1]"})[0].id == "n99"
         assert vdw_handler.get_parameter({"smirks": "[#1:1]"})[0].id == "n00"
 
+    def test_set_invalid_scale_factor(self):
+        handler = vdWHandler(version=0.3)
+
+        with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale12"):
+            handler.scale12 = 0.1
+
+        with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale13"):
+            handler.scale13 = 0.1
+
+        with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale15"):
+            handler.scale15 = 0.1
+
 
 class TestvdWType:
     """
     Test the behavior of vdWType
     """
-
-    @pytest.mark.parametrize(
-        "cutoff,switch_width,expected_use,expected_switching_distance",
-        [
-            (9.0 * unit.angstrom, 1.0 * unit.angstrom, True, 8.0 * unit.angstrom),
-            (15.0 * unit.angstrom, 5.0 * unit.angstrom, True, 10.0 * unit.angstrom),
-            (9.0 * unit.angstrom, 0.0 * unit.angstrom, False, 0.0 * unit.angstrom),
-        ],
-    )
-    @pytest.mark.parametrize(
-        "method",
-        # It's possible that this test should not cover PME (LJ-PME), see comments in parameters.py
-        ["PME", "cutoff"],
-    )
-    def test_switch_width(
-        self, cutoff, switch_width, expected_use, expected_switching_distance, method
-    ):
-        """Test that create_force works on a vdWHandler which has a switch width
-        specified.
-        """
-
-        import openmm
-        from openmm import unit as openmm_unit
-
-        # Create a dummy topology containing only argon and give it a set of
-        # box vectors.
-        topology = Molecule.from_smiles("[Ar]").to_topology()
-        topology.box_vectors = unit.Quantity(numpy.eye(3) * 20 * unit.angstrom)
-
-        # create a VdW handler with only parameters for argon.
-        vdw_handler = vdWHandler(
-            version=0.3,
-            cutoff=cutoff,
-            switch_width=switch_width,
-            method=method,
-        )
-        vdw_handler.add_parameter(
-            {
-                "smirks": "[#18:1]",
-                "epsilon": 1.0 * unit.kilojoules_per_mole,
-                "sigma": 1.0 * unit.angstrom,
-            }
-        )
-
-        omm_sys = openmm.System()
-
-        vdw_handler.create_force(omm_sys, topology)
-
-        nonbonded_force = [
-            force
-            for force in omm_sys.getForces()
-            if isinstance(force, openmm.NonbondedForce)
-        ][0]
-
-        assert nonbonded_force.getUseSwitchingFunction() == expected_use
-
-        if expected_use:
-
-            assert numpy.isclose(
-                nonbonded_force.getSwitchingDistance().value_in_unit(
-                    openmm_unit.angstrom
-                ),
-                expected_switching_distance.m_as(unit.angstrom),
-            )
 
     def test_sigma_rmin_half(self):
         """Test the setter/getter behavior or sigma and rmin_half"""
@@ -1874,6 +1850,18 @@ class TestElectrostaticsHandler:
             match="unexpected periodic potential",
         ):
             handler.periodic_potential = "PPPM"
+
+    def test_set_invalid_scale_factor(self):
+        handler = ElectrostaticsHandler(version=0.4)
+
+        with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale12"):
+            handler.scale12 = 0.1
+
+        with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale13"):
+            handler.scale13 = 0.1
+
+        with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale15"):
+            handler.scale15 = 0.1
 
 
 class TestElectrostaticsHandlerUpconversion:
@@ -2727,9 +2715,6 @@ class TestParameterTypeReExports:
                 )
 
 
-# TODO: test_nonbonded_settings (ensure that choices in Electrostatics and vdW tags resolve
-#                                to correct openmm.NonbondedForce subtypes, that setting different cutoffs raises
-#                                exceptions, etc)
 # TODO: test_(all attributes of all ParameterTypes)
 # TODO: test_add_parameter_fractional_bondorder
 # TODO: test_get_indexed_attrib

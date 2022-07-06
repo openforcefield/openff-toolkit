@@ -15,21 +15,6 @@ class IncompatibleUnitError(OpenFFToolkitException):
     """
 
 
-class MissingDependencyError(OpenFFToolkitException, ImportError):
-    """
-    Exception for when an optional dependency is needed but not installed
-
-    """
-
-    def __init__(self, package_name):
-        self.msg = (
-            f"Missing dependency {package_name}. Try installing it "
-            f"with\n\n$ conda install {package_name} -c conda-forge"
-        )
-
-        super().__init__(self.msg)
-
-
 class MissingPackageError(OpenFFToolkitException):
     """This function requires a package that is not installed."""
 
@@ -113,6 +98,18 @@ class SmilesParsingError(OpenFFToolkitException):
 
 class NotAttachedToMoleculeError(OpenFFToolkitException):
     """Exception for when a component does not belong to a Molecule object, but is queried"""
+
+
+class NotInTopologyError(OpenFFToolkitException):
+    """An object was not found in a topology."""
+
+
+class AtomNotInTopologyError(NotInTopologyError):
+    """An atom was not found in a topology."""
+
+
+class MoleculeNotInTopologyError(NotInTopologyError):
+    """A molecule was not found in a topology."""
 
 
 class InvalidAtomMetadataError(OpenFFToolkitException):
@@ -249,10 +246,6 @@ class UnassignedMoleculeChargeException(OpenFFToolkitException):
     """Exception raised when no charge method is able to assign charges to a molecule."""
 
 
-class NonintegralMoleculeChargeException(OpenFFToolkitException):
-    """Exception raised when the partial charges on a molecule do not sum up to its formal charge."""
-
-
 class DuplicateParameterError(OpenFFToolkitException):
     """Exception raised when trying to add a ParameterType that already exists"""
 
@@ -287,6 +280,10 @@ class MissingIndexedAttributeError(
     """Error raised when an indexed attribute does not exist"""
 
 
+class MissingPartialChargesError(OpenFFToolkitException, ValueError):
+    """Error raised when a molecule is missing partial charges in a context in which it is expected to have them."""
+
+
 class UnsupportedMoleculeConversionError(OpenFFToolkitException):
     """Error raised when attempting to instantiate a Molecule with insufficient inputs."""
 
@@ -299,3 +296,7 @@ class InconsistentStereochemistryError(OpenFFToolkitException):
 
 class UnsupportedFileTypeError(OpenFFToolkitException):
     """Error raised when attempting to parse an unsupported file type."""
+
+
+class UnsupportedKeywordArgumentsError(OpenFFToolkitException, ValueError):
+    """Error raised when an unexpected keyword argument is passed to `ForceField.create_openmm_system`."""

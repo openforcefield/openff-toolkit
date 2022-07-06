@@ -1,24 +1,40 @@
 name: offtk-examples
 channels:
   - conda-forge
-  - bioconda
-
-# These dependencies are in addition to the toolkit itself
+  - openeye
 dependencies:
+  - networkx
+  - rdkit
+  - ambertools
+  - openeye-toolkits
+  - xmltodict
+  - python-constraint
+  # These dependencies are in addition to the toolkit itself
   - nglview
   - notebook
-  - gromacs
+  - gromacs >=2021=nompi*
+  # Add back when LAMMPS export is better
+  # lammps
+  - openff-amber-ff-ports >=0.0.3
+  - ambertools
   - qcelemental
   - qcportal
   - qcengine
+  - pytest
+  - nbval
   # https://github.com/openforcefield/openff-toolkit/pull/1232#issuecomment-1080889858
   # openmmforcefields
-  # Below are dependencies of the toolkit; they are listed here as a reference
+  # Below are some dependencies of the toolkit; they are listed here as a reference
   - mdtraj
   - numpy
-  - openmm
+  - openmm >=7.7
   - openff-forcefields >=2.0.0
-  - openff-interchange >=0.1.3
-  - gromacs
-  - lammps
-  - ambertools
+  - cached-property
+  - cachetools
+  # Some others that will be pulled down by an Interchange conda package
+  - openff-utilities
+  - openff-units >=0.1.6
+  - panedr
+  - pip:
+    # Replace with conda package when 0.2.0 is released
+    - git+https://github.com/openforcefield/openff-interchange.git@main

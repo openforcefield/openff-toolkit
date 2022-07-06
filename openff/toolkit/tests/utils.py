@@ -45,6 +45,10 @@ requires_openeye_mol2 = pytest.mark.skipif(
     reason="Test requires OE toolkit to read mol2 files",
 )
 
+unimplemented_interchange = pytest.mark.skip(
+    reason="Functionality has not or will not be implemented in Interchange"
+)
+
 
 def has_pkg(pkg_name):
     """

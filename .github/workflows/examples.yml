@@ -3,15 +3,14 @@ name: Examples
 on:
   push:
     branches:
-      - "master"
+      - "main"
       - "maintenance/.+"
   pull_request:
     branches:
-      - "master"
+      - "main"
       - "maintenance/.+"
-      - "topology-biopolymer-refactor"
   schedule:
-    # Nightly tests run on master by default:
+    # Nightly tests run on main by default:
     #   Scheduled workflows run on the latest commit on the default or base branch.
     #   (from https://help.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events-schedule)
     - cron: "0 0 * * *"
@@ -45,7 +44,7 @@ jobs:
       NB_ARGS: -v --nbval-lax --ignore=examples/deprecated
 
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3.0.2
         with:
           fetch-depth: 2
 
@@ -98,8 +97,9 @@ jobs:
 
       - name: Install package
         run: |
-          # Remove the packaged openff-toolkit, installed as a dependency of openmmforcefields
-          conda remove --force openff-toolkit-base
+          # Maybe remove the packaged openff-toolkit, installed as a dependency of openmmforcefields
+          # and/or Interchange
+          # conda remove --force openff-toolkit-base
           python setup.py develop --no-deps
 
       - name: Environment Information
@@ -122,18 +122,23 @@ jobs:
             NB_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             NB_ARGS+=" --ignore=examples/conformer_energies"
             NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
+            # Remove when #1322 is merged
+            NB_ARGS+=" --ignore=examples/using_smirnoff_with_amber_protein_forcefield"
           fi
-          NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs/export_with_interchange.ipynb"
-          # https://github.com/openforcefield/openff-toolkit/pull/1232#issuecomment-1080889858
-          NB_ARGS+=" --ignore=examples/toolkit_showcase/toolkit_showcase.ipynb"
-          NB_ARGS+=" --ignore=examples/swap_amber_parameters/swap_existing_ligand_parameters_with_openmmforcefields.ipynb"
 
-          # REMOVE THIS LINE BEFORE 0.11.0 RELEASE
+          # Working on in #1325
           NB_ARGS+=" --ignore=examples/virtual_sites/vsite_showcase.ipynb"
+
+          # openmmforcefields incompatible with new toolkit
+          NB_ARGS+=" --ignore=examples/external/swap_amber_parameters/swap_existing_ligand_parameters_with_openmmforcefields.ipynb"
+
+          # JM will do some smithing on this before 0.11.0 release
+          NB_ARGS+=" --ignore=examples/toolkit_showcase/toolkit_showcase.ipynb"
+
           pytest $NB_ARGS examples
 
       - name: Codecov
-        uses: codecov/codecov-action@v3.0.0
+        uses: codecov/codecov-action@v3.1.0
         with:
           file: ./coverage.xml
           fail_ci_if_error: true

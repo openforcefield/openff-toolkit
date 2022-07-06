@@ -1751,7 +1751,7 @@ class TestOpenEyeToolkitWrapper:
         expected_error = (
             "Bond order model 'not a real bond order model' is not supported by "
             "OpenEyeToolkitWrapper. Supported models are "
-            "\['am1-wiberg', 'am1-wiberg-elf10', 'pm3-wiberg', 'pm3-wiberg-elf10'\]"
+            r"\['am1-wiberg', 'am1-wiberg-elf10', 'pm3-wiberg', 'pm3-wiberg-elf10'\]"
         )
 
         with pytest.raises(ValueError, match=expected_error):
@@ -3917,6 +3917,10 @@ class TestToolkitRegistry:
     @requires_rdkit
     def test_register_imported_toolkit_wrappers(self):
         """Test that imported toolkits are registered, and in the expected order"""
+        no_precedence = ToolkitRegistry(_register_imported_toolkit_wrappers=True)
+
+        assert len(no_precedence.registered_toolkits) == 4
+
         # Ensure a specified order is respected
         default_registry = ToolkitRegistry(
             toolkit_precedence=[

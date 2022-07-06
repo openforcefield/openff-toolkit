@@ -2,6 +2,8 @@ from openff.toolkit.topology.molecule import (
     Atom,
     Bond,
     FrozenMolecule,
+    HierarchyElement,
+    HierarchyScheme,
     Molecule,
     Particle,
 )
@@ -36,4 +38,6 @@ __all__ = [
     "Topology",
     "UnsortedDict",
     "ValenceDict",
+    "HierarchyScheme",
+    "HierarchyElement",
 ]
