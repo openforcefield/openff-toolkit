@@ -3,15 +3,14 @@ name: Examples
 on:
   push:
     branches:
-      - "master"
+      - "main"
       - "maintenance/.+"
   pull_request:
     branches:
-      - "master"
+      - "main"
       - "maintenance/.+"
-      - "topology-biopolymer-refactor"
   schedule:
-    # Nightly tests run on master by default:
+    # Nightly tests run on main by default:
     #   Scheduled workflows run on the latest commit on the default or base branch.
     #   (from https://help.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events-schedule)
     - cron: "0 0 * * *"
@@ -45,16 +44,12 @@ jobs:
       NB_ARGS: -v --nbval-lax --ignore=examples/deprecated
 
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3.0.2
         with:
           fetch-depth: 2
 
       - name: Set environment variables
         run: |
-          if [[ ${{ matrix.openeye }} == true && ${{ matrix.rdkit }} == true ]]; then
-              echo "ENVFILE=test_env" >> $GITHUB_ENV
-          fi
-
           if [[ ${{ matrix.openeye }} == true && ${{ matrix.rdkit }} == false ]]; then
               echo "ENVFILE=openeye" >> $GITHUB_ENV
           fi
@@ -139,7 +134,7 @@ jobs:
           pytest $NB_ARGS examples
 
       - name: Codecov
-        uses: codecov/codecov-action@v3.0.0
+        uses: codecov/codecov-action@v3.1.0
         with:
           file: ./coverage.xml
           fail_ci_if_error: true

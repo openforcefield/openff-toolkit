@@ -3323,8 +3323,6 @@ class TestMoleculeResiduePerception:
         assert counter == offmol.n_atoms
 
 
-# TODO: Remove when not dependent on RDKit
-@requires_rdkit
 class TestMoleculeFromPDB:
     """
     Test creation of cheminformatics-rich openff Molecule from PDB files.
@@ -3348,6 +3346,16 @@ class TestMoleculeFromPDB:
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C)C(=O)NC")
         assert offmol.is_isomorphic_with(
             expected_mol, atom_stereochemistry_matching=False
+        )
+
+        with NamedTemporaryFile(suffix="pdb") as iofile:
+            offmol.to_file(iofile.name, file_format="pdb")
+            offmol2 = Molecule.from_polymer_pdb(iofile.name)
+        assert offmol.is_isomorphic_with(offmol2)
+        assert np.allclose(
+            offmol2.conformers[0].m_as(unit.angstrom),
+            offmol2.conformers[0].m_as(unit.angstrom),
+            atol=0.01,
         )
 
     def test_molecule_from_pdb_mainchain_ala_tripeptide(self):

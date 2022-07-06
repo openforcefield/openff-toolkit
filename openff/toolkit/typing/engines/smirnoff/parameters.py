@@ -2336,12 +2336,20 @@ class ParameterHandler(_ParameterAttributeHandler):
             this_val, other_val = get_unitless_values(attr)
 
             if this_val != other_val:
-                raise IncompatibleParameterError(
-                    "{} values are not identical. "
-                    "(handler value: {}, incompatible value: {}".format(
-                        attr, this_val, other_val
-                    )
+                msg = (
+                    f"{attr} values are not identical. (handler value: '{this_val}', "
+                    f"incompatible value: '{other_val}').\n"
                 )
+                if "AM1-Wiberg" in (this_val, other_val) and "none" in (
+                    this_val,
+                    other_val,
+                ):
+                    msg += (
+                        "This likely results from mixing bond handlers with different versions "
+                        "(0.3 and 0.4). Consider upgrading bond handlers to version 0.4 or "
+                        "manually setting `fractional_bondorder_method='AM1-Wiberg'`."
+                    )
+                raise IncompatibleParameterError(msg)
 
         for attr in tolerance_attrs:
             try:
