@@ -3562,9 +3562,9 @@ class TestMoleculeFromPDB:
             match=(
                 r"The following residue names with unassigned atoms were "
                 + r"not found in the substructure library. While the OpenFF "
-                + r"Toolkit identifies residues by matching chemical substructures "
-                + r"rather than by residue name, it currently only supports the "
-                + r"20 'canonical' amino acids\.\n\s*DYE"
+                + r"Toolkit identifies residues by matching chemical "
+                + r"substructures rather than by residue name, it currently "
+                + r"only supports the 20 'canonical' amino acids\.\n\s*DYE"
             ),
         ):
             Molecule.from_polymer_pdb(
@@ -3577,11 +3577,11 @@ class TestMoleculeFromPDB:
             UnassignedChemistryInPDBError,
             match=(
                 r"Hint: The following residues have the right numbers of the "
-                + r"right elements to match a substructure with the same name as "
-                + r"the input residue, but did not match\. This most likely "
+                + r"right elements to match a substructure with the same name "
+                + r"as the input residue, but did not match\. This most likely "
                 + r"suggests that their atom names do not match those in the "
-                + r"substructure library\. Try renaming misnamed atoms according "
-                + r"to the PDB Chemical Component Dictionary\.\n"
+                + r"substructure library\. Try renaming misnamed atoms "
+                + r"according to the PDB Chemical Component Dictionary\.\n"
                 + r"    Input residue ALA#0003 has misnamed atoms H01, H02, H03"
             ),
         ):
@@ -3609,10 +3609,11 @@ class TestMoleculeFromPDB:
         with pytest.raises(
             MultipleMoleculesInPDBError,
             match=(
-                r"This PDB has multiple molecules\. The OpenFF Toolkit requires "
-                + r"that only one molecule is present in a PDB\. Try splitting "
-                + r"each molecule into its own PDB with another tool, and "
-                + r"load any small molecules with Molecule\.from_pdb_and_smiles\."
+                r"This PDB has multiple molecules\. The OpenFF Toolkit "
+                + r"requires that only one molecule is present in a "
+                + r"PDB\. Try splitting each molecule into its own PDB "
+                + r"with another tool, and load any small molecules "
+                + r"with Molecule\.from_pdb_and_smiles\."
             ),
         ):
             Molecule.from_polymer_pdb(get_data_file_path("proteins/TwoMol_SER_CYS.pdb"))
@@ -3621,31 +3622,29 @@ class TestMoleculeFromPDB:
         """Test that a file fresh from the PDB gives all the right hints when it fails to load"""
         with pytest.raises(
             UnassignedChemistryInPDBError,
-            match="".join(
-                [
-                    "Some bonds or atoms in the input could not be identified.",
-                    "\n\n",
-                    "Hint: There are no hydrogens in the input. The OpenFF Toolkit ",
-                    "requires explicit hydrogens to avoid ambiguities in protonation ",
-                    "state or bond order. Try generating hydrogens with another ",
-                    "package and trying again.",
-                    "\n\n",
-                    "Hint: The input has multiple chain identifiers. The OpenFF ",
-                    "Toolkit only supports single-molecule PDB files, and residue ",
-                    "assignment can get very confused when multiple molecules are ",
-                    "present. Please split the file into individual chains and load ",
-                    "each seperately.",
-                    "\n\n",
-                    "Hint: The following residue names with unassigned atoms were ",
-                    "not found in the substructure library. While the OpenFF Toolkit ",
-                    "identifies residues by matching chemical substructures rather ",
-                    "than by residue name, it currently only supports the 20 ",
-                    "'canonical' amino acids.\n",
-                    "    EPE\n    HOH\n",
-                    "Note: 'HOH' is a residue code for water. You may have ",
-                    "crystallographic waters in your PDB file. Please remove these ",
-                    "before proceeding; they can be added back to the topology later.",
-                ]
+            match=(
+                r"Some bonds or atoms in the input could not be identified\."
+                + r"\n\n"
+                + r"Hint: There are no hydrogens in the input\. The OpenFF "
+                + r"Toolkit requires explicit hydrogens to avoid ambiguities "
+                + r"in protonation state or bond order\. Try generating "
+                + r"hydrogens with another package and trying again\."
+                + r"\n\n"
+                + r"Hint: The input has multiple chain identifiers\. The "
+                + r"OpenFF Toolkit only supports single-molecule PDB files\. "
+                + r"Please split the file into individual chains and load "
+                + r"each seperately\."
+                + r"\n\n"
+                + r"Hint: The following residue names with unassigned atoms "
+                + r"were not found in the substructure library\. While the "
+                + r"OpenFF Toolkit identifies residues by matching chemical "
+                + r"substructures rather than by residue name, it currently "
+                + r"only supports the 20 'canonical' amino acids\.\n"
+                + r"(    EPE\n    HOH\n)|(    HOH\n    EPE\n)"
+                + r"Note: 'HOH' is a residue code for water\. You may have "
+                + r"crystallographic waters in your PDB file\. Please remove "
+                + r"these before proceeding; they can be added back to the "
+                + r"topology later\."
             ),
         ):
             Molecule.from_polymer_pdb(

@@ -463,11 +463,10 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
     def multiple_chains_hint(self) -> List[str]:
         if self.omm_top.getNumChains() > 1:
             return [
-                "Hint: The input has multiple chain identifiers. The OpenFF Toolkit "
-                + "only supports single-molecule PDB files, and residue "
-                + "assignment can get very confused when multiple molecules are "
-                + "present. Please split the file into individual chains and "
-                + "load each seperately.",
+                "Hint: The input has multiple chain identifiers. The OpenFF "
+                + "Toolkit only supports single-molecule PDB files. Please "
+                + "split the file into individual chains and load each "
+                + "seperately.",
                 "",
             ]
 
