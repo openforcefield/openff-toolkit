@@ -369,7 +369,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
                     + "substructure library:"
                 ),
                 *(
-                    f"    Atom {i: >5} ({self._atoms[i].element.symbol}) in residue "
+                    f"    Atom {i: >5} ({self._atoms[i].name}) in residue "
                     + f"{self.residue_of_atom_as_str(i)}"
                     for i in self.unassigned_atoms
                 ),
@@ -402,9 +402,9 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
                     + "chemical information from the substructure library:"
                 ),
                 *(
-                    f"    Bond between atom {i_a: >5} ({self._atoms[i_a].element.symbol}) "
+                    f"    Bond between atom {i_a: >5} ({self._atoms[i_a].name}) "
                     + f"in {self.residue_of_atom_as_str(i_a)} "
-                    + f"and atom {i_b: >5} ({self._atoms[i_b].element.symbol}) "
+                    + f"and atom {i_b: >5} ({self._atoms[i_b].name}) "
                     + f"in {self.residue_of_atom_as_str(i_b)}"
                     for i_a, i_b in unassigned_bonds_with_assigned_atoms
                 ),
