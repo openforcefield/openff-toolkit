@@ -35,8 +35,8 @@ from openff.toolkit.utils.exceptions import (
     NotAttachedToMoleculeError,
     SMILESParseError,
     ToolkitUnavailableException,
-    UndefinedStereochemistryError,
     UnassignedChemistryInPDBError,
+    UndefinedStereochemistryError,
 )
 from openff.toolkit.utils.utils import inherit_docstrings
 
