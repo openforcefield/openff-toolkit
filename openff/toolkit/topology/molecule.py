@@ -3818,6 +3818,9 @@ class FrozenMolecule(Serializable):
         import openmm.unit as openmm_unit
         from openmm.app import PDBFile
 
+        if isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit_registry = ToolkitRegistry([toolkit_registry])
+
         pdb = PDBFile(file_path)
 
         substructure_file_path = get_data_file_path(
