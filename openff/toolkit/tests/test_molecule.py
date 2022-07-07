@@ -3604,32 +3604,15 @@ class TestMoleculeFromPDB:
                 get_data_file_path("proteins/T4_protein_waters.pdb")
             )
 
-    def test_molecule_from_pdb_error_two_chains(self):
-        """Test that a PDB with two chains raises a clear error"""
-        with pytest.raises(
-            MultipleMoleculesInPDBError,
-            match=(
-                r"Multiple polymer chains were detected in the input\. The OpenFF "
-                + r"Toolkit requires that only one polymer chain is present in a "
-                + r"PDB, and that it is the only molecule present\. Try splitting "
-                + r"each polymer chain into its own PDB with another tool, and "
-                + r"import any small molecules with Topology.from_pdb_and_smiles\."
-            ),
-        ):
-            Molecule.from_polymer_pdb(
-                get_data_file_path("proteins/TwoChains_SER_CYS.pdb")
-            )
-
     def test_molecule_from_pdb_error_two_polymers(self):
         """Test that a PDB with two capped polymers but no chain IDs raises a clear error"""
         with pytest.raises(
             MultipleMoleculesInPDBError,
             match=(
-                r"This PDB has multiple molecules. The OpenFF Toolkit "
-                + r"requires that only one polymer chain is present in a PDB, "
-                + r"and that it is the only molecule present\. Try splitting "
-                + r"each polymer chain into its own PDB with another tool, and "
-                + r"import any small molecules with Topology\.from_pdb_and_smiles\."
+                r"This PDB has multiple molecules\. The OpenFF Toolkit requires "
+                + r"that only one molecule is present in a PDB\. Try splitting "
+                + r"each molecule into its own PDB with another tool, and "
+                + r"load any small molecules with Molecule\.from_pdb_and_smiles\."
             ),
         ):
             Molecule.from_polymer_pdb(get_data_file_path("proteins/TwoMol_SER_CYS.pdb"))
