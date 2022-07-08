@@ -3768,29 +3768,10 @@ class FrozenMolecule(Serializable):
         but are not used in the actual assignment process.
 
         Metadata such as residues, chains, and atom names are recorded in the
-        ``Atom.properties`` attribute, which is a dictionary mapping from
-        strings like "residue" to the appropriate value. ``from_polymer_pdb``
+        ``Atom.metadata`` attribute, which is a dictionary mapping from
+        strings like "residue_name" to the appropriate value. ``from_polymer_pdb``
         returns a molecule that can be iterated over with the ``.residues`` and
         ``.chains`` attributes, as well as the usual ``.atoms``.
-
-        This method proceeds in the following order:
-
-        * Loads the polymer substructure template file (distributed with the
-          OpenFF Toolkit)
-        * Loads the PDB into an OpenMM :class:`openmm.app.PDBFile` object
-        * Turns OpenMM topology into a temporarily invalid rdkit Molecule
-        * Adds chemical information to the molecule; for each substructure
-          loaded from the substructure template file:
-
-          * Uses rdkit to find matches between the substructure and the
-            molecule
-          * For any matches, assigns the atom formal charge and bond order
-            info from the substructure to the rdkit molecule, then marks
-            the atoms and bonds as having been assigned so they can not be
-            overwritten by subsequent isomorphisms
-
-        * Take coordinates from the OpenMM Topology and add them as a conformer
-        * Convert the rdkit Molecule to OpenFF
 
         Parameters
         ----------
