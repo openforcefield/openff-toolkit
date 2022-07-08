@@ -56,6 +56,7 @@ from openff.toolkit.utils.exceptions import (
     IncompatibleUnitError,
     InvalidAtomMetadataError,
     InvalidConformerError,
+    MultipleMoleculesInPDBError,
     SmilesParsingError,
     UnsupportedFileTypeError,
 )
@@ -3746,7 +3747,9 @@ class FrozenMolecule(Serializable):
     @classmethod
     @requires_package("openmm")
     def from_polymer_pdb(
-        cls, file_path: Union[str, TextIO], toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
+        cls,
+        file_path: Union[str, TextIO],
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
         Loads a polymer from a PDB file.
@@ -3754,30 +3757,21 @@ class FrozenMolecule(Serializable):
         Currently only supports proteins with canonical amino acids that are
         either uncapped or capped by ACE/NME groups, but may later be extended
         to handle other common polymers, or accept user-defined polymer
-        templates.
+        templates. Only one polymer chain may be present in the PDB file, and it
+        must be the only molecule present.
+
+        Connectivity and bond orders are assigned by matching SMARTS codes for
+        the supported residues against atom names. The PDB file must include
+        all atoms with the correct standard atom names described in the
+        `PDB Chemical Component Dictionary <https://www.wwpdb.org/data/ccd>`_.
+        Residue names are used to assist trouble-shooting failed assignments,
+        but are not used in the actual assignment process.
 
         Metadata such as residues, chains, and atom names are recorded in the
-        ``Atom.properties`` attribute, which is a dictionary mapping from
-        strings like "residue" to the appropriate value. ``from_polymer_pdb``
+        ``Atom.metadata`` attribute, which is a dictionary mapping from
+        strings like "residue_name" to the appropriate value. ``from_polymer_pdb``
         returns a molecule that can be iterated over with the ``.residues`` and
         ``.chains`` attributes, as well as the usual ``.atoms``.
-
-        This method proceeds in the following order:
-
-        * Loads the polymer substructure template file (distributed with the
-          OpenFF Toolkit)
-        * Loads the PDB into an OpenMM :class:`openmm.app.PDBFile` object
-        * Turns OpenMM topology into a temporarily invalid rdkit Molecule
-        * Adds chemical information to the molecule:
-            * For each substructure loaded from the substructure template file
-                * Uses rdkit to find matches between the substructure and the
-                  molecule
-                * For any matches, assigns the atom formal charge and bond order
-                  info from the substructure to the rdkit molecule, then marks
-                  the atoms and bonds as having been assigned so they can not be
-                  overwritten by subsequent isomorphisms
-        * Take coordinates from the OpenMM Topology and add them as a conformer
-        * Convert the rdkit Molecule to OpenFF
 
         Parameters
         ----------
@@ -3789,9 +3783,24 @@ class FrozenMolecule(Serializable):
         Returns
         -------
         molecule : openff.toolkit.topology.Molecule
+
+        Raises
+        ------
+
+        UnassignedChemistryInPDBError
+            If an atom or bond could not be assigned; the exception will
+            provide a detailed diagnostic of what went wrong.
+
+        MultipleMoleculesInPDBError
+            If all atoms and bonds could be assigned, but the PDB includes
+            multiple chains or molecules.
+
         """
         import openmm.unit as openmm_unit
         from openmm.app import PDBFile
+
+        if isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit_registry = ToolkitRegistry([toolkit_registry])
 
         pdb = PDBFile(file_path)
 
@@ -3824,7 +3833,22 @@ class FrozenMolecule(Serializable):
             offmol.atoms[i].metadata["chain_id"] = atom.residue.chain.id
         offmol.add_default_hierarchy_schemes()
 
+        if offmol._has_multiple_molecules():
+            raise MultipleMoleculesInPDBError(
+                "This PDB has multiple molecules. The OpenFF Toolkit requires "
+                + "that only one molecule is present in a PDB. Try splitting "
+                + "each molecule into its own PDB with another tool, and "
+                + "load any small molecules with Molecule.from_pdb_and_smiles."
+            )
+
         return offmol
+
+    def _has_multiple_molecules(self) -> bool:
+        import networkx as nx
+
+        graph = self.to_networkx()
+        num_disconnected_subgraphs = sum(1 for _ in nx.connected_components(graph))
+        return num_disconnected_subgraphs > 1
 
     def _to_xyz_file(self, file_path):
         """

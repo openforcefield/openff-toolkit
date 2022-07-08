@@ -54,6 +54,8 @@ from openff.toolkit.utils.exceptions import (
     ConformerGenerationError,
     IncompatibleUnitError,
     InvalidConformerError,
+    MultipleMoleculesInPDBError,
+    UnassignedChemistryInPDBError,
     UnsupportedFileTypeError,
 )
 from openff.toolkit.utils.toolkits import (
@@ -3547,6 +3549,117 @@ class TestMoleculeFromPDB:
         assert offmol.is_isomorphic_with(
             expected_mol, atom_stereochemistry_matching=False
         )
+
+    def test_molecule_from_pdb_error_no_hydrogens(self):
+        """Test that a PDB without hydrogens raises a descriptive error"""
+        with pytest.raises(
+            UnassignedChemistryInPDBError,
+            match=(
+                r"There are no hydrogens in the input\. The OpenFF Toolkit "
+                + r"requires explicit hydrogens to avoid ambiguities in "
+                + r"protonation state or bond order\. Try generating hydrogens "
+                + r"with another package and trying again\."
+            ),
+        ):
+            Molecule.from_polymer_pdb(
+                get_data_file_path("proteins/MainChain_ALA_ALA_no_hydrogens.pdb")
+            )
+
+    def test_molecule_from_pdb_error_non_canonical_aa(self):
+        """Test that a PDB with an NCAA raises a descriptive error"""
+        with pytest.raises(
+            UnassignedChemistryInPDBError,
+            match=(
+                r"The following residue names with unassigned atoms were "
+                + r"not found in the substructure library. While the OpenFF "
+                + r"Toolkit identifies residues by matching chemical "
+                + r"substructures rather than by residue name, it currently "
+                + r"only supports the 20 'canonical' amino acids\.\n\s*DYE"
+            ),
+        ):
+            Molecule.from_polymer_pdb(
+                get_data_file_path("proteins/fluoresceine_dyed_helix_capped.pdb")
+            )
+
+    def test_molecule_from_pdb_error_misnamed_hydrogens(self):
+        """Test that a PDB with two chains raises a clear error"""
+        with pytest.raises(
+            UnassignedChemistryInPDBError,
+            match=(
+                r"Hint: The following residues have the right numbers of the "
+                + r"right elements to match a substructure with the same name "
+                + r"as the input residue, but did not match\. This most likely "
+                + r"suggests that their atom names do not match those in the "
+                + r"substructure library\. Try renaming misnamed atoms "
+                + r"according to the PDB Chemical Component Dictionary\.\n"
+                + r"    Input residue ALA#0003 has misnamed atoms H01, H02, H03"
+            ),
+        ):
+            Molecule.from_polymer_pdb(
+                get_data_file_path("proteins/CTerminal_ALA_ALA_misnamedH.pdb")
+            )
+
+    def test_molecule_from_pdb_error_crystal_waters(self):
+        """Test that a PDB with two chains raises a clear error"""
+        with pytest.raises(
+            UnassignedChemistryInPDBError,
+            match=(
+                r"Note: 'HOH' is a residue code for water. You may have "
+                + r"crystallographic waters in your PDB file. Please remove "
+                + r"these before proceeding; they can be added back to the "
+                + r"topology later."
+            ),
+        ):
+            Molecule.from_polymer_pdb(
+                get_data_file_path("proteins/T4_protein_waters.pdb")
+            )
+
+    def test_molecule_from_pdb_error_two_polymers(self):
+        """Test that a PDB with two capped polymers but no chain IDs raises a clear error"""
+        with pytest.raises(
+            MultipleMoleculesInPDBError,
+            match=(
+                r"This PDB has multiple molecules\. The OpenFF Toolkit "
+                + r"requires that only one molecule is present in a "
+                + r"PDB\. Try splitting each molecule into its own PDB "
+                + r"with another tool, and load any small molecules "
+                + r"with Molecule\.from_pdb_and_smiles\."
+            ),
+        ):
+            Molecule.from_polymer_pdb(get_data_file_path("proteins/TwoMol_SER_CYS.pdb"))
+
+    def test_unproc_pdb_4w51_errors(self):
+        """Test that a file fresh from the PDB gives all the right hints when it fails to load"""
+        with pytest.raises(
+            UnassignedChemistryInPDBError,
+            match=(
+                r"Some bonds or atoms in the input could not be identified\."
+                + r"\n\n"
+                + r"Hint: There are no hydrogens in the input\. The OpenFF "
+                + r"Toolkit requires explicit hydrogens to avoid ambiguities "
+                + r"in protonation state or bond order\. Try generating "
+                + r"hydrogens with another package and trying again\."
+                + r"\n\n"
+                + r"Hint: The input has multiple chain identifiers\. The "
+                + r"OpenFF Toolkit only supports single-molecule PDB files\. "
+                + r"Please split the file into individual chains and load "
+                + r"each seperately\."
+                + r"\n\n"
+                + r"Hint: The following residue names with unassigned atoms "
+                + r"were not found in the substructure library\. While the "
+                + r"OpenFF Toolkit identifies residues by matching chemical "
+                + r"substructures rather than by residue name, it currently "
+                + r"only supports the 20 'canonical' amino acids\.\n"
+                + r"(    EPE\n    HOH\n)|(    HOH\n    EPE\n)"
+                + r"Note: 'HOH' is a residue code for water\. You may have "
+                + r"crystallographic waters in your PDB file\. Please remove "
+                + r"these before proceeding; they can be added back to the "
+                + r"topology later\."
+            ),
+        ):
+            Molecule.from_polymer_pdb(
+                get_data_file_path("proteins/T4-protein-unprocessed-4w51.pdb")
+            )
 
     @pytest.mark.xfail()
     def test_from_pdb_t4_n_residues(self):

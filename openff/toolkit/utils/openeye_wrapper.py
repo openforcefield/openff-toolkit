@@ -35,6 +35,7 @@ from openff.toolkit.utils.exceptions import (
     NotAttachedToMoleculeError,
     SMILESParseError,
     ToolkitUnavailableException,
+    UnassignedChemistryInPDBError,
     UndefinedStereochemistryError,
 )
 from openff.toolkit.utils.utils import inherit_docstrings
@@ -232,32 +233,37 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         )
 
     def _polymer_openmm_topology_to_offmol(self, omm_top, substructure_dictionary):
-        oemol = self._polymer_openmm_topology_to_oemol(omm_top)
-        oemol = self._add_chemical_info(oemol, substructure_dictionary)
+        oemol = self._polymer_openmm_topology_to_oemol(omm_top, substructure_dictionary)
         offmol = self.from_openeye(oemol, allow_undefined_stereo=True)
         return offmol
 
-    def _add_chemical_info(
+    def _polymer_openmm_topology_to_oemol(
         self,
-        oemol,
+        omm_top,
         substructure_library,
     ):
         """
         Parameters
         ----------
-        oemol : oechem.OEMol
-            Currently invalid (bond orders and charge) Molecule
+        omm_top : openmm.app.Topology
+            OpenMM Topology loaded from PDB
         substructure_library : dict{str:list[str, list[str]]}
             A dictionary of substructures. substructure_library[aa_name] = list[tagged SMARTS, list[atom_names]]
 
         Returns
         -------
         oemol : oechem.OEMol
-            a copy of the original molecule with charges and bond order added
+            a new molecule with charges and bond order added
         """
+
+        oemol = self._get_connectivity_from_openmm_top(omm_top)
 
         already_assigned_nodes = set()
         already_assigned_edges = set()
+
+        # Keeping track of which atoms are matched where will help us with error
+        # messages
+        matches = defaultdict(list)
 
         for res_name in substructure_library:
             # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes
@@ -271,6 +277,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     match_mol_atom_indices = [
                         at.GetIdx() for at in match.GetTargetAtoms()
                     ]
+                    for i in match_mol_atom_indices:
+                        matches[i].append(res_name)
+
                     if any(
                         m in already_assigned_nodes for m in match_mol_atom_indices
                     ) and (res_name not in ["PEPTIDE_BOND", "DISULFIDE"]):
@@ -290,11 +299,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                         )
 
         oemol_n_atoms = len([*oemol.GetAtoms()])
-        if not (len(already_assigned_nodes) == oemol_n_atoms):
-            unassigned_atom_indices = set(range(oemol_n_atoms)) - already_assigned_nodes
-            unassigned_atom_indices = sorted(list(unassigned_atom_indices))
-            print("Atoms were unassigned:")
-            print(unassigned_atom_indices)
+        unassigned_atoms = sorted(set(range(oemol_n_atoms)) - already_assigned_nodes)
 
         all_bonds = set(
             [
@@ -302,15 +307,20 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 for bond in oemol.GetBonds()
             ]
         )
+        unassigned_bonds = sorted(all_bonds - already_assigned_edges)
 
-        if all_bonds != already_assigned_edges:
-            print("Bonds were unassigned:")
-            print(len(all_bonds), len(already_assigned_edges))
-            for bond in sorted(all_bonds - already_assigned_edges):
-                print(bond)
+        if unassigned_atoms or unassigned_bonds:
+            raise UnassignedChemistryInPDBError(
+                substructure_library=substructure_library,
+                omm_top=omm_top,
+                unassigned_atoms=unassigned_atoms,
+                unassigned_bonds=unassigned_bonds,
+                matches=matches,
+            )
+
         return oemol
 
-    def _polymer_openmm_topology_to_oemol(self, omm_top):
+    def _get_connectivity_from_openmm_top(self, omm_top):
         from openeye import oechem
 
         oemol = oechem.OEMol()
