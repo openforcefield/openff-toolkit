@@ -876,6 +876,14 @@ class TestMolecule:
         with pytest.raises(ValueError):
             Molecule(filename, allow_undefined_stereo=True)
 
+    def test_from_file_pathlib(self):
+        from pathlib import Path
+
+        ethanol = create_ethanol()
+        ethanol.to_file("ethanol.sdf", file_format="sdf")
+
+        Molecule.from_file(Path("ethanol.sdf"))
+
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_create_from_serialized(self, molecule):
         """Test standard constructor taking the output of Molecule.to_dict()."""
