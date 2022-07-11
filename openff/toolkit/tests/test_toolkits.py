@@ -5,7 +5,7 @@ Tests for cheminformatics toolkit wrappers
 
 import logging
 import os
-from pathlib import Path
+import pathlib
 from tempfile import NamedTemporaryFile
 from typing import Dict
 
@@ -837,7 +837,7 @@ class TestOpenEyeToolkitWrapper:
         ethanol.to_file("ethanol.sdf", file_format="sdf")
 
         toolkit = OpenEyeToolkitWrapper()
-        toolkit.from_file(Path("ethanol.sdf"), file_format="sdf")
+        toolkit.from_file(pathlib.Path("ethanol.sdf"), file_format="sdf")
 
     def test_write_multiconformer_pdb(self):
         """
@@ -2389,7 +2389,7 @@ class TestRDKitToolkitWrapper:
         ethanol.to_file("ethanol.sdf", file_format="sdf")
 
         toolkit = RDKitToolkitWrapper()
-        toolkit.from_file(Path("ethanol.sdf"), file_format="sdf")
+        toolkit.from_file(pathlib.Path("ethanol.sdf"), file_format="sdf")
 
     def test_file_extension_case(self):
         """

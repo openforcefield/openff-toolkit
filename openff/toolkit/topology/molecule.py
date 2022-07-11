@@ -26,6 +26,7 @@ Molecular chemical entity representation and routines to interface with cheminfo
 """
 import json
 import operator
+import pathlib
 import warnings
 from collections import OrderedDict, UserDict
 from copy import deepcopy
@@ -3630,6 +3631,8 @@ class FrozenMolecule(Serializable):
         """
 
         if file_format is None:
+            if isinstance(file_path, pathlib.Path):
+                file_path: str = file_path.as_posix()
             if not isinstance(file_path, str):
                 raise Exception(
                     "If providing a file-like object for reading molecules, the format must be specified"

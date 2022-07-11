@@ -9,6 +9,7 @@ import functools
 import importlib
 import itertools
 import logging
+import pathlib
 import tempfile
 from collections import defaultdict
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
@@ -484,6 +485,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         """
         from rdkit import Chem
+
+        if isinstance(file_path, pathlib.Path):
+            file_path: str = file_path.as_posix()
 
         file_format = normalize_file_format(file_format)
 

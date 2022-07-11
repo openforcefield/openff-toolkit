@@ -14,8 +14,8 @@ TODO:
 """
 import copy
 import os
+import pathlib
 import pickle
-from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 import numpy as np
@@ -881,7 +881,7 @@ class TestMolecule:
         ethanol = create_ethanol()
         ethanol.to_file("ethanol.sdf", file_format="sdf")
 
-        Molecule.from_file(Path("ethanol.sdf"))
+        Molecule.from_file(pathlib.Path("ethanol.sdf"))
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_create_from_serialized(self, molecule):
