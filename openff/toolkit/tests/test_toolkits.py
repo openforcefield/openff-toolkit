@@ -5,6 +5,7 @@ Tests for cheminformatics toolkit wrappers
 
 import logging
 import os
+from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Dict
 
@@ -830,6 +831,13 @@ class TestOpenEyeToolkitWrapper:
         # Compare atom names
         for oeatom, atom2 in zip(oemol.GetAtoms(), molecule2.atoms):
             assert oeatom.GetName() == atom2.name
+
+    def test_from_pathlib_path(self):
+        ethanol = create_ethanol()
+        ethanol.to_file("ethanol.sdf", file_format="sdf")
+
+        toolkit = OpenEyeToolkitWrapper()
+        toolkit.from_file(Path("ethanol.sdf"), file_format="sdf")
 
     def test_write_multiconformer_pdb(self):
         """
@@ -2375,6 +2383,13 @@ class TestRDKitToolkitWrapper:
 
         off_molecule = Molecule.from_rdkit(Chem.MolFromSmiles(smiles))
         assert off_molecule.properties["atom_map"] == expected_map
+
+    def test_from_pathlib_path(self):
+        ethanol = create_ethanol()
+        ethanol.to_file("ethanol.sdf", file_format="sdf")
+
+        toolkit = RDKitToolkitWrapper()
+        toolkit.from_file(Path("ethanol.sdf"), file_format="sdf")
 
     def test_file_extension_case(self):
         """

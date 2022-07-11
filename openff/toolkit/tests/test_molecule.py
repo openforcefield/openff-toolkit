@@ -15,6 +15,7 @@ TODO:
 import copy
 import os
 import pickle
+from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 import numpy as np
@@ -876,9 +877,7 @@ class TestMolecule:
         with pytest.raises(ValueError):
             Molecule(filename, allow_undefined_stereo=True)
 
-    def test_from_file_pathlib(self):
-        from pathlib import Path
-
+    def test_from_pathlib_path(self):
         ethanol = create_ethanol()
         ethanol.to_file("ethanol.sdf", file_format="sdf")
 
