@@ -14,6 +14,7 @@ TODO:
 """
 import copy
 import os
+import pathlib
 import pickle
 from tempfile import NamedTemporaryFile
 
@@ -875,6 +876,12 @@ class TestMolecule:
         filename = get_data_file_path("molecules/zinc-subset-tripos.mol2.gz")
         with pytest.raises(ValueError):
             Molecule(filename, allow_undefined_stereo=True)
+
+    def test_from_pathlib_path(self):
+        ethanol = create_ethanol()
+        ethanol.to_file("ethanol.sdf", file_format="sdf")
+
+        Molecule.from_file(pathlib.Path("ethanol.sdf"))
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_create_from_serialized(self, molecule):

@@ -407,6 +407,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         from openeye import oechem
 
+        if isinstance(file_path, pathlib.Path):
+            file_path: str = file_path.as_posix()
+
         oeformat = get_oeformat(file_format)
         ifs = oechem.oemolistream(file_path)
         if not ifs.IsValid():

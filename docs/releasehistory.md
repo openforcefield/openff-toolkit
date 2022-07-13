@@ -58,6 +58,9 @@ print(value_roundtrip)
 
 ## Current Development
 
+- [PR #1348](https://github.com/openforcefield/openff-toolkit/pull/1348): Allows
+  `pathlib.Path` objects to be passed to
+  [`Molecule.from_file`](openff.toolkit.topology.molecule.Molecule.from_file).
 - [PR #1276](https://github.com/openforcefield/openff-toolkit/pull/1276): Removes the
   `use_interchange` argument to
   [`create_openmm_system`](openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system).
