@@ -1444,6 +1444,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     off_atom.partial_charge.m_as(unit.elementary_charge)
                 )
             res = oechem.OEAtomGetResidue(oe_atom)
+            # If we add residue info without updating the serial number, all of the atom
+            # serial numbers in a written PDB will be 0. Note two things:
+            # 1) the "res" object is specific to this atom, so its serial number
+            #    applies only to this atom
+            # 2) we do NOT preserve
+            #    PDB serial numbers in our infrastructure, we merely set these to the
+            #    atom index in the molecule so that OpenEye-written PDBs are nonzero.
+            res.SetSerialNumber(oe_to_off_idx[oe_idx] + 1)
 
             if "residue_name" in off_atom.metadata:
                 res.SetName(off_atom.metadata["residue_name"])
