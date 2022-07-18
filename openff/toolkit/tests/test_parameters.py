@@ -1782,6 +1782,30 @@ class TestvdWHandler:
             handler.scale15 = 0.1
 
 
+class TestvdwHandlerUpconversion:
+    """
+    Test a proposed implementation of OFF-EP-0007:
+
+    https://github.com/openforcefield/standards/pull/40
+    """
+
+    def test_upconversion(self):
+        handler = vdWHandler(version=0.3)
+        assert handler.version == Version("0.4")
+
+        assert handler.long_range_dispersion == "isotropic"
+
+    @pytest.mark.parametrize(
+        "version,exception_type", [(0.3, NotImplementedError), (0.4, SMIRNOFFSpecError)]
+    )
+    def test_invalid_dispersion(self, version, exception_type):
+        with pytest.raises(
+            exception_type,
+            match="long_range_dispersion.*magic",
+        ):
+            vdWHandler(version=version, long_range_dispersion="magic")
+
+
 class TestvdWType:
     """
     Test the behavior of vdWType

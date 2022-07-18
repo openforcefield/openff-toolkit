@@ -2810,6 +2810,7 @@ class vdWHandler(_NonbondedHandler):
 
     _TAGNAME = "vdW"  # SMIRNOFF tag name to process
     _INFOTYPE = vdWType  # info type to store
+    _MAX_SUPPORTED_SECTION_VERSION = Version("0.4")
 
     potential = ParameterAttribute(
         default="Lennard-Jones-12-6", converter=_allow_only(["Lennard-Jones-12-6"])
@@ -2827,6 +2828,9 @@ class vdWHandler(_NonbondedHandler):
     switch_width = ParameterAttribute(default=1.0 * unit.angstroms, unit=unit.angstrom)
     method = ParameterAttribute(
         default="cutoff", converter=_allow_only(["cutoff", "PME"])
+    )
+    long_range_dispersion = ParameterAttribute(
+        default="isotropic", converter=_allow_only(["isotropic", "none"])
     )
 
     # TODO: Use _allow_only when ParameterAttribute will support multiple converters
@@ -2860,6 +2864,33 @@ class vdWHandler(_NonbondedHandler):
 
     # Tolerance when comparing float attributes for handler compatibility.
     _SCALETOL = 1e-5
+
+    def __init__(self, **kwargs):
+        if kwargs.get("version") == 0.3:
+
+            logger.info("Attempting to up-convert vdW section from 0.3 to 0.4")
+
+            if kwargs.get("long_range_dispersion") in ["isotropic", None]:
+                kwargs["long_range_dispersion"] = "isotropic"
+                logger.info(
+                    "Successfully up-converted vdW section from 0.3 to 0.4. "
+                    '`long_range_dispersion="isotropic"` is now set.'
+                )
+                kwargs["version"] = 0.4
+            elif kwargs.get("long_range_dispersion") == "none":
+                # store as "none" or None?
+                kwargs["long_range_dispersion"] = "none"
+                logger.info(
+                    "Successfully up-converted vdW section from 0.3 to 0.4. "
+                    '`long_range_dispersion="isotropic"` is now set.'
+                )
+                kwargs["version"] = 0.4
+            else:
+                raise NotImplementedError(
+                    "Failed to up-convert Electrostatics section from 0.3 to 0.4. Did not know "
+                    f'how to process `long_range_dispersion="{kwargs["long_range_dispersion"]}"`.'
+                )
+        super().__init__(**kwargs)
 
     def check_handler_compatibility(self, other_handler):
         """
