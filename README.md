@@ -19,6 +19,10 @@ The toolkit currently covers two main areas we have committed to stably maintain
 
 [Documentation](https://open-forcefield-toolkit.readthedocs.io/en/stable/) for the Open Force Field Toolkit is hosted at [readthedocs](https://open-forcefield-toolkit.readthedocs.io/en/stable). Example notebooks are hosted on [binder](https://mybinder.org/v2/gh/openforcefield/openff-toolkit/stable?filepath=%2Fexamples%2F)
 
+## How to cite
+
+Please cite the OpenFF Toolkit using the [Zenodo record](https://zenodo.org/record/6483648) of the [latest release](https://zenodo.org/record/6483648#.YsXLJuzMKrM) or the version that was used. The BibTeX reference of the latest release can be found [here](https://zenodo.org/record/6483648/export/hx#.YsXLZezMKrM).
+
 ## Installation
 
 The Open Force Field Toolkit (`openff-toolkit`) is a Python toolkit, and supports Python 3.8 and 3.9.
