@@ -1450,7 +1450,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             #    applies only to this atom
             # 2) we do NOT preserve
             #    PDB serial numbers in our infrastructure, we merely set these to the
-            #    atom index in the molecule so that OpenEye-written PDBs are nonzero.
+            #    atom index in the molecule so that OpenEye-written PDBs have
+            #    nonzero atom serial numbers.
             res.SetSerialNumber(oe_to_off_idx[oe_idx] + 1)
 
             if "residue_name" in off_atom.metadata:
