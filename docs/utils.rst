@@ -122,3 +122,16 @@ Miscellaneous utility functions.
     convert_0_2_smirnoff_to_0_3
     get_molecule_parameterIDs
     unit_to_string
+
+Exceptions
+----------
+
+Exceptions raised by the Toolkit.
+
+.. currentmodule:: openff.toolkit.utils
+.. autosummary::
+    :nosignatures:
+    :toctree: api/generated/
+
+    exceptions
+
