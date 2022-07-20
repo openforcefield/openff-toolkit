@@ -2663,7 +2663,7 @@ class TestRDKitToolkitWrapper:
             toolkit.generate_conformers(molecule, n_conformers=1)
 
     def test_generate_conformers_large_molecule(self):
-        """Reproduce issue #882 / OpenMM #3550."""
+        """Ensure that we don't get error caused by this molecule being too big for conf gen.  See issue #882 / OpenMM #3550."""
         ql8 = Molecule.from_file(get_data_file_path("molecules/QL8.sdf"))
 
         ql8.generate_conformers(
