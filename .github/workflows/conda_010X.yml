@@ -80,6 +80,12 @@ jobs:
       - name: Check installed toolkits
         shell: bash -l {0}
         run: |
+          # Checkout the state of the repo as of the last 0.10.X release
+          export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openff-toolkit.git | cut -f2 | grep -E "0\.10\.([0-9]+)$" | sort --version-sort | tail -1 | sed 's/refs\/tags\///' )
+          git fetch --tags
+          git checkout tags/$LATEST_TAG
+          git log -1 | cat
+          
           if [[ "$OPENEYE" == true ]]; then
             python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert OPENEYE_AVAILABLE, 'OpenEye unavailable'"
           fi
@@ -114,11 +120,6 @@ jobs:
       - name: Test the package
         shell: bash -l {0}
         run: |
-          # Checkout the state of the repo as of the last 0.10.X release
-          export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openff-toolkit.git | cut -f2 | grep -E "0\.10\.([0-9]+)$" | sort --version-sort | tail -1 | sed 's/refs\/tags\///' )
-          git fetch --tags
-          git checkout tags/$LATEST_TAG
-          git log -1 | cat
 
           # Install test plugins
           cd utilities/test_plugins
