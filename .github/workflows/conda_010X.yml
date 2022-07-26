@@ -1,4 +1,4 @@
-name: Conda latest
+name: Conda 0.10.X
 
 on:
   release:
@@ -36,7 +36,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: test
-          environment-file: devtools/conda-envs/conda.yaml
+          environment-file: devtools/conda-envs/conda_010X.yaml
           auto-activate-base: false
           miniforge-version: latest
           miniforge-variant: Mambaforge
@@ -47,7 +47,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: test
-          environment-file: devtools/conda-envs/conda_oe.yaml
+          environment-file: devtools/conda-envs/conda_oe_010X.yaml
           auto-activate-base: false
           miniforge-version: latest
           miniforge-variant: Mambaforge
@@ -92,7 +92,7 @@ jobs:
           # Go up one directory to ensure that we don't just load the OFFTK from the checked-out repo
           cd ../
 
-          export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openff-toolkit.git | cut -f2 | grep -E "([0-9]+)\.([0-9]+)\.([0-9]+)" | sort --version-sort | tail -1 | sed 's/refs\/tags\///')
+          export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openff-toolkit.git | cut -f2 | grep -E "0\.10\.([0-9]+)$" | sort --version-sort | tail -1 | sed 's/refs\/tags\///' )
           export FOUND_VER=$(python -c "import openff.toolkit; print(openff.toolkit.__version__)")
 
           echo "Latest tag is"
@@ -110,8 +110,8 @@ jobs:
       - name: Test the package
         shell: bash -l {0}
         run: |
-          # Checkout the state of the repo as of the last release (including RCs)
-          export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openff-toolkit.git | cut -f2 | grep -E "([0-9]+)\.([0-9]+)\.([0-9]+)" | sort --version-sort | tail -1 | sed 's/refs\/tags\///')
+          # Checkout the state of the repo as of the last 0.10.X release
+          export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openff-toolkit.git | cut -f2 | grep -E "0\.10\.([0-9]+)$" | sort --version-sort | tail -1 | sed 's/refs\/tags\///' )
           git fetch --tags
           git checkout tags/$LATEST_TAG
           git log -1 | cat

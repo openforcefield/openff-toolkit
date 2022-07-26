@@ -1,16 +1,13 @@
 name: test
 channels:
   - conda-forge
-  - openeye
-  - conda-forge/label/openff-toolkit_rc
-  - conda-forge/label/openff-interchange_rc
+
 
 dependencies:
     # Base depends
-  - openff-toolkit
+  - openff-toolkit =0.10
 
   - openmmforcefields
-  - openeye-toolkits
   - pytest
   - pytest-rerunfailures
   - nbval
