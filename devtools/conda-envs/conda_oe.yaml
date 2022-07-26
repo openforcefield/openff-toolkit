@@ -1,9 +1,9 @@
 name: test
 channels:
-  - conda-forge
-  - openeye
   - conda-forge/label/openff-toolkit_rc
   - conda-forge/label/openff-interchange_rc
+  - conda-forge
+  - openeye
 
 dependencies:
     # Base depends
