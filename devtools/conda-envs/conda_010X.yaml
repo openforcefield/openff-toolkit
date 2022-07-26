@@ -5,7 +5,7 @@ channels:
 
 dependencies:
     # Base depends
-  - openff-toolkit =0.10
+  - openff-toolkit-examples =0.10
 
   - openmmforcefields
   - pytest

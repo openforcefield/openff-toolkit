@@ -7,7 +7,7 @@ channels:
 
 dependencies:
     # Base depends
-  - openff-toolkit
+  - openff-toolkit-examples
 
   - openmmforcefields
   - openeye-toolkits
