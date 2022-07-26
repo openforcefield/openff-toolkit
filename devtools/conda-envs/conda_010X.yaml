@@ -1,4 +1,4 @@
-name: test
+name: 010x-latest-deployment
 channels:
   - conda-forge
 
@@ -8,6 +8,7 @@ dependencies:
   - openff-toolkit-examples =0.10
 
   - openmmforcefields
+  - qcportal >=0.15
   - pytest
   - pytest-rerunfailures
   - nbval

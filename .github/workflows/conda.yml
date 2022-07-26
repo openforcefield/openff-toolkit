@@ -16,7 +16,7 @@ on:
 
 jobs:
   test:
-    name: Test on ${{ matrix.os }}, Python ${{ matrix.cfg.python-version }}, OpenEye=${{ matrix.cfg.openeye }}
+    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenEye=${{ matrix.openeye }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -40,7 +40,7 @@ jobs:
         if: ${{ matrix.openeye == 'false' }}
         with:
           python-version: ${{ matrix.python-version }}
-          activate-environment: test
+          activate-environment: latest-deployment
           environment-file: devtools/conda-envs/conda.yaml
           auto-activate-base: false
           miniforge-version: latest

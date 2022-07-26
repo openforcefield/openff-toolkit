@@ -1,4 +1,4 @@
-name: test
+name: 010x-latest-deployment
 channels:
   - conda-forge
   - openeye
@@ -9,6 +9,7 @@ dependencies:
 
   - openmmforcefields
   - openeye-toolkits
+  - qcportal >=0.15
   - pytest
   - pytest-rerunfailures
   - nbval
