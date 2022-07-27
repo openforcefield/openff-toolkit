@@ -884,6 +884,11 @@ class TestOpenEyeToolkitWrapper:
         water.to_file(sio, "pdb", toolkit_registry=toolkit)
         water_from_pdb = sio.getvalue()
         water_from_pdb_split = water_from_pdb.split("\n")
+        # Check serial number
+        assert water_from_pdb_split[0].split()[1].rstrip() == "1"
+        assert water_from_pdb_split[1].split()[1].rstrip() == "2"
+        assert water_from_pdb_split[2].split()[1].rstrip() == "3"
+        # Check atom name
         assert water_from_pdb_split[0].split()[2].rstrip() == "H"
         assert water_from_pdb_split[1].split()[2].rstrip() == "O"
         assert water_from_pdb_split[2].split()[2].rstrip() == "H"
