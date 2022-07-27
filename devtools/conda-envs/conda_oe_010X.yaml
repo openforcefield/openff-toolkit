@@ -1,14 +1,14 @@
-name: latest-deployment
+name: 010x-latest-deployment
 channels:
-  - conda-forge/label/openff-toolkit_rc
-  - conda-forge/label/openff-interchange_rc
   - conda-forge
+  - openeye
 
 dependencies:
     # Base depends
-  - openff-toolkit-examples
+  - openff-toolkit-examples =0.10
 
   - openmmforcefields
+  - openeye-toolkits
   - qcportal >=0.15
   - pytest
   - pytest-rerunfailures
