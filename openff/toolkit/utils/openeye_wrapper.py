@@ -2313,7 +2313,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 oemol, charge_method["oe_charge_method"](optimize, symmetrize)
             )
         else:
-            if partial_charge_method == "gasteiger":
+            # symmetrize is implicit in gasteiger and is already set to True in am1bccelf10
+            if partial_charge_method in ["gasteiger", "am1bccelf10"]:
                 kwargs = {}
             else:
                 kwargs = {"symmetrize": True}
