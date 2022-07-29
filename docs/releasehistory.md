@@ -119,6 +119,9 @@ print(value_roundtrip)
 
 ### Behaviors changed and bugfixes
 
+- [PR #1346](https://github.com/openforcefield/openff-toolkit/pull/1346): Conformer generation with RDKit
+  will use `useRandomCoords=True` on a second attempt if the first attempt fails, which sometimes
+  happens with large molecules.
 - [PR #1277](https://github.com/openforcefield/openff-toolkit/pull/1277): Version 0.3 `<Electrostatics>`
   sections of OFFXML files will automatically be up-converted (in memory) to version 0.4 according
   to the recomendations provided in

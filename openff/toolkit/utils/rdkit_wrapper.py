@@ -1084,7 +1084,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         rdmol = self.to_rdkit(molecule)
         # TODO: This generates way more conformations than omega, given the same
         # nConfs and RMS threshold. Is there some way to set an energy cutoff as well?
-        conformer_generation_status = AllChem.EmbedMultipleConfs(
+        first_conformer_generation_status = AllChem.EmbedMultipleConfs(
             rdmol,
             numConfs=n_conformers,
             pruneRmsThresh=rms_cutoff.m_as(unit.angstrom),
@@ -1092,8 +1092,19 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # params=AllChem.ETKDG()
         )
 
-        if not conformer_generation_status:
-            raise ConformerGenerationError("RDKit conformer generation failed.")
+        if not first_conformer_generation_status:
+            # For some large molecules, conformer generation fails without `useRandomCoords`;
+            # Landrum recommends it https://github.com/rdkit/rdkit/issues/3764#issuecomment-769367489
+            fallback_conformer_generation_status = AllChem.EmbedMultipleConfs(
+                rdmol,
+                numConfs=n_conformers,
+                pruneRmsThresh=rms_cutoff.m_as(unit.angstrom),
+                randomSeed=1,
+                useRandomCoords=True,
+            )
+
+            if not fallback_conformer_generation_status:
+                raise ConformerGenerationError("RDKit conformer generation failed.")
 
         molecule2 = self.from_rdkit(
             rdmol, allow_undefined_stereo=True, _cls=molecule.__class__
