@@ -6,6 +6,60 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+## Current development
+
+## 0.10.6 Bugfix release
+
+### Critical bugfixes
+
+- [PR #1284](https://github.com/openforcefield/openforcefield/pull/1284): Fixes
+  [Issue #1283](https://github.com/openforcefield/openff-toolkit/issues/1283) - force fields containing `BondCharge` virtual sites cannot be loaded due to an issue with how `outOfPlaneAngle` and `inPlaneAngle` keywords are validated
+
+### Minor bugfixes
+- [PR #1290](https://github.com/openforcefield/openforcefield/pull/1290): Fixes
+  [Issue #1216](https://github.com/openforcefield/openff-toolkit/issues/1216) by adding internal logic to handle
+  the possibility that multiple vsites share the same parent atom, and makes the return value of 
+  `VirtualSiteHandler.find_matches` be closer to the base class.
+
+
+
+## 0.10.5 Bugfix release
+
+- [PR #1252](https://github.com/openforcefield/openforcefield/pull/1252): Refactors virtual 
+  site support, resolving
+  [Issue #1235](https://github.com/openforcefield/openff-toolkit/issues/1235), 
+  [Issue #1233](https://github.com/openforcefield/openff-toolkit/issues/1233), 
+  [Issue #1222](https://github.com/openforcefield/openff-toolkit/issues/1222),
+  [Issue #1221](https://github.com/openforcefield/openff-toolkit/issues/1221), and
+  [Issue #1206](https://github.com/openforcefield/openff-toolkit/issues/1206).
+  
+  - Attempts to make virtual site handler more resilient through code simplification.
+  - Virtual sites are now associated with a particular 'parent' atom, rather than with a set of atoms. In particular, when checking if a v-site has been assigned we now only check the main 'parent' atom associated with the v-site, rather than all additional orientation atoms. As an example, if a force field contained a bond-charge v-site that matches [O:1]=[C:2] and a monovalent lone pair that matches [O:1]=[C:2]-[*:3] in that order, then only the monovalent lone pair will be assigned to formaldehyde as the oxygen is the main atom that would be associated with both v-sites, and the monovalent lone pair appears later in the hierarchy. This constitutes a behaviour change over previous versions.
+  - All v-site exclusion policies have been removed except for 'parents' which has been updated to match [OFF-EP 0006](https://openforcefield.github.io/standards/enhancement-proposals/off-ep-0006/).
+  - checks have been added to enforce that the 'match' keyword complies with the SMIRNOFF spec.
+  - Molecule virtual site classes no longer store FF data such as epsilon and sigma.
+  - Sanity checks have been added when matching chemical environments for v-sites that ensure the environment looks like one of our expected test cases.
+  - Fixes di- and trivalent lone pairs mixing the `:1` and `:2` indices.
+  - Fixes trivalent v-site positioning.
+  - Correctly splits `TopologyVirtualSite` and `TopologyVirtualParticle` so that virtual particles no longer have attributes such as `particles`, and ensure that indexing methods now work correctly.
+
+## 0.10.4 Bugfix release
+
+### Critical bugfixes
+
+- [PR #1242](https://github.com/openforcefield/openforcefield/pull/1242): Fixes
+  [Issue #837](https://github.com/openforcefield/openff-toolkit/issues/837).
+  If OpenEye Toolkits are available,
+  [`ToolkitAM1BCCHandler`](openff.toolkit.typing.engines.smirnoff.parameters.ToolkitAM1BCCHandler)
+  will use the ELF10 method to select conformers for AM1-BCC charge assignment.
+- [PR #1184](https://github.com/openforcefield/openforcefield/pull/1184): Fixes
+  [Issue #1181](https://github.com/openforcefield/openff-toolkit/issues/1181) and
+  [Issue #1190](https://github.com/openforcefield/openff-toolkit/issues/1190), where in rare cases
+  double bond stereochemistry would cause
+  [`Molecule.to_rdkit`](openff.toolkit.topology.Molecule.to_rdkit) to raise an error. The transfer
+  of double bond stereochemistry from OpenFF's E/Z representation to RDKit's local representation is
+  now handled as a constraint satisfaction problem.
+
 ## 0.10.3 Bugfix release
 
 ### Critical bugfixes

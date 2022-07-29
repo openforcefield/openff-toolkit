@@ -17,6 +17,7 @@ import itertools
 import os
 import pprint
 import textwrap
+from contextlib import contextmanager
 from typing import List, Tuple
 
 import numpy as np
@@ -106,6 +107,13 @@ def requires_pkg(pkg_name, reason=None):
         reason = f"Package {pkg_name} is required, but was not found."
     requires_pkg = pytest.mark.skipif(not has_pkg(pkg_name), reason=reason)
     return requires_pkg
+
+
+@contextmanager
+def does_not_raise():
+    """A helpful context manager to use inplace of a pytest raise statement
+    when no exception is expected."""
+    yield
 
 
 # =============================================================================================
