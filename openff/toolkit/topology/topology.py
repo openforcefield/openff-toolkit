@@ -95,6 +95,32 @@ class _TransformedDict(MutableMapping):
     def __sortfunc__(key):
         return key
 
+    @classmethod
+    def _return_possible_index_of(cls, key, possible=[], permutations={}):
+        """
+        Returns canonical ordering of ``key``, given a dictionary of ordered
+        ``permutations`` and a list of allowed orders ``possible``.
+
+        Parameters
+        ----------
+        key: tuple of int
+            A key of indices
+        possible: list of tuples of int
+            List of possible keys
+        permutations: Dict[Tuple[int, ...], int]
+            Dictionary of canonical orders
+        """
+        key = tuple(key)
+        possible = [tuple(p) for p in possible]
+        impossible = [p for p in possible if p not in permutations]
+        if impossible:
+            raise ValueError(f"Impossible permutations {impossible} for key {key}!")
+        possible_permutations = [k for k in permutations if k in possible]
+        for i, permutation in enumerate(possible_permutations):
+            if key == permutation:
+                return i
+        raise ValueError(f"key {key} not in possible {possible}")
+
 
 # TODO: Encapsulate this atom ordering logic directly into Atom/Bond/Angle/Torsion classes?
 class ValenceDict(_TransformedDict):
@@ -103,16 +129,13 @@ class ValenceDict(_TransformedDict):
     @staticmethod
     def key_transform(key):
         """Reverse tuple if first element is larger than last element."""
-        # Ensure key is a tuple.
         key = tuple(key)
-        assert len(key) > 0 and len(key) < 5, "Valence keys must be at most 4 atoms"
-        # Reverse the key if the first element is bigger than the last.
         if key[0] > key[-1]:
             key = tuple(reversed(key))
         return key
 
-    @staticmethod
-    def index_of(key, possible=None):
+    @classmethod
+    def index_of(cls, key, possible=None):
         """
         Generates a canonical ordering of the equivalent permutations of ``key`` (equivalent rearrangements of indices)
         and identifies which of those possible orderings this particular ordering is. This method is useful when
@@ -134,47 +157,17 @@ class ValenceDict(_TransformedDict):
         -------
         index : int
         """
-        assert len(key) < 4
-        refkey = __class__.key_transform(key)
-        if len(key) == 2:
-            permutations = OrderedDict(
-                {(refkey[0], refkey[1]): 0, (refkey[1], refkey[0]): 1}
-            )
-        elif len(key) == 3:
-            permutations = OrderedDict(
-                {
-                    (refkey[0], refkey[1], refkey[2]): 0,
-                    (refkey[2], refkey[1], refkey[0]): 1,
-                }
-            )
-        else:
-            # For a proper, only forward/backward makes sense
-            permutations = OrderedDict(
-                {
-                    (refkey[0], refkey[1], refkey[2], refkey[3]): 0,
-                    (refkey[3], refkey[1], refkey[2], refkey[0]): 1,
-                }
-            )
+        refkey = cls.key_transform(key)
+        permutations = {refkey: 0, refkey[::-1]: 1}
         if possible is not None:
-            i = 0
-            # If the possible permutations were provided, ensure that `possible` is a SUBSET of `permutations`
-            assert all([p in permutations for p in possible]), (
-                "Possible permutations " + str(possible) + " is impossible!"
+            return cls._return_possible_index_of(
+                key, possible=possible, permutations=permutations
             )
-            # TODO: Double-check whether this will generalize. It seems like this would fail if ``key``
-            #       were in ``permutations``, but not ``possible``
-
-            for k in permutations:
-                if all([x == y for x, y in zip(key, k)]):
-                    return i
-                if k in possible:
-                    i += 1
         else:
-            # If the possible permutations were NOT provided, then return the unique index of this permutation.
-            return permutations[key]
+            return permutations[tuple(key)]
 
     def __keytransform__(self, key):
-        return __class__.key_transform(key)
+        return self.key_transform(key)
 
 
 class SortedDict(_TransformedDict):
@@ -182,9 +175,7 @@ class SortedDict(_TransformedDict):
 
     def __keytransform__(self, key):
         """Sort tuple from lowest to highest."""
-        # Ensure key is a tuple.
         key = tuple(sorted(key))
-        # Reverse the key if the first element is bigger than the last.
         return key
 
 
@@ -307,8 +298,8 @@ class ImproperDict(_TransformedDict):
         key = tuple([connectedatoms[0], key[1], connectedatoms[1], connectedatoms[2]])
         return key
 
-    @staticmethod
-    def index_of(key, possible=None):
+    @classmethod
+    def index_of(cls, key, possible=None):
         """
         Generates a canonical ordering of the equivalent permutations of ``key`` (equivalent rearrangements of indices)
         and identifies which of those possible orderings this particular ordering is. This method is useful when
@@ -330,8 +321,9 @@ class ImproperDict(_TransformedDict):
         -------
         index : int
         """
+        key = tuple(key)
         assert len(key) == 4
-        refkey = __class__.key_transform(key)
+        refkey = cls.key_transform(key)
         permutations = OrderedDict(
             {
                 (refkey[0], refkey[1], refkey[2], refkey[3]): 0,
@@ -343,15 +335,9 @@ class ImproperDict(_TransformedDict):
             }
         )
         if possible is not None:
-            assert all(
-                [p in permutations for p in possible]
-            ), "Possible permuation is impossible!"
-            i = 0
-            for k in permutations:
-                if all([x == y for x, y in zip(key, k)]):
-                    return i
-                if k in possible:
-                    i += 1
+            return cls._return_possible_index_of(
+                key, possible=possible, permutations=permutations
+            )
         else:
             return permutations[key]
 
