@@ -2314,7 +2314,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             )
         else:
             # symmetrize is implicit in gasteiger and is already set to True in am1bccelf10
-            if partial_charge_method in ["gasteiger", "am1bccelf10"]:
+            if partial_charge_method in ["gasteiger", "mmff94", "am1bccelf10"]:
                 kwargs = {}
             else:
                 kwargs = {"symmetrize": True}
