@@ -1467,35 +1467,22 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         rms_matrix = cls._elf_compute_rms_matrix(molecule)
 
         # Apply the greedy selection process.
-        closed_list = np.zeros(limit).astype(int)
-        closed_mask = np.zeros(rms_matrix.shape[0], dtype=bool)
-
-        n_selected = 1
-
-        for i in range(min(molecule.n_conformers, limit - 1)):
-
-            distances = rms_matrix[closed_list[: i + 1], :].sum(axis=0)
-
-            # Exclude already selected conformers or conformers which are too similar
-            # to those already selected.
-            closed_mask[
-                np.any(
-                    rms_matrix[closed_list[: i + 1], :]
-                    < rms_tolerance.m_as(unit.angstrom),
-                    axis=0,
-                )
-            ] = True
-
-            if np.all(closed_mask):
-                # Stop of there are no more distinct conformers to select from.
+        selected_indices = [0]
+        angstrom_tol = rms_tolerance.m_as(unit.angstrom)
+        for i in range(min(limit, molecule.n_conformers) - 1):
+            selected_rms = rms_matrix[selected_indices]
+            any_too_close = np.any(selected_rms < angstrom_tol, axis=0)
+            if np.all(any_too_close):
+                # stop if all conformers remaining are within RMS
+                # threshold of any selected conformer
                 break
 
-            distant_index = np.ma.array(distances, mask=closed_mask).argmax()
-            closed_list[i + 1] = distant_index
+            # add the next conformer with the largest summed RMS distance
+            # to current selected conformers
+            rmsdist = np.where(any_too_close, -np.inf, selected_rms.sum(axis=0))
+            selected_indices.append(int(rmsdist.argmax()))
 
-            n_selected += 1
-
-        return [ranked_conformers[i.item()] for i in closed_list[:n_selected]]
+        return [ranked_conformers[i] for i in selected_indices]
 
     def apply_elf_conformer_selection(
         self,
