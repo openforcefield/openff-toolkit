@@ -257,6 +257,10 @@ print(value_roundtrip)
 [`Molecule.assign_partial_charges()`]: openff.toolkit.topology.Molecule.assign_partial_charges
 [`Molecule.assign_fractional_bond_orders()`]: openff.toolkit.topology.Molecule.assign_fractional_bond_orders
 
+### Behaviors changed and bugfixes
+- [PR #1185](https://github.com/openforcefield/openff-toolkit/pull/1185):
+  Removed length check in ValenceDict and fixed checking the permutations of dihedrals
+
 ### Improved documentation and warnings
 - [PR #1172](https://github.com/openforcefield/openff-toolkit/pull/1172): Adding
   discussion about constraints to the FAQ
