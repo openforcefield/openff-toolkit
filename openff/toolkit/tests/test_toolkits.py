@@ -5,6 +5,7 @@ Tests for cheminformatics toolkit wrappers
 
 import logging
 import os
+import pathlib
 from tempfile import NamedTemporaryFile
 from typing import Dict
 
@@ -831,6 +832,13 @@ class TestOpenEyeToolkitWrapper:
         for oeatom, atom2 in zip(oemol.GetAtoms(), molecule2.atoms):
             assert oeatom.GetName() == atom2.name
 
+    def test_from_pathlib_path(self):
+        ethanol = create_ethanol()
+        ethanol.to_file("ethanol.sdf", file_format="sdf")
+
+        toolkit = OpenEyeToolkitWrapper()
+        toolkit.from_file(pathlib.Path("ethanol.sdf"), file_format="sdf")
+
     def test_write_multiconformer_pdb(self):
         """
         Make sure OpenEye can write multi conformer PDB files.
@@ -876,6 +884,11 @@ class TestOpenEyeToolkitWrapper:
         water.to_file(sio, "pdb", toolkit_registry=toolkit)
         water_from_pdb = sio.getvalue()
         water_from_pdb_split = water_from_pdb.split("\n")
+        # Check serial number
+        assert water_from_pdb_split[0].split()[1].rstrip() == "1"
+        assert water_from_pdb_split[1].split()[1].rstrip() == "2"
+        assert water_from_pdb_split[2].split()[1].rstrip() == "3"
+        # Check atom name
         assert water_from_pdb_split[0].split()[2].rstrip() == "H"
         assert water_from_pdb_split[1].split()[2].rstrip() == "O"
         assert water_from_pdb_split[2].split()[2].rstrip() == "H"
@@ -1739,7 +1752,7 @@ class TestOpenEyeToolkitWrapper:
         expected_error = (
             "Bond order model 'not a real bond order model' is not supported by "
             "OpenEyeToolkitWrapper. Supported models are "
-            "\['am1-wiberg', 'am1-wiberg-elf10', 'pm3-wiberg', 'pm3-wiberg-elf10'\]"
+            r"\['am1-wiberg', 'am1-wiberg-elf10', 'pm3-wiberg', 'pm3-wiberg-elf10'\]"
         )
 
         with pytest.raises(ValueError, match=expected_error):
@@ -2381,6 +2394,13 @@ class TestRDKitToolkitWrapper:
         off_molecule = Molecule.from_rdkit(Chem.MolFromSmiles(smiles))
         assert off_molecule.properties["atom_map"] == expected_map
 
+    def test_from_pathlib_path(self):
+        ethanol = create_ethanol()
+        ethanol.to_file("ethanol.sdf", file_format="sdf")
+
+        toolkit = RDKitToolkitWrapper()
+        toolkit.from_file(pathlib.Path("ethanol.sdf"), file_format="sdf")
+
     def test_file_extension_case(self):
         """
         Test round-trips of some file extensions when called directly from the toolkit wrappers,
@@ -2666,6 +2686,15 @@ class TestRDKitToolkitWrapper:
 
         with pytest.raises(ConformerGenerationError, match="RDKit conf.*fail"):
             toolkit.generate_conformers(molecule, n_conformers=1)
+
+    def test_generate_conformers_large_molecule(self):
+        """Ensure that we don't get error caused by this molecule being too big for conf gen.  See issue #882 / OpenMM #3550."""
+        ql8 = Molecule.from_file(get_data_file_path("molecules/QL8.sdf"))
+
+        ql8.generate_conformers(
+            n_conformers=1,
+            toolkit_registry=RDKitToolkitWrapper(),
+        )
 
     @pytest.mark.parametrize("partial_charge_method", ["mmff94"])
     def test_assign_partial_charges_neutral(self, partial_charge_method):
@@ -3891,6 +3920,10 @@ class TestToolkitRegistry:
     @requires_rdkit
     def test_register_imported_toolkit_wrappers(self):
         """Test that imported toolkits are registered, and in the expected order"""
+        no_precedence = ToolkitRegistry(_register_imported_toolkit_wrappers=True)
+
+        assert len(no_precedence.registered_toolkits) == 4
+
         # Ensure a specified order is respected
         default_registry = ToolkitRegistry(
             toolkit_precedence=[

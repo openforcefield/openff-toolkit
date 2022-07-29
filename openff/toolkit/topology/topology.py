@@ -1428,6 +1428,8 @@ class Topology(Serializable):
         OpenFF Molecule that it came from. In other words, no chain or residue
         will span two OpenFF Molecules.
 
+        This method will **not** populate the OpenMM Topology with virtual sites.
+
         Parameters
         ----------
         ensure_unique_atom_names : bool, optional. Default=True
@@ -1441,6 +1443,8 @@ class Topology(Serializable):
         openmm_topology : openmm.app.Topology
             An OpenMM Topology object
         """
+        # TODO: MT needs to write a virtual sites section of the Interchange user guide.
+        #       Once that exists, the last note in this docstring should link to that.
         from openmm import app
 
         from openff.toolkit.topology.molecule import Bond

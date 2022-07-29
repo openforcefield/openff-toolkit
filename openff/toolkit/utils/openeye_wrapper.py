@@ -35,6 +35,7 @@ from openff.toolkit.utils.exceptions import (
     NotAttachedToMoleculeError,
     SMILESParseError,
     ToolkitUnavailableException,
+    UnassignedChemistryInPDBError,
     UndefinedStereochemistryError,
 )
 from openff.toolkit.utils.utils import inherit_docstrings
@@ -231,6 +232,139 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             "Cannot create Molecule from {} object".format(type(obj))
         )
 
+    def _polymer_openmm_topology_to_offmol(self, omm_top, substructure_dictionary):
+        oemol = self._polymer_openmm_topology_to_oemol(omm_top, substructure_dictionary)
+        offmol = self.from_openeye(oemol, allow_undefined_stereo=True)
+        return offmol
+
+    def _polymer_openmm_topology_to_oemol(
+        self,
+        omm_top,
+        substructure_library,
+    ):
+        """
+        Parameters
+        ----------
+        omm_top : openmm.app.Topology
+            OpenMM Topology loaded from PDB
+        substructure_library : dict{str:list[str, list[str]]}
+            A dictionary of substructures. substructure_library[aa_name] = list[tagged SMARTS, list[atom_names]]
+
+        Returns
+        -------
+        oemol : oechem.OEMol
+            a new molecule with charges and bond order added
+        """
+
+        oemol = self._get_connectivity_from_openmm_top(omm_top)
+
+        already_assigned_nodes = set()
+        already_assigned_edges = set()
+
+        # Keeping track of which atoms are matched where will help us with error
+        # messages
+        matches = defaultdict(list)
+
+        for res_name in substructure_library:
+            # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes
+            # so it just does the biggest substructures first
+            sorted_substructure_smarts = sorted(
+                substructure_library[res_name], key=len, reverse=True
+            )
+            for substructure_smarts in sorted_substructure_smarts:
+                ss = self._fuzzy_query(substructure_smarts)
+                for match in ss.Match(oemol, True):
+                    match_mol_atom_indices = [
+                        at.GetIdx() for at in match.GetTargetAtoms()
+                    ]
+                    for i in match_mol_atom_indices:
+                        matches[i].append(res_name)
+
+                    if any(
+                        m in already_assigned_nodes for m in match_mol_atom_indices
+                    ) and (res_name not in ["PEPTIDE_BOND", "DISULFIDE"]):
+                        continue
+
+                    for substructure_atom, mol_atom in zip(
+                        match.GetPatternAtoms(), match.GetTargetAtoms()
+                    ):
+                        mol_atom.SetFormalCharge(substructure_atom.GetFormalCharge())
+                        already_assigned_nodes.add(mol_atom.GetIdx())
+                    for substructure_bond, mol_bond in zip(
+                        match.GetPatternBonds(), match.GetTargetBonds()
+                    ):
+                        mol_bond.SetOrder(substructure_bond.GetOrder())
+                        already_assigned_edges.add(
+                            tuple(sorted([mol_bond.GetBgnIdx(), mol_bond.GetEndIdx()]))
+                        )
+
+        oemol_n_atoms = len([*oemol.GetAtoms()])
+        unassigned_atoms = sorted(set(range(oemol_n_atoms)) - already_assigned_nodes)
+
+        all_bonds = set(
+            [
+                tuple(sorted([bond.GetBgnIdx(), bond.GetEndIdx()]))
+                for bond in oemol.GetBonds()
+            ]
+        )
+        unassigned_bonds = sorted(all_bonds - already_assigned_edges)
+
+        if unassigned_atoms or unassigned_bonds:
+            raise UnassignedChemistryInPDBError(
+                substructure_library=substructure_library,
+                omm_top=omm_top,
+                unassigned_atoms=unassigned_atoms,
+                unassigned_bonds=unassigned_bonds,
+                matches=matches,
+            )
+
+        return oemol
+
+    def _get_connectivity_from_openmm_top(self, omm_top):
+        from openeye import oechem
+
+        oemol = oechem.OEMol()
+        # Add atoms
+        oemol_atoms = list()  # list of corresponding oemol atoms
+        for atom in omm_top.atoms():
+            oeatom = oemol.NewAtom(atom.element.atomic_number)
+            oemol_atoms.append(oeatom)
+
+        # Add bonds
+        oemol_bonds = list()  # list of corresponding oemol bonds
+        for bond in omm_top.bonds():
+            atom1_index = bond[0].index
+            atom2_index = bond[1].index
+            oebond = oemol.NewBond(oemol_atoms[atom1_index], oemol_atoms[atom2_index])
+            oemol_bonds.append(oebond)
+        return oemol
+
+    @staticmethod
+    def _fuzzy_query(query):
+        """return a copy of Query which is less specific:
+        - ignore aromaticity and hybridization of atoms (i.e. [#6] not C)
+        - ignore bond orders
+        - ignore formal charges
+        """
+        from openeye import oechem
+
+        from openff.toolkit.typing.chemistry import SMIRKSParsingError
+
+        #  Jeff wasn't able to get this working with OEQMol and OEParseSmarts,
+        #  the QMol/SS matching didn't behave correctly when set to AtomicNumber
+        qmol = oechem.OEMol()
+        status = oechem.OEParseSmiles(
+            qmol,
+            query,
+        )
+
+        if not status:
+            raise SMIRKSParsingError(
+                f"OpenEye Toolkit was unable to parse SMIRKS {query}"
+            )
+        ss = oechem.OESubSearch(qmol, oechem.OEExprOpts_AtomicNumber, 0)
+        return ss
+
     def from_file(
         self, file_path, file_format, allow_undefined_stereo=False, _cls=None
     ):
@@ -272,6 +406,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         """
         from openeye import oechem
+
+        if isinstance(file_path, pathlib.Path):
+            file_path: str = file_path.as_posix()
 
         oeformat = get_oeformat(file_format)
         ifs = oechem.oemolistream(file_path)
@@ -1237,7 +1374,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         return oemol, off_to_oe_idx
 
     def to_openeye(self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
-        r"""
+        """
         Create an OpenEye molecule using the specified aromaticity model
 
         ``OEAtom`` s have a different set of allowed value for partial
@@ -1307,6 +1444,15 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     off_atom.partial_charge.m_as(unit.elementary_charge)
                 )
             res = oechem.OEAtomGetResidue(oe_atom)
+            # If we add residue info without updating the serial number, all of the atom
+            # serial numbers in a written PDB will be 0. Note two things:
+            # 1) the "res" object is specific to this atom, so its serial number
+            #    applies only to this atom
+            # 2) we do NOT preserve
+            #    PDB serial numbers in our infrastructure, we merely set these to the
+            #    atom index in the molecule so that OpenEye-written PDBs have
+            #    nonzero atom serial numbers.
+            res.SetSerialNumber(oe_to_off_idx[oe_idx] + 1)
 
             if "residue_name" in off_atom.metadata:
                 res.SetName(off_atom.metadata["residue_name"])
@@ -1840,7 +1986,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         clear_existing=True,
         make_carboxylic_acids_cis=False,
     ):
-        r"""
+        """
         Generate molecule conformers using OpenEye Omega.
 
         .. warning :: This API is experimental and subject to change.

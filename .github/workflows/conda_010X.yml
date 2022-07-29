@@ -1,0 +1,135 @@
+name: Conda 0.10.X
+
+on:
+  release:
+    types:
+      - released
+      - prereleased
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenEye=${{ matrix.openeye }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.8", "3.9"]
+        openeye: ["true", "false"]
+
+    env:
+      CI_OS: ${{ matrix.os }}
+      OPENEYE: ${{ matrix.openeye }}
+      PYVER: ${{ matrix.python-version }}
+      OE_LICENSE: ${{ github.workspace }}/oe_license.txt
+      PACKAGE: openff-toolkit
+
+    steps:
+      - uses: actions/checkout@v3.0.2
+
+      - uses: conda-incubator/setup-miniconda@v2.1.1
+        name: Vanilla install from conda
+        if: ${{ matrix.openeye == 'false' }}
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: 010x-latest-deployment
+          environment-file: devtools/conda-envs/conda_010X.yaml
+          auto-activate-base: false
+          miniforge-version: latest
+          miniforge-variant: Mambaforge
+          use-mamba: true
+      - uses: conda-incubator/setup-miniconda@v2.1.1
+        name: Install from conda with OpenEye
+        if: ${{ matrix.openeye == 'true' }}
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: test
+          environment-file: devtools/conda-envs/conda_oe_010X.yaml
+          auto-activate-base: false
+          miniforge-version: latest
+          miniforge-variant: Mambaforge
+          use-mamba: true
+
+      - name: Additional info about the build
+        shell: bash -l {0}
+        run: |
+          uname -a
+          df -h
+          ulimit -a
+
+      - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
+        shell: bash
+        env:
+          OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
+        run: |
+          echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
+
+      - name: Environment Information
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+
+      - name: Check installed toolkits
+        shell: bash -l {0}
+        run: |
+          # Checkout the state of the repo as of the last 0.10.X release
+          export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openff-toolkit.git | cut -f2 | grep -E "0\.10\.([0-9]+)$" | sort --version-sort | tail -1 | sed 's/refs\/tags\///' )
+          git fetch --tags
+          git checkout tags/$LATEST_TAG
+          git log -1 | cat
+          
+          if [[ "$OPENEYE" == true ]]; then
+            python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert OPENEYE_AVAILABLE, 'OpenEye unavailable'"
+          fi
+          if [[ "$OPENEYE" == false ]]; then
+            if [[ $(conda list | grep openeye-toolkits) ]]; then
+              conda remove --force openeye-toolkits --yes
+            fi
+            python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert not OPENEYE_AVAILABLE, 'OpenEye unexpectedly found'"
+          fi
+
+      - name: Check that correct OFFTK version was installed
+        shell: bash -l {0}
+        run: |
+          # Go up one directory to ensure that we don't just load the OFFTK from the checked-out repo
+          cd ../
+
+          export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openff-toolkit.git | cut -f2 | grep -E "0\.10\.([0-9]+)$" | sort --version-sort | tail -1 | sed 's/refs\/tags\///' )
+          export FOUND_VER=$(python -c "import openff.toolkit; print(openff.toolkit.__version__)")
+
+          echo "Latest tag is"
+          echo $LATEST_TAG
+          echo "Found version is"
+          echo $FOUND_VER
+
+          if [[ $LATEST_TAG != $FOUND_VER ]];
+            then echo "Version mismatch"
+          #  exit 1
+          fi
+
+          cd openff-toolkit
+
+      - name: Test the package
+        shell: bash -l {0}
+        run: |
+
+          # Install test plugins
+          cd utilities/test_plugins
+          python setup.py develop --no-deps
+          cd -
+
+          pwd
+          ls
+
+          if [[ "$OPENEYE" == true ]]; then
+            python -c "import openff.toolkit; print(openff.toolkit.__file__)"
+            python -c "import openeye; print(openeye.oechem.OEChemIsLicensed())"
+          fi
+
+          PYTEST_ARGS=" -r fE --tb=short --runslow openff/toolkit/tests/conftest.py"
+          PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
+          pytest $PYTEST_ARGS openff

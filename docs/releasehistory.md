@@ -62,6 +62,9 @@ print(value_roundtrip)
   [Issue #1287](https://github.com/openforcefield/openff-toolkit/issues/1287), where  
   `OpenEyeToolkitWrapper.assign_partial_charges` didn't request symmetrized charges when
   the charge model was set to `AM1-Mulliken`.
+- [PR #1348](https://github.com/openforcefield/openff-toolkit/pull/1348): Allows
+  `pathlib.Path` objects to be passed to
+  [`Molecule.from_file`](openff.toolkit.topology.molecule.Molecule.from_file).
 - [PR #1276](https://github.com/openforcefield/openff-toolkit/pull/1276): Removes the
   `use_interchange` argument to
   [`create_openmm_system`](openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system).
@@ -120,6 +123,9 @@ print(value_roundtrip)
 
 ### Behaviors changed and bugfixes
 
+- [PR #1346](https://github.com/openforcefield/openff-toolkit/pull/1346): Conformer generation with RDKit
+  will use `useRandomCoords=True` on a second attempt if the first attempt fails, which sometimes
+  happens with large molecules.
 - [PR #1277](https://github.com/openforcefield/openff-toolkit/pull/1277): Version 0.3 `<Electrostatics>`
   sections of OFFXML files will automatically be up-converted (in memory) to version 0.4 according
   to the recomendations provided in

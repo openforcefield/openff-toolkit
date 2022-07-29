@@ -1432,6 +1432,45 @@ class TestBondHandler:
         # This comparison should pass, since the potentials defined above are compatible
         bh1.check_handler_compatibility(bh2)
 
+    def test_am1_wiberg_combine_error(self):
+        """Reproduce issue #719 and a suggested fix."""
+        v3 = BondHandler(version=0.3)
+        v4 = BondHandler(version=0.4)
+
+        v3.add_parameter(
+            parameter=BondHandler.BondType(
+                smirks="[#6:1]-[*:2]",
+                length=1.0 * unit.angstrom,
+                k=5 * unit.kilocalorie / unit.mole / unit.angstrom**2,
+            )
+        )
+
+        v4.add_parameter(
+            parameter=BondHandler.BondType(
+                smirks="[#8:1]-[*:2]",
+                length=2.0 * unit.angstrom,
+                k=5 * unit.kilocalorie / unit.mole / unit.angstrom**2,
+            )
+        )
+
+        ff_v3 = ForceField()
+        ff_v4 = ForceField()
+
+        ff_v3.register_parameter_handler(v3)
+        ff_v4.register_parameter_handler(v4)
+
+        with pytest.raises(
+            IncompatibleParameterError,
+            match="This likely results from mixing bond handlers",
+        ):
+            ff_v3._load_smirnoff_data(ff_v4._to_smirnoff_data())
+
+        # Simulate a user following the recommendation to switch a
+        # version 0.3 BondHandler to use 'AM1-Wiberg'
+        ff_v3["Bonds"].fractional_bondorder_method = "AM1-Wiberg"
+
+        ff_v3._load_smirnoff_data(ff_v4._to_smirnoff_data())
+
 
 class TestProperTorsionType:
     """Tests for the ProperTorsionType class."""
@@ -1497,7 +1536,7 @@ class TestProperTorsionType:
         the indices are not consecutive and a SMIRNOFFSpecError is raised
         """
         with pytest.raises(
-            SMIRNOFFSpecError, match="Unexpected kwarg \(phase3: 31 deg\)*."
+            SMIRNOFFSpecError, match=r"Unexpected kwarg \(phase3: 31 deg\)*."
         ):
             ProperTorsionHandler.ProperTorsionType(
                 smirks="[*:1]-[*:2]-[*:3]-[*:4]",
@@ -1632,7 +1671,7 @@ class TestProperTorsionType:
         AND we are doing bond order interpolation
         """
         with pytest.raises(
-            SMIRNOFFSpecError, match="Unexpected kwarg \(k3_bondorder1*."
+            SMIRNOFFSpecError, match=r"Unexpected kwarg \(k3_bondorder1*."
         ):
             ProperTorsionHandler.ProperTorsionType(
                 smirks="[*:1]-[*:2]-[*:3]-[*:4]",
@@ -1730,6 +1769,18 @@ class TestvdWHandler:
         assert vdw_handler.get_parameter({"smirks": "[*:1]"})[0].id == "n99"
         assert vdw_handler.get_parameter({"smirks": "[#1:1]"})[0].id == "n00"
 
+    def test_set_invalid_scale_factor(self):
+        handler = vdWHandler(version=0.3)
+
+        with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale12"):
+            handler.scale12 = 0.1
+
+        with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale13"):
+            handler.scale13 = 0.1
+
+        with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale15"):
+            handler.scale15 = 0.1
+
 
 class TestvdWType:
     """
@@ -1799,6 +1850,18 @@ class TestElectrostaticsHandler:
             match="unexpected periodic potential",
         ):
             handler.periodic_potential = "PPPM"
+
+    def test_set_invalid_scale_factor(self):
+        handler = ElectrostaticsHandler(version=0.4)
+
+        with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale12"):
+            handler.scale12 = 0.1
+
+        with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale13"):
+            handler.scale13 = 0.1
+
+        with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale15"):
+            handler.scale15 = 0.1
 
 
 class TestElectrostaticsHandlerUpconversion:

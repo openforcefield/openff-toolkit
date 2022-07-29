@@ -58,6 +58,7 @@ from openff.toolkit.utils.exceptions import (
     SMIRNOFFAromaticityError,
     SMIRNOFFSpecError,
     SMIRNOFFSpecUnimplementedError,
+    SMIRNOFFVersionError,
 )
 
 XML_FF_GENERICS = """<?xml version='1.0' encoding='ASCII'?>
@@ -878,12 +879,25 @@ class TestForceField:
             "smirnoff99Frosst-1.1.0.offxml",
             "openff-1.0.0.offxml",
             "openff_unconstrained-1.0.0.offxml",
-            "openff-1.1.0.offxml",
-            "openff-1.2.0.offxml",
+            "openff-1.3.0.offxml",
+            "openff-2.0.0.offxml",
+            "ff14sb_off_impropers_0.0.3.offxml",
         ]
 
         for ff in expected_force_fields:
             assert ff in available_force_fields
+
+    @pytest.mark.parametrize("full_path", [(True, False)])
+    @pytest.mark.parametrize("force_field_file", [*get_available_force_fields()])
+    def test_get_available_force_fields_loadable(self, full_path, force_field_file):
+        """Ensure get_available_force_fields returns load-able files"""
+        if "ff14sb" in force_field_file and "off_imp" not in force_field_file:
+            pytest.skip(
+                "Only the variants of the ff14SB port with SMIRNOFF-style impropers "
+                "can be loaded by the toolkit by default. Those with Amber-style impropers"
+                "require AmberImproperTorsionHandler."
+            )
+        ForceField(force_field_file)
 
     def test_force_field_case(self):
         """Ensure forcefield paths are loaded in a case-insensitive manner"""
@@ -911,11 +925,17 @@ class TestForceField:
         ):
             ForceField("force-field.offxml")
 
-    @pytest.mark.parametrize("full_path", [(True, False)])
-    @pytest.mark.parametrize("force_field_file", [*get_available_force_fields()])
-    def test_get_available_force_fields_loadable(self, full_path, force_field_file):
-        """Ensure get_available_force_fields returns load-able files"""
-        ForceField(force_field_file)
+    def test_load_bad_version(self):
+        with pytest.raises(SMIRNOFFVersionError, match="99.3"):
+            ForceField(
+                "test_forcefields/unsupported_smirnoff_version.offxml",
+                disable_version_check=False,
+            )
+
+        ForceField(
+            "test_forcefields/unsupported_smirnoff_version.offxml",
+            disable_version_check=True,
+        )
 
     def test_create_forcefield_no_args(self):
         """Test empty constructor"""
@@ -2006,8 +2026,8 @@ class TestForceFieldChargeAssignment:
         for particle_index, expected_charge in expected_charges:
             q, _, _ = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
-        for particle_index in range(topology.n_particles):
-            q, _, _ = nonbondedForce.getParticleParameters(particle_index)
+        for atom_index in range(topology.n_atoms):
+            q, _, _ = nonbondedForce.getParticleParameters(atom_index)
             assert q != (0.0 * unit.elementary_charge)
 
     @pytest.mark.parametrize(
@@ -3896,10 +3916,18 @@ class TestForceFieldParameterAssignment:
             if isinstance(f, openmm.HarmonicBondForce)
         ][0]
 
+        kj_mol_nm2 = openmm_unit.kilojoule_per_mole / openmm_unit.nanometer**2
+
         for idx in range(default_bond_force.getNumBonds()):
-            assert default_bond_force.getBondParameters(
-                idx
-            ) == mod_bond_force.getBondParameters(idx)
+            # atom1_index, atom2_index, length (nm), k (kj/mol/nm2)
+            default = default_bond_force.getBondParameters(idx)
+            modified = mod_bond_force.getBondParameters(idx)
+            assert default[2].value_in_unit(openmm_unit.nanometer) == pytest.approx(
+                modified[2].value_in_unit(openmm_unit.nanometer)
+            )
+            assert default[3].value_in_unit(kj_mol_nm2) == pytest.approx(
+                modified[3].value_in_unit(kj_mol_nm2)
+            )
 
         for bond1, bond2 in zip(omm_sys_top.bonds, mod_omm_sys_top.bonds):
             # 'approx()' because https://github.com/openforcefield/openff-toolkit/issues/994

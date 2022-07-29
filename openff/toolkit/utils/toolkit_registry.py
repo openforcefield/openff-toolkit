@@ -58,7 +58,7 @@ class ToolkitRegistry:
 
     def __init__(
         self,
-        toolkit_precedence=[],
+        toolkit_precedence=None,
         exception_if_unavailable=True,
         _register_imported_toolkit_wrappers=False,
     ):
@@ -67,7 +67,7 @@ class ToolkitRegistry:
 
         Parameters
         ----------
-        toolkit_precedence : list, default=[]
+        toolkit_precedence : list, optional, default=None
             List of toolkit wrapper classes, in order of desired precedence when performing molecule operations. If
             None, no toolkits will be registered.
 
@@ -98,7 +98,7 @@ class ToolkitRegistry:
                 if toolkit in all_importable_toolkit_wrappers:
                     toolkits_to_register.append(toolkit)
         else:
-            if toolkit_precedence:
+            if toolkit_precedence is not None:
                 toolkits_to_register = toolkit_precedence
 
         if toolkits_to_register:
