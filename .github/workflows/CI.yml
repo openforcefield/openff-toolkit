@@ -4,11 +4,11 @@ on:
   push:
     branches:
       - "master"
-      - "maintenance/.*"
+      - "0-10-x"
   pull_request:
     branches:
       - "master"
-      - "maintenance/.*"
+      - "0-10-x"
   schedule:
     # Nightly tests run on master by default:
     #   Scheduled workflows run on the latest commit on the default or base branch.

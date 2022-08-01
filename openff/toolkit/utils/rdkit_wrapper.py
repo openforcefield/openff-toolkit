@@ -1278,7 +1278,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # add the next conformer with the largest summed RMS distance
             # to current selected conformers
             rmsdist = np.where(any_too_close, -np.inf, selected_rms.sum(axis=0))
-            selected_indices.append(rmsdist.argmax())
+            selected_indices.append(int(rmsdist.argmax()))
 
         return [ranked_conformers[i] for i in selected_indices]
 
