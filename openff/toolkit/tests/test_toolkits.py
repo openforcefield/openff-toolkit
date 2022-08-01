@@ -1316,6 +1316,11 @@ class TestOpenEyeToolkitWrapper:
         charge_sum = sum(molecule.partial_charges, 0.0 * unit.elementary_charge)
         assert 1.0e-10 > abs(charge_sum.value_in_unit(unit.elementary_charge))
 
+        # Atoms 6 and 7 are hydrogens on the central C. If we don't symmetrize charges they'll have slight differences
+        assert 1.0e-10 > abs(
+            molecule.partial_charges[6] - molecule.partial_charges[7]
+        ).m_as(unit.elementary_charge)
+
     @pytest.mark.parametrize("partial_charge_method", ["am1bcc", "am1-mulliken"])
     def test_assign_partial_charges_conformer_dependence(self, partial_charge_method):
         """Test OpenEyeToolkitWrapper assign_partial_charges()'s use_conformers kwarg

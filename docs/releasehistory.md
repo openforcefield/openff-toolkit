@@ -8,6 +8,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+- [PR #1313](https://github.com/openforcefield/openff-toolkit/pull/1313): Fixes 
+  [Issue #1287](https://github.com/openforcefield/openff-toolkit/issues/1287), where  
+  `OpenEyeToolkitWrapper.assign_partial_charges` didn't request symmetrized charges when
+  the charge model was set to `AM1-Mulliken`.
+
 ## 0.10.6 Bugfix release
 
 ### Critical bugfixes
