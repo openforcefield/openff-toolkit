@@ -58,6 +58,10 @@ print(value_roundtrip)
 
 ## Current Development
 
+- [PR #1313](https://github.com/openforcefield/openff-toolkit/pull/1313): Fixes 
+  [Issue #1287](https://github.com/openforcefield/openff-toolkit/issues/1287), where  
+  `OpenEyeToolkitWrapper.assign_partial_charges` didn't request symmetrized charges when
+  the charge model was set to `AM1-Mulliken`.
 - [PR #1348](https://github.com/openforcefield/openff-toolkit/pull/1348): Allows
   `pathlib.Path` objects to be passed to
   [`Molecule.from_file`](openff.toolkit.topology.molecule.Molecule.from_file).
