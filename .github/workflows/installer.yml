@@ -26,8 +26,8 @@ jobs:
       uses: mamba-org/provision-with-micromamba@main
       with:
         environment-file: devtools/conda-envs/installer.yaml
-          extra-specs: |
-            python=${{ matrix.python-version }}
+        extra-specs: |
+          python=${{ matrix.python-version }}
 
     - name: Additional info about the build
       shell: bash
