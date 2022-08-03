@@ -68,6 +68,7 @@ jobs:
           environment-file: devtools/conda-envs/${{env.ENVFILE}}.yaml
           extra-specs: |
             python=${{ matrix.python-version }}
+            mamba
 
       - name: Install additional example dependencies
         run: |
