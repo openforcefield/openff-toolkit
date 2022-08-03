@@ -256,6 +256,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             a new molecule with charges and bond order added
         """
         from openeye import oechem
+
         oemol = self._get_connectivity_from_openmm_top(omm_top)
 
         already_assigned_nodes = set()
