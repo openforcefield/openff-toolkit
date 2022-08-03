@@ -255,6 +255,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         oemol : oechem.OEMol
             a new molecule with charges and bond order added
         """
+        from openeye import oechem
 
         oemol = self._get_connectivity_from_openmm_top(omm_top)
 
@@ -289,6 +290,15 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                         match.GetPatternAtoms(), match.GetTargetAtoms()
                     ):
                         mol_atom.SetFormalCharge(substructure_atom.GetFormalCharge())
+                        # Set arbitrary initial stereochemistry to avoid
+                        # spamming "undefined stereo" warnings. In the from_polymer_pdb
+                        # code path, the "real stereo" will be assigned later by a
+                        # call to _assign_aromaticity_and_stereo_from_3d.
+                        neighs = [n for n in mol_atom.GetAtoms()]
+                        mol_atom.SetStereo(
+                            neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Left
+                        )
+
                         already_assigned_nodes.add(mol_atom.GetIdx())
                     for substructure_bond, mol_bond in zip(
                         match.GetPatternBonds(), match.GetTargetBonds()
