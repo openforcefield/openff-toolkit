@@ -62,16 +62,12 @@ jobs:
               echo "ENVFILE=rdkit" >> $GITHUB_ENV
           fi
 
-      - uses: conda-incubator/setup-miniconda@v2.1.1
-        name: Install with only ${{env.ENVFILE}}
+      - name: Install conda environment with ${{ env.ENVFILE }}
+        uses: mamba-org/provision-with-micromamba@main
         with:
-          python-version: ${{ matrix.python-version }}
-          activate-environment: test
           environment-file: devtools/conda-envs/${{env.ENVFILE}}.yaml
-          auto-activate-base: false
-          miniforge-version: latest
-          miniforge-variant: Mambaforge
-          use-mamba: true
+          extra-specs: |
+            python=${{ matrix.python-version }}
 
       - name: Install additional example dependencies
         run: |

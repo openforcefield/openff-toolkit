@@ -30,28 +30,20 @@ jobs:
     steps:
       - uses: actions/checkout@v3.0.2
 
-      - uses: conda-incubator/setup-miniconda@v2.1.1
-        name: Vanilla install from conda
+      - name: Vanilla install from conda
+        uses: mamba-org/provision-with-micromamba@main
         if: ${{ matrix.openeye == 'false' }}
         with:
-          python-version: ${{ matrix.python-version }}
-          activate-environment: 010x-latest-deployment
           environment-file: devtools/conda-envs/conda_010X.yaml
-          auto-activate-base: false
-          miniforge-version: latest
-          miniforge-variant: Mambaforge
-          use-mamba: true
-      - uses: conda-incubator/setup-miniconda@v2.1.1
-        name: Install from conda with OpenEye
+          extra-specs: |
+            python=${{ matrix.python-version }}
+      - name: Install from conda with OpenEye
+        uses: mamba-org/provision-with-micromamba@main
         if: ${{ matrix.openeye == 'true' }}
         with:
-          python-version: ${{ matrix.python-version }}
-          activate-environment: test
           environment-file: devtools/conda-envs/conda_oe_010X.yaml
-          auto-activate-base: false
-          miniforge-version: latest
-          miniforge-variant: Mambaforge
-          use-mamba: true
+          extra-specs: |
+            python=${{ matrix.python-version }}
 
       - name: Additional info about the build
         shell: bash -l {0}

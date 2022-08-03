@@ -76,17 +76,12 @@ jobs:
               echo "PACKAGES_TO_REMOVE=openeye-toolkits" >> $GITHUB_ENV
           fi
 
-
       - name: Install environment with ${{ env.JOBNAME }}
-        uses: conda-incubator/setup-miniconda@v2.1.1
+        uses: mamba-org/provision-with-micromamba@main
         with:
-          python-version: ${{ matrix.python-version }}
-          activate-environment: test
           environment-file: devtools/conda-envs/${{ env.ENVFILE }}.yaml
-          auto-activate-base: false
-          miniforge-version: latest
-          miniforge-variant: Mambaforge
-          use-mamba: true
+          extra-specs: |
+            python=${{ matrix.python-version }}
 
       - name: Additional info about the build
         run: |

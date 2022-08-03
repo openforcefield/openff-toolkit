@@ -22,12 +22,12 @@ jobs:
     steps:
     - uses: actions/checkout@v3.0.2
 
-    - uses: conda-incubator/setup-miniconda@v2.1.1
+    - name: Install conda environment
+      uses: mamba-org/provision-with-micromamba@main
       with:
-        python-version: ${{ matrix.python-version }}
-        activate-environment: constructor
         environment-file: devtools/conda-envs/installer.yaml
-        auto-activate-base: false
+          extra-specs: |
+            python=${{ matrix.python-version }}
 
     - name: Additional info about the build
       shell: bash
