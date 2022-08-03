@@ -28,7 +28,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: [3.8]
+        python-version: ["3.8"]
         rdkit: [true, false]
         openeye: [true, false]
         exclude:
@@ -50,10 +50,6 @@ jobs:
 
       - name: Set environment variables
         run: |
-          if [[ ${{ matrix.openeye }} == true && ${{ matrix.rdkit }} == true ]]; then
-              echo "ENVFILE=test_env" >> $GITHUB_ENV
-          fi
-
           if [[ ${{ matrix.openeye }} == true && ${{ matrix.rdkit }} == false ]]; then
               echo "ENVFILE=openeye" >> $GITHUB_ENV
           fi
@@ -62,23 +58,24 @@ jobs:
               echo "ENVFILE=rdkit" >> $GITHUB_ENV
           fi
 
-      - uses: conda-incubator/setup-miniconda@v2.1.1
-        name: Install with only ${{env.ENVFILE}}
+      - name: Install conda environment with ${{ env.ENVFILE }}
+        uses: mamba-org/provision-with-micromamba@main
         with:
-          python-version: ${{ matrix.python-version }}
-          activate-environment: test
           environment-file: devtools/conda-envs/${{env.ENVFILE}}.yaml
-          auto-activate-base: false
-          miniforge-version: latest
-          miniforge-variant: Mambaforge
-          use-mamba: true
+          environment-name: offtk-examples
+          extra-specs: |
+            python=${{ matrix.python-version }}
+            mamba
 
       - name: Install additional example dependencies
         run: |
           mamba env update --file examples/environment.yaml --name test
 
-          # Remove rdkit if it is not being tested, as it is a dependency of openmmforcefields
-          if [[ ${{ matrix.openeye }} == true ]]; then
+          # If openmmforcefields is included in examples/environment.yaml,
+          # remove RDKit and AmberTools brought in by it. Currently it's not included,
+          # so don't remove it.
+          # if [[ ${{ matrix.rdkit }} == false ]]; then
+          if [[ true == false ]]; then
             conda remove --force rdkit ambertools
           fi
 

@@ -27,17 +27,12 @@ jobs:
         with:
           fetch-depth: 2
 
-      - uses: conda-incubator/setup-miniconda@v2.1.1
-        name: Install everything with betas and RCs
+      - name: Install environment with ${{ env.JOBNAME }}
+        uses: mamba-org/provision-with-micromamba@main
         with:
-          python-version: ${{ matrix.python-version }}
-          activate-environment: test
           environment-file: devtools/conda-envs/beta_rc_env.yaml
-          auto-activate-base: false
-          miniforge-version: latest
-          miniforge-variant: Mambaforge
-          use-mamba: true
-          channel-priority: strict
+          extra-specs: |
+            python=${{ matrix.python-version }}
 
       - name: Additional info about the build
         shell: bash -l {0}
