@@ -718,8 +718,11 @@ class Topology(Serializable):
         if "_topology_atom_index" not in atom.__dict__:
             topology_molecule_atom_start_index = 0
             for molecule in self.molecules:
-                for atom in molecule.atoms:
-                    atom._topology_atom_index = topology_molecule_atom_start_index + atom.molecule_atom_index
+                for at in molecule.atoms:
+                    at._topology_atom_index = (
+                        topology_molecule_atom_start_index + at.molecule_atom_index
+                    )
+                topology_molecule_atom_start_index += molecule.n_atoms
         if "_topology_atom_index" not in atom.__dict__:
             raise AtomNotInTopologyError("Atom not found in this Topology")
 
