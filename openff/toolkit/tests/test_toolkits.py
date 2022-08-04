@@ -884,6 +884,11 @@ class TestOpenEyeToolkitWrapper:
         water.to_file(sio, "pdb", toolkit_registry=toolkit)
         water_from_pdb = sio.getvalue()
         water_from_pdb_split = water_from_pdb.split("\n")
+        # Check serial number
+        assert water_from_pdb_split[0].split()[1].rstrip() == "1"
+        assert water_from_pdb_split[1].split()[1].rstrip() == "2"
+        assert water_from_pdb_split[2].split()[1].rstrip() == "3"
+        # Check atom name
         assert water_from_pdb_split[0].split()[2].rstrip() == "H"
         assert water_from_pdb_split[1].split()[2].rstrip() == "O"
         assert water_from_pdb_split[2].split()[2].rstrip() == "H"
@@ -1375,6 +1380,11 @@ class TestOpenEyeToolkitWrapper:
         )
         charge_sum = np.sum(molecule.partial_charges)
         assert 1.0e-10 > abs(charge_sum.m_as(unit.elementary_charge))
+
+        # Atoms 6 and 7 are hydrogens on the central C. If we don't symmetrize charges they'll have slight differences
+        assert 1.0e-10 > abs(
+            molecule.partial_charges[6] - molecule.partial_charges[7]
+        ).m_as(unit.elementary_charge)
 
     @pytest.mark.parametrize("partial_charge_method", ["am1bcc", "am1-mulliken"])
     def test_assign_partial_charges_conformer_dependence(self, partial_charge_method):
@@ -2676,6 +2686,15 @@ class TestRDKitToolkitWrapper:
 
         with pytest.raises(ConformerGenerationError, match="RDKit conf.*fail"):
             toolkit.generate_conformers(molecule, n_conformers=1)
+
+    def test_generate_conformers_large_molecule(self):
+        """Ensure that we don't get error caused by this molecule being too big for conf gen.  See issue #882 / OpenMM #3550."""
+        ql8 = Molecule.from_file(get_data_file_path("molecules/QL8.sdf"))
+
+        ql8.generate_conformers(
+            n_conformers=1,
+            toolkit_registry=RDKitToolkitWrapper(),
+        )
 
     @pytest.mark.parametrize("partial_charge_method", ["mmff94"])
     def test_assign_partial_charges_neutral(self, partial_charge_method):

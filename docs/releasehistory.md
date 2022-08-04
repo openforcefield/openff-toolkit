@@ -58,6 +58,10 @@ print(value_roundtrip)
 
 ## Current Development
 
+- [PR #1313](https://github.com/openforcefield/openff-toolkit/pull/1313): Fixes 
+  [Issue #1287](https://github.com/openforcefield/openff-toolkit/issues/1287), where  
+  `OpenEyeToolkitWrapper.assign_partial_charges` didn't request symmetrized charges when
+  the charge model was set to `AM1-Mulliken`.
 - [PR #1348](https://github.com/openforcefield/openff-toolkit/pull/1348): Allows
   `pathlib.Path` objects to be passed to
   [`Molecule.from_file`](openff.toolkit.topology.molecule.Molecule.from_file).
@@ -119,6 +123,9 @@ print(value_roundtrip)
 
 ### Behaviors changed and bugfixes
 
+- [PR #1346](https://github.com/openforcefield/openff-toolkit/pull/1346): Conformer generation with RDKit
+  will use `useRandomCoords=True` on a second attempt if the first attempt fails, which sometimes
+  happens with large molecules.
 - [PR #1277](https://github.com/openforcefield/openff-toolkit/pull/1277): Version 0.3 `<Electrostatics>`
   sections of OFFXML files will automatically be up-converted (in memory) to version 0.4 according
   to the recomendations provided in
@@ -253,6 +260,10 @@ print(value_roundtrip)
 [`Molecule.generate_conformers()`]: openff.toolkit.topology.Molecule.generate_conformers
 [`Molecule.assign_partial_charges()`]: openff.toolkit.topology.Molecule.assign_partial_charges
 [`Molecule.assign_fractional_bond_orders()`]: openff.toolkit.topology.Molecule.assign_fractional_bond_orders
+
+### Behaviors changed and bugfixes
+- [PR #1185](https://github.com/openforcefield/openff-toolkit/pull/1185):
+  Removed length check in ValenceDict and fixed checking the permutations of dihedrals
 
 ### Improved documentation and warnings
 - [PR #1172](https://github.com/openforcefield/openff-toolkit/pull/1172): Adding

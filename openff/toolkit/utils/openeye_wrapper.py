@@ -255,6 +255,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         oemol : oechem.OEMol
             a new molecule with charges and bond order added
         """
+        from openeye import oechem
 
         oemol = self._get_connectivity_from_openmm_top(omm_top)
 
@@ -289,6 +290,15 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                         match.GetPatternAtoms(), match.GetTargetAtoms()
                     ):
                         mol_atom.SetFormalCharge(substructure_atom.GetFormalCharge())
+                        # Set arbitrary initial stereochemistry to avoid
+                        # spamming "undefined stereo" warnings. In the from_polymer_pdb
+                        # code path, the "real stereo" will be assigned later by a
+                        # call to _assign_aromaticity_and_stereo_from_3d.
+                        neighs = [n for n in mol_atom.GetAtoms()]
+                        mol_atom.SetStereo(
+                            neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Left
+                        )
+
                         already_assigned_nodes.add(mol_atom.GetIdx())
                     for substructure_bond, mol_bond in zip(
                         match.GetPatternBonds(), match.GetTargetBonds()
@@ -1444,6 +1454,15 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     off_atom.partial_charge.m_as(unit.elementary_charge)
                 )
             res = oechem.OEAtomGetResidue(oe_atom)
+            # If we add residue info without updating the serial number, all of the atom
+            # serial numbers in a written PDB will be 0. Note two things:
+            # 1) the "res" object is specific to this atom, so its serial number
+            #    applies only to this atom
+            # 2) we do NOT preserve
+            #    PDB serial numbers in our infrastructure, we merely set these to the
+            #    atom index in the molecule so that OpenEye-written PDBs have
+            #    nonzero atom serial numbers.
+            res.SetSerialNumber(oe_to_off_idx[oe_idx] + 1)
 
             if "residue_name" in off_atom.metadata:
                 res.SetName(off_atom.metadata["residue_name"])
@@ -2304,10 +2323,16 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 oemol, charge_method["oe_charge_method"](optimize, symmetrize)
             )
         else:
+            # symmetrize is implicit in gasteiger and mmff and is already set to True in am1bccelf10
+            if partial_charge_method in ["gasteiger", "mmff94", "am1bccelf10"]:
+                kwargs = {}
+            else:
+                kwargs = {"symmetrize": True}
+
             oe_charge_method = charge_method["oe_charge_method"]
 
             if callable(oe_charge_method):
-                oe_charge_method = oe_charge_method()
+                oe_charge_method = oe_charge_method(**kwargs)
 
             quacpac_status = oequacpac.OEAssignCharges(oemol, oe_charge_method)
 
