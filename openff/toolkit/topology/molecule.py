@@ -2584,8 +2584,8 @@ class FrozenMolecule(Serializable):
         # TODO: Clear fractional bond orders
         self._ordered_connection_table_hash = None
         for atom in self.atoms:
-            if "molecule_atom_index" in atom.__dict__:
-                del atom.__dict__["molecule_atom_index"]
+            if "_molecule_atom_index" in atom.__dict__:
+                del atom.__dict__["_molecule_atom_index"]
 
     def to_networkx(self):
         """Generate a NetworkX undirected graph from the molecule.

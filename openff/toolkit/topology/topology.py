@@ -715,14 +715,11 @@ class Topology(Serializable):
         ------
         AtomNotInTopologyError : If the given atom is not in this topology
         """
+        # If the atom's topology atom index isn't cached, calculate it for the whole topology
         if "_topology_atom_index" not in atom.__dict__:
-            topology_molecule_atom_start_index = 0
-            for molecule in self.molecules:
-                for at in molecule.atoms:
-                    at._topology_atom_index = (
-                        topology_molecule_atom_start_index + at.molecule_atom_index
-                    )
-                topology_molecule_atom_start_index += molecule.n_atoms
+            self._build_atom_index_cache()
+        # After computing the topology atom indices for all atoms in this topology, if this
+        # atom still doesn't have a topology atom index assigned, then it must not be in this topology
         if "_topology_atom_index" not in atom.__dict__:
             raise AtomNotInTopologyError("Atom not found in this Topology")
 
@@ -1138,6 +1135,21 @@ class Topology(Serializable):
                     )
                     already_matched_mols.add(mol2_idx)
         return self._cached_chemically_identical_molecules
+
+    def _build_atom_index_cache(self):
+        topology_molecule_atom_start_index = 0
+        for molecule in self.molecules:
+            for at in molecule.atoms:
+                at._topology_atom_index = (
+                    topology_molecule_atom_start_index + at.molecule_atom_index
+                )
+            topology_molecule_atom_start_index += molecule.n_atoms
+
+    def _invalidate_cached_properties(self):
+        self._cached_chemically_identical_molecules = None
+        for atom in self.atoms:
+            if "_topology_atom_index" in atom.__dict__:
+                del atom.__dict__["_topology_atom_index"]
 
     def copy_initializer(self, other):
         other_dict = deepcopy(other.to_dict())
@@ -2054,7 +2066,7 @@ class Topology(Serializable):
 
     def add_molecule(self, molecule: Union[Molecule, _SimpleMolecule]) -> int:
         self._molecules.append(deepcopy(molecule))
-        self._cached_chemically_identical_molecules = None
+        self._invalidate_cached_properties()
         return len(self._molecules)
 
     def add_constraint(self, iatom, jatom, distance=True):
