@@ -715,13 +715,15 @@ class Topology(Serializable):
         ------
         AtomNotInTopologyError : If the given atom is not in this topology
         """
-        topology_molecule_atom_start_index = 0
-        for molecule in self.molecules:
-            if molecule is atom.molecule:
-                return molecule.atom_index(atom) + topology_molecule_atom_start_index
-            else:
-                topology_molecule_atom_start_index += molecule.n_atoms
-        raise AtomNotInTopologyError("Atom not found in this Topology")
+        if "_topology_atom_index" not in atom.__dict__:
+            topology_molecule_atom_start_index = 0
+            for molecule in self.molecules:
+                for atom in molecule.atoms:
+                    atom._topology_atom_index = topology_molecule_atom_start_index + atom.molecule_atom_index
+        if "_topology_atom_index" not in atom.__dict__:
+            raise AtomNotInTopologyError("Atom not found in this Topology")
+
+        return atom._topology_atom_index
 
     def molecule_index(self, molecule):
         """
