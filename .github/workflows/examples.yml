@@ -72,10 +72,8 @@ jobs:
           mamba env update --file examples/environment.yaml --name test
 
           # If openmmforcefields is included in examples/environment.yaml,
-          # remove RDKit and AmberTools brought in by it. Currently it's not included,
-          # so don't remove it.
-          # if [[ ${{ matrix.rdkit }} == false ]]; then
-          if [[ true == false ]]; then
+          # remove RDKit and AmberTools brought in by it.
+          if [[ ${{ matrix.rdkit }} == false ]]; then
             conda remove --force rdkit ambertools
           fi
 
@@ -125,9 +123,6 @@ jobs:
 
           # Working on in #1325
           NB_ARGS+=" --ignore=examples/virtual_sites/vsite_showcase.ipynb"
-
-          # openmmforcefields incompatible with new toolkit
-          NB_ARGS+=" --ignore=examples/external/swap_amber_parameters/swap_existing_ligand_parameters_with_openmmforcefields.ipynb"
 
           # JM will do some smithing on this before 0.11.0 release
           NB_ARGS+=" --ignore=examples/toolkit_showcase/toolkit_showcase.ipynb"

@@ -23,8 +23,7 @@ dependencies:
   - parmed
   - openeye-toolkits
   - packaging
-    # Removed until a compatible release is made
-# - openmmforcefields
+  - openmmforcefields >=0.11.1
   - openmm =>7.6
   - openff-forcefields
   - openff-units >=0.1.6
