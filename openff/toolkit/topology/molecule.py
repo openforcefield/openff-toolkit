@@ -1261,6 +1261,7 @@ class FrozenMolecule(Serializable):
         # self._cached_properties = None # Cached properties (such as partial charges) can be recomputed as needed
         self._partial_charges = None
         self._conformers = None  # Optional conformers
+        self._hill_formula = None  # Cached Hill formula
         self._hierarchy_schemes = dict()
         self._invalidate_cached_properties()
 
@@ -2580,6 +2581,7 @@ class FrozenMolecule(Serializable):
         self._propers = None
         self._impropers = None
 
+        self._hill_formula = None
         self._cached_smiles = None
         # TODO: Clear fractional bond orders
         self._ordered_connection_table_hash = None
@@ -3345,9 +3347,11 @@ class FrozenMolecule(Serializable):
         -----------
         NotImplementedError : if the molecule is not of one of the specified types.
         """
-        atom_nums = [atom.atomic_number for atom in self.atoms]
+        if self._hill_formula is None:
+            atom_nums = [atom.atomic_number for atom in self.atoms]
+            self._hill_formula = _atom_nums_to_hill_formula(atom_nums)
 
-        return _atom_nums_to_hill_formula(atom_nums)
+        return self._hill_formula
 
     @staticmethod
     def _object_to_hill_formula(obj: Union["Molecule", "nx.Graph"]) -> str:
