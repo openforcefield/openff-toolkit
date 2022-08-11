@@ -13,7 +13,7 @@ Class definitions to represent a molecular system and its chemical components
 """
 import itertools
 import warnings
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from collections.abc import MutableMapping
 from copy import deepcopy
 from typing import TYPE_CHECKING, Dict, Generator, List, Tuple, Union
@@ -1079,15 +1079,19 @@ class Topology(Serializable):
 
         {0: [[0, {0: 0, 1: 1, 2: 2}], [1, {0: 1, 1: 0, 2: 2}]]}
         """
-        identity_maps = self._identify_chemically_identical_molecules()
+        # Check whether this was run previously, and a cached result is available.
+        if self._cached_chemically_identical_molecules is not None:
+            return self._cached_chemically_identical_molecules
+
         # Convert molecule identity maps into groups of identical molecules
-        groupings = {}
-        for molecule_idx in identity_maps.keys():
-            unique_mol, atom_map = identity_maps[molecule_idx]
-            groupings[unique_mol] = groupings.get(unique_mol, list()) + [
-                [molecule_idx, atom_map]
-            ]
-        return groupings
+        identity_maps = self._identify_chemically_identical_molecules()
+        groupings = defaultdict(list)
+        for molecule_idx, (unique_mol, atom_map) in identity_maps.items():
+            groupings[unique_mol] += [[molecule_idx, atom_map]]
+
+        self._cached_chemically_identical_molecules = groupings
+
+        return self._cached_chemically_identical_molecules
 
     def _identify_chemically_identical_molecules(self):
         """
@@ -1105,19 +1109,14 @@ class Topology(Serializable):
                 unique_molecule_idx, {molecule_atom_idx, unique_molecule_atom_idx}
             )``
         """
-        # Check whether this was run previously, and a cached result is available.
-        if self._cached_chemically_identical_molecules is not None:
-            return self._cached_chemically_identical_molecules
-
-        # If a cached result isn't available, recalculate the identity maps.
-        self._cached_chemically_identical_molecules = dict()
+        identity_maps = dict()
         already_matched_mols = set()
 
         for mol1_idx in range(self.n_molecules):
             if mol1_idx in already_matched_mols:
                 continue
             mol1 = self.molecule(mol1_idx)
-            self._cached_chemically_identical_molecules[mol1_idx] = (
+            identity_maps[mol1_idx] = (
                 mol1_idx,
                 {i: i for i in range(mol1.n_atoms)},
             )
@@ -1129,12 +1128,13 @@ class Topology(Serializable):
                     mol1, mol2, return_atom_map=True
                 )
                 if are_isomorphic:
-                    self._cached_chemically_identical_molecules[mol2_idx] = (
+                    identity_maps[mol2_idx] = (
                         mol1_idx,
                         atom_map,
                     )
                     already_matched_mols.add(mol2_idx)
-        return self._cached_chemically_identical_molecules
+
+        return identity_maps
 
     def _build_atom_index_cache(self):
         topology_molecule_atom_start_index = 0
