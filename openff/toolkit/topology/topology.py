@@ -445,7 +445,8 @@ class Topology(Serializable):
         atom_index_offset = self.n_atoms
 
         for molecule in other.molecules:
-            self.add_molecule(deepcopy(molecule))
+            self._add_molecule_keep_cache(molecule)
+        self._invalidate_cached_properties()
 
         for key, value in constrained_atom_pairs_to_add.items():
             new_key = tuple(index + atom_index_offset for index in key)
@@ -494,7 +495,8 @@ class Topology(Serializable):
         # Create Topology and populate it with specified molecules
         topology = cls()
         for molecule in molecules:
-            topology.add_molecule(molecule)
+            topology._add_molecule_keep_cache(molecule)
+        topology._invalidate_cached_properties()
 
         return topology
 
@@ -1225,7 +1227,8 @@ class Topology(Serializable):
 
         for molecule_dict in topology_dict["molecules"]:
             new_mol = Molecule.from_dict(molecule_dict)
-            self.add_molecule(new_mol)
+            self._add_molecule_keep_cache(new_mol)
+        self._invalidate_cached_properties()
 
     @staticmethod
     @requires_package("openmm")
@@ -1405,7 +1408,8 @@ class Topology(Serializable):
                     omm_mol_G.nodes[omm_atom]["residue_id"]
                 )
                 off_atom.metadata["chain_id"] = omm_mol_G.nodes[omm_atom]["chain_id"]
-            topology.add_molecule(remapped_mol)
+            topology._add_molecule_keep_cache(remapped_mol)
+        topology._invalidate_cached_properties()
 
         if openmm_topology.getPeriodicBoxVectors() is not None:
             topology.box_vectors = from_openmm(openmm_topology.getPeriodicBoxVectors())
@@ -2065,8 +2069,16 @@ class Topology(Serializable):
             this_molecule_start_index += molecule.n_bonds
 
     def add_molecule(self, molecule: Union[Molecule, _SimpleMolecule]) -> int:
-        self._molecules.append(deepcopy(molecule))
+        """Add a copy of the molecule to the topology"""
+        idx = self._add_molecule_keep_cache(molecule)
         self._invalidate_cached_properties()
+        return idx
+
+    def _add_molecule_keep_cache(
+        self,
+        molecule: Union[Molecule, _SimpleMolecule],
+    ) -> int:
+        self._molecules.append(deepcopy(molecule))
         return len(self._molecules)
 
     def add_constraint(self, iatom, jatom, distance=True):
