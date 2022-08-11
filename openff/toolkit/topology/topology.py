@@ -1563,9 +1563,10 @@ class Topology(Serializable):
     @requires_package("openmm")
     def visualize(self):
         from io import StringIO
+
+        import nglview
         from openff.units.openmm import to_openmm as to_openmm_quantity
         from openmm.app import PDBFile
-        import nglview
 
         openmm_top = self.to_openmm(ensure_unique_atom_names=False)
         openmm_positions = to_openmm_quantity(self.get_positions())
