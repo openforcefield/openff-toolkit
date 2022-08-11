@@ -1875,7 +1875,25 @@ class FrozenMolecule(Serializable):
             [Dict[int,int]] ordered by mol1 indexing {mol1_index: mol2_index}
             If molecules are not isomorphic given input arguments, will return None instead of dict.
         """
-        # Do a quick hill formula check first
+
+        def _object_to_n_atoms(obj):
+            import networkx as nx
+
+            if isinstance(obj, FrozenMolecule):
+                return obj.n_atoms
+            elif isinstance(obj, nx.Graph):
+                return obj.number_of_nodes()
+            else:
+                raise RuntimeError(
+                    f"Unsupport object of type {type(obj)} passed to "
+                    "Molecule._object_to_hill_formula"
+                )
+
+        # Quick number of atoms check. Important for large molecules
+        if _object_to_n_atoms(mol1) != _object_to_n_atoms(mol2):
+            return False, None
+
+        # If the number of atoms match, check the Hill formula
         if Molecule._object_to_hill_formula(mol1) != Molecule._object_to_hill_formula(
             mol2
         ):
