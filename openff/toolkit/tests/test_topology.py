@@ -4,8 +4,10 @@ Tests for Topology
 """
 
 import itertools
+from copy import deepcopy
 
 import numpy as np
+from openff.units.units import Quantity
 import pytest
 from openff.units import unit
 from openmm import app
@@ -50,6 +52,7 @@ from openff.toolkit.utils.exceptions import (
     DuplicateUniqueMoleculeError,
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
+    IncompatibleUnitError,
     MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
 )
@@ -1448,3 +1451,103 @@ class TestImproperDictKeyIndex:
     def test_no_key(self):
         with pytest.raises(ValueError, match="not in possible"):
             ImproperDict.index_of([0, 1, 2, 4], possible=[(4, 1, 2, 0)])
+
+
+@pytest.mark.parametrize(
+    "generate_positions",
+    [
+        # Test an array
+        lambda n, rng: rng.random((n, 3)),
+        # Test a list of lists
+        lambda n, rng: [[rng.random(), rng.random(), rng.random()] for _ in range(n)],
+        # Test a list of tuples
+        lambda n, rng: [(rng.random(), rng.random(), rng.random()) for _ in range(n)],
+    ],
+)
+class TestTopologyPositions:
+    def test_set_positions(self, generate_positions):
+        # Methane molecule with initial conformers
+        methane = Molecule.from_mapped_smiles("[H:2][C:1]([H:3])([H:4])[H:5]")
+        methane.generate_conformers()
+        init_conformers = deepcopy(methane.conformers)
+
+        # Water molecules without initial conformers
+        water = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
+        topology = Topology.from_molecules([methane] + [water] * 1000)
+
+        # Generate positions deterministically
+        rng = np.random.default_rng(seed=999)
+
+        positions = Quantity(generate_positions(topology.n_atoms, rng), unit.nanometer)
+
+        # Run the method under test
+        topology.set_positions(positions)
+
+        # Make sure the input molecules haven't changed
+        # (because adding them to the topology copies them)
+        assert all(np.all(a == b) for a, b in zip(methane.conformers, init_conformers))
+        assert not water.conformers
+
+        # Now we're going to check all the molecules
+        mol_iter = topology.molecules
+
+        # Make sure the methane's first conformation is changed, but the others are left
+        first_mol = next(mol_iter)
+        print(first_mol.conformers[0])
+        assert np.all(first_mol.conformers[0] == positions[0:5, :])
+        assert np.all(first_mol.conformers[1:] == init_conformers[1:])
+
+        # Check the other molecules in the topology.
+        # Reusing the iterator to skip the methane
+        for i, mol in enumerate(mol_iter):
+            assert np.all(mol.conformers[0] == positions[i * 3 + 5 : i * 3 + 8, :])
+
+    @pytest.fixture()
+    def topology(self) -> Topology:
+        methane = Molecule.from_mapped_smiles("[H:2][C:1]([H:3])([H:4])[H:5]")
+        water = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
+        topology = Topology.from_molecules([methane] + [water] * 1000)
+
+        return topology
+
+    def test_set_positions_fails_without_units(self, topology, generate_positions):
+        # Generate positions without units deterministically
+        rng = np.random.default_rng(seed=999)
+        positions_no_units = generate_positions(topology.n_atoms, rng)
+
+        with pytest.raises(
+            IncompatibleUnitError,
+            match="array should be an OpenFF Quantity with dimensions of length",
+        ):
+            topology.set_positions(positions_no_units)
+
+    def test_get_positions(self, topology, generate_positions):
+        # Generate positions deterministically
+        rng = np.random.default_rng(seed=999)
+        positions = Quantity(generate_positions(topology.n_atoms, rng), unit.nanometer)
+        topology.set_positions(positions)
+
+        # Check that the positions match
+        positions_out = topology.get_positions()
+        assert np.all(positions_out == positions)
+        assert positions_out is not positions
+
+        # Set a position in positions_out and check that it does not alter the
+        # underlying conformer
+        positions_out[0, 0] = 100 * unit.nanometer  # Too big to be generated
+        assert np.all(next(topology.molecules).conformers[0] != 100 * unit.nanometer)
+
+    def test_get_positions_none(self, topology, generate_positions):
+        # No positions when conformers are None
+        assert topology.get_positions() is None
+
+        # No positions when conformer is empty
+        topology._molecules[0]._conformers = []
+        assert topology.get_positions() is None
+
+        # Positions for everything but first molecule
+        rng = np.random.default_rng(seed=999)
+        positions = Quantity(generate_positions(topology.n_atoms, rng), unit.nanometer)
+        topology.set_positions(positions)
+        topology._molecules[0]._conformers = None
+        assert topology.get_positions() is None

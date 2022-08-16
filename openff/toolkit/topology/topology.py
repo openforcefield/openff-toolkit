@@ -19,7 +19,10 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, Dict, Generator, List, Tuple, Union
 
 import numpy as np
+from numpy.typing import ArrayLike
 from openff.units import unit
+from openff.units.units import Quantity
+from openff.units.units import _Quantity as PintQuantity
 from openff.utilities import requires_package
 
 from openff.toolkit.topology import Molecule
@@ -35,6 +38,7 @@ from openff.toolkit.utils.exceptions import (
     MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
     NotBondedError,
+    IncompatibleUnitError,
 )
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import (
@@ -1614,6 +1618,72 @@ class Topology(Serializable):
         # writing to PDB file
         with open(filename, "w") as outfile:
             app.PDBFile.writeFile(openmm_top, openmm_positions, outfile, keepIds)
+
+    def get_positions(self):
+        """
+        Copy the positions of the topology into a new array.
+
+        Topology positions are stored as the first conformer of each molecule.
+        If any molecule has no conformers, this method returns ``None``. Note
+        that modifying the returned array will not update the positions in the
+        topology. To change the positions, use :meth:`Topology.set_positions`.
+
+        See Also
+        ========
+        set_positions
+        """
+        conformers = []
+        for molecule in self.molecules:
+            try:
+                conformer = molecule.conformers[0]
+            except (IndexError, TypeError):
+                return None
+
+            conformer = conformer.m_as(unit.nanometer)
+
+            conformers.append(conformer)
+        positions = np.concatenate(conformers, axis=0)
+
+        return Quantity(positions, unit.nanometer)
+
+    def set_positions(self, array: PintQuantity[ArrayLike]):
+        """
+        Set the positions in a topology by copying from a single n×3 array.
+
+        Note that modifying the original array will not update the positions
+        in the topology; it must be passed again to ``set_positions()``.
+
+        Parameters
+        ==========
+
+        array
+            Positions for the topology. Should be a unit-wrapped array-like
+            object with shape (n_atoms, 3) and dimensions of length.
+
+        See Also
+        ========
+        get_positions
+        """
+        if not isinstance(array, PintQuantity):
+            raise IncompatibleUnitError(
+                "array should be an OpenFF Quantity with dimensions of length"
+            )
+
+        # Copy the array in nanometers and make it an OpenFF Quantity
+        array = Quantity(np.asarray(array.to(unit.nanometer).magnitude), unit.nanometer)
+        if array.shape != (self.n_atoms, 3):
+            raise ValueError(
+                f"Array has shape {array.shape} but should have shape {self.n_atoms, 3}"
+            )
+
+        start = 0
+        for molecule in self.molecules:
+            stop = start + molecule.n_atoms
+            if not molecule.conformers:
+                molecule._conformers = [array[start:stop]]
+            else:
+                molecule._conformers[0] = array[start:stop]
+            start = stop
 
     @classmethod
     @requires_package("mdtraj")
