@@ -32,13 +32,13 @@ from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.exceptions import (
     AtomNotInTopologyError,
     DuplicateUniqueMoleculeError,
+    IncompatibleUnitError,
     InvalidAromaticityModelError,
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
     MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
     NotBondedError,
-    IncompatibleUnitError,
 )
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import (

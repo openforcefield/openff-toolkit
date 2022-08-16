@@ -7,9 +7,9 @@ import itertools
 from copy import deepcopy
 
 import numpy as np
-from openff.units.units import Quantity
 import pytest
 from openff.units import unit
+from openff.units.units import Quantity
 from openmm import app
 
 from openff.toolkit.tests.create_molecules import (
@@ -50,9 +50,9 @@ from openff.toolkit.utils import (
 from openff.toolkit.utils.exceptions import (
     AtomNotInTopologyError,
     DuplicateUniqueMoleculeError,
+    IncompatibleUnitError,
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
-    IncompatibleUnitError,
     MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
 )
