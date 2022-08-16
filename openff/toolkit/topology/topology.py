@@ -1658,14 +1658,15 @@ class Topology(Serializable):
         else:
             raise ValueError(f"Could not process positions of type {type(positions)}.")
 
-        file_format = file_format.upper()
-        if file_format != "PDB":
+        if file_format.upper() != "PDB":
             raise NotImplementedError("Topology.to_file supports only PDB format")
 
         # writing to PDB file
+        ctx_manager: Union[nullcontext[TextIO], TextIO]
         if filename is not None:
             ctx_manager = open(filename, "w")
         else:
+            assert file is not None
             ctx_manager = nullcontext(file)
         with ctx_manager as outfile:
             app.PDBFile.writeFile(openmm_top, openmm_positions, outfile, keepIds)
@@ -1730,10 +1731,13 @@ class Topology(Serializable):
         start = 0
         for molecule in self.molecules:
             stop = start + molecule.n_atoms
-            if not molecule.conformers:
-                molecule._conformers = [array[start:stop]]
+            if molecule.conformers is None:
+                if isinstance(molecule, Molecule):
+                    molecule._conformers = [array[start:stop]]
+                else:
+                    molecule.conformers = [array[start:stop]]
             else:
-                molecule._conformers[0] = array[start:stop]
+                molecule.conformers[0] = array[start:stop]
             start = stop
 
     @classmethod
