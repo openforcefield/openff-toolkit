@@ -1636,17 +1636,20 @@ class Topology(Serializable):
             PDB that truncate long atom names.
 
         """
+        from openff.units.openmm import to_openmm as to_openmm_quantity
+        from openmm import app
+        from openmm import unit as openmm_unit
+
+        # Check that file and filename are MECE
         if file is not None and filename is not None:
             raise ValueError("Provide either file or filename, not both.")
         elif file is None and filename is None:
             raise ValueError("File or filename must be supplied.")
 
-        from openff.units.openmm import to_openmm as to_openmm_quantity
-        from openmm import app
-        from openmm import unit as openmm_unit
-
+        # Convert the topology to OpenMM
         openmm_top = self.to_openmm(ensure_unique_atom_names=ensure_unique_atom_names)
 
+        # Get positions in OpenMM format
         if isinstance(positions, openmm_unit.Quantity):
             openmm_positions = positions
         elif isinstance(positions, unit.Quantity):
@@ -1658,15 +1661,18 @@ class Topology(Serializable):
         else:
             raise ValueError(f"Could not process positions of type {type(positions)}.")
 
+        # Make sure the desired file format is PDB
         if file_format.upper() != "PDB":
             raise NotImplementedError("Topology.to_file supports only PDB format")
 
-        # writing to PDB file
-        ctx_manager: Union[nullcontext[TextIO], TextIO]
+        # Write PDB file
+        ctx_manager: Union[nullcontext[TextIO], TextIO]  # MyPy needs some help here
         if filename is not None:
             ctx_manager = open(filename, "w")
         else:
-            assert file is not None
+            assert (
+                file is not None
+            )  # We've already checked this, but MyPy doesn't know that
             ctx_manager = nullcontext(file)
         with ctx_manager as outfile:
             app.PDBFile.writeFile(openmm_top, openmm_positions, outfile, keepIds)
