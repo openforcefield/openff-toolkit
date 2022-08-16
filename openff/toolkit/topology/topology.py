@@ -34,7 +34,6 @@ from typing import (
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from openff.units import Quantity, unit
-from openff.units.exceptions import NoneQuantityError
 from openff.units.units import _Quantity as PintQuantity
 from openff.utilities import requires_package
 
