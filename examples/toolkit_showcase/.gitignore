@@ -8,6 +8,8 @@ fep-benchmark/
 *.edr
 *.cpt
 *.xtc
+receptor.pdb
+receptor_solvated.pdb
 system.pdb
 mdout.mdp
 \#*\#
