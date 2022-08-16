@@ -15,13 +15,26 @@ import itertools
 import warnings
 from collections import OrderedDict, defaultdict
 from collections.abc import MutableMapping
+from contextlib import nullcontext
 from copy import deepcopy
-from typing import TYPE_CHECKING, Dict, Generator, List, Tuple, Union
+from pathlib import Path
+from typing import (
+    TYPE_CHECKING,
+    BinaryIO,
+    Dict,
+    Generator,
+    List,
+    Literal,
+    Optional,
+    TextIO,
+    Tuple,
+    Union,
+)
 
 import numpy as np
-from numpy.typing import ArrayLike
-from openff.units import unit
-from openff.units.units import Quantity
+from numpy.typing import ArrayLike, NDArray
+from openff.units import Quantity, unit
+from openff.units.exceptions import NoneQuantityError
 from openff.units.units import _Quantity as PintQuantity
 from openff.utilities import requires_package
 
@@ -48,6 +61,8 @@ from openff.toolkit.utils.toolkits import (
 )
 
 if TYPE_CHECKING:
+    from openmm.unit import Quantity as OMMQuantity
+
     from openff.toolkit.topology.molecule import Atom
 
 
@@ -1565,7 +1580,13 @@ class Topology(Serializable):
 
     @requires_package("openmm")
     def to_file(
-        self, filename: str, positions, file_format: str = "PDB", keepIds=False
+        self,
+        filename: Optional[Union[Path, str]] = None,
+        positions: Optional[Union["OMMQuantity", Quantity, NDArray]] = None,
+        file_format: Literal["PDB"] = "PDB",
+        keepIds: bool = False,
+        ensure_unique_atom_names: bool = True,
+        file: Optional[TextIO] = None,
     ):
         """
         Save coordinates and topology to a PDB file.
@@ -1583,31 +1604,58 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        filename : str
-            name of the pdb file to write to
-        positions : n_atoms x 3 numpy array or openmm.unit.Quantity-wrapped n_atoms x 3 iterable
-            Can be a
-              - `openmm.unit.Quantity' object which has atomic positions as a list of unit-tagged `Vec3` objects
-              - `openff.units.unit.Quantity` object which wraps a `numpy.ndarray` with units
-              - (unitless) 2D `numpy.ndarray`, in which it is assumed that the positions are in units of Angstroms.
-            For all data types, must have shape (n_atoms, 3) where n_atoms is the number of atoms in this topology.
-        file_format : str
-            Output file format. Case insensitive. Currently only supported value is "pdb".
+        filename
+            Name of the file to write to. Mutually exclusive and collectively
+            exhaustive with ``file``; provide exactly one of ``filename`` or
+            ``file``.
+        file
+            A file-like object to write to. Mutually exclusive and collectively
+            exhaustive with ``filename``; provide exactly one of ``filename`` or
+            ``file``.
+        positions : Array with shape ``(n_atoms, 3)`` and dimensions of length
+            May be a...
+
+            - ``openmm.unit.Quantity`` object which has atomic positions as a
+              list of unit-tagged ``Vec3`` objects
+            - ``openff.units.unit.Quantity`` object which wraps a
+              ``numpy.ndarray`` with dimensions of length
+            - (unitless) 2D ``numpy.ndarray``, in which it is assumed that the
+              positions are in units of Angstroms.
+            - ``None`` (the default), in which case the first conformer of
+              each molecule in the topology will be used.
+
+        file_format
+            Output file format. Case insensitive. Currently only supported value
+            is ``"PDB"``.
+        keepIds
+            If ``True``, keep the residue and chain IDs specified in the Topology
+            rather than generating new ones.
+        ensure_unique_atom_names
+            If ``True`` (the default), new atom names will be generated as
+            needed so that no two atoms in a molecule have the same name. Note
+            that this option cannot guarantee name uniqueness for formats like
+            PDB that truncate long atom names.
 
         """
+        if file is not None and filename is not None:
+            raise ValueError("Provide either file or filename, not both.")
+        elif file is None and filename is None:
+            raise ValueError("File or filename must be supplied.")
+
+        from openff.units.openmm import to_openmm as to_openmm_quantity
         from openmm import app
         from openmm import unit as openmm_unit
 
-        openmm_top = self.to_openmm()
+        openmm_top = self.to_openmm(ensure_unique_atom_names=ensure_unique_atom_names)
 
         if isinstance(positions, openmm_unit.Quantity):
             openmm_positions = positions
         elif isinstance(positions, unit.Quantity):
-            from openff.units.openmm import to_openmm as to_openmm_quantity
-
             openmm_positions = to_openmm_quantity(positions)
         elif isinstance(positions, np.ndarray):
             openmm_positions = openmm_unit.Quantity(positions, openmm_unit.angstroms)
+        elif positions is None:
+            openmm_positions = to_openmm_quantity(self.get_positions())
         else:
             raise ValueError(f"Could not process positions of type {type(positions)}.")
 
@@ -1616,7 +1664,11 @@ class Topology(Serializable):
             raise NotImplementedError("Topology.to_file supports only PDB format")
 
         # writing to PDB file
-        with open(filename, "w") as outfile:
+        if filename is not None:
+            ctx_manager = open(filename, "w")
+        else:
+            ctx_manager = nullcontext(file)
+        with ctx_manager as outfile:
             app.PDBFile.writeFile(openmm_top, openmm_positions, outfile, keepIds)
 
     def get_positions(self):
