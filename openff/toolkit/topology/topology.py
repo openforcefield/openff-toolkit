@@ -32,9 +32,8 @@ from typing import (
 )
 
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
+from numpy.typing import NDArray
 from openff.units import Quantity, unit
-from openff.units.units import _Quantity as PintQuantity
 from openff.utilities import requires_package
 
 from openff.toolkit.topology import Molecule
@@ -1704,7 +1703,7 @@ class Topology(Serializable):
 
         return Quantity(positions, unit.nanometer)
 
-    def set_positions(self, array: PintQuantity[ArrayLike]):
+    def set_positions(self, array: Quantity):
         """
         Set the positions in a topology by copying from a single n×3 array.
 
@@ -1722,7 +1721,7 @@ class Topology(Serializable):
         ========
         get_positions
         """
-        if not isinstance(array, PintQuantity):
+        if not isinstance(array, Quantity):
             raise IncompatibleUnitError(
                 "array should be an OpenFF Quantity with dimensions of length"
             )
