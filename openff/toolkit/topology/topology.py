@@ -20,7 +20,6 @@ from copy import deepcopy
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
-    BinaryIO,
     Dict,
     Generator,
     List,
