@@ -1435,7 +1435,7 @@ class Topology(Serializable):
         return topology
 
     @requires_package("openmm")
-    def to_openmm(self, ensure_unique_atom_names=True):
+    def to_openmm(self, ensure_unique_atom_names: Union[str, bool] = "residues"):
         """
         Create an OpenMM Topology object.
 
@@ -1456,11 +1456,18 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        ensure_unique_atom_names : bool, optional. Default=True
-            Whether to check that the molecules in each molecule have
-            unique atom names, and regenerate them if not. Note that this
-            looks only at molecules, and does not guarantee uniqueness in
-            the entire Topology.
+        ensure_unique_atom_names
+            Whether to generate new atom names to ensure uniqueness within a
+            molecule or hierarchy element.
+
+            - If the name of a :class:`HierarchyScheme` is given as a string,
+              new atom names will be generated so that each element of that
+              scheme has unique atom names. Molecules without the given
+              hierarchy scheme will be given unique atom names within that
+              molecule.
+            - If ``True``, new atom names will be generated so that atom names
+              are unique within a molecule.
+            - If ``False``, the existing atom names will be used.
 
         Returns
         -------
@@ -1477,9 +1484,14 @@ class Topology(Serializable):
 
         # Create unique atom names
         if ensure_unique_atom_names:
-            for ref_mol in self.reference_molecules:
-                if not ref_mol.has_unique_atom_names:
-                    ref_mol.generate_unique_atom_names()
+            for molecule in self._molecules:
+                if isinstance(ensure_unique_atom_names, str) and hasattr(
+                    molecule, ensure_unique_atom_names
+                ):
+                    for hier_elem in getattr(molecule, ensure_unique_atom_names):
+                        hier_elem.generate_unique_atom_names()
+                else:
+                    molecule.generate_unique_atom_names()
 
         # Go through atoms in OpenFF to preserve the order.
         omm_atoms = []
@@ -1583,7 +1595,7 @@ class Topology(Serializable):
         positions: Optional[Union["OMMQuantity", Quantity, NDArray]] = None,
         file_format: Literal["PDB"] = "PDB",
         keepIds: bool = False,
-        ensure_unique_atom_names: bool = True,
+        ensure_unique_atom_names: Union[str, bool] = "residues",
         file: Optional[TextIO] = None,
     ):
         """
@@ -1629,10 +1641,20 @@ class Topology(Serializable):
             If ``True``, keep the residue and chain IDs specified in the Topology
             rather than generating new ones.
         ensure_unique_atom_names
-            If ``True`` (the default), new atom names will be generated as
-            needed so that no two atoms in a molecule have the same name. Note
-            that this option cannot guarantee name uniqueness for formats like
-            PDB that truncate long atom names.
+            Whether to generate new atom names to ensure uniqueness within a
+            molecule or hierarchy element.
+
+            - If the name of a :class:`HierarchyScheme` is given as a string,
+              new atom names will be generated so that each element of that
+              scheme has unique atom names. Molecules without the given
+              hierarchy scheme will be given unique atom names within that
+              molecule.
+            - If ``True``, new atom names will be generated so that atom names
+              are unique within a molecule.
+            - If ``False``, the existing atom names will be used.
+
+            Note that this option cannot guarantee name uniqueness for formats
+            like PDB that truncate long atom names.
 
         """
         from openff.units.openmm import to_openmm as to_openmm_quantity

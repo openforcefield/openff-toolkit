@@ -1000,10 +1000,7 @@ class FrozenMolecule(Serializable):
     @property
     def has_unique_atom_names(self) -> bool:
         """True if the molecule has unique atom names, False otherwise."""
-        unique_atom_names = set([atom.name for atom in self.atoms])
-        if len(unique_atom_names) < self.n_atoms:
-            return False
-        return True
+        return _has_unique_atom_names(self)
 
     def generate_unique_atom_names(self):
         """
@@ -1014,18 +1011,7 @@ class FrozenMolecule(Serializable):
         type imported from another source.
 
         """
-        from collections import defaultdict
-
-        element_counts = defaultdict(int)
-        for atom in self.atoms:
-            symbol = atom.symbol
-            element_counts[symbol] += 1
-            # TODO: It may be worth exposing this as a user option, i.e. to avoid multiple ligands
-            # parameterized with OpenFF clashing because they have atom names like O1x, H3x, etc.
-            # i.e. an optional argument could enable a user to `generate_unique_atom_names(blah="y")
-            # to have one ligand be O1y, etc.
-            # https://github.com/openforcefield/openff-toolkit/pull/1096#pullrequestreview-767227391
-            atom.name = symbol + str(element_counts[symbol]) + "x"
+        return _generate_unique_atom_names(self)
 
     def _validate(self):
         """
@@ -5683,6 +5669,10 @@ class HierarchyElement:
         return return_dict
 
     @property
+    def n_atoms(self):
+        return len(self.atom_indices)
+
+    @property
     def atoms(self):
         for atom_index in self.atom_indices:
             yield self.parent.atoms[atom_index]
@@ -5713,3 +5703,50 @@ class HierarchyElement:
 
     def __repr__(self):
         return self.__str__()
+
+    @property
+    def has_unique_atom_names(self) -> bool:
+        """True if the molecule has unique atom names, False otherwise."""
+        return _has_unique_atom_names(self)
+
+    def generate_unique_atom_names(self):
+        """
+        Generate unique atom names using element name and number of times that element has occurred
+        e.g. 'C1x', 'H1x', 'O1x', 'C2x', ...
+
+        The character 'x' is appended to these generated names to reduce the odds that they clash with an atom name or
+        type imported from another source.
+
+        """
+        return _generate_unique_atom_names(self)
+
+
+def _has_unique_atom_names(obj: Union[FrozenMolecule, HierarchyElement]) -> bool:
+    """True if the object has unique atom names, False otherwise."""
+    unique_atom_names = set([atom.name for atom in obj.atoms])
+    if len(unique_atom_names) < obj.n_atoms:
+        return False
+    return True
+
+
+def _generate_unique_atom_names(obj: Union[FrozenMolecule, HierarchyElement]):
+    """
+    Generate unique atom names using element name and number of times that element has occurred
+    e.g. 'C1x', 'H1x', 'O1x', 'C2x', ...
+
+    The character 'x' is appended to these generated names to reduce the odds that they clash with an atom name or
+    type imported from another source.
+
+    """
+    from collections import defaultdict
+
+    element_counts = defaultdict(int)
+    for atom in obj.atoms:
+        symbol = atom.symbol
+        element_counts[symbol] += 1
+        # TODO: It may be worth exposing this as a user option, i.e. to avoid multiple ligands
+        # parameterized with OpenFF clashing because they have atom names like O1x, H3x, etc.
+        # i.e. an optional argument could enable a user to `generate_unique_atom_names(blah="y")
+        # to have one ligand be O1y, etc.
+        # https://github.com/openforcefield/openff-toolkit/pull/1096#pullrequestreview-767227391
+        atom.name = symbol + str(element_counts[symbol]) + "x"
