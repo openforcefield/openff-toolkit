@@ -1000,17 +1000,18 @@ class FrozenMolecule(Serializable):
 
     @property
     def has_unique_atom_names(self) -> bool:
-        """True if the molecule has unique atom names, False otherwise."""
+        """``True`` if the molecule has unique atom names, ``False`` otherwise."""
         return _has_unique_atom_names(self)
 
     def generate_unique_atom_names(self):
         """
-        Generate unique atom names using element name and number of times that element has occurred
-        e.g. 'C1x', 'H1x', 'O1x', 'C2x', ...
+        Generate unique atom names from the element symbol and count.
 
-        The character 'x' is appended to these generated names to reduce the odds that they clash with an atom name or
-        type imported from another source.
-
+        Names are generated from the elemental symbol and the number of times
+        that element is found in the molecule. The character 'x' is appended to
+        these generated names to reduce the odds that they clash with an atom
+        name or type imported from another source. For example, generated atom
+        names might begin 'C1x', 'H1x', 'O1x', 'C2x', etc.
         """
         return _generate_unique_atom_names(self)
 
@@ -5662,7 +5663,7 @@ class HierarchyElement:
 
     def to_dict(self):
         """
-        Serialize this object to a basic dict of strings, ints, and floats
+        Serialize this object to a basic dict of strings, ints, and floats.
         """
         return_dict = dict()
         return_dict["identifier"] = self.identifier
@@ -5671,29 +5672,30 @@ class HierarchyElement:
 
     @property
     def n_atoms(self):
+        """
+        The number of atoms in this hierarchy element.
+        """
         return len(self.atom_indices)
 
     @property
     def atoms(self):
+        """
+        Iterator over the atoms in this hierarchy element.
+        """
         for atom_index in self.atom_indices:
             yield self.parent.atoms[atom_index]
 
-    def atom(self, index: int):
+    def atom(self, index: int) -> Atom:
         """
-        Get atom with a specified index.
-
-        Parameters
-        ----------
-        index : int
-
-        Returns
-        -------
-        atom : openff.toolkit.topology.molecule.Atom
+        Get the atom with the specified index.
         """
         return self.parent.atoms[self.atom_indices[index]]
 
     @property
     def parent(self) -> FrozenMolecule:
+        """
+        The parent molecule for this hierarchy element
+        """
         return self.scheme.parent
 
     def __str__(self):
@@ -5707,23 +5709,24 @@ class HierarchyElement:
 
     @property
     def has_unique_atom_names(self) -> bool:
-        """True if the molecule has unique atom names, False otherwise."""
+        """``True`` if the element has unique atom names, ``False`` otherwise."""
         return _has_unique_atom_names(self)
 
     def generate_unique_atom_names(self):
         """
-        Generate unique atom names using element name and number of times that element has occurred
-        e.g. 'C1x', 'H1x', 'O1x', 'C2x', ...
+        Generate unique atom names from the element symbol and count.
 
-        The character 'x' is appended to these generated names to reduce the odds that they clash with an atom name or
-        type imported from another source.
-
+        Names are generated from the elemental symbol and the number of times
+        that element is found in the hierarchy element. The character 'x' is
+        appended to these generated names to reduce the odds that they clash
+        with an atom name or type imported from another source. For example,
+        generated atom names might begin 'C1x', 'H1x', 'O1x', 'C2x', etc.
         """
         return _generate_unique_atom_names(self)
 
 
 def _has_unique_atom_names(obj: Union[FrozenMolecule, HierarchyElement]) -> bool:
-    """True if the object has unique atom names, False otherwise."""
+    """``True`` if the object has unique atom names, ``False`` otherwise."""
     unique_atom_names = set([atom.name for atom in obj.atoms])
     if len(unique_atom_names) < obj.n_atoms:
         return False
@@ -5732,12 +5735,13 @@ def _has_unique_atom_names(obj: Union[FrozenMolecule, HierarchyElement]) -> bool
 
 def _generate_unique_atom_names(obj: Union[FrozenMolecule, HierarchyElement]):
     """
-    Generate unique atom names using element name and number of times that element has occurred
-    e.g. 'C1x', 'H1x', 'O1x', 'C2x', ...
+    Generate unique atom names from the element symbol and count.
 
-    The character 'x' is appended to these generated names to reduce the odds that they clash with an atom name or
-    type imported from another source.
-
+    Names are generated from the elemental symbol and the number of times that
+    element is found in the hierarchy element or molecule. The character 'x' is
+    appended to these generated names to reduce the odds that they clash with
+    an atom name or type imported from another source. For example, generated
+    atom names might begin 'C1x', 'H1x', 'O1x', 'C2x', etc.
     """
     from collections import defaultdict
 
