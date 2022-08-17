@@ -33,6 +33,7 @@ from copy import deepcopy
 from typing import (
     TYPE_CHECKING,
     Any,
+    DefaultDict,
     Dict,
     Generator,
     List,
@@ -5740,7 +5741,7 @@ def _generate_unique_atom_names(obj: Union[FrozenMolecule, HierarchyElement]):
     """
     from collections import defaultdict
 
-    element_counts = defaultdict(int)
+    element_counts: DefaultDict[str, int] = defaultdict(int)
     for atom in obj.atoms:
         symbol = atom.symbol
         element_counts[symbol] += 1
