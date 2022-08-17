@@ -1473,7 +1473,20 @@ class TestTopologyPositions:
 
         # Water molecules without initial conformers
         water = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
-        topology = Topology.from_molecules([methane] + [water] * 1000)
+        assert water._conformers is None
+
+        # Water molecules with empty list of conformers
+        water_emptyconfs = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
+        water_emptyconfs._conformers = []
+
+        # Compile topology
+        topology = Topology.from_molecules(
+            [
+                methane,
+                *[water] * 500,
+                *[water_emptyconfs] * 500,
+            ]
+        )
 
         # Generate positions deterministically
         rng = np.random.default_rng(seed=999)

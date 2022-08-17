@@ -1742,7 +1742,7 @@ class Topology(Serializable):
                 else:
                     molecule.conformers = [array[start:stop]]
             else:
-                molecule.conformers[0] = array[start:stop]
+                molecule.conformers[0:1] = [array[start:stop]]
             start = stop
 
     @classmethod
