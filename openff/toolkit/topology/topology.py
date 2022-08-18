@@ -50,6 +50,7 @@ from openff.toolkit.utils.exceptions import (
     MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
     NotBondedError,
+    WrongShapeError,
 )
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import (
@@ -1751,7 +1752,7 @@ class Topology(Serializable):
         # Copy the array in nanometers and make it an OpenFF Quantity
         array = Quantity(np.asarray(array.to(unit.nanometer).magnitude), unit.nanometer)
         if array.shape != (self.n_atoms, 3):
-            raise ValueError(
+            raise WrongShapeError(
                 f"Array has shape {array.shape} but should have shape {self.n_atoms, 3}"
             )
 

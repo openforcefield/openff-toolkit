@@ -310,6 +310,10 @@ class MultipleMoleculesInPDBError(OpenFFToolkitException):
     """Error raised when a multiple molecules are found when one was expected"""
 
 
+class WrongShapeError(OpenFFToolkitException):
+    """Error raised when an array of the wrong shape is found"""
+
+
 class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
     """
     Error raised when a bond or atom in a polymer could not be assigned chemical information.

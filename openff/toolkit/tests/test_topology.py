@@ -56,6 +56,7 @@ from openff.toolkit.utils.exceptions import (
     InvalidPeriodicityError,
     MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
+    WrongShapeError,
 )
 
 
@@ -1565,7 +1566,7 @@ class TestTopologyPositions:
         )
 
         with pytest.raises(
-            ValueError,
+            WrongShapeError,
             match=re.escape(
                 f"Array has shape {shape} but should have shape {(n_atoms, 3)}"
             ),
