@@ -1872,9 +1872,9 @@ class FrozenMolecule(Serializable):
             elif isinstance(obj, nx.Graph):
                 return obj.number_of_nodes()
             else:
-                raise RuntimeError(
-                    f"Unsupport object of type {type(obj)} passed to "
-                    "Molecule._object_to_hill_formula"
+                raise TypeError(
+                    "are_isomorphic accepts a NetworkX Graph or OpenFF "
+                    + f"(Frozen)Molecule, not {type(obj)}"
                 )
 
         # Quick number of atoms check. Important for large molecules
@@ -3371,9 +3371,9 @@ class FrozenMolecule(Serializable):
         elif isinstance(obj, nx.Graph):
             return _networkx_graph_to_hill_formula(obj)
         else:
-            raise RuntimeError(
-                f"Unsupport object of type {type(obj)} passed to "
-                "Molecule._object_to_hill_formula"
+            raise TypeError(
+                "_object_to_hill_formula accepts a NetworkX Graph or OpenFF "
+                + f"(Frozen)Molecule, not {type(obj)}"
             )
 
     def chemical_environment_matches(
