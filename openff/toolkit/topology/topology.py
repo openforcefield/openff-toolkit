@@ -14,7 +14,7 @@ Class definitions to represent a molecular system and its chemical components
 import itertools
 import warnings
 from collections import OrderedDict, defaultdict
-from collections.abc import MutableMapping
+from collections.abc import Iterator, MutableMapping
 from contextlib import nullcontext
 from copy import deepcopy
 from pathlib import Path
@@ -37,6 +37,7 @@ from openff.utilities import requires_package
 
 from openff.toolkit.topology import Molecule
 from openff.toolkit.topology._mm_molecule import _SimpleBond, _SimpleMolecule
+from openff.toolkit.topology.molecule import HierarchyElement
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.exceptions import (
@@ -2291,20 +2292,29 @@ class Topology(Serializable):
         else:
             return False
 
-    def hierarchy_iterator(self, iter_name):
+    def hierarchy_iterator(
+        self,
+        iter_name: str,
+    ) -> Iterator[HierarchyElement]:
         """
-        Get a HierarchyElement iterator from all of the molecules in this topology that provide the appropriately
-        named iterator. This iterator will yield HierarchyElements sorted first by the order that molecules are
-        listed in the Topology, and second by the specific sorting of HierarchyElements defined in each molecule.
+        Iterate over all molecules with the given hierarchy scheme.
+
+        Get an iterator over hierarchy elements from all of the molecules in
+        this topology that provide the appropriately named iterator. This
+        iterator will yield hierarchy elements sorted first by the order that
+        molecules are listed in the Topology, and second by the specific
+        sorting of hierarchy elements defined in each molecule. Molecules
+        without the named iterator are not included.
 
         Parameters
         ----------
-        iter_name: string
-            The iterator name associated with the HierarchyScheme to retrieve (for example 'residues' or 'chains')
+        iter_name
+            The iterator name associated with the HierarchyScheme to retrieve
+            (for example 'residues' or 'chains')
 
         Returns
         -------
-        iterator of HierarchyElement
+        iterator of :class:`HierarchyElement`
         """
         for molecule in self._molecules:
             if hasattr(molecule, iter_name):
