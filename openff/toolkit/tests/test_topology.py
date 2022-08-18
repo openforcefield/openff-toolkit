@@ -4,8 +4,8 @@ Tests for Topology
 """
 
 import itertools
-from copy import deepcopy
 import re
+from copy import deepcopy
 
 import numpy as np
 import pytest
