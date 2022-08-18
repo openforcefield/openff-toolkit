@@ -1506,7 +1506,6 @@ class TestTopologyPositions:
 
         # Make sure the methane's first conformation is changed, but the others are left
         first_mol = next(mol_iter)
-        print(first_mol.conformers[0])
         assert np.all(first_mol.conformers[0] == positions[0:5, :])
         assert np.all(first_mol.conformers[1:] == init_conformers[1:])
 
