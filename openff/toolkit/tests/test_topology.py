@@ -1453,18 +1453,18 @@ class TestImproperDictKeyIndex:
             ImproperDict.index_of([0, 1, 2, 4], possible=[(4, 1, 2, 0)])
 
 
-@pytest.mark.parametrize(
-    "generate_positions",
-    [
-        # Test an array
-        lambda n, rng: rng.random((n, 3)),
-        # Test a list of lists
-        lambda n, rng: [[rng.random(), rng.random(), rng.random()] for _ in range(n)],
-        # Test a list of tuples
-        lambda n, rng: [(rng.random(), rng.random(), rng.random()) for _ in range(n)],
-    ],
-)
 class TestTopologyPositions:
+    @pytest.mark.parametrize(
+        "generate_positions",
+        [
+            # Test an array
+            lambda n: np.arange(n * 3).reshape(n, 3),
+            # Test a list of lists
+            lambda n: [[i * 3, i * 3 + 1, i * 3 + 2] for i in range(n)],
+            # Test a list of tuples
+            lambda n: [(i * 3, i * 3 + 1, i * 3 + 2) for i in range(n)],
+        ],
+    )
     def test_set_positions(self, generate_positions):
         # Methane molecule with initial conformers
         methane = Molecule.from_mapped_smiles("[H:2][C:1]([H:3])([H:4])[H:5]")
@@ -1483,15 +1483,13 @@ class TestTopologyPositions:
         topology = Topology.from_molecules(
             [
                 methane,
-                *[water] * 500,
-                *[water_emptyconfs] * 500,
+                *[water] * 2,
+                *[water_emptyconfs] * 2,
             ]
         )
 
         # Generate positions deterministically
-        rng = np.random.default_rng(seed=999)
-
-        positions = Quantity(generate_positions(topology.n_atoms, rng), unit.nanometer)
+        positions = Quantity(generate_positions(topology.n_atoms), unit.nanometer)
 
         # Run the method under test
         topology.set_positions(positions)
@@ -1518,14 +1516,13 @@ class TestTopologyPositions:
     def topology(self) -> Topology:
         methane = Molecule.from_mapped_smiles("[H:2][C:1]([H:3])([H:4])[H:5]")
         water = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
-        topology = Topology.from_molecules([methane] + [water] * 1000)
+        topology = Topology.from_molecules([methane] + [water] * 4)
 
         return topology
 
-    def test_set_positions_fails_without_units(self, topology, generate_positions):
+    def test_set_positions_fails_without_units(self, topology):
         # Generate positions without units deterministically
-        rng = np.random.default_rng(seed=999)
-        positions_no_units = generate_positions(topology.n_atoms, rng)
+        positions_no_units = np.arange(topology.n_atoms * 3).reshape(-1, 3)
 
         with pytest.raises(
             IncompatibleUnitError,
@@ -1533,10 +1530,11 @@ class TestTopologyPositions:
         ):
             topology.set_positions(positions_no_units)
 
-    def test_get_positions(self, topology, generate_positions):
+    def test_get_positions(self, topology):
         # Generate positions deterministically
-        rng = np.random.default_rng(seed=999)
-        positions = Quantity(generate_positions(topology.n_atoms, rng), unit.nanometer)
+        positions = Quantity(
+            np.arange(topology.n_atoms * 3).reshape(-1, 3), unit.nanometer
+        )
         topology.set_positions(positions)
 
         # Check that the positions match
@@ -1546,10 +1544,12 @@ class TestTopologyPositions:
 
         # Set a position in positions_out and check that it does not alter the
         # underlying conformer
-        positions_out[0, 0] = 100 * unit.nanometer  # Too big to be generated
-        assert np.all(next(topology.molecules).conformers[0] != 100 * unit.nanometer)
+        positions_out[0, 0] = (
+            -1.0 * unit.nanometer
+        )  # Negative positions cannot be generated
+        assert np.all(next(topology.molecules).conformers[0] != -1.0 * unit.nanometer)
 
-    def test_get_positions_none(self, topology, generate_positions):
+    def test_get_positions_none(self, topology):
         # No positions when conformers are None
         assert topology.get_positions() is None
 
@@ -1558,8 +1558,10 @@ class TestTopologyPositions:
         assert topology.get_positions() is None
 
         # Positions for everything but first molecule
-        rng = np.random.default_rng(seed=999)
-        positions = Quantity(generate_positions(topology.n_atoms, rng), unit.nanometer)
+        positions = Quantity(
+            np.arange(topology.n_atoms * 3).reshape(-1, 3),
+            unit.nanometer,
+        )
         topology.set_positions(positions)
         topology._molecules[0]._conformers = None
         assert topology.get_positions() is None
