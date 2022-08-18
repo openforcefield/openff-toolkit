@@ -1688,7 +1688,7 @@ class Topology(Serializable):
         with ctx_manager as outfile:
             app.PDBFile.writeFile(openmm_top, openmm_positions, outfile, keepIds)
 
-    def get_positions(self):
+    def get_positions(self) -> Optional[Quantity]:
         """
         Copy the positions of the topology into a new array.
 
