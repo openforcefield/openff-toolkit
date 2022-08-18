@@ -5,6 +5,7 @@ Tests for Topology
 
 import itertools
 from copy import deepcopy
+import re
 
 import numpy as np
 import pytest
@@ -1530,9 +1531,46 @@ class TestTopologyPositions:
 
         with pytest.raises(
             IncompatibleUnitError,
-            match="array should be an OpenFF Quantity with dimensions of length",
+            match=re.escape(
+                "array should be an OpenFF Quantity with dimensions of length"
+            ),
         ):
             topology.set_positions(positions_no_units)
+
+    @pytest.mark.parametrize(
+        "generate_shape",
+        [
+            lambda n: (3, n),  # right size, backwards
+            lambda n: (n, 1, 3),  # right size, one extra dimension
+            lambda n: (n * 3,),  # right size, 1D array
+            lambda _: (0,),  # No positions
+            lambda n: (n + 1, 3),  # Right shape, one too many atoms
+            lambda n: (n - 1, 3),  # Right shape, one too few atoms
+            lambda n: (n * 3, 3),  # Right shape, 3 times too many atoms
+            lambda n: (n, 1),  # 1D chemistry is not real
+        ],
+    )
+    def test_set_positions_fails_with_wrong_shape(
+        self,
+        topology,
+        generate_shape,
+    ):
+        # Generate positions without units deterministically
+        n_atoms = topology.n_atoms
+        shape = generate_shape(n_atoms)
+        size = np.prod(shape)
+        positions_wrong_shape = Quantity(
+            np.arange(size).reshape(*shape),
+            unit.nanometer,
+        )
+
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                f"Array has shape {shape} but should have shape {(n_atoms, 3)}"
+            ),
+        ):
+            topology.set_positions(positions_wrong_shape)
 
     def test_get_positions(self, topology):
         # Generate positions deterministically
