@@ -1510,7 +1510,11 @@ class TestTopologyPositions:
         # Check the other molecules in the topology.
         # Reusing the iterator to skip the methane
         for i, mol in enumerate(mol_iter):
-            assert np.all(mol.conformers[0] == positions[i * 3 + 5 : i * 3 + 8, :])
+            # Methane is indices 0-4, so the first water we want to iterate
+            # over (i==0) is indices 5, 6, 7, ie slice [5:8].
+            start = i * 3 + 5
+            stop = i * 3 + 8
+            assert np.all(mol.conformers[0] == positions[start:stop, :])
 
     @pytest.fixture()
     def topology(self) -> Topology:
