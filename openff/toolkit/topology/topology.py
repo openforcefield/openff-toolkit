@@ -1592,12 +1592,11 @@ class Topology(Serializable):
     @requires_package("openmm")
     def to_file(
         self,
-        filename: Optional[Union[Path, str]] = None,
+        file: Union[Path, str, TextIO],
         positions: Optional[Union["OMMQuantity", Quantity, NDArray]] = None,
         file_format: Literal["PDB"] = "PDB",
         keepIds: bool = False,
         ensure_unique_atom_names: Union[str, bool] = "residues",
-        file: Optional[TextIO] = None,
     ):
         """
         Save coordinates and topology to a PDB file.
@@ -1615,14 +1614,8 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        filename
-            Name of the file to write to. Mutually exclusive and collectively
-            exhaustive with ``file``; provide exactly one of ``filename`` or
-            ``file``.
         file
-            A file-like object to write to. Mutually exclusive and collectively
-            exhaustive with ``filename``; provide exactly one of ``filename`` or
-            ``file``.
+            A file-like object to write to, or a path to save the file to.
         positions : Array with shape ``(n_atoms, 3)`` and dimensions of length
             May be a...
 
@@ -1662,12 +1655,6 @@ class Topology(Serializable):
         from openmm import app
         from openmm import unit as openmm_unit
 
-        # Check that file and filename are MECE
-        if file is not None and filename is not None:
-            raise ValueError("Provide either file or filename, not both.")
-        elif file is None and filename is None:
-            raise ValueError("File or filename must be supplied.")
-
         # Convert the topology to OpenMM
         openmm_top = self.to_openmm(ensure_unique_atom_names=ensure_unique_atom_names)
 
@@ -1689,13 +1676,15 @@ class Topology(Serializable):
 
         # Write PDB file
         ctx_manager: Union[nullcontext[TextIO], TextIO]  # MyPy needs some help here
-        if filename is not None:
-            ctx_manager = open(filename, "w")
-        else:
-            assert (
-                file is not None
-            )  # We've already checked this, but MyPy doesn't know that
+        if isinstance(file, TextIO):
             ctx_manager = nullcontext(file)
+        elif isinstance(file, (str, Path)):
+            ctx_manager = open(file, "w")
+        else:
+            raise TypeError(
+                "file must be a string, path, or file-like object in text mode,"
+                + f" not {type(file)}."
+            )
         with ctx_manager as outfile:
             app.PDBFile.writeFile(openmm_top, openmm_positions, outfile, keepIds)
 
