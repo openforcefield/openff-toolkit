@@ -43,6 +43,7 @@ dependencies:
   - qcportal >=0.15
   - qcengine
   - mdtraj
+  - ipywidgets >=7,<8
   # Typing
   - mypy
   - typing-extensions
