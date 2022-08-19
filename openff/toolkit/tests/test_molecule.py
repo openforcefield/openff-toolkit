@@ -3885,7 +3885,9 @@ class TestHierarchies:
         with pytest.raises(
             TypeError, match="'iterator_name' kwarg must be a string, received 1"
         ):
-            offmol.add_hierarchy_scheme(("chain", "residue_number", "insertion_code", "residue_name"), 1)
+            offmol.add_hierarchy_scheme(
+                ("chain", "residue_number", "insertion_code", "residue_name"), 1
+            )
 
         # Ensure that the uniqueness criteria kwarg is some sort of iterable
         with pytest.raises(
@@ -3912,7 +3914,9 @@ class TestHierarchies:
         )
         offmol.delete_hierarchy_scheme("residues")
         offmol.delete_hierarchy_scheme("chains")
-        offmol.add_hierarchy_scheme(("residue_number", "insertion_code", "residue_name"), "residues")
+        offmol.add_hierarchy_scheme(
+            ("residue_number", "insertion_code", "residue_name"), "residues"
+        )
         # Make sure that the non-default "residues" iterator that we just added
         # doesn't have "chain_id" as a uniqueness criterion
         assert (
@@ -3992,6 +3996,10 @@ class TestHierarchies:
 
         for atom in dipeptide_hierarchy_perceived.atoms:
             atom.metadata["chain_id"] = "A"
-        assert ("A", 1, " ", "ACE") != dipeptide_hierarchy_perceived.residues[0].identifier
+        assert ("A", 1, " ", "ACE") != dipeptide_hierarchy_perceived.residues[
+            0
+        ].identifier
         dipeptide_hierarchy_perceived.update_hierarchy_schemes()
-        assert ("A", 1, " ", "ACE") == dipeptide_hierarchy_perceived.residues[0].identifier
+        assert ("A", 1, " ", "ACE") == dipeptide_hierarchy_perceived.residues[
+            0
+        ].identifier

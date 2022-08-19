@@ -1405,7 +1405,9 @@ class Topology(Serializable):
                 off_atom.metadata["residue_number"] = int(
                     omm_mol_G.nodes[omm_atom]["residue_id"]
                 )
-                off_atom.metadata["insertion_code"] = omm_mol_G.nodes[omm_atom]["insertion_code"]
+                off_atom.metadata["insertion_code"] = omm_mol_G.nodes[omm_atom][
+                    "insertion_code"
+                ]
 
                 off_atom.metadata["chain_id"] = omm_mol_G.nodes[omm_atom]["chain_id"]
             topology.add_molecule(remapped_mol)
@@ -1508,10 +1510,12 @@ class Topology(Serializable):
                 # Determine whether this atom should be a part of the last atom's residue, or if it
                 # should start a new residue
                 if last_residue is None:
-                    residue = omm_topology.addResidue(atom_residue_name,
-                                                      chain,
-                                                      id=atom_residue_number,
-                                                      insertionCode=atom_insertion_code)
+                    residue = omm_topology.addResidue(
+                        atom_residue_name,
+                        chain,
+                        id=atom_residue_number,
+                        insertionCode=atom_insertion_code,
+                    )
                 elif (
                     (last_residue.name == atom_residue_name)
                     and (int(last_residue.id) == int(atom_residue_number))
@@ -1520,10 +1524,12 @@ class Topology(Serializable):
                 ):
                     residue = last_residue
                 else:
-                    residue = omm_topology.addResidue(atom_residue_name,
-                                                      chain,
-                                                      id=atom_residue_number,
-                                                      insertionCode=atom_insertion_code)
+                    residue = omm_topology.addResidue(
+                        atom_residue_name,
+                        chain,
+                        id=atom_residue_number,
+                        insertionCode=atom_insertion_code,
+                    )
 
                 # Add atom.
                 element = app.Element.getByAtomicNumber(atom.atomic_number)

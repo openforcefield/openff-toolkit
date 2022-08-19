@@ -620,7 +620,10 @@ class TestTopology:
                 assert omm_atom.residue.id == "0"
 
             if "insertion_code" in orig_atom.metadata:
-                assert orig_atom.metadata["insertion_code"] == omm_atom.residue.insertionCode
+                assert (
+                    orig_atom.metadata["insertion_code"]
+                    == omm_atom.residue.insertionCode
+                )
             else:
                 assert omm_atom.residue.insertionCode == " "
 
@@ -1102,7 +1105,7 @@ class TestTopology:
         chains = list(top.hierarchy_iterator("chains"))
         assert [res.identifier for res in residues] == [
             ("None", 1, " ", "ACE"),
-            ("None", 2, " ","ALA"),
+            ("None", 2, " ", "ALA"),
             ("None", 1, " ", "ACE"),
             ("None", 2, " ", "ALA"),
             ("None", 1, " ", "ACE"),

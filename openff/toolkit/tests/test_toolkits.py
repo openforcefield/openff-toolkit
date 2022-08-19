@@ -458,7 +458,12 @@ class TestOpenEyeToolkitWrapper:
             # OpenEye wrapper always adds hierarchy metadata (residue name + num) info, so account for that
             atom1_dict = atom1.to_dict()
             atom1_dict["metadata"].update(
-                {"residue_name": "UNL", "residue_number": 1, "insertion_code": " ", "chain_id": " "}
+                {
+                    "residue_name": "UNL",
+                    "residue_number": 1,
+                    "insertion_code": " ",
+                    "chain_id": " ",
+                }
             )
             assert atom1_dict == atom2.to_dict()
         for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
@@ -513,7 +518,12 @@ class TestOpenEyeToolkitWrapper:
             # OpenEye wrapper always adds hierarchy metadata (residue name + num) info, so account for that
             atom1_dict = atom1.to_dict()
             atom1_dict["metadata"].update(
-                {"residue_name": "UNL", "residue_number": 1, "insertion_code": " ", "chain_id": " "}
+                {
+                    "residue_name": "UNL",
+                    "residue_number": 1,
+                    "insertion_code": " ",
+                    "chain_id": " ",
+                }
             )
             assert atom1_dict == atom2.to_dict()
         for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
