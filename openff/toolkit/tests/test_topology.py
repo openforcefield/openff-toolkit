@@ -619,6 +619,11 @@ class TestTopology:
             else:
                 assert omm_atom.residue.id == "0"
 
+            if "insertion_code" in orig_atom.metadata:
+                assert orig_atom.metadata["insertion_code"] == omm_atom.residue.insertionCode
+            else:
+                assert omm_atom.residue.insertionCode == " "
+
             if "chain_id" in orig_atom.metadata:
                 assert orig_atom.metadata["chain_id"] == omm_atom.residue.chain.id
             else:
@@ -639,6 +644,13 @@ class TestTopology:
                 assert original == roundtrip
             else:
                 assert roundtrip_atom.metadata["residue_number"] == 0
+
+            if "insertion_code" in orig_atom.metadata:
+                original = orig_atom.metadata["insertion_code"]
+                roundtrip = roundtrip_atom.metadata["insertion_code"]
+                assert original == roundtrip
+            else:
+                assert roundtrip_atom.metadata["insertion_code"] == " "
 
             if "chain_id" in orig_atom.metadata:
                 original = orig_atom.metadata["chain_id"]
@@ -1079,8 +1091,8 @@ class TestTopology:
         chains = list(top.hierarchy_iterator("chains"))
         assert chains == []
         assert [res.identifier for res in residues] == [
-            ("None", 1, "ACE"),
-            ("None", 2, "ALA"),
+            ("None", 1, " ", "ACE"),
+            ("None", 2, " ", "ALA"),
         ]
         # Ensure that adding molecules WITH hierarchy perceived DOES give the
         # topology residues and chains to iterate over
@@ -1089,16 +1101,16 @@ class TestTopology:
         residues = list(top.hierarchy_iterator("residues"))
         chains = list(top.hierarchy_iterator("chains"))
         assert [res.identifier for res in residues] == [
-            ("None", 1, "ACE"),
-            ("None", 2, "ALA"),
-            ("None", 1, "ACE"),
-            ("None", 2, "ALA"),
-            ("None", 1, "ACE"),
-            ("None", 2, "CYS"),
-            ("None", 3, "NME"),
-            ("None", 4, "ACE"),
-            ("None", 5, "CYS"),
-            ("None", 6, "NME"),
+            ("None", 1, " ", "ACE"),
+            ("None", 2, " ","ALA"),
+            ("None", 1, " ", "ACE"),
+            ("None", 2, " ", "ALA"),
+            ("None", 1, " ", "ACE"),
+            ("None", 2, " ", "CYS"),
+            ("None", 3, " ", "NME"),
+            ("None", 4, " ", "ACE"),
+            ("None", 5, " ", "CYS"),
+            ("None", 6, " ", "NME"),
         ]
         # First chain hierarchy element is from dipeptide_hierarchy_added,
         # second is from cyx_hierarchy_added. Both have the same uniqueness
@@ -1112,16 +1124,16 @@ class TestTopology:
         residues = list(top.hierarchy_iterator("residues"))
         chains = list(top.hierarchy_iterator("chains"))
         assert [res.identifier for res in residues] == [
-            ("None", 1, "ACE"),
-            ("None", 2, "ALA"),
-            ("None", 1, "ACE"),
-            ("None", 2, "ALA"),
-            ("None", 1, "ACE"),
-            ("None", 2, "CYS"),
-            ("None", 3, "NME"),
-            ("None", 4, "ACE"),
-            ("None", 5, "CYS"),
-            ("None", 6, "NME"),
+            ("None", 1, " ", "ACE"),
+            ("None", 2, " ", "ALA"),
+            ("None", 1, " ", "ACE"),
+            ("None", 2, " ", "ALA"),
+            ("None", 1, " ", "ACE"),
+            ("None", 2, " ", "CYS"),
+            ("None", 3, " ", "NME"),
+            ("None", 4, " ", "ACE"),
+            ("None", 5, " ", "CYS"),
+            ("None", 6, " ", "NME"),
         ]
         assert len(chains) == 2
 

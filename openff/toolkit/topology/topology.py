@@ -1241,6 +1241,7 @@ class Topology(Serializable):
                 atom_name=atom.name,
                 residue_name=atom.residue.name,
                 residue_id=atom.residue.id,
+                insertion_code=atom.residue.insertionCode,
                 chain_id=atom.residue.chain.id,
             )
         for bond in openmm_topology.bonds():
@@ -1404,6 +1405,8 @@ class Topology(Serializable):
                 off_atom.metadata["residue_number"] = int(
                     omm_mol_G.nodes[omm_atom]["residue_id"]
                 )
+                off_atom.metadata["insertion_code"] = omm_mol_G.nodes[omm_atom]["insertion_code"]
+
                 off_atom.metadata["chain_id"] = omm_mol_G.nodes[omm_atom]["chain_id"]
             topology.add_molecule(remapped_mol)
 
@@ -1418,10 +1421,10 @@ class Topology(Serializable):
         """
         Create an OpenMM Topology object.
 
-        The atom metadata fields `residue_name`, `residue_number`, and `chain_id`
+        The atom metadata fields `residue_name`, `residue_number`, `insertion_code`, and `chain_id`
         are used to group atoms into OpenMM residues and chains.
 
-        Contiguously-indexed atoms with the same `residue_name`, `residue_number`,
+        Contiguously-indexed atoms with the same `residue_name`, `residue_number`, `insertion_code`,
         and `chain_id` will be put into the same OpenMM residue.
 
         Contiguously-indexed residues with with the same `chain_id` will be put
@@ -1482,6 +1485,12 @@ class Topology(Serializable):
                 else:
                     atom_residue_number = "0"
 
+                # If the insertion code  is undefined, assume a default of " "
+                if "insertion_code" in atom.metadata:
+                    atom_insertion_code = atom.metadata["insertion_code"]
+                else:
+                    atom_insertion_code = " "
+
                 # If the chain ID is undefined, assume a default of "X"
                 if "chain_id" in atom.metadata:
                     atom_chain_id = atom.metadata["chain_id"]
@@ -1499,17 +1508,22 @@ class Topology(Serializable):
                 # Determine whether this atom should be a part of the last atom's residue, or if it
                 # should start a new residue
                 if last_residue is None:
-                    residue = omm_topology.addResidue(atom_residue_name, chain)
-                    residue.id = atom_residue_number
+                    residue = omm_topology.addResidue(atom_residue_name,
+                                                      chain,
+                                                      id=atom_residue_number,
+                                                      insertionCode=atom_insertion_code)
                 elif (
                     (last_residue.name == atom_residue_name)
                     and (int(last_residue.id) == int(atom_residue_number))
+                    and (last_residue.insertionCode == atom_insertion_code)
                     and (chain.id == last_chain.id)
                 ):
                     residue = last_residue
                 else:
-                    residue = omm_topology.addResidue(atom_residue_name, chain)
-                    residue.id = atom_residue_number
+                    residue = omm_topology.addResidue(atom_residue_name,
+                                                      chain,
+                                                      id=atom_residue_number,
+                                                      insertionCode=atom_insertion_code)
 
                 # Add atom.
                 element = app.Element.getByAtomicNumber(atom.atomic_number)

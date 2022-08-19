@@ -1352,7 +1352,7 @@ class FrozenMolecule(Serializable):
                 self.delete_hierarchy_scheme("residues")
 
         self.add_hierarchy_scheme(
-            ("chain_id", "residue_number", "residue_name"), "residues"
+            ("chain_id", "residue_number", "insertion_code", "residue_name"), "residues"
         )
 
     def add_hierarchy_scheme(
@@ -3833,6 +3833,7 @@ class FrozenMolecule(Serializable):
             offmol.atoms[i].name = atom.name
             offmol.atoms[i].metadata["residue_name"] = atom.residue.name
             offmol.atoms[i].metadata["residue_number"] = atom.residue.id
+            offmol.atoms[i].metadata["insertion_code"] = atom.residue.insertionCode
             offmol.atoms[i].metadata["chain_id"] = atom.residue.chain.id
         offmol.add_default_hierarchy_schemes()
 
@@ -5341,6 +5342,7 @@ class Molecule(FrozenMolecule):
                     "residue_name"
                 ]
                 self.atoms[atom_idx].metadata["residue_number"] = residue_num + 1
+                self.atoms[atom_idx].metadata["insertion_code"] = " "
                 self.atoms[atom_idx].metadata["atom_name"] = match_dict["atom_names"][
                     smarts_idx
                 ]
