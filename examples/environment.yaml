@@ -3,6 +3,7 @@ channels:
   - conda-forge
   - openeye
 dependencies:
+  - pip
   - networkx
   - rdkit
   - ambertools
@@ -11,6 +12,7 @@ dependencies:
   - python-constraint
   # These dependencies are in addition to the toolkit itself
   - nglview
+  - ipywidgets >=7,<8
   - notebook
   - gromacs >=2021=nompi*
   # Add back when LAMMPS export is better

@@ -69,7 +69,7 @@ jobs:
 
       - name: Install additional example dependencies
         run: |
-          mamba env update --file examples/environment.yaml --name test
+          mamba env update -v --file examples/environment.yaml --name offtk-examples
 
           # If openmmforcefields is included in examples/environment.yaml,
           # remove RDKit and AmberTools brought in by it. Currently it's not included,

@@ -24,10 +24,18 @@ $ conda install -c conda-forge openff-toolkit
 Installation via the Conda package manager is the preferred method since all dependencies are automatically fetched and installed for you.
 :::
 
+(installation/platforms)=
+
 ### OS support
 
 The OpenFF Toolkit is pure Python, and we expect it to work on any platform that supports its dependencies.
-Our automated testing takes place on both MacOS and Ubuntu Linux.
+Our automated testing takes place on both (x86) MacOS and Ubuntu Linux.
+
+
+(installation/windows)=
+
+#### Windows
+
 For Windows support, we recommend using the [Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/install-win10) (WSL) to run a Linux system integrated into Windows.
 We strongly suggest using WSL2, if your hardware supports it, for a smoother experience.
 WSL2 requires virtualization support in hardware.
@@ -39,6 +47,26 @@ Note that by default, Jupyter Notebook will not be able to open a browser window
 :::{note}
 WSL2 [does support](https://docs.microsoft.com/en-us/windows/wsl/tutorials/gpu-compute) GPU compute, at least with nvidia cards, but setting it up [takes some work](https://developer.nvidia.com/cuda/wsl).
 :::
+
+
+(installation/m1)=
+
+#### macOS with M1 chips
+
+Apple Silicon (M1 mac, `osx-arm64`) is supported, but only through Rosetta because (as of August 2022) some upstream dependencies are not yet built on it.
+To configure `conda` to [use Rosetta](https://conda-forge.org/docs/user/tipsandtricks.html#installing-apple-intel-packages-on-apple-silicon) when creating an environment (or modifying one, such as installing new packages into it), prepend the command with `CONDA_SUBDIR=osx-64`:
+
+```shell-session
+$ CONDA_SUBDIR=osx-64 conda install -c conda-forge openff-toolkit
+```
+
+To make this setting the global default, update the conda config via
+
+```
+$ conda config --env --set subdir osx-64
+```
+
+Note that this will affect how `conda` behaves with other environments.
 
 (conda_envs)=
 
