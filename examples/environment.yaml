@@ -3,6 +3,7 @@ channels:
   - conda-forge
   - openeye
 dependencies:
+  - pip
   - networkx
   - rdkit
   - ambertools
