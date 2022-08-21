@@ -14,7 +14,7 @@ Class definitions to represent a molecular system and its chemical components
 import itertools
 import warnings
 from collections import OrderedDict, defaultdict
-from collections.abc import Iterator, MutableMapping
+from collections.abc import MutableMapping
 from contextlib import nullcontext
 from copy import deepcopy
 from pathlib import Path
@@ -28,6 +28,7 @@ from typing import (
     TextIO,
     Tuple,
     Union,
+    Iterator,
 )
 
 import numpy as np
