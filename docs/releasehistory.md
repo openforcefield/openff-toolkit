@@ -57,7 +57,9 @@ print(value_roundtrip)
 
 ### `Topology.to_file()`
 
-The [`Topology.to_file()`](openff.toolkit.topology.Topology.to_file) method has been significantly revised, including two breaking changes.
+The [`Topology.to_file()`](openff.toolkit.topology.Topology.to_file) method has been significantly revised, including three breaking changes.
+
+#### Breaking change: `filename` argument renamed `file`
 
 The `filename` argument has been renamed `file`, and now supports file-like objects in addition to file names:
 
@@ -66,14 +68,29 @@ The `filename` argument has been renamed `file`, and now supports file-like obje
 +  topology.to_file(file="out.pdb", positions=xyz)
 ```
 
-The `ensure_unique_atom_names` argument can now take the name of a `HierarchyScheme`, in which case atom names will be unique within the elements of that scheme (instead of within the atoms of a molecule). If the scheme is missing from a molecule, atom names will be unique within that molecule (the previous behavior). The default value for this argument is now `residues` to preserve atom names from the PDB. If a boolean is explicitly passed to this argument, the behavior should not change; therefore, the previous behavior can be achieved by passing `True` to `ensure_unique_atom_names`:
+#### Breaking change: Atom names guaranteed unique per residue by default
+
+The default behavior is now to ensure that atom names are unique within a residue, rather than within a molecule. The `ensure_unique_atom_names` argument has been added to control this behavior. The previous behavior can be achieved by passing `True` to `ensure_unique_atom_names`:
 
 ```diff
 - topology.to_file("out.pdb", xyz)
 + topology.to_file("out.pdb", xyz, ensure_unique_atom_names=True)
 ```
 
-In addition, the `positions` argument is now optional. If it is not provided, positions will be taken from the first conformer of each molecule in the topology. If any molecule has no conformers, an error will be raised. This is not a breaking change.
+The `ensure_unique_atom_names` argument can also take the name of a `HierarchyScheme`, in which case atom names will be unique within the elements of that scheme (instead of within the atoms of a molecule). If the scheme is missing from a molecule, atom names will be unique within that molecule. The default value of this argument is `"residues"` to preserve atom names from the PDB.
+
+#### Breaking change: `keepIds` argument renamed `keep_ids`
+
+The `keepIds` argument has been renamed to the more Pythonic `keep_ids`. Its behavior and position in the argument list has not changed.
+
+```diff
+- topology.to_file("out.pdb", xyz, keepIds=True)
++ topology.to_file("out.pdb", xyz, keep_ids=True)
+```
+
+#### Non-breaking changes
+
+In addition to these breaking changes, the `positions` argument is now optional. If it is not provided, positions will be taken from the first conformer of each molecule in the topology. If any molecule has no conformers, an error will be raised.
 
 ## Current Development
 

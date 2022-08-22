@@ -1596,7 +1596,7 @@ class Topology(Serializable):
         file: Union[Path, str, TextIO],
         positions: Optional[Union["OMMQuantity", Quantity, NDArray]] = None,
         file_format: Literal["PDB"] = "PDB",
-        keepIds: bool = False,
+        keep_ids: bool = False,
         ensure_unique_atom_names: Union[str, bool] = "residues",
     ):
         """
@@ -1632,7 +1632,7 @@ class Topology(Serializable):
         file_format
             Output file format. Case insensitive. Currently only supported value
             is ``"PDB"``.
-        keepIds
+        keep_ids
             If ``True``, keep the residue and chain IDs specified in the Topology
             rather than generating new ones.
         ensure_unique_atom_names
@@ -1687,7 +1687,12 @@ class Topology(Serializable):
                 + f" not {type(file)}."
             )
         with ctx_manager as outfile:
-            app.PDBFile.writeFile(openmm_top, openmm_positions, outfile, keepIds)
+            app.PDBFile.writeFile(
+                topology=openmm_top,
+                positions=openmm_positions,
+                file=outfile,
+                keepIds=keep_ids,
+            )
 
     def get_positions(self) -> Optional[Quantity]:
         """
