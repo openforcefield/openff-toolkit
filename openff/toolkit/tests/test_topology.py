@@ -825,6 +825,147 @@ class TestTopology:
             "C",
         ]
 
+    def test_to_file_object(self):
+        """
+        Checks that a file-like object can be written to (vs a path or str)
+        """
+        from io import StringIO
+        from tempfile import NamedTemporaryFile
+
+        from openff.toolkit.topology import Molecule, Topology
+
+        topology = Topology()
+        mol = Molecule.from_pdb_and_smiles(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO"
+        )
+        topology.add_molecule(mol)
+        positions = mol.conformers[0]
+
+        # Check a file-like wrapper around a str
+        count = 1
+        with StringIO() as iofile:
+            topology.to_file(iofile, positions)
+            data1 = [line + "\n" for line in iofile.getvalue().splitlines()]
+
+        # Check an actual real file object
+        count = 1
+        with NamedTemporaryFile(mode="w+", suffix=".pdb") as iofile:
+            topology.to_file(iofile, positions)
+            iofile.seek(0)
+            data2 = iofile.readlines()
+
+        # Do it the old fashioned way for comparison
+        count = 1
+        with NamedTemporaryFile(mode="w+", suffix=".pdb") as iofile:
+            topology.to_file(iofile.name, positions)
+            data3 = iofile.readlines()
+
+        assert data1 == data3
+        assert data2 == data3
+
+    def test_to_file_automatic_positions(self):
+        """
+        Checks that to_file can take positions from the topology
+        """
+        from io import StringIO
+
+        from openff.toolkit.topology import Molecule, Topology
+
+        topology = Topology()
+        mol = Molecule.from_pdb_and_smiles(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO"
+        )
+        topology.add_molecule(mol)
+
+        count = 1
+        with StringIO() as iofile:
+            topology.to_file(iofile)
+            data = iofile.getvalue().splitlines()
+            for line in data:
+                if line.startswith("HETATM") and count == 1:
+                    count = count + 1
+                    coord = line.split()[-6]
+        assert coord == "10.172"
+
+    def test_to_file_ensure_uniqueness_true(self):
+        """
+        Checks that ensure_unique_atom_names=True provides per-molecule unique atom names
+        """
+        from io import StringIO
+
+        from openff.toolkit.topology import Molecule, Topology
+
+        mol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+        )
+        topology = Topology.from_molecules([mol])
+
+        with StringIO() as iofile:
+            topology.to_file(iofile, ensure_unique_atom_names=True)
+            data = iofile.getvalue().splitlines()
+
+        atom_names = []
+        for line in data:
+            if line.startswith("ATOM") or line.startswith("HETATM"):
+                atom_name = line[12:16].strip()
+                atom_names.append(atom_name)
+        assert len(atom_names) == len(set(atom_names))
+
+    def test_to_file_ensure_uniqueness_false(self):
+        """
+        Checks that ensure_unique_atom_names=False preserves atom names
+        """
+        from io import StringIO
+
+        from openff.toolkit.topology import Molecule, Topology
+
+        mol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+        )
+        topology = Topology.from_molecules([mol])
+        atom_names = set([atom.name for atom in topology.atoms])
+        assert None not in atom_names, "All input atoms must be named"
+
+        with StringIO() as iofile:
+            topology.to_file(iofile, ensure_unique_atom_names=False)
+            data = iofile.getvalue().splitlines()
+
+        for line in data:
+            if line.startswith("ATOM") or line.startswith("HETATM"):
+                atom_name = line[12:16].strip()
+                assert atom_name in atom_names
+
+    def test_to_file_ensure_uniqueness_residues(self):
+        """
+        Checks that ensure_unique_atom_names="residues" provides per-residue unique atom names
+        """
+        from io import StringIO
+
+        from openff.toolkit.topology import Molecule, Topology
+
+        mol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+        )
+        topology = Topology.from_molecules([mol])
+
+        with StringIO() as iofile:
+            topology.to_file(iofile, ensure_unique_atom_names="residues")
+            data = iofile.getvalue().splitlines()
+
+        from collections import defaultdict
+
+        residues = defaultdict(list)
+        for line in data:
+            if line.startswith("ATOM") or line.startswith("HETATM"):
+                atom_name = line[12:16].strip()
+                res_name = line[17:20].strip()
+                res_number = line[22:26].strip()
+                res_icode = line[26].strip()
+                residues[(res_name, res_number, res_icode)].append(atom_name)
+
+        for residue_atom_names in residues.values():
+            assert len(residue_atom_names) == len(set(residue_atom_names))
+
     @requires_openeye
     def test_from_openmm_duplicate_unique_mol(self):
         """

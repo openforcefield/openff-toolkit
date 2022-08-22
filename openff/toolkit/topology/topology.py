@@ -1677,15 +1677,10 @@ class Topology(Serializable):
 
         # Write PDB file
         ctx_manager: Union[nullcontext[TextIO], TextIO]  # MyPy needs some help here
-        if isinstance(file, TextIO):
-            ctx_manager = nullcontext(file)
-        elif isinstance(file, (str, Path)):
+        if isinstance(file, (str, Path)):
             ctx_manager = open(file, "w")
         else:
-            raise TypeError(
-                "file must be a string, path, or file-like object in text mode,"
-                + f" not {type(file)}."
-            )
+            ctx_manager = nullcontext(file)
         with ctx_manager as outfile:
             app.PDBFile.writeFile(
                 topology=openmm_top,
