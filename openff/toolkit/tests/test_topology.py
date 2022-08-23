@@ -842,20 +842,17 @@ class TestTopology:
         positions = mol.conformers[0]
 
         # Check a file-like wrapper around a str
-        count = 1
         with StringIO() as iofile:
             topology.to_file(iofile, positions)
             data1 = [line + "\n" for line in iofile.getvalue().splitlines()]
 
         # Check an actual real file object
-        count = 1
         with NamedTemporaryFile(mode="w+", suffix=".pdb") as iofile:
             topology.to_file(iofile, positions)
             iofile.seek(0)
             data2 = iofile.readlines()
 
         # Do it the old fashioned way for comparison
-        count = 1
         with NamedTemporaryFile(mode="w+", suffix=".pdb") as iofile:
             topology.to_file(iofile.name, positions)
             data3 = iofile.readlines()
