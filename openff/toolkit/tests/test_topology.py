@@ -1118,7 +1118,8 @@ class TestTopology:
             atom.name = f"AT{atom.molecule_atom_index}"
         benzene = Molecule.from_smiles("c1ccccc1")
         off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
-        init_atomnames = [atom.name for atom in off_topology.atoms]
+        # Record the initial atom names to compare to later
+        init_atomnames = [str(atom.name) for atom in off_topology.atoms]
 
         # This test uses molecules with no hierarchy schemes, so the parametrized
         # ensure_unique_atom_names values should behave identically (except False).
@@ -1130,11 +1131,16 @@ class TestTopology:
             ensure_unique_atom_names=ensure_unique_atom_names
         )
 
+        # Get the atom names back from the initial molecules after calling to_openmm
         final_atomnames_mols = [
             atom.name for atom in [*ethanol.atoms, *benzene.atoms, *benzene.atoms]
         ]
+        # Get the atom names back from the initial topology after calling to_openmm
         final_atomnames_offtop = [atom.name for atom in off_topology.atoms]
+        # Get the atom names back from the new OpenMM topology
         final_atomnames_ommtop = [atom.name for atom in omm_topology.atoms()]
+
+        # Check the appropriate properties!
         assert (
             init_atomnames == final_atomnames_mols
         ), "Molecules' atom names were changed"
