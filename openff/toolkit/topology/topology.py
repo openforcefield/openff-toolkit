@@ -1492,8 +1492,9 @@ class Topology(Serializable):
                     molecule, ensure_unique_atom_names
                 ):
                     for hier_elem in getattr(molecule, ensure_unique_atom_names):
-                        hier_elem.generate_unique_atom_names()
-                else:
+                        if not hier_elem.has_unique_atom_names:
+                            hier_elem.generate_unique_atom_names()
+                elif not molecule.has_unique_atom_names:
                     molecule.generate_unique_atom_names()
 
         # Go through atoms in OpenFF to preserve the order.

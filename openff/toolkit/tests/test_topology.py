@@ -989,7 +989,8 @@ class TestTopology:
         # process doesn't encode stereochemistry.
         raise NotImplementedError
 
-    def test_to_openmm_assign_unique_atom_names(self):
+    @pytest.mark.parametrize("ensure_unique_atom_names", [True, "residues", "chains"])
+    def test_to_openmm_assign_unique_atom_names(self, ensure_unique_atom_names):
         """
         Ensure that OFF topologies with no pre-existing atom names have unique
         atom names applied when being converted to openmm
@@ -998,14 +999,24 @@ class TestTopology:
         ethanol = Molecule.from_smiles("CCO")
         benzene = Molecule.from_smiles("c1ccccc1")
         off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
-        omm_topology = off_topology.to_openmm()
+
+        # This test uses molecules with no hierarchy schemes, so the parametrized
+        # ensure_unique_atom_names values should behave identically.
+        assert not any(
+            [mol._hierarchy_schemes for mol in off_topology.molecules]
+        ), "Test assumes no hierarchy schemes"
+
+        omm_topology = off_topology.to_openmm(
+            ensure_unique_atom_names=ensure_unique_atom_names
+        )
         atom_names = set()
         for atom in omm_topology.atoms():
             atom_names.add(atom.name)
         # There should be 6 unique Cs, 6 unique Hs, and 1 unique O, for a total of 13 unique atom names
         assert len(atom_names) == 13
 
-    def test_to_openmm_assign_some_unique_atom_names(self):
+    @pytest.mark.parametrize("ensure_unique_atom_names", [True, "residues", "chains"])
+    def test_to_openmm_assign_some_unique_atom_names(self, ensure_unique_atom_names):
         """
         Ensure that OFF topologies with some pre-existing atom names have unique
         atom names applied to the other atoms when being converted to openmm
@@ -1016,7 +1027,16 @@ class TestTopology:
             atom.name = f"AT{atom.molecule_atom_index}"
         benzene = Molecule.from_smiles("c1ccccc1")
         off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
-        omm_topology = off_topology.to_openmm()
+
+        # This test uses molecules with no hierarchy schemes, so the parametrized
+        # ensure_unique_atom_names values should behave identically.
+        assert not any(
+            [mol._hierarchy_schemes for mol in off_topology.molecules]
+        ), "Test assumes no hierarchy schemes"
+
+        omm_topology = off_topology.to_openmm(
+            ensure_unique_atom_names=ensure_unique_atom_names
+        )
         atom_names = set()
         for atom in omm_topology.atoms():
             atom_names.add(atom.name)
@@ -1024,7 +1044,10 @@ class TestTopology:
         # for a total of 21 unique atom names
         assert len(atom_names) == 21
 
-    def test_to_openmm_assign_unique_atom_names_some_duplicates(self):
+    @pytest.mark.parametrize("ensure_unique_atom_names", [True, "residues", "chains"])
+    def test_to_openmm_assign_unique_atom_names_some_duplicates(
+        self, ensure_unique_atom_names
+    ):
         """
         Ensure that OFF topologies where some molecules have invalid/duplicate
         atom names have unique atom names applied while the other molecules are unaffected.
@@ -1045,7 +1068,16 @@ class TestTopology:
             atom.name = atom_name
 
         off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
-        omm_topology = off_topology.to_openmm()
+
+        # This test uses molecules with no hierarchy schemes, so the parametrized
+        # ensure_unique_atom_names values should behave identically.
+        assert not any(
+            [mol._hierarchy_schemes for mol in off_topology.molecules]
+        ), "Test assumes no hierarchy schemes"
+
+        omm_topology = off_topology.to_openmm(
+            ensure_unique_atom_names=ensure_unique_atom_names
+        )
         atom_names = set()
         for atom in omm_topology.atoms():
             atom_names.add(atom.name)
