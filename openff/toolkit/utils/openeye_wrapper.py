@@ -1164,6 +1164,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 metadata_dict["residue_number"] = oechem.OEAtomGetResidue(
                     oeatom
                 ).GetResidueNumber()
+                metadata_dict["insertion_code"] = oechem.OEAtomGetResidue(
+                    oeatom
+                ).GetInsertCode()
                 metadata_dict["chain_id"] = oechem.OEAtomGetResidue(oeatom).GetChainID()
             # print('from', metadata_dict)
 
@@ -1473,6 +1476,11 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 res.SetResidueNumber(int(off_atom.metadata["residue_number"]))
             else:
                 res.SetResidueNumber(1)
+
+            if "insertion_code" in off_atom.metadata:
+                res.SetInsertCode(off_atom.metadata["insertion_code"])
+            else:
+                res.SetInsertCode(" ")
 
             if "chain_id" in off_atom.metadata:
                 res.SetChainID(off_atom.metadata["chain_id"])
