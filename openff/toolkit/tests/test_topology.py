@@ -825,6 +825,7 @@ class TestTopology:
             "C",
         ]
 
+    @requires_rdkit
     def test_to_file_object(self):
         """
         Checks that a file-like object can be written to (vs a path or str)
@@ -860,6 +861,7 @@ class TestTopology:
         assert data1 == data3
         assert data2 == data3
 
+    @requires_rdkit
     def test_to_file_automatic_positions(self):
         """
         Checks that to_file can take positions from the topology
