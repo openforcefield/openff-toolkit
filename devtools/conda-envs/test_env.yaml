@@ -47,7 +47,7 @@ dependencies:
   - mypy
   - typing-extensions
   - pip:
-    - git+https://github.com/openforcefield/openff-interchange@v0.2.0-rc.3
+    - git+https://github.com/openforcefield/openff-interchange@v0.2.0-rc.4
     - types-pkg_resources
     - types-setuptools
     - types-toml
