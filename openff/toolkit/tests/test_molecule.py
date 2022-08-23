@@ -12,6 +12,7 @@ TODO:
   serialized OFFMols.
 
 """
+from collections import namedtuple
 import copy
 import os
 import pathlib
@@ -897,9 +898,11 @@ class TestMolecule:
 
     def test_from_pathlib_path(self):
         ethanol = create_ethanol()
-        ethanol.to_file("ethanol.sdf", file_format="sdf")
+        with NamedTemporaryFile(suffix=".sdf") as outfile:
+            filename = str(outfile.name)
+            ethanol.to_file(filename, file_format="sdf")
 
-        Molecule.from_file(pathlib.Path("ethanol.sdf"))
+            Molecule.from_file(pathlib.Path(filename))
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_create_from_serialized(self, molecule):
