@@ -1156,10 +1156,17 @@ class TestAddTopology:
 
         assert topology1.constrained_atom_pairs[(0, 1)] == 1.01 * unit.angstrom
         assert len(topology2._cached_chemically_identical_molecules) == 1
+        # Do a basic test of topology.atom_index which forces topology2
+        # to build its atom index cache
+        assert topology2.atom_index(topology2.atom(2)) == 2
 
         topology3 = topology1 + topology2
 
         assert topology3._cached_chemically_identical_molecules is None
+        # Query the same atom as above, but in topology 3. If the cache isn't invalidated
+        # then this will still have the old atom index (2), but if it's correctly
+        # invalidated and rebuilt, it will have an index of 5.
+        assert topology3.atom_index(topology3.atom(5)) == 5
 
         # Constrained atom pairs are intentionally not removed
         assert topology3.constrained_atom_pairs[(0, 1)] == 1.01 * unit.angstrom

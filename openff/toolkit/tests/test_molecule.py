@@ -724,6 +724,24 @@ class TestMolecule:
                 f"The required toolkit ({toolkit_class.toolkit_name}) is not available."
             )
 
+    def test_atom_index_cache(self):
+        """Test that the atom index cache is invalidated when a molecule is modified"""
+        # First make OH-
+        mol = Molecule()
+        mol.add_atom(8, -1, False, None)
+        mol.add_atom(1, 0, False, None)
+        mol.add_bond(0, 1, 1, False)
+        assert mol.atom(0).molecule_atom_index == 0
+        assert mol.atom(1).molecule_atom_index == 1
+
+        # Now convert it to H2O and ask for atom indices again
+        mol.add_atom(1, 0, False, None)
+        mol.add_bond(1, 2, 1, False)
+        mol.atom(0).formal_charge = 0
+        assert mol.atom(0).molecule_atom_index == 0
+        assert mol.atom(1).molecule_atom_index == 1
+        assert mol.atom(2).molecule_atom_index == 2
+
     mapped_types = [
         {"atom_map": None},
         {"atom_map": {0: 0}},
