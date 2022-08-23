@@ -1105,6 +1105,141 @@ class TestTopology:
         # and 12 atoms named "", for a total of 3 unique atom names
         assert len(atom_names) == 3
 
+    @pytest.mark.parametrize("explicit_arg", [True, False])
+    def test_to_openmm_preserve_per_residue_unique_atom_names(self, explicit_arg):
+        """
+        Test that to_openmm preserves atom names that are unique per-residue by default
+        """
+        # Create a topology from a capped dialanine
+        peptide = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+        )
+        off_topology = Topology.from_molecules([peptide])
+
+        # Assert the test's assumptions
+        _ace, ala1, ala2, _nme = off_topology.hierarchy_iterator("residues")
+        assert [a.name for a in ala1.atoms] == [
+            a.name for a in ala2.atoms
+        ], "Test assumes both alanines have same atom names"
+
+        for res in off_topology.hierarchy_iterator("residues"):
+            res_atomnames = [atom.name for atom in res.atoms]
+            assert len(set(res_atomnames)) == len(
+                res_atomnames
+            ), f"Test assumes atom names are already unique per-residue in {res}"
+
+        # Record the initial atom names
+        init_atomnames = [str(atom.name) for atom in off_topology.atoms]
+
+        # Perform the test
+        if explicit_arg:
+            omm_topology = off_topology.to_openmm(ensure_unique_atom_names="residues")
+        else:
+            omm_topology = off_topology.to_openmm()
+
+        # Check that the atom names were preserved
+        final_atomnames = [str(atom.name) for atom in omm_topology.atoms()]
+        assert final_atomnames == init_atomnames
+
+    @pytest.mark.parametrize("explicit_arg", [True, False])
+    def test_to_openmm_generate_per_residue_unique_atom_names(self, explicit_arg):
+        """
+        Test that to_openmm preserves atom names that are unique per-residue by default
+        """
+        # Create a topology from a capped dialanine
+        peptide = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+        )
+        off_topology = Topology.from_molecules([peptide])
+
+        # Remove atom names from some residues, make others have duplicate atom names
+        ace, ala1, ala2, nme = off_topology.hierarchy_iterator("residues")
+        for atom in ace.atoms:
+            atom._name = None
+        for atom in ala1.atoms:
+            atom.name = ""
+        for atom in ala2.atoms:
+            atom.name = "ATX2"
+        for atom in nme.atoms:
+            if atom.name == "H2":
+                atom.name = "H1"
+                break
+
+        # Assert assumptions
+        for res in off_topology.hierarchy_iterator("residues"):
+            res_atomnames = [atom.name for atom in res.atoms]
+            assert len(set(res_atomnames)) != len(
+                res_atomnames
+            ), f"Test assumes atom names are not unique per-residue in {res}"
+        assert off_topology.n_atoms == 32, "Test assumes topology has 32 atoms"
+
+        # Perform the test
+        if explicit_arg:
+            omm_topology = off_topology.to_openmm(ensure_unique_atom_names="residues")
+        else:
+            omm_topology = off_topology.to_openmm()
+
+        # Check that the atom names are now unique per-residue but not per-molecule
+        for res in omm_topology.residues():
+            res_atomnames = [atom.name for atom in res.atoms()]
+            assert len(set(res_atomnames)) == len(
+                res_atomnames
+            ), f"Final atom names are not unique in residue {res}"
+
+        atom_names = set()
+        for atom in omm_topology.atoms():
+            atom_names.add(atom.name)
+        assert (
+            len(atom_names) < 32
+        ), "There should be duplicate atom names in this output topology"
+
+    @pytest.mark.parametrize("ensure_unique_atom_names", ["chains", True])
+    def test_to_openmm_generate_per_molecule_unique_atom_names_with_residues(
+        self, ensure_unique_atom_names
+    ):
+        """
+        Test that to_openmm preserves atom names that are unique per-residue by default
+        """
+        # Create a topology from a capped dialanine
+        peptide = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+        )
+        off_topology = Topology.from_molecules([peptide])
+
+        # Remove atom names from some residues, make others have duplicate atom names
+        ace, ala1, ala2, nme = off_topology.hierarchy_iterator("residues")
+        for atom in ace.atoms:
+            atom._name = None
+        for atom in ala1.atoms:
+            atom.name = ""
+        for atom in ala2.atoms:
+            atom.name = "ATX2"
+        for atom in nme.atoms:
+            if atom.name == "H2":
+                atom.name = "H1"
+                break
+
+        # Assert assumptions
+        for res in off_topology.hierarchy_iterator("residues"):
+            res_atomnames = [atom.name for atom in res.atoms]
+            assert len(set(res_atomnames)) != len(
+                res_atomnames
+            ), f"Test assumes atom names are not unique per-residue in {res}"
+        assert off_topology.n_atoms == 32, "Test assumes topology has 32 atoms"
+
+        # Perform the test
+        omm_topology = off_topology.to_openmm(
+            ensure_unique_atom_names=ensure_unique_atom_names
+        )
+
+        # Check that the atom names are now unique across the topology (of 1 molecule)
+        atom_names = set()
+        for atom in omm_topology.atoms():
+            atom_names.add(atom.name)
+        assert (
+            len(atom_names) == 32
+        ), "There should not be duplicate atom names in this output topology"
+
     @pytest.mark.parametrize(
         "ensure_unique_atom_names", [True, "residues", "chains", False]
     )
