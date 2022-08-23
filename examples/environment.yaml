@@ -1,4 +1,4 @@
- name: offtk-examples
+name: offtk-examples
 channels:
   - conda-forge
   - openeye
