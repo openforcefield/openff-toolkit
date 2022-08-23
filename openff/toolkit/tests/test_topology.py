@@ -1073,6 +1073,47 @@ class TestTopology:
         # and 12 atoms named "", for a total of 3 unique atom names
         assert len(atom_names) == 3
 
+    @pytest.mark.parametrize(
+        "ensure_unique_atom_names", [True, "residues", "chains", False]
+    )
+    def test_to_openmm_copies_molecules(self, ensure_unique_atom_names):
+        """
+        Check that generating new atom names doesn't affect the input topology
+        """
+        # Create OpenFF topology with 1 ethanol and 2 benzenes.
+        ethanol = Molecule.from_smiles("CCO")
+        for atom in ethanol.atoms:
+            atom.name = f"AT{atom.molecule_atom_index}"
+        benzene = Molecule.from_smiles("c1ccccc1")
+        off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
+        init_atomnames = [atom.name for atom in off_topology.atoms]
+
+        # This test uses molecules with no hierarchy schemes, so the parametrized
+        # ensure_unique_atom_names values should behave identically (except False).
+        assert not any(
+            [mol._hierarchy_schemes for mol in off_topology.molecules]
+        ), "Test assumes no hierarchy schemes"
+
+        omm_topology = off_topology.to_openmm(
+            ensure_unique_atom_names=ensure_unique_atom_names
+        )
+
+        final_atomnames_mols = [
+            atom.name for atom in [*ethanol.atoms, *benzene.atoms, *benzene.atoms]
+        ]
+        final_atomnames_offtop = [atom.name for atom in off_topology.atoms]
+        final_atomnames_ommtop = [atom.name for atom in omm_topology.atoms()]
+        assert (
+            init_atomnames == final_atomnames_mols
+        ), "Molecules' atom names were changed"
+        assert (
+            init_atomnames == final_atomnames_offtop
+        ), "Topology's atom names were changed"
+        if ensure_unique_atom_names:
+            assert (
+                init_atomnames != final_atomnames_ommtop
+            ), "New atom names should've been generated but weren't"
+
     def test_group_chemically_identical_molecules(self):
         """Test behavior and caching of Topology.group_chemically_identical_molecules"""
         top = Topology()

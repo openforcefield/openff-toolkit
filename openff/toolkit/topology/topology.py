@@ -1482,11 +1482,12 @@ class Topology(Serializable):
 
         from openff.toolkit.topology.molecule import Bond
 
+        off_topology = Topology(self)
         omm_topology = app.Topology()
 
         # Create unique atom names
         if ensure_unique_atom_names:
-            for molecule in self._molecules:
+            for molecule in off_topology._molecules:
                 if isinstance(ensure_unique_atom_names, str) and hasattr(
                     molecule, ensure_unique_atom_names
                 ):
@@ -1499,7 +1500,7 @@ class Topology(Serializable):
         omm_atoms = []
 
         # For each atom in each molecule, determine which chain/residue it should be a part of
-        for molecule in self.molecules:
+        for molecule in off_topology.molecules:
             # No chain or residue can span more than one OFF molecule, so reset these to None for the first
             # atom in each molecule.
             last_chain = None
@@ -1551,7 +1552,7 @@ class Topology(Serializable):
                 omm_atom = omm_topology.addAtom(atom.name, element, residue)
 
                 # Make sure that OpenFF and OpenMM Topology atoms have the same indices.
-                assert self.atom_index(atom) == int(omm_atom.id) - 1
+                assert off_topology.atom_index(atom) == int(omm_atom.id) - 1
                 omm_atoms.append(omm_atom)
 
                 last_chain = chain
@@ -1561,7 +1562,9 @@ class Topology(Serializable):
             bond_types = {1: app.Single, 2: app.Double, 3: app.Triple}
             for bond in molecule.bonds:
                 atom1, atom2 = bond.atoms
-                atom1_idx, atom2_idx = self.atom_index(atom1), self.atom_index(atom2)
+                atom1_idx, atom2_idx = off_topology.atom_index(
+                    atom1
+                ), off_topology.atom_index(atom2)
                 if isinstance(bond, Bond):
                     if bond.is_aromatic:
                         bond_type = app.Aromatic
@@ -1584,10 +1587,10 @@ class Topology(Serializable):
                     order=bond_order,
                 )
 
-        if self.box_vectors is not None:
+        if off_topology.box_vectors is not None:
             from openff.units.openmm import to_openmm
 
-            omm_topology.setPeriodicBoxVectors(to_openmm(self.box_vectors))
+            omm_topology.setPeriodicBoxVectors(to_openmm(off_topology.box_vectors))
         return omm_topology
 
     @requires_package("openmm")
