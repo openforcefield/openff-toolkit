@@ -3365,6 +3365,27 @@ class TestMoleculeFromPDB:
         )
         assert offmol.n_atoms == expected_n_atoms
 
+    def test_from_pdb_metadata(self):
+        """Test that metadata is correctly loaded from PDB."""
+        expected_metadata = (
+            [(" ", "1", " ", "ACE")] * 6
+            + [(" ", "2", " ", "ALA")] * 10
+            + [(" ", "2", "X", "ALA")] * 10
+            + [(" ", "3", " ", "NME")] * 6
+        )
+
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA_icodes.pdb")
+        )
+        for atom, metadata_tuple in zip(offmol.atoms, expected_metadata):
+            metadata_dict = {
+                "chain_id": metadata_tuple[0],
+                "residue_number": metadata_tuple[1],
+                "insertion_code": metadata_tuple[2],
+                "residue_name": metadata_tuple[3],
+            }
+            assert atom.metadata == metadata_dict
+
     def test_molecule_from_pdb_mainchain_ala_dipeptide(self):
         offmol = Molecule.from_polymer_pdb(
             get_data_file_path("proteins/MainChain_ALA.pdb")
