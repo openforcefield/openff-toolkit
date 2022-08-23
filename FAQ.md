@@ -64,11 +64,11 @@ By default, the OpenFF Toolkit throws an error if a molecule with undefined ster
 
 This behavior is in line with OpenFF's general attitude of requiring users to explicitly acknowledge actions that may cause silent errors later on. If you're confident a `Molecule` with unassigned stereochemistry is acceptable, pass `allow_undefined_stereo=True` to molecule loading methods like [Molecule.from_smiles](openff.toolkit.topology.Molecule.from_smiles) to downgrade the exception to a warning. For an example, see the "SMILES without stereochemistry" section in the [Molecule cookbook](smiles_no_stereochemistry). Where possible, our parameter assignment infrastructure will gracefully handle molecules with undefined stereochemistry that are loaded this way, though they will be missing any stereospecific parameters.
 
-## I'm having troubles installing the OpenFF Toolkit on my M1 Mac.
+## I'm having troubles installing the OpenFF Toolkit on my Apple Silicon Mac.
 
-As of August 2022, some upstreams (at least AmberTools, possibly more) are not built on `osx-arm64`, so installing the OpenFF stack is only possible with Rosetta. See the [platform support](installation/m1) section of the installation documentation for more.
+As of August 2022, some upstreams (at least AmberTools, possibly more) are not built on `osx-arm64`, so installing the OpenFF stack is only possible with [Rosetta](https://support.apple.com/en-au/HT211861). See the [platform support](installation/m1) section of the installation documentation for more.
 
-(Keywords `osx-arm64`, Apple Silicon)
+(Keywords `osx-arm64`, M1 Mac, M2 Mac)
 
 ## My conda installation of the toolkit doesn't appear to work. What should I try next?
 

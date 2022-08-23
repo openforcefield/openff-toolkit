@@ -53,11 +53,14 @@ WSL2 [does support](https://docs.microsoft.com/en-us/windows/wsl/tutorials/gpu-c
 
 #### macOS with M1 chips
 
-Apple Silicon (M1 mac, `osx-arm64`) is supported, but only through Rosetta because (as of August 2022) some upstream dependencies are not yet built on it.
-To configure `conda` to [use Rosetta](https://conda-forge.org/docs/user/tipsandtricks.html#installing-apple-intel-packages-on-apple-silicon) when creating an environment (or modifying one, such as installing new packages into it), prepend the command with `CONDA_SUBDIR=osx-64`:
+The Toolkit supports Apple Silicon (M1, M2, etc.), but only through [Rosetta] because (as of August 2022) some upstream dependencies are not yet built for the `osx-arm64` architecture. 
+Conda can be configured to [use Rosetta] with the `CONDA_SUBDIR=osx-64` environment variable or the `subdir` Conda config variable. 
+We recommend using this on a per-environment basis so that it persists across updates and new installs, but does not affect existing setups:
 
 ```shell-session
-$ CONDA_SUBDIR=osx-64 conda install -c conda-forge openff-toolkit
+$ CONDA_SUBDIR=osx-64 conda create --name openff -c conda-forge openff-toolkit
+$ conda activate
+$ conda config --env --set subdir osx-64
 ```
 
 To make this setting the global default, update the conda config via
@@ -66,7 +69,10 @@ To make this setting the global default, update the conda config via
 $ conda config --env --set subdir osx-64
 ```
 
-Note that this will affect how `conda` behaves with other environments.
+Note that this will affect how Conda behaves with other environments.
+
+[Rosetta]: https://support.apple.com/en-au/HT211861
+[use Rosetta]: https://conda-forge.org/docs/user/tipsandtricks.html#installing-apple-intel-packages-on-apple-silicon
 
 (conda_envs)=
 
