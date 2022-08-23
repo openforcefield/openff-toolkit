@@ -12,11 +12,11 @@ TODO:
   serialized OFFMols.
 
 """
-from collections import namedtuple
 import copy
 import os
 import pathlib
 import pickle
+from collections import namedtuple
 from tempfile import NamedTemporaryFile
 
 import numpy as np
