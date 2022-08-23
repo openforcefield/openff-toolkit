@@ -207,11 +207,16 @@ The [`Topology.identical_molecule_groups`] property has been refactored for perf
   double bond stereo would cause `to_rdkit` to raise an error. The transfer of double bond stereochemistry
   from OpenFF's E/Z representation to RDKit's local representation is now handled as a constraint
   satisfaction problem.
+- [PR #1368](https://github.com/openforcefield/openff-toolkit/pull/1368): Adds the `Topology.get_positions()` and `Topology.set_positions()` methods for working with topology positions. Positions are represented as the first conformer of each molecule in the topology.
+- [PR #1368](https://github.com/openforcefield/openff-toolkit/pull/1368): Allows setting the `ensure_unique_atom_names` argument of `Topology.to_openmm()`to the name of a hierarchy scheme, in which case atom names are guaranteed unique per element of that scheme rather than per molecule. Changes the default value to `"residues"`.
+- [PR #1368](https://github.com/openforcefield/openff-toolkit/pull/1368): Adds the `ensure_unique_atom_names` argument to the `Topology.to_file()`, which mimics the same argument in `Topology.to_openmm()`. Renames the `keepIds` argument to `keep_ids`. Renames the `filename` argument to `file` and allows a file-like object to be passed instead of a filename. Makes the `positions` argument optional; if it is not given, positions are take from the first conformer of each molecule in the Topology.
 
 ### Examples added
 
 - [PR #1113](https://github.com/openforcefield/openff-toolkit/pull/1113): Updates the Amber/GROMACS
   example to use Interchange.
+
+- [PR #1368](https://github.com/openforcefield/openff-toolkit/pull/1368): Updates the Toolkit showcase with the new polymer handling and Interchange support
 
 ### Tests updated
 
