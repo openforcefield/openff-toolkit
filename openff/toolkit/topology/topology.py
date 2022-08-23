@@ -22,13 +22,13 @@ from typing import (
     TYPE_CHECKING,
     Dict,
     Generator,
+    Iterator,
     List,
     Literal,
     Optional,
     TextIO,
     Tuple,
     Union,
-    Iterator,
 )
 
 import numpy as np
