@@ -1301,7 +1301,7 @@ class TestTopology:
         groupings = top.identical_molecule_groups
 
         def assert_first_ethanol_is_grouped_correctly(groupings):
-            assert groupings[0][0] == [0, {i: i for i in range(9)}]
+            assert groupings[0][0] == (0, {i: i for i in range(9)})
 
         assert_first_ethanol_is_grouped_correctly(groupings)
 
@@ -1327,7 +1327,7 @@ class TestTopology:
 
         def assert_cyclohexane_is_grouped_correctly(groupings):
             assert len(groupings[2]) == 1
-            assert groupings[2][0] == [2, {i: i for i in range(18)}]
+            assert groupings[2][0] == (2, {i: i for i in range(18)})
 
         groupings = top.identical_molecule_groups
         assert_first_ethanol_is_grouped_correctly(groupings)
