@@ -28,7 +28,7 @@ dependencies:
   - openff-forcefields
   - openff-units >=0.1.6
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.2.0rc1
+  - openff-interchange-base >=0.2.0rc4
   - smirnoff99Frosst
   - cachetools
   - cached-property
@@ -42,3 +42,4 @@ dependencies:
   - qcportal >=0.15
   - qcengine
   - mdtraj
+  - ipywidgets >=7,<8

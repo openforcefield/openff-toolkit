@@ -13,6 +13,7 @@ dependencies:
   - python-constraint
   # These dependencies are in addition to the toolkit itself
   - nglview
+  - ipywidgets >=7,<8
   - notebook
   - gromacs >=2021=nompi*
   - pdbfixer
