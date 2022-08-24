@@ -15,7 +15,7 @@ dependencies:
   - openff-forcefields
   - openff-units >=0.1.6
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.2.0rc4
+  - openff-interchange-base >=0.2.0rc5
   - smirnoff99Frosst
   - numpy
   - networkx
@@ -48,7 +48,6 @@ dependencies:
   - mypy
   - typing-extensions
   - pip:
-    - git+https://github.com/openforcefield/openff-interchange@v0.2.0-rc.4
     - types-pkg_resources
     - types-setuptools
     - types-toml
