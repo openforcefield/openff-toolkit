@@ -1322,6 +1322,11 @@ class FrozenMolecule(Serializable):
         HierarchySchemeWithIteratorNameAlreadyRegisteredException
             When ``overwrite_existing=False`` and either the ``chains`` or
             ``residues`` hierarchy scheme is already configured.
+
+        See also
+        --------
+        HierarchyScheme, Molecule.add_hierarchy_scheme,
+        Molecule.update_hierarchy_schemes
         """
         self._add_chain_hierarchy_scheme(overwrite_existing=overwrite_existing)
         self._add_residue_hierarchy_scheme(overwrite_existing=overwrite_existing)
@@ -1385,6 +1390,11 @@ class FrozenMolecule(Serializable):
         new_hier_scheme : openff.toolkit.topology.HierarchyScheme
             The newly created HierarchyScheme
 
+        See also
+        --------
+        Molecule.add_default_hierarchy_schemes, Molecule.hierarchy_schemes,
+        Molecule.delete_hierarchy_scheme,  Molecule.update_hierarchy_schemes,
+        HierarchyScheme,
         """
         if iterator_name in self._hierarchy_schemes:
             msg = (
@@ -1414,6 +1424,12 @@ class FrozenMolecule(Serializable):
         -------
         A dict of the form {str: HierarchyScheme}
             The HierarchySchemes associated with the molecule.
+
+        See also
+        --------
+        Molecule.add_hierarchy_scheme, Molecule.delete_hierarchy_scheme,
+        Molecule.update_hierarchy_schemes, Topology.hierarchy_iterator,
+        HierarchyScheme
         """
         return self._hierarchy_schemes
 
@@ -1428,6 +1444,11 @@ class FrozenMolecule(Serializable):
         Parameters
         ----------
         iter_name : str
+
+        See also
+        --------
+        Molecule.add_hierarchy_scheme, Molecule.update_hierarchy_schemes,
+        Molecule.hierarchy_schemes, HierarchyScheme
         """
         if iter_name not in self._hierarchy_schemes:
             raise HierarchySchemeNotFoundException(
@@ -1451,6 +1472,11 @@ class FrozenMolecule(Serializable):
             Only perceive hierarchy for HierarchySchemes that expose these
             iterator names. If not provided, all known hierarchies will be
             perceived, overwriting previous results if applicable.
+
+        See also
+        --------
+        Molecule.add_hierarchy_scheme, Molecule.delete_hierarchy_schemes,
+        Molecule.hierarchy_schemes, HierarchyScheme
         """
         if iter_names is None:
             iter_names = self._hierarchy_schemes.keys()
@@ -5479,6 +5505,13 @@ class HierarchyScheme:
     A ``HierarchyScheme`` contains the information needed to perceive
     ``HierarchyElement`` objects from a ``Molecule`` containing atoms with
     metadata.
+
+    See also
+    --------
+    Molecule.add_default_hierarchy_schemes, Molecule.add_hierarchy_scheme,
+    Molecule.hierarchy_schemes, Molecule.delete_hierarchy_scheme,
+    Molecule.update_hierarchy_schemes, Topology.hierarchy_iterator,
+    HierarchyElement
     """
 
     def __init__(

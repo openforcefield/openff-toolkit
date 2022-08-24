@@ -2340,6 +2340,10 @@ class Topology(Serializable):
         Returns
         -------
         iterator of :class:`HierarchyElement`
+
+        See also
+        --------
+        HierarchyScheme, HierarchyElement, Molecule.hierarchy_schemes
         """
         for molecule in self._molecules:
             if hasattr(molecule, iter_name):
