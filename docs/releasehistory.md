@@ -92,12 +92,6 @@ The `keepIds` argument has been renamed to the more Pythonic `keep_ids`. Its beh
 
 In addition to these breaking changes, the `positions` argument is now optional. If it is not provided, positions will be taken from the first conformer of each molecule in the topology. If any molecule has no conformers, an error will be raised.
 
-### Breaking change: List to Tuple in `Topology.identical_molecule_groups`
-
-The [`Topology.identical_molecule_groups`] property has been refactored for performance and improved typing support. It now returns a value of type `{int:[(int, {int: int})]}`, where it previously returned `{int:[[int, {int: int}]]}`; the interior 2-element list has been changed to a tuple to allow the type of each element to be specified separately. This is technically a breaking change but is unlikely to cause any issues.
-
-[`Topology.identical_molecule_groups`]: openff.toolkit.topology.Topology.identical_molecule_groups
-
 
 ## Current Development
 
@@ -152,6 +146,7 @@ The [`Topology.identical_molecule_groups`] property has been refactored for perf
   width is correctly set and enabled.
 - [PR #1213](https://github.com/openforcefield/openff-toolkit/pull/1213): Removes
   `Topology.charge_model` and `Topology.fractional_bond_order_model`.
+- [PR #1140](https://github.com/openforcefield/openff-toolkit/pull/1140): Adds the `Topology.identical_molecule_groups` property, which provides a way of grouping the instances of a specific chemical species in the topology.
 
 ### Critical bugfixes
 
