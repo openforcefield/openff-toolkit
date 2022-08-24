@@ -857,10 +857,12 @@ class TestOpenEyeToolkitWrapper:
 
     def test_from_pathlib_path(self):
         ethanol = create_ethanol()
-        ethanol.to_file("ethanol.sdf", file_format="sdf")
+        with NamedTemporaryFile(suffix=".sdf") as outfile:
+            filename = str(outfile.name)
+            ethanol.to_file(filename, file_format="sdf")
 
-        toolkit = OpenEyeToolkitWrapper()
-        toolkit.from_file(pathlib.Path("ethanol.sdf"), file_format="sdf")
+            toolkit = OpenEyeToolkitWrapper()
+            toolkit.from_file(pathlib.Path(filename), file_format="sdf")
 
     def test_write_multiconformer_pdb(self):
         """
@@ -2437,10 +2439,12 @@ class TestRDKitToolkitWrapper:
 
     def test_from_pathlib_path(self):
         ethanol = create_ethanol()
-        ethanol.to_file("ethanol.sdf", file_format="sdf")
+        with NamedTemporaryFile(suffix=".sdf") as outfile:
+            filename = str(outfile.name)
+            ethanol.to_file(filename, file_format="sdf")
 
-        toolkit = RDKitToolkitWrapper()
-        toolkit.from_file(pathlib.Path("ethanol.sdf"), file_format="sdf")
+            toolkit = RDKitToolkitWrapper()
+            toolkit.from_file(pathlib.Path(filename), file_format="sdf")
 
     def test_file_extension_case(self):
         """

@@ -3,6 +3,7 @@ channels:
   - conda-forge
   - openeye
 dependencies:
+  - python >= 3.8
   - pip
   - networkx
   - rdkit
@@ -15,6 +16,8 @@ dependencies:
   - ipywidgets >=7,<8
   - notebook
   - gromacs >=2021=nompi*
+  - pdbfixer
+  - snakeviz
   # Add back when LAMMPS export is better
   # lammps
   - openff-amber-ff-ports >=0.0.3
@@ -24,8 +27,6 @@ dependencies:
   - qcengine
   - pytest
   - nbval
-  # https://github.com/openforcefield/openff-toolkit/pull/1232#issuecomment-1080889858
-  # openmmforcefields
   # Below are some dependencies of the toolkit; they are listed here as a reference
   - mdtraj
   - numpy

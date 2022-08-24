@@ -87,6 +87,10 @@ intersphinx_mapping = {
         "https://docs.openforcefield.org/projects/fragmenter/en/stable/",
         None,
     ),
+    "openff.units": (
+        "https://docs.openforcefield.org/projects/units/en/stable/",
+        None,
+    ),
 }
 myst_url_schemes = [
     "http",

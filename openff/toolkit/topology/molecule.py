@@ -33,6 +33,7 @@ from copy import deepcopy
 from typing import (
     TYPE_CHECKING,
     Any,
+    DefaultDict,
     Dict,
     Generator,
     List,
@@ -999,33 +1000,20 @@ class FrozenMolecule(Serializable):
 
     @property
     def has_unique_atom_names(self) -> bool:
-        """True if the molecule has unique atom names, False otherwise."""
-        unique_atom_names = set([atom.name for atom in self.atoms])
-        if len(unique_atom_names) < self.n_atoms:
-            return False
-        return True
+        """``True`` if the molecule has unique atom names, ``False`` otherwise."""
+        return _has_unique_atom_names(self)
 
     def generate_unique_atom_names(self):
         """
-        Generate unique atom names using element name and number of times that element has occurred
-        e.g. 'C1x', 'H1x', 'O1x', 'C2x', ...
+        Generate unique atom names from the element symbol and count.
 
-        The character 'x' is appended to these generated names to reduce the odds that they clash with an atom name or
-        type imported from another source.
-
+        Names are generated from the elemental symbol and the number of times
+        that element is found in the molecule. The character 'x' is appended to
+        these generated names to reduce the odds that they clash with an atom
+        name or type imported from another source. For example, generated atom
+        names might begin 'C1x', 'H1x', 'O1x', 'C2x', etc.
         """
-        from collections import defaultdict
-
-        element_counts = defaultdict(int)
-        for atom in self.atoms:
-            symbol = atom.symbol
-            element_counts[symbol] += 1
-            # TODO: It may be worth exposing this as a user option, i.e. to avoid multiple ligands
-            # parameterized with OpenFF clashing because they have atom names like O1x, H3x, etc.
-            # i.e. an optional argument could enable a user to `generate_unique_atom_names(blah="y")
-            # to have one ligand be O1y, etc.
-            # https://github.com/openforcefield/openff-toolkit/pull/1096#pullrequestreview-767227391
-            atom.name = symbol + str(element_counts[symbol]) + "x"
+        return _generate_unique_atom_names(self)
 
     def _validate(self):
         """
@@ -1261,6 +1249,7 @@ class FrozenMolecule(Serializable):
         # self._cached_properties = None # Cached properties (such as partial charges) can be recomputed as needed
         self._partial_charges = None
         self._conformers = None  # Optional conformers
+        self._hill_formula = None  # Cached Hill formula
         self._hierarchy_schemes = dict()
         self._invalidate_cached_properties()
 
@@ -1874,7 +1863,25 @@ class FrozenMolecule(Serializable):
             [Dict[int,int]] ordered by mol1 indexing {mol1_index: mol2_index}
             If molecules are not isomorphic given input arguments, will return None instead of dict.
         """
-        # Do a quick hill formula check first
+
+        def _object_to_n_atoms(obj):
+            import networkx as nx
+
+            if isinstance(obj, FrozenMolecule):
+                return obj.n_atoms
+            elif isinstance(obj, nx.Graph):
+                return obj.number_of_nodes()
+            else:
+                raise TypeError(
+                    "are_isomorphic accepts a NetworkX Graph or OpenFF "
+                    + f"(Frozen)Molecule, not {type(obj)}"
+                )
+
+        # Quick number of atoms check. Important for large molecules
+        if _object_to_n_atoms(mol1) != _object_to_n_atoms(mol2):
+            return False, None
+
+        # If the number of atoms match, check the Hill formula
         if Molecule._object_to_hill_formula(mol1) != Molecule._object_to_hill_formula(
             mol2
         ):
@@ -2580,6 +2587,7 @@ class FrozenMolecule(Serializable):
         self._propers = None
         self._impropers = None
 
+        self._hill_formula = None
         self._cached_smiles = None
         # TODO: Clear fractional bond orders
         self._ordered_connection_table_hash = None
@@ -3345,9 +3353,11 @@ class FrozenMolecule(Serializable):
         -----------
         NotImplementedError : if the molecule is not of one of the specified types.
         """
-        atom_nums = [atom.atomic_number for atom in self.atoms]
+        if self._hill_formula is None:
+            atom_nums = [atom.atomic_number for atom in self.atoms]
+            self._hill_formula = _atom_nums_to_hill_formula(atom_nums)
 
-        return _atom_nums_to_hill_formula(atom_nums)
+        return self._hill_formula
 
     @staticmethod
     def _object_to_hill_formula(obj: Union["Molecule", "nx.Graph"]) -> str:
@@ -3361,9 +3371,9 @@ class FrozenMolecule(Serializable):
         elif isinstance(obj, nx.Graph):
             return _networkx_graph_to_hill_formula(obj)
         else:
-            raise RuntimeError(
-                f"Unsupport object of type {type(obj)} passed to "
-                "Molecule._object_to_hill_formula"
+            raise TypeError(
+                "_object_to_hill_formula accepts a NetworkX Graph or OpenFF "
+                + f"(Frozen)Molecule, not {type(obj)}"
             )
 
     def chemical_environment_matches(
@@ -5655,7 +5665,7 @@ class HierarchyElement:
 
     def to_dict(self):
         """
-        Serialize this object to a basic dict of strings, ints, and floats
+        Serialize this object to a basic dict of strings, ints, and floats.
         """
         return_dict = dict()
         return_dict["identifier"] = self.identifier
@@ -5663,26 +5673,31 @@ class HierarchyElement:
         return return_dict
 
     @property
+    def n_atoms(self):
+        """
+        The number of atoms in this hierarchy element.
+        """
+        return len(self.atom_indices)
+
+    @property
     def atoms(self):
+        """
+        Iterator over the atoms in this hierarchy element.
+        """
         for atom_index in self.atom_indices:
             yield self.parent.atoms[atom_index]
 
-    def atom(self, index: int):
+    def atom(self, index: int) -> Atom:
         """
-        Get atom with a specified index.
-
-        Parameters
-        ----------
-        index : int
-
-        Returns
-        -------
-        atom : openff.toolkit.topology.molecule.Atom
+        Get the atom with the specified index.
         """
         return self.parent.atoms[self.atom_indices[index]]
 
     @property
     def parent(self) -> FrozenMolecule:
+        """
+        The parent molecule for this hierarchy element
+        """
         return self.scheme.parent
 
     def __str__(self):
@@ -5693,3 +5708,52 @@ class HierarchyElement:
 
     def __repr__(self):
         return self.__str__()
+
+    @property
+    def has_unique_atom_names(self) -> bool:
+        """``True`` if the element has unique atom names, ``False`` otherwise."""
+        return _has_unique_atom_names(self)
+
+    def generate_unique_atom_names(self):
+        """
+        Generate unique atom names from the element symbol and count.
+
+        Names are generated from the elemental symbol and the number of times
+        that element is found in the hierarchy element. The character 'x' is
+        appended to these generated names to reduce the odds that they clash
+        with an atom name or type imported from another source. For example,
+        generated atom names might begin 'C1x', 'H1x', 'O1x', 'C2x', etc.
+        """
+        return _generate_unique_atom_names(self)
+
+
+def _has_unique_atom_names(obj: Union[FrozenMolecule, HierarchyElement]) -> bool:
+    """``True`` if the object has unique atom names, ``False`` otherwise."""
+    unique_atom_names = set([atom.name for atom in obj.atoms])
+    if len(unique_atom_names) < obj.n_atoms:
+        return False
+    return True
+
+
+def _generate_unique_atom_names(obj: Union[FrozenMolecule, HierarchyElement]):
+    """
+    Generate unique atom names from the element symbol and count.
+
+    Names are generated from the elemental symbol and the number of times that
+    element is found in the hierarchy element or molecule. The character 'x' is
+    appended to these generated names to reduce the odds that they clash with
+    an atom name or type imported from another source. For example, generated
+    atom names might begin 'C1x', 'H1x', 'O1x', 'C2x', etc.
+    """
+    from collections import defaultdict
+
+    element_counts: DefaultDict[str, int] = defaultdict(int)
+    for atom in obj.atoms:
+        symbol = atom.symbol
+        element_counts[symbol] += 1
+        # TODO: It may be worth exposing this as a user option, i.e. to avoid multiple ligands
+        # parameterized with OpenFF clashing because they have atom names like O1x, H3x, etc.
+        # i.e. an optional argument could enable a user to `generate_unique_atom_names(blah="y")
+        # to have one ligand be O1y, etc.
+        # https://github.com/openforcefield/openff-toolkit/pull/1096#pullrequestreview-767227391
+        atom.name = symbol + str(element_counts[symbol]) + "x"
