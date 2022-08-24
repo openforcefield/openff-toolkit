@@ -13,28 +13,45 @@ Class definitions to represent a molecular system and its chemical components
 """
 import itertools
 import warnings
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from collections.abc import MutableMapping
+from contextlib import nullcontext
 from copy import deepcopy
-from typing import TYPE_CHECKING, Dict, Generator, List, Tuple, Union
+from pathlib import Path
+from typing import (
+    TYPE_CHECKING,
+    Dict,
+    Generator,
+    Iterator,
+    List,
+    Literal,
+    Optional,
+    TextIO,
+    Tuple,
+    Union,
+)
 
 import numpy as np
-from openff.units import unit
+from numpy.typing import NDArray
+from openff.units import Quantity, unit
 from openff.utilities import requires_package
 
 from openff.toolkit.topology import Molecule
 from openff.toolkit.topology._mm_molecule import _SimpleBond, _SimpleMolecule
+from openff.toolkit.topology.molecule import HierarchyElement
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.exceptions import (
     AtomNotInTopologyError,
     DuplicateUniqueMoleculeError,
+    IncompatibleUnitError,
     InvalidAromaticityModelError,
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
     MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
     NotBondedError,
+    WrongShapeError,
 )
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import (
@@ -44,6 +61,8 @@ from openff.toolkit.utils.toolkits import (
 )
 
 if TYPE_CHECKING:
+    from openmm.unit import Quantity as OMMQuantity
+
     from openff.toolkit.topology.molecule import Atom
 
 
@@ -445,7 +464,8 @@ class Topology(Serializable):
         atom_index_offset = self.n_atoms
 
         for molecule in other.molecules:
-            self.add_molecule(deepcopy(molecule))
+            self._add_molecule_keep_cache(molecule)
+        self._invalidate_cached_properties()
 
         for key, value in constrained_atom_pairs_to_add.items():
             new_key = tuple(index + atom_index_offset for index in key)
@@ -494,7 +514,8 @@ class Topology(Serializable):
         # Create Topology and populate it with specified molecules
         topology = cls()
         for molecule in molecules:
-            topology.add_molecule(molecule)
+            topology._add_molecule_keep_cache(molecule)
+        topology._invalidate_cached_properties()
 
         return topology
 
@@ -1044,18 +1065,21 @@ class Topology(Serializable):
         return matches
 
     @property
-    def identical_molecule_groups(self):
+    def identical_molecule_groups(self) -> Dict[int, List[Tuple[int, Dict[int, int]]]]:
         """
         Returns groups of chemically identical molecules, identified by index and atom map.
 
         Returns
         -------
-        identical_molecule_groups : {int:[[int: {int: int}]]}
-            A dict of the form {unique_mol_idx : [[topology_mol_idx, atom_map],...].
-            A dict where each key is the topology molecule index of a unique chemical species, and each value is a list
-            describing all of the instances of that chemical species in the topology. Each instance is a
-            two-membered list where the first element is the topology molecule index, and the second element
-            is a dict describing the atom map from the unique molecule to the instance of it in the topology.
+        identical_molecule_groups : {int:[(int, {int: int})]}
+            A dict of the form {unique_mol_idx : [(topology_mol_idx, atom_map),...].
+            Each key is the topology molecule index of a unique chemical species.
+            Iterating over the keys will yield all of the unique chemical
+            species in the topology. Each value is a list describing all of the
+            instances of that chemical species in the topology. Each instance is
+            a 2-tuple where the first element is the topology molecule index of
+            the instance, and the second element maps the atom indices of the
+            unique molecule to the instance.
 
         >>> from openff.toolkit import Molecule, Topology
         >>> # Create a water ordered as OHH
@@ -1077,47 +1101,53 @@ class Topology(Serializable):
         >>> top = Topology.from_molecules([water1, water2])
         >>> top.identical_molecule_groups
 
-        {0: [[0, {0: 0, 1: 1, 2: 2}], [1, {0: 1, 1: 0, 2: 2}]]}
-        """
-        identity_maps = self._identify_chemically_identical_molecules()
-        # Convert molecule identity maps into groups of identical molecules
-        groupings = {}
-        for molecule_idx in identity_maps.keys():
-            unique_mol, atom_map = identity_maps[molecule_idx]
-            groupings[unique_mol] = groupings.get(unique_mol, list()) + [
-                [molecule_idx, atom_map]
-            ]
-        return groupings
-
-    def _identify_chemically_identical_molecules(self):
-        """
-        Efficiently perform an all-by-all isomorphism check for the molecules in this Topology. This method
-        uses the strictest form of isomorphism checking, which will NOT match distinct kekule structures of
-        multiple resonance forms of the same molecule, or different kekulizations of aromatic systems.
-
-        Returns
-        -------
-        identical_molecules : {int: (int, {int: int})}
-            A mapping from the index of each molecule in the topology to (the index of the first appearance of
-            a chemically equivalent molecule in the topology, and a mapping from the atom indices of this molecule to
-            the atom indices of that chemically equivalent molecule).
-            ``identical_molecules[molecule_idx] = (
-                unique_molecule_idx, {molecule_atom_idx, unique_molecule_atom_idx}
-            )``
+        {0: [(0, {0: 0, 1: 1, 2: 2}), (1, {0: 1, 1: 0, 2: 2})]}
         """
         # Check whether this was run previously, and a cached result is available.
         if self._cached_chemically_identical_molecules is not None:
             return self._cached_chemically_identical_molecules
 
-        # If a cached result isn't available, recalculate the identity maps.
-        self._cached_chemically_identical_molecules = dict()
+        # Convert molecule identity maps into groups of identical molecules
+        identity_maps = self._identify_chemically_identical_molecules()
+        groupings: Dict[int, List[Tuple[int, Dict[int, int]]]] = defaultdict(list)
+        for molecule_idx, (unique_mol, atom_map) in identity_maps.items():
+            groupings[unique_mol] += [(molecule_idx, atom_map)]
+
+        self._cached_chemically_identical_molecules = dict(groupings)
+
+        return self._cached_chemically_identical_molecules
+
+    def _identify_chemically_identical_molecules(
+        self,
+    ) -> Dict[int, Tuple[int, Dict[int, int]]]:
+        """
+        Perform an all-by-all isomorphism check over molecules in the Topology.
+
+        Efficiently performs an all-by-all isomorphism check for the molecules in
+        this Topology. This method uses the strictest form of isomorphism
+        checking, which will NOT match distinct kekule structures of multiple
+        resonance forms of the same molecule, or different kekulizations of
+        aromatic systems.
+
+        Returns
+        -------
+        identical_molecules : {int: (int, {int: int})}
+            A mapping from the index of each molecule in the topology to (the
+            index of the first appearance of a chemically equivalent molecule in
+            the topology, and a mapping from the atom indices of this molecule
+            to the atom indices of that chemically equivalent molecule).
+            ``identical_molecules[molecule_idx] = (
+                unique_molecule_idx, {molecule_atom_idx, unique_molecule_atom_idx}
+            )``
+        """
+        identity_maps: Dict[int, Tuple[int, Dict[int, int]]] = dict()
         already_matched_mols = set()
 
         for mol1_idx in range(self.n_molecules):
             if mol1_idx in already_matched_mols:
                 continue
             mol1 = self.molecule(mol1_idx)
-            self._cached_chemically_identical_molecules[mol1_idx] = (
+            identity_maps[mol1_idx] = (
                 mol1_idx,
                 {i: i for i in range(mol1.n_atoms)},
             )
@@ -1129,12 +1159,13 @@ class Topology(Serializable):
                     mol1, mol2, return_atom_map=True
                 )
                 if are_isomorphic:
-                    self._cached_chemically_identical_molecules[mol2_idx] = (
+                    identity_maps[mol2_idx] = (
                         mol1_idx,
                         atom_map,
                     )
                     already_matched_mols.add(mol2_idx)
-        return self._cached_chemically_identical_molecules
+
+        return identity_maps
 
     def _build_atom_index_cache(self):
         topology_molecule_atom_start_index = 0
@@ -1225,7 +1256,8 @@ class Topology(Serializable):
 
         for molecule_dict in topology_dict["molecules"]:
             new_mol = Molecule.from_dict(molecule_dict)
-            self.add_molecule(new_mol)
+            self._add_molecule_keep_cache(new_mol)
+        self._invalidate_cached_properties()
 
     @staticmethod
     @requires_package("openmm")
@@ -1241,6 +1273,7 @@ class Topology(Serializable):
                 atom_name=atom.name,
                 residue_name=atom.residue.name,
                 residue_id=atom.residue.id,
+                insertion_code=atom.residue.insertionCode,
                 chain_id=atom.residue.chain.id,
             )
         for bond in openmm_topology.bonds():
@@ -1404,8 +1437,13 @@ class Topology(Serializable):
                 off_atom.metadata["residue_number"] = int(
                     omm_mol_G.nodes[omm_atom]["residue_id"]
                 )
+                off_atom.metadata["insertion_code"] = omm_mol_G.nodes[omm_atom][
+                    "insertion_code"
+                ]
+
                 off_atom.metadata["chain_id"] = omm_mol_G.nodes[omm_atom]["chain_id"]
-            topology.add_molecule(remapped_mol)
+            topology._add_molecule_keep_cache(remapped_mol)
+        topology._invalidate_cached_properties()
 
         if openmm_topology.getPeriodicBoxVectors() is not None:
             topology.box_vectors = from_openmm(openmm_topology.getPeriodicBoxVectors())
@@ -1414,14 +1452,14 @@ class Topology(Serializable):
         return topology
 
     @requires_package("openmm")
-    def to_openmm(self, ensure_unique_atom_names=True):
+    def to_openmm(self, ensure_unique_atom_names: Union[str, bool] = "residues"):
         """
         Create an OpenMM Topology object.
 
-        The atom metadata fields `residue_name`, `residue_number`, and `chain_id`
+        The atom metadata fields `residue_name`, `residue_number`, `insertion_code`, and `chain_id`
         are used to group atoms into OpenMM residues and chains.
 
-        Contiguously-indexed atoms with the same `residue_name`, `residue_number`,
+        Contiguously-indexed atoms with the same `residue_name`, `residue_number`, `insertion_code`,
         and `chain_id` will be put into the same OpenMM residue.
 
         Contiguously-indexed residues with with the same `chain_id` will be put
@@ -1435,11 +1473,18 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        ensure_unique_atom_names : bool, optional. Default=True
-            Whether to check that the molecules in each molecule have
-            unique atom names, and regenerate them if not. Note that this
-            looks only at molecules, and does not guarantee uniqueness in
-            the entire Topology.
+        ensure_unique_atom_names
+            Whether to generate new atom names to ensure uniqueness within a
+            molecule or hierarchy element.
+
+            - If the name of a :class:`HierarchyScheme` is given as a string,
+              new atom names will be generated so that each element of that
+              scheme has unique atom names. Molecules without the given
+              hierarchy scheme will be given unique atom names within that
+              molecule.
+            - If ``True``, new atom names will be generated so that atom names
+              are unique within a molecule.
+            - If ``False``, the existing atom names will be used.
 
         Returns
         -------
@@ -1452,19 +1497,26 @@ class Topology(Serializable):
 
         from openff.toolkit.topology.molecule import Bond
 
+        off_topology = Topology(self)
         omm_topology = app.Topology()
 
         # Create unique atom names
         if ensure_unique_atom_names:
-            for ref_mol in self.reference_molecules:
-                if not ref_mol.has_unique_atom_names:
-                    ref_mol.generate_unique_atom_names()
+            for molecule in off_topology._molecules:
+                if isinstance(ensure_unique_atom_names, str) and hasattr(
+                    molecule, ensure_unique_atom_names
+                ):
+                    for hier_elem in getattr(molecule, ensure_unique_atom_names):
+                        if not hier_elem.has_unique_atom_names:
+                            hier_elem.generate_unique_atom_names()
+                elif not molecule.has_unique_atom_names:
+                    molecule.generate_unique_atom_names()
 
         # Go through atoms in OpenFF to preserve the order.
         omm_atoms = []
 
         # For each atom in each molecule, determine which chain/residue it should be a part of
-        for molecule in self.molecules:
+        for molecule in off_topology.molecules:
             # No chain or residue can span more than one OFF molecule, so reset these to None for the first
             # atom in each molecule.
             last_chain = None
@@ -1481,6 +1533,12 @@ class Topology(Serializable):
                     atom_residue_number = atom.metadata["residue_number"]
                 else:
                     atom_residue_number = "0"
+
+                # If the insertion code  is undefined, assume a default of " "
+                if "insertion_code" in atom.metadata:
+                    atom_insertion_code = atom.metadata["insertion_code"]
+                else:
+                    atom_insertion_code = " "
 
                 # If the chain ID is undefined, assume a default of "X"
                 if "chain_id" in atom.metadata:
@@ -1499,24 +1557,33 @@ class Topology(Serializable):
                 # Determine whether this atom should be a part of the last atom's residue, or if it
                 # should start a new residue
                 if last_residue is None:
-                    residue = omm_topology.addResidue(atom_residue_name, chain)
-                    residue.id = atom_residue_number
+                    residue = omm_topology.addResidue(
+                        atom_residue_name,
+                        chain,
+                        id=atom_residue_number,
+                        insertionCode=atom_insertion_code,
+                    )
                 elif (
                     (last_residue.name == atom_residue_name)
                     and (int(last_residue.id) == int(atom_residue_number))
+                    and (last_residue.insertionCode == atom_insertion_code)
                     and (chain.id == last_chain.id)
                 ):
                     residue = last_residue
                 else:
-                    residue = omm_topology.addResidue(atom_residue_name, chain)
-                    residue.id = atom_residue_number
+                    residue = omm_topology.addResidue(
+                        atom_residue_name,
+                        chain,
+                        id=atom_residue_number,
+                        insertionCode=atom_insertion_code,
+                    )
 
                 # Add atom.
                 element = app.Element.getByAtomicNumber(atom.atomic_number)
                 omm_atom = omm_topology.addAtom(atom.name, element, residue)
 
                 # Make sure that OpenFF and OpenMM Topology atoms have the same indices.
-                assert self.atom_index(atom) == int(omm_atom.id) - 1
+                assert off_topology.atom_index(atom) == int(omm_atom.id) - 1
                 omm_atoms.append(omm_atom)
 
                 last_chain = chain
@@ -1526,7 +1593,9 @@ class Topology(Serializable):
             bond_types = {1: app.Single, 2: app.Double, 3: app.Triple}
             for bond in molecule.bonds:
                 atom1, atom2 = bond.atoms
-                atom1_idx, atom2_idx = self.atom_index(atom1), self.atom_index(atom2)
+                atom1_idx, atom2_idx = off_topology.atom_index(
+                    atom1
+                ), off_topology.atom_index(atom2)
                 if isinstance(bond, Bond):
                     if bond.is_aromatic:
                         bond_type = app.Aromatic
@@ -1549,15 +1618,20 @@ class Topology(Serializable):
                     order=bond_order,
                 )
 
-        if self.box_vectors is not None:
+        if off_topology.box_vectors is not None:
             from openff.units.openmm import to_openmm
 
-            omm_topology.setPeriodicBoxVectors(to_openmm(self.box_vectors))
+            omm_topology.setPeriodicBoxVectors(to_openmm(off_topology.box_vectors))
         return omm_topology
 
     @requires_package("openmm")
     def to_file(
-        self, filename: str, positions, file_format: str = "PDB", keepIds=False
+        self,
+        file: Union[Path, str, TextIO],
+        positions: Optional[Union["OMMQuantity", Quantity, NDArray]] = None,
+        file_format: Literal["PDB"] = "PDB",
+        keep_ids: bool = False,
+        ensure_unique_atom_names: Union[str, bool] = "residues",
     ):
         """
         Save coordinates and topology to a PDB file.
@@ -1575,41 +1649,148 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        filename : str
-            name of the pdb file to write to
-        positions : n_atoms x 3 numpy array or openmm.unit.Quantity-wrapped n_atoms x 3 iterable
-            Can be a
-              - `openmm.unit.Quantity' object which has atomic positions as a list of unit-tagged `Vec3` objects
-              - `openff.units.unit.Quantity` object which wraps a `numpy.ndarray` with units
-              - (unitless) 2D `numpy.ndarray`, in which it is assumed that the positions are in units of Angstroms.
-            For all data types, must have shape (n_atoms, 3) where n_atoms is the number of atoms in this topology.
-        file_format : str
-            Output file format. Case insensitive. Currently only supported value is "pdb".
+        file
+            A file-like object to write to, or a path to save the file to.
+        positions : Array with shape ``(n_atoms, 3)`` and dimensions of length
+            May be a...
+
+            - ``openmm.unit.Quantity`` object which has atomic positions as a
+              list of unit-tagged ``Vec3`` objects
+            - ``openff.units.unit.Quantity`` object which wraps a
+              ``numpy.ndarray`` with dimensions of length
+            - (unitless) 2D ``numpy.ndarray``, in which it is assumed that the
+              positions are in units of Angstroms.
+            - ``None`` (the default), in which case the first conformer of
+              each molecule in the topology will be used.
+
+        file_format
+            Output file format. Case insensitive. Currently only supported value
+            is ``"PDB"``.
+        keep_ids
+            If ``True``, keep the residue and chain IDs specified in the Topology
+            rather than generating new ones.
+        ensure_unique_atom_names
+            Whether to generate new atom names to ensure uniqueness within a
+            molecule or hierarchy element.
+
+            - If the name of a :class:`HierarchyScheme` is given as a string,
+              new atom names will be generated so that each element of that
+              scheme has unique atom names. Molecules without the given
+              hierarchy scheme will be given unique atom names within that
+              molecule.
+            - If ``True``, new atom names will be generated so that atom names
+              are unique within a molecule.
+            - If ``False``, the existing atom names will be used.
+
+            Note that this option cannot guarantee name uniqueness for formats
+            like PDB that truncate long atom names.
 
         """
+        from openff.units.openmm import to_openmm as to_openmm_quantity
         from openmm import app
         from openmm import unit as openmm_unit
 
-        openmm_top = self.to_openmm()
+        # Convert the topology to OpenMM
+        openmm_top = self.to_openmm(ensure_unique_atom_names=ensure_unique_atom_names)
 
+        # Get positions in OpenMM format
         if isinstance(positions, openmm_unit.Quantity):
             openmm_positions = positions
         elif isinstance(positions, unit.Quantity):
-            from openff.units.openmm import to_openmm as to_openmm_quantity
-
             openmm_positions = to_openmm_quantity(positions)
         elif isinstance(positions, np.ndarray):
             openmm_positions = openmm_unit.Quantity(positions, openmm_unit.angstroms)
+        elif positions is None:
+            openmm_positions = to_openmm_quantity(self.get_positions())
         else:
             raise ValueError(f"Could not process positions of type {type(positions)}.")
 
-        file_format = file_format.upper()
-        if file_format != "PDB":
+        # Make sure the desired file format is PDB
+        if file_format.upper() != "PDB":
             raise NotImplementedError("Topology.to_file supports only PDB format")
 
-        # writing to PDB file
-        with open(filename, "w") as outfile:
-            app.PDBFile.writeFile(openmm_top, openmm_positions, outfile, keepIds)
+        # Write PDB file
+        ctx_manager: Union[nullcontext[TextIO], TextIO]  # MyPy needs some help here
+        if isinstance(file, (str, Path)):
+            ctx_manager = open(file, "w")
+        else:
+            ctx_manager = nullcontext(file)
+        with ctx_manager as outfile:
+            app.PDBFile.writeFile(
+                topology=openmm_top,
+                positions=openmm_positions,
+                file=outfile,
+                keepIds=keep_ids,
+            )
+
+    def get_positions(self) -> Optional[Quantity]:
+        """
+        Copy the positions of the topology into a new array.
+
+        Topology positions are stored as the first conformer of each molecule.
+        If any molecule has no conformers, this method returns ``None``. Note
+        that modifying the returned array will not update the positions in the
+        topology. To change the positions, use :meth:`Topology.set_positions`.
+
+        See Also
+        ========
+        set_positions
+        """
+        conformers = []
+        for molecule in self.molecules:
+            try:
+                conformer = molecule.conformers[0]
+            except (IndexError, TypeError):
+                return None
+
+            conformer = conformer.m_as(unit.nanometer)
+
+            conformers.append(conformer)
+        positions = np.concatenate(conformers, axis=0)
+
+        return Quantity(positions, unit.nanometer)
+
+    def set_positions(self, array: Quantity):
+        """
+        Set the positions in a topology by copying from a single n×3 array.
+
+        Note that modifying the original array will not update the positions
+        in the topology; it must be passed again to ``set_positions()``.
+
+        Parameters
+        ==========
+
+        array
+            Positions for the topology. Should be a unit-wrapped array-like
+            object with shape (n_atoms, 3) and dimensions of length.
+
+        See Also
+        ========
+        get_positions
+        """
+        if not isinstance(array, Quantity):
+            raise IncompatibleUnitError(
+                "array should be an OpenFF Quantity with dimensions of length"
+            )
+
+        # Copy the array in nanometers and make it an OpenFF Quantity
+        array = Quantity(np.asarray(array.to(unit.nanometer).magnitude), unit.nanometer)
+        if array.shape != (self.n_atoms, 3):
+            raise WrongShapeError(
+                f"Array has shape {array.shape} but should have shape {self.n_atoms, 3}"
+            )
+
+        start = 0
+        for molecule in self.molecules:
+            stop = start + molecule.n_atoms
+            if molecule.conformers is None:
+                if isinstance(molecule, Molecule):
+                    molecule._conformers = [array[start:stop]]
+                else:
+                    molecule.conformers = [array[start:stop]]
+            else:
+                molecule.conformers[0:1] = [array[start:stop]]
+            start = stop
 
     @classmethod
     @requires_package("mdtraj")
@@ -2065,8 +2246,16 @@ class Topology(Serializable):
             this_molecule_start_index += molecule.n_bonds
 
     def add_molecule(self, molecule: Union[Molecule, _SimpleMolecule]) -> int:
-        self._molecules.append(deepcopy(molecule))
+        """Add a copy of the molecule to the topology"""
+        idx = self._add_molecule_keep_cache(molecule)
         self._invalidate_cached_properties()
+        return idx
+
+    def _add_molecule_keep_cache(
+        self,
+        molecule: Union[Molecule, _SimpleMolecule],
+    ) -> int:
+        self._molecules.append(deepcopy(molecule))
         return len(self._molecules)
 
     def add_constraint(self, iatom, jatom, distance=True):
@@ -2128,20 +2317,29 @@ class Topology(Serializable):
         else:
             return False
 
-    def hierarchy_iterator(self, iter_name):
+    def hierarchy_iterator(
+        self,
+        iter_name: str,
+    ) -> Iterator[HierarchyElement]:
         """
-        Get a HierarchyElement iterator from all of the molecules in this topology that provide the appropriately
-        named iterator. This iterator will yield HierarchyElements sorted first by the order that molecules are
-        listed in the Topology, and second by the specific sorting of HierarchyElements defined in each molecule.
+        Iterate over all molecules with the given hierarchy scheme.
+
+        Get an iterator over hierarchy elements from all of the molecules in
+        this topology that provide the appropriately named iterator. This
+        iterator will yield hierarchy elements sorted first by the order that
+        molecules are listed in the Topology, and second by the specific
+        sorting of hierarchy elements defined in each molecule. Molecules
+        without the named iterator are not included.
 
         Parameters
         ----------
-        iter_name: string
-            The iterator name associated with the HierarchyScheme to retrieve (for example 'residues' or 'chains')
+        iter_name
+            The iterator name associated with the HierarchyScheme to retrieve
+            (for example 'residues' or 'chains')
 
         Returns
         -------
-        iterator of HierarchyElement
+        iterator of :class:`HierarchyElement`
         """
         for molecule in self._molecules:
             if hasattr(molecule, iter_name):

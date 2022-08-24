@@ -55,6 +55,43 @@ print(value_roundtrip)
 # 1.0 <Unit('nanometer')>
 ```
 
+### `Topology.to_file()`
+
+The [`Topology.to_file()`](openff.toolkit.topology.Topology.to_file) method has been significantly revised, including three breaking changes.
+
+#### Breaking change: `filename` argument renamed `file`
+
+The `filename` argument has been renamed `file`, and now supports file-like objects in addition to file names:
+
+```diff
+-  topology.to_file(filename="out.pdb", positions=xyz)
++  topology.to_file(file="out.pdb", positions=xyz)
+```
+
+#### Breaking change: Atom names guaranteed unique per residue by default
+
+The default behavior is now to ensure that atom names are unique within a residue, rather than within a molecule. The `ensure_unique_atom_names` argument has been added to control this behavior. The previous behavior can be achieved by passing `True` to `ensure_unique_atom_names`:
+
+```diff
+- topology.to_file("out.pdb", xyz)
++ topology.to_file("out.pdb", xyz, ensure_unique_atom_names=True)
+```
+
+The `ensure_unique_atom_names` argument can also take the name of a `HierarchyScheme`, in which case atom names will be unique within the elements of that scheme (instead of within the atoms of a molecule). If the scheme is missing from a molecule, atom names will be unique within that molecule. The default value of this argument is `"residues"` to preserve atom names from the PDB.
+
+#### Breaking change: `keepIds` argument renamed `keep_ids`
+
+The `keepIds` argument has been renamed to the more Pythonic `keep_ids`. Its behavior and position in the argument list has not changed.
+
+```diff
+- topology.to_file("out.pdb", xyz, keepIds=True)
++ topology.to_file("out.pdb", xyz, keep_ids=True)
+```
+
+#### Non-breaking changes
+
+In addition to these breaking changes, the `positions` argument is now optional. If it is not provided, positions will be taken from the first conformer of each molecule in the topology. If any molecule has no conformers, an error will be raised.
+
 
 ## Current Development
 
@@ -109,6 +146,7 @@ print(value_roundtrip)
   width is correctly set and enabled.
 - [PR #1213](https://github.com/openforcefield/openff-toolkit/pull/1213): Removes
   `Topology.charge_model` and `Topology.fractional_bond_order_model`.
+- [PR #1140](https://github.com/openforcefield/openff-toolkit/pull/1140): Adds the `Topology.identical_molecule_groups` property, which provides a way of grouping the instances of a specific chemical species in the topology.
 
 ### Critical bugfixes
 
@@ -164,11 +202,16 @@ print(value_roundtrip)
   double bond stereo would cause `to_rdkit` to raise an error. The transfer of double bond stereochemistry
   from OpenFF's E/Z representation to RDKit's local representation is now handled as a constraint
   satisfaction problem.
+- [PR #1368](https://github.com/openforcefield/openff-toolkit/pull/1368): Adds the `Topology.get_positions()` and `Topology.set_positions()` methods for working with topology positions. Positions are represented as the first conformer of each molecule in the topology.
+- [PR #1368](https://github.com/openforcefield/openff-toolkit/pull/1368): Allows setting the `ensure_unique_atom_names` argument of `Topology.to_openmm()`to the name of a hierarchy scheme, in which case atom names are guaranteed unique per element of that scheme rather than per molecule. Changes the default value to `"residues"`.
+- [PR #1368](https://github.com/openforcefield/openff-toolkit/pull/1368): Adds the `ensure_unique_atom_names` argument to the `Topology.to_file()`, which mimics the same argument in `Topology.to_openmm()`. Renames the `keepIds` argument to `keep_ids`. Renames the `filename` argument to `file` and allows a file-like object to be passed instead of a filename. Makes the `positions` argument optional; if it is not given, positions are take from the first conformer of each molecule in the Topology.
 
 ### Examples added
 
 - [PR #1113](https://github.com/openforcefield/openff-toolkit/pull/1113): Updates the Amber/GROMACS
   example to use Interchange.
+
+- [PR #1368](https://github.com/openforcefield/openff-toolkit/pull/1368): Updates the Toolkit showcase with the new polymer handling and Interchange support
 
 ### Tests updated
 

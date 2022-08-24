@@ -3,6 +3,7 @@ channels:
   - conda-forge
   - openeye
 dependencies:
+  - python >= 3.8
   - pip
   - networkx
   - rdkit
@@ -13,6 +14,12 @@ dependencies:
   - ipywidgets >=7,<8
   - notebook
   - gromacs >=2021=nompi*
+  - pdbfixer
+  - snakeviz
+  # Add back when LAMMPS export is better
+  # lammps
+  - openff-amber-ff-ports >=0.0.3
+  - ambertools
   - qcelemental
   - qcportal
   - qcengine
@@ -22,6 +29,16 @@ dependencies:
   # openmmforcefields
   # Dependencies of the full Interchange package not included in openff-interchange-base
   - pandas
+  # Below are some dependencies of the toolkit; they are listed here as a reference
+  - mdtraj
+  - numpy
+  - openmm >=7.7
+  - openff-forcefields >=2.0.0
+  - cached-property
+  - cachetools
+  # Some others that will be pulled down by an Interchange conda package
+  - openff-utilities
+  - openff-units >=0.1.6
   - panedr
   # Add back when LAMMPS export is better
   # lammps
