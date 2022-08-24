@@ -8,7 +8,52 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Migration guide
 
+### Important API points re-exported from `openff.toolkit`
+
+A number of commonly used API points have been re-exported from the package root. This should make using the Toolkit simpler for most people. The previous API points remain available. These API points are lazy-loaded so that parts of the toolkit can still be loaded without loading the entire code-base.
+
+The most important of these are the `ForceField`, `Molecule`, and `Topology` classes:
+
+```diff
+- from openff.toolkit.typing.engines.smirnoff import ForceField
+- from openff.toolkit.topology import Molecule, Topology
++ from openff.toolkit import ForceField, Molecule, Topology
+```
+
+A number of other useful API points are also available through this mechanism:
+
+```diff
+- from openff.toolkit.typing.engines.smirnoff import get_available_force_fields
+- from openff.toolkit.utils.toolkits import (
+-     GLOBAL_TOOLKIT_REGISTRY,
+-     AmberToolsToolkitWrapper,
+-     BuiltInToolkitWrapper,
+-     OpenEyeToolkitWrapper,
+-     RDKitToolkitWrapper,
+-     ToolkitRegistry,
+- )
++ from openff.toolkit import (
++     get_available_force_fields,
++     GLOBAL_TOOLKIT_REGISTRY,
++     AmberToolsToolkitWrapper,
++     BuiltInToolkitWrapper,
++     OpenEyeToolkitWrapper,
++     RDKitToolkitWrapper,
++     ToolkitRegistry,
++ )
+```
+
+The `topology`, `typing`, and `utils` modules can also be lazy loaded after importing only the top-level module:
+
+```diff
+- import openff.toolkit.topology
++ import openff.toolkit
+  atom = openff.toolkit.topology.Atom()
+```
+
 ### Units
+
+The use of OpenMM units has been replaced by the new OpenFF Units package, based on Pint.
 
 Import the [unit registry](https://pint.readthedocs.io/en/stable/developers_reference.html?highlight=unitregistry#pint.UnitRegistry) provided by `openff-units`:
 
@@ -55,6 +100,90 @@ print(value_roundtrip)
 # 1.0 <Unit('nanometer')>
 ```
 
+<!-- ### `ForceField.create_openmm_system()` now goes through Interchange
+
+TODO. This includes removal of some stuff from openff.toolkit.typing.engines.smirnoff.parameters:
+- NonintegralMoleculeChargeException
+- NonbondedMethod
+- ParameterHandler.assign_parameters()
+- ParameterHandler.postprocess_system()
+- ParameterHandler.check_partial_bond_orders_from_molecules_duplicates()
+- ParameterHandler.assign_partial_bond_orders_from_molecules()
+
+ -->
+
+### Breaking change: `Topology` molecule representation
+
+`Topology` objects now store complete copies of their constituent `Molecule` objects, rather than using simplified classes specific to `Topology`. This dramatically simplifies the code base and allows the use of the full `Molecule` API on molecules inside topologies.
+
+The following classes have been removed:
+- `TopologyAtom`
+- `TopologyBond`
+- `TopologyMolecule`
+- `TopologyVirtualParticle`
+- `TopologyVirtualSite`
+
+In addition, the `Topology.identical_molecule_groups` property has been added, to facilitate iterating over copies of isomorphic molecules in a `Topology`.
+
+### Breaking change: Removed virtual site handling from topologies
+
+To maintain a clear distinction between a model and the chemistry it represents, virtual site handling has been removed from the Toolkit's `Topology` and `Molecule` classes. Virtual site support remains in the force field side of the toolkit, but creating virtual sites for particular molecules is now the responsibility of OpenFF Interchange. This allows the same `Topology` to be used for force fields that use different virtual sites; for example, a topology representing a solvated protein might be parametrized separately with a 3-point and 4-point water model.
+
+As part of this change, the distinction between `Atom` and `Particle` is deprecated. The `Particle` class will be removed in a future release.
+
+The following classes have been removed:
+- `BondChargeVirtualSite`
+- `DivalentLonePairVirtualSite`
+- `MonovalentLonePairVirtualSite`
+- `TrivalentLonePairVirtualSite`
+- `VirtualParticle`
+- `VirtualSite`
+
+The following methods and properties have been removed:
+- `Atom.add_virtual_site()`
+- `Atom.virtual_sites`
+- `FrozenMolecule.compute_virtual_site_positions_from_conformer()`
+- `FrozenMolecule.compute_virtual_site_positions_from_atom_positions()`
+- `FrozenMolecule.n_virtual_sites`
+- `FrozenMolecule.n_virtual_particles`
+- `FrozenMolecule.virtual_sites()`
+- `Molecule.add_bond_charge_virtual_site()`
+- `Molecule.add_monovalent_lone_pair_virtual_site()`
+- `Molecule.add_divalent_lone_pair_virtual_site()`
+- `Molecule.add_trivalent_lone_pair_virtual_site()`
+- `Molecule.add_bond_charge_virtual_site()`
+- `Topology.n_topology_virtual_sites`
+- `Topology.topology_virtual_sites`
+- `Topology.virtual_site()`
+- `Topology.add_particle()`
+
+### Breaking change: Removed `Topology.charge_model` and `Topology.fractional_bond_order_model`
+
+To maintain a clear distinction between a model and the chemistry it represents, the `Topology.charge_model` and `Topology.fractional_bond_order_model` properties have been removed. Charge models and FBOs are now the responsibility of the ForceField.
+
+### Breaking change: Removed `Atom.element`
+
+`Atom.element` has been removed to reduce our dependency on OpenMM for core functions:
+
+```diff
+- atomic_number = atom.element.atomic_number
++ atomic_number = atom.atomic_number
+- atom_mass = atom.element.mass
++ atom_mass = atom.mass
+- atom_elem_symbol = atom.element.symbol
++ atom_elem_symbol = atom.symbol
+```
+<!-- 
+- atom_elem_name = atom.element.name
++ atom_elem_name = atom.element_name # TODO
+-->
+
+### Atom metadata and hierarchy schemes for iterating over residues, chains, etc.
+
+The new `Atom.metadata` attribute is a dictionary that can store arbitrary metadata. Atom metadata commonly includes residue names, residue sequence numbers, chain identifiers, and other metadata that is not essential to the functioning of the Toolkit. Metadata can then be passed on when a `Molecule` is converted to another package; see [](users/molecule_conversion).
+
+Metadata can also support iteration through the [`HierarchyScheme`](openff.toolkit.topology.HierarchyScheme) class. A hierarchy scheme is defined by some uniqueness criteria. Iterating over the scheme iterates over groups of atoms that have identical metadata values for the defined uniqueness criteria. For more information, see the API docs for [`HierarchyScheme`](openff.toolkit.topology.HierarchyScheme) and its related methods.
+
 ### `Topology.to_file()`
 
 The [`Topology.to_file()`](openff.toolkit.topology.Topology.to_file) method has been significantly revised, including three breaking changes.
@@ -92,6 +221,25 @@ The `keepIds` argument has been renamed to the more Pythonic `keep_ids`. Its beh
 
 In addition to these breaking changes, the `positions` argument is now optional. If it is not provided, positions will be taken from the first conformer of each molecule in the topology. If any molecule has no conformers, an error will be raised.
 
+### Positions in topologies
+
+The `Topology.get_positions()` and `Topology.set_positions()` methods have been added to facilitate working with coordinates in topologies. A topology's positions are defined by the zeroth conformer of each molecule. If any molecule lacks conformers, the entire topology has no positions.
+
+<!-- ### Parameter types moved out of handler classes
+
+TODO. -->
+
+<!-- ### Exceptions renamed or removed
+
+TODO. -->
+
+<!-- ### Deprecations
+
+TODO. -->
+
+<!-- ### Changes in openff.toolkit.utils.utils
+
+TODO. -->
 
 ## Current Development
 
@@ -101,7 +249,7 @@ In addition to these breaking changes, the `positions` argument is now optional.
   the charge model was set to `AM1-Mulliken`.
 - [PR #1348](https://github.com/openforcefield/openff-toolkit/pull/1348): Allows
   `pathlib.Path` objects to be passed to
-  [`Molecule.from_file`](openff.toolkit.topology.molecule.Molecule.from_file).
+  [`Molecule.from_file`](openff.toolkit.topology.Molecule.from_file).
 - [PR #1276](https://github.com/openforcefield/openff-toolkit/pull/1276): Removes the
   `use_interchange` argument to
   [`create_openmm_system`](openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system).
