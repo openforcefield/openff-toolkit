@@ -1326,7 +1326,7 @@ class FrozenMolecule(Serializable):
         See also
         --------
         HierarchyScheme, Molecule.add_hierarchy_scheme,
-        Molecule.update_hierarchy_schemes
+        Molecule.update_hierarchy_schemes, Molecule.perceive_residues,
         """
         self._add_chain_hierarchy_scheme(overwrite_existing=overwrite_existing)
         self._add_residue_hierarchy_scheme(overwrite_existing=overwrite_existing)
@@ -5510,8 +5510,8 @@ class HierarchyScheme:
     --------
     Molecule.add_default_hierarchy_schemes, Molecule.add_hierarchy_scheme,
     Molecule.hierarchy_schemes, Molecule.delete_hierarchy_scheme,
-    Molecule.update_hierarchy_schemes, Topology.hierarchy_iterator,
-    HierarchyElement
+    Molecule.update_hierarchy_schemes, Molecule.perceive_residues,
+    Topology.hierarchy_iterator, HierarchyElement
     """
 
     def __init__(
