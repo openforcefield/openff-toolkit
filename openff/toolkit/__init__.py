@@ -11,11 +11,11 @@ from openff.toolkit._version import get_versions  # type: ignore
 if TYPE_CHECKING:
     # These types are imported lazily at runtime, but we need to tell type
     # checkers what they are
+    from openff.toolkit.topology import Molecule, Topology
     from openff.toolkit.typing.engines.smirnoff import (
         ForceField,
         get_available_force_fields,
     )
-    from openff.toolkit.topology import Molecule, Topology
     from openff.toolkit.utils.toolkits import (
         GLOBAL_TOOLKIT_REGISTRY,
         AmberToolsToolkitWrapper,
