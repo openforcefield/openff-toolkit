@@ -118,6 +118,9 @@ Code for applying parameters to topologies has been removed from the Toolkit. Th
 
 The [`ForceField.create_interchange()`] method has been added, and the [`ForceField.create_openmm_system()`] method now uses Interchange under the hood.
 
+As part of this change, the `UnsupportedKeywordArgumentsError` has been removed;
+passing unknown arguments to `create_openmm_system` now raises a `TypeError`, as is normal in Python.
+
 The following classes and methods have been **removed** from `openff.toolkit.typing.engines.smirnoff.parameters`:
 - `NonintegralMoleculeChargeException`
 - `NonbondedMethod`

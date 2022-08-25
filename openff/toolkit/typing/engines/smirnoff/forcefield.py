@@ -1078,7 +1078,12 @@ class ForceField:
     def create_openmm_system(
         self,
         topology: "Topology",
-        **kwargs,
+        *,
+        return_topology: bool = False,
+        toolkit_registry: Optional[Union["ToolkitRegistry", "ToolkitWrapper"]] = None,
+        charge_from_molecules: Optional[List["Molecule"]] = None,
+        partial_bond_orders_from_molecules: Optional[List["Molecule"]] = None,
+        allow_nonintegral_charges: bool = False,
     ) -> Union["openmm.System", Tuple["openmm.System", "Topology"]]:
         """Create an OpenMM System from this ForceField and a Topology.
 
@@ -1111,25 +1116,6 @@ class ForceField:
             Return the Topology with any modifications needed to parametrize it
             in a tuple along with the OpenMM system.
         """
-        return_topology = kwargs.pop("return_topology", False)
-        toolkit_registry = kwargs.pop("toolkit_registry", None)
-        charge_from_molecules = kwargs.pop("charge_from_molecules", None)
-        partial_bond_orders_from_molecules = kwargs.pop(
-            "partial_bond_orders_from_molecules", None
-        )
-        allow_nonintegral_charges = kwargs.pop("allow_nonintegral_charges", False)
-
-        if len(kwargs) > 0:
-            from openff.toolkit.utils.exceptions import UnsupportedKeywordArgumentsError
-
-            msg = (
-                "Unsupported keyword arguments found passed to `ForceField.create_openmm_system`. Supported "
-                "keyword arguments are `return_topology`, `toolkit_registry`, `charge_from_molecules`, "
-                f"`partial_bond_orders_from_molecules`, and `allow_nonintegral_charges`. Found: {kwargs}"
-            )
-
-            raise UnsupportedKeywordArgumentsError(msg)
-
         interchange = self.create_interchange(
             topology,
             toolkit_registry,
