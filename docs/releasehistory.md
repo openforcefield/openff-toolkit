@@ -156,7 +156,9 @@ The following properties have been deprecated and will be removed in a future re
 - `Topology.particles` (use [`Topology.molecules`](Topology.molecules) instead)
 - `Topology.particle_index` (use [`Topology.atom_index`](Topology.atom_index) instead)
 
-In addition, the `Topology.identical_molecule_groups` property has been added, to facilitate iterating over copies of isomorphic molecules in a `Topology`.
+In addition, the [`Topology.identical_molecule_groups`] property has been added, to facilitate iterating over copies of isomorphic molecules in a `Topology`.
+
+[`Topology.identical_molecule_groups`]: Topology.identical_molecule_groups
 
 ### Breaking change: Removed virtual site handling from topologies
 
@@ -207,7 +209,7 @@ Metadata can also support iteration through the [`HierarchyScheme`](openff.toolk
 
 ### Breaking change: Removed `Topology.charge_model` and `Topology.fractional_bond_order_model`
 
-To maintain a clear distinction between a model and the chemistry it represents, the `Topology.charge_model` and `Topology.fractional_bond_order_model` properties have been removed. Charge models and FBOs are now the responsibility of the ForceField.
+Due to flaws in previous versions of the OFF Toolkit, these properties never had an effect on the assigned parameters. To resolve this bug and maintain a clear distinction between a model and the chemistry it represents, the `Topology.charge_model` and `Topology.fractional_bond_order_model` properties have been removed. Charge models and FBOs are now the responsibility of the ForceField.
 
 ### Breaking change: Removed `Atom.element`
 
