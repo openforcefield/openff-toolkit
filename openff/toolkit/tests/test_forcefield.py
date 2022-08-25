@@ -1531,7 +1531,7 @@ class TestForceField:
 
         with pytest.raises(
             TypeError,
-            match="Unsupported.* Found: {'invalid_kwarg': 'aaa",
+            match="got an unexpected keyword argument .*invalid_kwarg.*",
         ):
             # TODO: specify desired toolkit_registry behavior in Interchange
             forcefield.create_openmm_system(
