@@ -481,7 +481,7 @@ class Topology(Serializable):
         return combined
 
     @property
-    def reference_molecules(self) -> List[Molecule]:
+    def reference_molecules(self) -> Iterator[Molecule]:
         """
         Get a list of reference molecules in this Topology.
 
@@ -494,7 +494,7 @@ class Topology(Serializable):
         return self.unique_molecules
 
     @property
-    def unique_molecules(self) -> List[Molecule]:
+    def unique_molecules(self) -> Iterator[Molecule]:
         """
         Get a list of chemically unique molecules in this Topology.
 
