@@ -100,9 +100,25 @@ print(value_roundtrip)
 # 1.0 <Unit('nanometer')>
 ```
 
-<!-- ### `ForceField.create_openmm_system()` now goes through Interchange
+#### Breaking change: Removal of `openff.toolkit.utils.check_units_are_compatible()`
 
-TODO. This includes removal of some stuff from openff.toolkit.typing.engines.smirnoff.parameters:
+The `openff.toolkit.utils.check_units_are_compatible()` function has been removed. Use [`openff.units.Quantity.is_compatible()`] and [`openff.units.openmm.from_openmm()`] instead:
+
+```diff
+- check_units_are_compatible("length", length, openmm.unit.angstrom)
++ from_openmm(length).is_compatible_with(openff.units.unit.angstrom)
+```
+
+[`openff.units.Quantity.is_compatible()`]: openff.units.Quantity.is_compatible
+[`openff.units.openmm.from_openmm()`]: openff.units.openmm.from_openmm
+
+### Breaking change: Interchange now responsible for system parametrization
+
+Code for applying parameters to topologies has been removed from the Toolkit. This is now the responsibility of [OpenFF Interchange]. This change improves support for working with parametrized systems (through the [`Interchange`] class), and adds support for working with simulation engines other than OpenMM.
+
+The [`ForceField.create_interchange()`] method has been added, and the [`ForceField.create_openmm_system()`] method now uses Interchange under the hood.
+
+The following classes and methods have been removed from `openff.toolkit.typing.engines.smirnoff.parameters`:
 - NonintegralMoleculeChargeException
 - NonbondedMethod
 - ParameterHandler.assign_parameters()
@@ -110,7 +126,9 @@ TODO. This includes removal of some stuff from openff.toolkit.typing.engines.smi
 - ParameterHandler.check_partial_bond_orders_from_molecules_duplicates()
 - ParameterHandler.assign_partial_bond_orders_from_molecules()
 
- -->
+[`Interchange`]: openff.interchange.Interchange
+[`ForceField.create_openmm_system()`]: openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system
+[OpenFF Interchange]: https://docs.openforcefield.org/interchange
 
 ### Breaking change: `Topology` molecule representation
 
@@ -157,6 +175,12 @@ The following methods and properties have been removed:
 - `Topology.virtual_site()`
 - `Topology.add_particle()`
 
+### Atom metadata and hierarchy schemes for iterating over residues, chains, etc.
+
+The new `Atom.metadata` attribute is a dictionary that can store arbitrary metadata. Atom metadata commonly includes residue names, residue sequence numbers, chain identifiers, and other metadata that is not essential to the functioning of the Toolkit. Metadata can then be passed on when a `Molecule` is converted to another package; see [](users/molecule_conversion).
+
+Metadata can also support iteration through the [`HierarchyScheme`](openff.toolkit.topology.HierarchyScheme) class. A hierarchy scheme is defined by some uniqueness criteria. Iterating over the scheme iterates over groups of atoms that have identical metadata values for the defined uniqueness criteria. For more information, see the API docs for [`HierarchyScheme`](openff.toolkit.topology.HierarchyScheme) and its related methods.
+
 ### Breaking change: Removed `Topology.charge_model` and `Topology.fractional_bond_order_model`
 
 To maintain a clear distinction between a model and the chemistry it represents, the `Topology.charge_model` and `Topology.fractional_bond_order_model` properties have been removed. Charge models and FBOs are now the responsibility of the ForceField.
@@ -173,16 +197,6 @@ To maintain a clear distinction between a model and the chemistry it represents,
 - atom_elem_symbol = atom.element.symbol
 + atom_elem_symbol = atom.symbol
 ```
-<!-- 
-- atom_elem_name = atom.element.name
-+ atom_elem_name = atom.element_name # TODO
--->
-
-### Atom metadata and hierarchy schemes for iterating over residues, chains, etc.
-
-The new `Atom.metadata` attribute is a dictionary that can store arbitrary metadata. Atom metadata commonly includes residue names, residue sequence numbers, chain identifiers, and other metadata that is not essential to the functioning of the Toolkit. Metadata can then be passed on when a `Molecule` is converted to another package; see [](users/molecule_conversion).
-
-Metadata can also support iteration through the [`HierarchyScheme`](openff.toolkit.topology.HierarchyScheme) class. A hierarchy scheme is defined by some uniqueness criteria. Iterating over the scheme iterates over groups of atoms that have identical metadata values for the defined uniqueness criteria. For more information, see the API docs for [`HierarchyScheme`](openff.toolkit.topology.HierarchyScheme) and its related methods.
 
 ### `Topology.to_file()`
 
@@ -225,21 +239,30 @@ In addition to these breaking changes, the `positions` argument is now optional.
 
 The `Topology.get_positions()` and `Topology.set_positions()` methods have been added to facilitate working with coordinates in topologies. A topology's positions are defined by the zeroth conformer of each molecule. If any molecule lacks conformers, the entire topology has no positions.
 
-<!-- ### Parameter types moved out of handler classes
+### Parameter types moved out of handler classes
 
-TODO. -->
+To facilitate their discovery and documentation, re-exports for the `ParameterType` classes have been added to the `openff.toolkit.typing.engines.smirnoff.parameters` module. Previously, they were accessible only within their associated `ParameterHandler` classes. This is not a breaking change.
 
-<!-- ### Exceptions renamed or removed
+### Breaking change: `MissingDependencyError` renamed `MissingPackageError`
 
-TODO. -->
+The `MissingDependencyError` exception has been renamed [`MissingPackageError`] to better reflect its purpose.
+
+```diff
+  try:
+      ...
+- except MissingDependencyError:
++ except MissingPackageError:
+      pass
+```
+
+[`MissingPackageError`]: openff.toolkit.utils.exceptions.MissingPackageError
 
 <!-- ### Deprecations
 
-TODO. -->
+The following classes and methods have been deprecated and will be removed in a future release:
 
-<!-- ### Changes in openff.toolkit.utils.utils
+ -->
 
-TODO. -->
 
 ## Current Development
 
