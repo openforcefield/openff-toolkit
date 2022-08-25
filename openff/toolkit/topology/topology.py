@@ -1071,15 +1071,20 @@ class Topology(Serializable):
 
         Returns
         -------
-        identical_molecule_groups : {int:[(int, {int: int})]}
-            A dict of the form {unique_mol_idx : [(topology_mol_idx, atom_map),...].
-            Each key is the topology molecule index of a unique chemical species.
-            Iterating over the keys will yield all of the unique chemical
-            species in the topology. Each value is a list describing all of the
-            instances of that chemical species in the topology. Each instance is
-            a 2-tuple where the first element is the topology molecule index of
-            the instance, and the second element maps the atom indices of the
-            unique molecule to the instance.
+        identical_molecule_groups
+            A dict of the form ``{unique_mol_idx : [(topology_mol_idx, atom_map), ...].``
+            Each key is the topology molecule index of the first instance of a
+            unique chemical species. Iterating over the keys will yield all of
+            the unique chemical species in the topology. Each value is a list
+            of all instances of that chemical species in the topology. Each
+            element of the list is a 2-tuple where the first element is the
+            molecule index of the instance, and the second element maps the atom
+            topology indices of the key molecule to the instance. The molecule
+            instance corresponding to the key is included in the list, so the
+            list is a complete list of all instances of that chemical species.
+
+        Examples
+        --------
 
         >>> from openff.toolkit import Molecule, Topology
         >>> # Create a water ordered as OHH
@@ -1089,7 +1094,7 @@ class Topology(Serializable):
         >>> water1.add_atom(1, 0, False)
         >>> water1.add_bond(0, 1, 1, False)
         >>> water1.add_bond(0, 2, 1, False)
-
+        ...
         >>> # Create a different water ordered as HOH
         >>> water2 = Molecule()
         >>> water2.add_atom(1, 0, False)
@@ -1097,10 +1102,9 @@ class Topology(Serializable):
         >>> water2.add_atom(1, 0, False)
         >>> water2.add_bond(0, 1, 1, False)
         >>> water2.add_bond(1, 2, 1, False)
-
+        ...
         >>> top = Topology.from_molecules([water1, water2])
         >>> top.identical_molecule_groups
-
         {0: [(0, {0: 0, 1: 1, 2: 2}), (1, {0: 1, 1: 0, 2: 2})]}
         """
         # Check whether this was run previously, and a cached result is available.
