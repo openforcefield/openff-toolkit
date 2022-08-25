@@ -480,17 +480,22 @@ class Topology(Serializable):
 
         return combined
 
-    # Should this be deprecated?
     @property
-    def reference_molecules(self) -> List[Molecule]:
+    def unique_molecules(self) -> Iterator[Molecule]:
         """
-        Get a list of reference molecules in this Topology.
+        Get a list of chemically unique molecules in this Topology.
 
-        Returns
-        -------
-        iterable of openff.toolkit.topology.Molecule
+        Molecules are considered unique if they fail an isomorphism check with
+        default values (see :meth:`Molecule.is_isomorphic_with`).
+        The order of molecules returned by this property is arbitrary.
         """
-        return self._molecules
+        for mol_idx in self.identical_molecule_groups.keys():
+            yield deepcopy(self.molecule(mol_idx))
+
+    @property
+    def n_unique_molecules(self) -> int:
+        """Returns the number of unique molecules in this Topology"""
+        return len(self.identical_molecule_groups)
 
     @classmethod
     def from_molecules(cls, molecules: Union[Molecule, List[Molecule]]):
@@ -660,13 +665,8 @@ class Topology(Serializable):
         return self._constrained_atom_pairs
 
     @property
-    def n_molecules(self):
-        """Returns the number of molecules in this Topology
-
-        Returns
-        -------
-        n_molecules : Iterable of Molecule
-        """
+    def n_molecules(self) -> int:
+        """Returns the number of molecules in this Topology"""
         return len(self._molecules)
 
     @property
@@ -2424,14 +2424,25 @@ class Topology(Serializable):
         return self.particles
 
     @property
+    def reference_molecules(self) -> Iterator[Molecule]:
+        """
+        .. deprecated:: 0.11.0
+            This property has been deprecated and will soon be removed. Use
+            :meth:`Topology.unique_molecules` instead.
+        ..
+        """
+        _topology_deprecation("reference_molecules", "unique_molecules")
+        return self.unique_molecules
+
+    @property
     def n_reference_molecules(self) -> int:
         """
         .. deprecated:: 0.11.0
             This property has been deprecated and will soon be removed. Use
-            :meth:`Topology.n_molecules` instead.
+            :meth:`Topology.n_unique_molecules` instead.
         ..
         """
-        _topology_deprecation("n_reference_molecules", "n_molecules")
+        _topology_deprecation("n_reference_molecules", "n_unique_molecules")
         return self.n_molecules
 
     @property

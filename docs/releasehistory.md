@@ -149,7 +149,8 @@ The following properties have been **deprecated** and will be removed in a futur
 - `Topology.topology_bonds` (use [`Topology.bonds`](Topology.bonds) instead)
 - `Topology.n_topology_particles` (use [`Topology.n_particles`](Topology.n_particles) instead)
 - `Topology.topology_particles` (use [`Topology.particles`](Topology.particles) instead)
-- `Topology.n_reference_molecules` (use [`Topology.n_molecules`](Topology.n_molecules) instead)
+- `Topology.reference_molecules` (use [`Topology.unique_molecules`](Topology.unique_molecules) instead)
+- `Topology.n_reference_molecules` (use [`Topology.n_unique_molecules`](Topology.n_unique_molecules) instead)
 - `Topology.n_topology_molecules` (use [`Topology.n_molecules`](Topology.n_molecules) instead)
 - `Topology.topology_molecules` (use [`Topology.molecules`](Topology.molecules) instead)
 - `Topology.n_particles` (use [`Topology.n_atoms`](Topology.n_atoms) instead)
@@ -306,6 +307,8 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 
 ## Current Development
 
+- [PR #1377](https://github.com/openforcefield/openff-toolkit/pull/1377): Adds 
+  `Topology.unique_molecules`, which largely replaces `Topology.reference_molecules`. 
 - [PR #1313](https://github.com/openforcefield/openff-toolkit/pull/1313): Fixes 
   [Issue #1287](https://github.com/openforcefield/openff-toolkit/issues/1287), where  
   `OpenEyeToolkitWrapper.assign_partial_charges` didn't request symmetrized charges when
