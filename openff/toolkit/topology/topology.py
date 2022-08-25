@@ -498,18 +498,18 @@ class Topology(Serializable):
         """
         Get a list of chemically unique molecules in this Topology.
 
-        Returns
-        -------
-        iterable of openff.toolkit.topology.Molecule
+        Molecules are considered unique if they fail an isomorphism check with
+        default values (see :meth:`Molecule.is_isomorphic_with`).
+        The order of molecules returned by this property is arbitrary.
         """
         import copy
+
         for mol_idx in self.identical_molecule_groups.keys():
             yield copy.deepcopy(self.molecule(mol_idx))
 
     @property
     def n_unique_molecules(self) -> int:
-        """Returns the number of unique molecules in this Topology
-        """
+        """Returns the number of unique molecules in this Topology"""
         return len(self.identical_molecule_groups)
 
     @classmethod
@@ -681,8 +681,7 @@ class Topology(Serializable):
 
     @property
     def n_molecules(self) -> int:
-        """Returns the number of molecules in this Topology
-        """
+        """Returns the number of molecules in this Topology"""
         return len(self._molecules)
 
     @property
