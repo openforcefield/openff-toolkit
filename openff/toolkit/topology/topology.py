@@ -481,19 +481,6 @@ class Topology(Serializable):
         return combined
 
     @property
-    def reference_molecules(self) -> Iterator[Molecule]:
-        """
-        Get a list of reference molecules in this Topology.
-
-        Returns
-        -------
-        iterable of openff.toolkit.topology.Molecule
-        """
-
-        _topology_deprecation("reference_molecules", "unique_molecules")
-        return self.unique_molecules
-
-    @property
     def unique_molecules(self) -> Iterator[Molecule]:
         """
         Get a list of chemically unique molecules in this Topology.
@@ -2401,6 +2388,12 @@ class Topology(Serializable):
         """DEPRECATED: Use Topology.n_unique_molecules instead."""
         _topology_deprecation("n_reference_molecules", "n_unique_molecules")
         return self.n_unique_molecules
+
+    @property
+    def reference_molecules(self) -> Iterator[Molecule]:
+        """DEPRECATED: Use Topology.unique_molecules instead."""
+        _topology_deprecation("reference_molecules", "unique_molecules")
+        return self.unique_molecules
 
     @property
     def n_topology_molecules(self) -> int:
