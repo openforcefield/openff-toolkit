@@ -102,14 +102,14 @@ print(value_roundtrip)
 
 #### Breaking change: Removal of `openff.toolkit.utils.check_units_are_compatible()`
 
-The `openff.toolkit.utils.check_units_are_compatible()` function has been removed. Use [`openff.units.Quantity.is_compatible()`] and [`openff.units.openmm.from_openmm()`] instead:
+The `openff.toolkit.utils.check_units_are_compatible()` function has been removed. Use [`openff.units.Quantity.is_compatible_with()`] and [`openff.units.openmm.from_openmm()`] instead:
 
 ```diff
 - check_units_are_compatible("length", length, openmm.unit.angstrom)
 + from_openmm(length).is_compatible_with(openff.units.unit.angstrom)
 ```
 
-[`openff.units.Quantity.is_compatible()`]: openff.units.Quantity.is_compatible
+[`openff.units.Quantity.is_compatible_with()`]: openff.units.Quantity.is_compatible_with
 [`openff.units.openmm.from_openmm()`]: openff.units.openmm.from_openmm
 
 ### Breaking change: Interchange now responsible for system parametrization
@@ -129,6 +129,7 @@ The following classes and methods have been **removed** from `openff.toolkit.typ
 In addition, the `ParameterHandler.create_force()` method has been deprecated and its functionality has been removed. It will be removed in a future release.
 
 [`Interchange`]: openff.interchange.Interchange
+[`ForceField.create_interchange()`]: openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.create_interchange
 [`ForceField.create_openmm_system()`]: openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system
 [OpenFF Interchange]: https://docs.openforcefield.org/interchange
 
@@ -141,7 +142,7 @@ The following classes have been **removed**:
 - `TopologyBond` (use [`Bond`](Bond) instead)
 - `TopologyMolecule` (use [`Molecule`](Molecule) instead)
 
-The following properties have been deprecated and will be removed in a future release:
+The following properties have been **deprecated** and will be removed in a future release:
 - `Topology.n_topology_atoms` (use [`Topology.n_atoms`](Topology.n_atoms) instead)
 - `Topology.topology_atoms` (use [`Topology.atoms`](Topology.atoms) instead)
 - `Topology.n_topology_bonds` (use [`Topology.n_bonds`](Topology.n_bonds) instead)
@@ -194,7 +195,7 @@ The following methods and properties have been **removed**:
 - `Topology.virtual_site()`
 - `Topology.add_particle()`
 
-The following properties have been deprecated and will be removed in a future release:
+The following properties have been **deprecated** and will be removed in a future release:
 
 - `Molecule.n_particles` (use [`Molecule.n_atoms`](Molecule.n_atoms) instead)
 - `Molecule.particles` (use [`Molecule.atoms`](Molecule.atoms) instead)
@@ -271,6 +272,12 @@ The [`Topology.get_positions()`] and [`Topology.set_positions()`] methods have b
 ### Parameter types moved out of handler classes
 
 To facilitate their discovery and documentation, re-exports for the `ParameterType` classes have been added to the `openff.toolkit.typing.engines.smirnoff.parameters` module. Previously, they were accessible only within their associated `ParameterHandler` classes. This is not a breaking change.
+
+```diff
+- from openff.toolkit.typing.engines.smirnoff.parameters import BondHandler
+- BondType = BondHandler.BondType
++ from openff.toolkit.typing.engines.smirnoff.parameters import BondType
+```
 
 ### Breaking change: `MissingDependencyError` renamed `MissingPackageError`
 
