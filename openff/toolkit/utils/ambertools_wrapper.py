@@ -280,6 +280,12 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         self, molecule, use_conformers=None, strict_n_conformers=False
     ):
         """
+        .. deprecated:: 0.11.0
+
+            This method was deprecated in v0.11.0 and will soon be removed.
+            Use :py:meth:`assign_partial_charges(partial_charge_method='am1bcc')
+            <AmberToolsToolkitWrapper.assign_partial_charges>` instead.
+
         Compute partial charges with AmberTools using antechamber/sqm. This will calculate AM1-BCC charges on the first
         conformer only.
 
