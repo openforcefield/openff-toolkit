@@ -734,7 +734,8 @@ class Topology(Serializable):
 
         Raises
         ------
-        AtomNotInTopologyError : If the given atom is not in this topology
+        AtomNotInTopologyError
+            If the given atom is not in this topology
         """
         # If the atom's topology atom index isn't cached, calculate it for the whole topology
         if "_topology_atom_index" not in atom.__dict__:
@@ -761,7 +762,8 @@ class Topology(Serializable):
 
         Raises
         ------
-        MoleculeNotInTopologyError : If the given atom is not in this topology
+        MoleculeNotInTopologyError
+            If the given atom is not in this topology
         """
         for index, iter_molecule in enumerate(self.molecules):
             if molecule is iter_molecule:
@@ -2357,71 +2359,130 @@ class Topology(Serializable):
     # DEPRECATED API POINTS
     @property
     def n_topology_atoms(self) -> int:
-        """DEPRECATED: Use Topology.n_atoms instead."""
+        """
+        .. deprecated:: 0.11.0
+            This property has been deprecated and will soon be removed. Use
+            :meth:`Topology.n_atoms` instead.
+        ..
+        """
         _topology_deprecation("n_topology_atoms", "n_atoms")
         return self.n_atoms
 
     @property
     def topology_atoms(self):
-        """DEPRECATED: Use Topology.atoms instead."""
+        """
+        .. deprecated:: 0.11.0
+            This property has been deprecated and will soon be removed. Use
+            :meth:`Topology.atoms` instead.
+        ..
+        """
         _topology_deprecation("topology_atoms", "atoms")
         return self.atoms
 
     @property
     def n_topology_bonds(self) -> int:
-        """DEPRECATED: Use Topology.n_bonds instead."""
+        """
+        .. deprecated:: 0.11.0
+            This property has been deprecated and will soon be removed. Use
+            :meth:`Topology.n_bonds` instead.
+        ..
+        """
         _topology_deprecation("n_topology_bonds", "n_bonds")
         return self.n_bonds
 
     @property
     def topology_bonds(self):
-        """DEPRECATED: Use Topology.bonds instead."""
+        """
+        .. deprecated:: 0.11.0
+            This property has been deprecated and will soon be removed. Use
+            :meth:`Topology.bonds` instead.
+        ..
+        """
         _topology_deprecation("topology_bonds", "bonds")
         return self.bonds
 
     @property
     def n_topology_particles(self) -> int:
-        """DEPRECATED: Use Topology.n_particles instead."""
+        """
+        .. deprecated:: 0.11.0
+            This property has been deprecated and will soon be removed. Use
+            :meth:`Topology.n_particles` instead.
+        ..
+        """
         _topology_deprecation("n_topology_particles", "n_particles")
         return self.n_particles
 
     @property
     def topology_particles(self):
-        """DEPRECATED: Use Topology.particles instead."""
+        """
+        .. deprecated:: 0.11.0
+            This property has been deprecated and will soon be removed. Use
+            :meth:`Topology.particles` instead.
+        ..
+        """
         _topology_deprecation("topology_particles", "particles")
         return self.particles
 
     @property
     def n_reference_molecules(self) -> int:
-        """DEPRECATED: Use Topology.n_molecules instead."""
+        """
+        .. deprecated:: 0.11.0
+            This property has been deprecated and will soon be removed. Use
+            :meth:`Topology.n_molecules` instead.
+        ..
+        """
         _topology_deprecation("n_reference_molecules", "n_molecules")
         return self.n_molecules
 
     @property
     def n_topology_molecules(self) -> int:
-        """DEPRECATED: Use Topology.n_molecules instead."""
+        """
+        .. deprecated:: 0.11.0
+            This property has been deprecated and will soon be removed. Use
+            :meth:`Topology.n_molecules` instead.
+        ..
+        """
         _topology_deprecation("n_topology_molecules", "n_molecules")
         return self.n_molecules
 
     @property
     def topology_molecules(self):
-        """DEPRECATED: Use Topology.molecules instead."""
+        """
+        .. deprecated:: 0.11.0
+            This property has been deprecated and will soon be removed. Use
+            :meth:`Topology.molecules` instead.
+        ..
+        """
         _topology_deprecation("topology_molecules", "molecules")
         return self.molecules
 
     @property
     def n_particles(self) -> int:
-        """DEPRECATED: Use Topology.n_atoms instead."""
+        """
+        .. deprecated:: 0.11.0
+            This property has been deprecated and will soon be removed. Use
+            :meth:`Topology.n_atoms` instead.
+        ..
+        """
         _topology_deprecation("n_particles", "n_atoms")
         return self.n_atoms
 
     @property
     def particles(self):
-        """DEPRECATED: Use Topology.molecules instead."""
+        """
+        .. deprecated:: 0.11.0
+            This property has been deprecated and will soon be removed. Use
+            :meth:`Topology.atoms` instead.
+        ..
+        """
         _topology_deprecation("particles", "atoms")
         return self.atoms
 
     def particle_index(self, particle) -> int:
-        """DEPRECATED: Use Topology.atom_index instead."""
+        """
+        .. deprecated:: 0.11.0
+            This method has been deprecated and will soon be removed. Use
+            :meth:`Topology.atom_index` instead.
+        """
         _topology_deprecation("particle_index", "atom_index")
         return self.atom_index(particle)

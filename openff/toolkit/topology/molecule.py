@@ -3004,7 +3004,12 @@ class FrozenMolecule(Serializable):
 
     @property
     def n_particles(self) -> int:
-        """DEPRECATED: Use Molecule.n_atoms instead."""
+        """
+        .. deprecated:: 0.11.0
+            This property has been deprecated and will soon be removed. Use
+            :meth:`Molecule.n_atoms` instead.
+        ..
+        """
         _molecule_deprecation("n_particles", "n_atoms")
         return self.n_atoms
 
@@ -3048,17 +3053,30 @@ class FrozenMolecule(Serializable):
 
     @property
     def particles(self) -> List[Atom]:
-        """DEPRECATED: Use Molecule.atoms instead."""
+        """
+        .. deprecated:: 0.11.0
+            This property has been deprecated and will soon be removed. Use
+            :meth:`Molecule.atoms` instead.
+        ..
+        """
         _molecule_deprecation("particles", "atoms")
         return self.atoms
 
     def particle(self, index: int) -> Atom:
-        """DEPRECATED: Use Molecule.atom instead."""
+        """
+        .. deprecated:: 0.11.0
+            This method has been deprecated and will soon be removed. Use
+            :meth:`Molecule.atom` instead.
+        """
         _molecule_deprecation("particle", "atom")
         return self.atom(index)
 
     def particle_index(self, particle: Atom) -> int:
-        """DEPRECATED: Use Molecule.atom_index instead."""
+        """
+        .. deprecated:: 0.11.0
+            This method has been deprecated and will soon be removed. Use
+            :meth:`Molecule.atom_index` instead.
+        """
         _molecule_deprecation("particle_index", "atom_index")
         return self.atom_index(particle)
 
