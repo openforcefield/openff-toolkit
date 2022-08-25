@@ -2433,7 +2433,7 @@ class Topology(Serializable):
         """
         _topology_deprecation("reference_molecules", "unique_molecules")
         return self.unique_molecules
-        
+
     @property
     def n_reference_molecules(self) -> int:
         """
