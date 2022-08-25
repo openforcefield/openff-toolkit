@@ -118,13 +118,15 @@ Code for applying parameters to topologies has been removed from the Toolkit. Th
 
 The [`ForceField.create_interchange()`] method has been added, and the [`ForceField.create_openmm_system()`] method now uses Interchange under the hood.
 
-The following classes and methods have been removed from `openff.toolkit.typing.engines.smirnoff.parameters`:
-- NonintegralMoleculeChargeException
-- NonbondedMethod
-- ParameterHandler.assign_parameters()
-- ParameterHandler.postprocess_system()
-- ParameterHandler.check_partial_bond_orders_from_molecules_duplicates()
-- ParameterHandler.assign_partial_bond_orders_from_molecules()
+The following classes and methods have been **removed** from `openff.toolkit.typing.engines.smirnoff.parameters`:
+- `NonintegralMoleculeChargeException`
+- `NonbondedMethod`
+- `ParameterHandler.assign_parameters()`
+- `ParameterHandler.postprocess_system()`
+- `ParameterHandler.check_partial_bond_orders_from_molecules_duplicates()`
+- `ParameterHandler.assign_partial_bond_orders_from_molecules()`
+
+In addition, the `ParameterHandler.create_force()` method has been deprecated and its functionality has been removed. It will be removed in a future release.
 
 [`Interchange`]: openff.interchange.Interchange
 [`ForceField.create_openmm_system()`]: openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system
@@ -134,12 +136,25 @@ The following classes and methods have been removed from `openff.toolkit.typing.
 
 `Topology` objects now store complete copies of their constituent `Molecule` objects, rather than using simplified classes specific to `Topology`. This dramatically simplifies the code base and allows the use of the full `Molecule` API on molecules inside topologies.
 
-The following classes have been removed:
-- `TopologyAtom`
-- `TopologyBond`
-- `TopologyMolecule`
-- `TopologyVirtualParticle`
-- `TopologyVirtualSite`
+The following classes have been **removed**:
+- `TopologyAtom` (use [`Atom`](Atom) instead)
+- `TopologyBond` (use [`Bond`](Bond) instead)
+- `TopologyMolecule` (use [`Molecule`](Molecule) instead)
+
+The following properties have been deprecated and will be removed in a future release:
+- `Topology.n_topology_atoms` (use [`Topology.n_atoms`](Topology.n_atoms) instead)
+- `Topology.topology_atoms` (use [`Topology.atoms`](Topology.atoms) instead)
+- `Topology.n_topology_bonds` (use [`Topology.n_bonds`](Topology.n_bonds) instead)
+- `Topology.topology_bonds` (use [`Topology.bonds`](Topology.bonds) instead)
+- `Topology.n_topology_particles` (use [`Topology.n_particles`](Topology.n_particles) instead)
+- `Topology.topology_particles` (use [`Topology.particles`](Topology.particles) instead)
+- `Topology.n_reference_molecules` (use [`Topology.n_unique_molecules`](Topology.n_unique_molecules) instead)
+- `Topology.reference_molecules` (use [`Topology.unique_molecules`](Topology.unique_molecules) instead).
+- `Topology.n_topology_molecules` (use [`Topology.n_molecules`](Topology.n_molecules) instead)
+- `Topology.topology_molecules` (use [`Topology.molecules`](Topology.molecules) instead)
+- `Topology.n_particles` (use [`Topology.n_atoms`](Topology.n_atoms) instead)
+- `Topology.particles` (use [`Topology.molecules`](Topology.molecules) instead)
+- `Topology.particle_index` (use [`Topology.atom_index`](Topology.atom_index) instead)
 
 In addition, the `Topology.identical_molecule_groups` property has been added, to facilitate iterating over copies of isomorphic molecules in a `Topology`.
 
@@ -149,15 +164,17 @@ To maintain a clear distinction between a model and the chemistry it represents,
 
 As part of this change, the distinction between `Atom` and `Particle` is deprecated. The `Particle` class will be removed in a future release.
 
-The following classes have been removed:
+The following classes have been **removed**:
 - `BondChargeVirtualSite`
 - `DivalentLonePairVirtualSite`
 - `MonovalentLonePairVirtualSite`
 - `TrivalentLonePairVirtualSite`
 - `VirtualParticle`
 - `VirtualSite`
+- `TopologyVirtualParticle`
+- `TopologyVirtualSite`
 
-The following methods and properties have been removed:
+The following methods and properties have been **removed**:
 - `Atom.add_virtual_site()`
 - `Atom.virtual_sites`
 - `FrozenMolecule.compute_virtual_site_positions_from_conformer()`
@@ -174,6 +191,13 @@ The following methods and properties have been removed:
 - `Topology.topology_virtual_sites`
 - `Topology.virtual_site()`
 - `Topology.add_particle()`
+
+The following properties have been deprecated and will be removed in a future release:
+
+- `Molecule.n_particles` (use [`Molecule.n_atoms`](Molecule.n_atoms) instead)
+- `Molecule.particles` (use [`Molecule.atoms`](Molecule.atoms) instead)
+- `Molecule.particle` (use [`Molecule.atom`](Molecule.atom) instead)
+- `Molecule.particle_index` (use [`Topology.n_atoms`](Topology.n_atoms) instead)
 
 ### Atom metadata and hierarchy schemes for iterating over residues, chains, etc.
 
@@ -237,7 +261,10 @@ In addition to these breaking changes, the `positions` argument is now optional.
 
 ### Positions in topologies
 
-The `Topology.get_positions()` and `Topology.set_positions()` methods have been added to facilitate working with coordinates in topologies. A topology's positions are defined by the zeroth conformer of each molecule. If any molecule lacks conformers, the entire topology has no positions.
+The [`Topology.get_positions()`] and [`Topology.set_positions()`] methods have been added to facilitate working with coordinates in topologies. A topology's positions are defined by the zeroth conformer of each molecule. If any molecule lacks conformers, the entire topology has no positions.
+
+[`Topology.get_positions()`]: Topology.get_positions
+[`Topology.set_positions()`]: Topology.set_positions
 
 ### Parameter types moved out of handler classes
 
@@ -257,11 +284,16 @@ The `MissingDependencyError` exception has been renamed [`MissingPackageError`] 
 
 [`MissingPackageError`]: openff.toolkit.utils.exceptions.MissingPackageError
 
-<!-- ### Deprecations
+### `compute_partial_charges_am1bcc()` deprecated
 
-The following classes and methods have been deprecated and will be removed in a future release:
+The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToolkitWrapper` and `OpenEyeToolkitWrapper` classes have been deprecated and will be removed in a future release. Their functionality has been incorporated into [`assign_partial_charges()`] for more consistency with other charge generation methods:
 
- -->
+```diff
+- mol.compute_partial_charges_am1bcc()
++ mol.assign_partial_charges(partial_charge_method='am1bcc')
+```
+
+[`assign_partial_charges()`]: Molecule.assign_partial_charges
 
 
 ## Current Development
