@@ -126,7 +126,17 @@ The following classes and methods have been **removed** from `openff.toolkit.typ
 - `ParameterHandler.check_partial_bond_orders_from_molecules_duplicates()`
 - `ParameterHandler.assign_partial_bond_orders_from_molecules()`
 
-In addition, the `ParameterHandler.create_force()` method has been deprecated and its functionality has been removed. It will be removed in a future release.
+In addition, the `ParameterHandler.create_force()` method has been deprecated and its functionality has been removed. It will be removed in a future release. The `return_topology` argument of `create_openmm_system` has also been deprecated, and will be removed in 0.12.0. If you need access to the modified topology, create an `Interchange` and retrieve it there:
+
+```diff
+- omm_sys, off_top = force_field.create_openmm_system(
+-     topology,
+-     return_topology=True,
+- )
++ interchange = force_field.create_interchange(topology)
++ off_top = interchange.topology
++ omm_sys = interchange.to_openmm(combine_nonbonded_forces=True)
+```
 
 [`Interchange`]: openff.interchange.Interchange
 [`ForceField.create_interchange()`]: openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.create_interchange
