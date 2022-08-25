@@ -63,10 +63,10 @@ $ conda activate
 $ conda config --env --set subdir osx-64
 ```
 
-To make this setting the global default, update the conda config via
+Alternatively, make this setting the global default by updating the system Conda config:
 
 ```
-$ conda config --env --set subdir osx-64
+$ conda config --system --set subdir osx-64
 ```
 
 Note that this will affect how Conda behaves with other environments.
