@@ -36,7 +36,7 @@ dependencies:
   - cachetools
   # Some others that will be pulled down by an Interchange conda package
   - openff-utilities
-  - openff-units >=0.1.6
+  - openff-units >=0.1.7
   - panedr
   - pip:
     # Replace with conda package when 0.2.0 is released
