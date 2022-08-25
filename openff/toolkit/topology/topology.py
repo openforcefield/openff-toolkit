@@ -480,7 +480,6 @@ class Topology(Serializable):
 
         return combined
 
-    # Should this be deprecated?
     @property
     def reference_molecules(self) -> List[Molecule]:
         """
@@ -490,7 +489,28 @@ class Topology(Serializable):
         -------
         iterable of openff.toolkit.topology.Molecule
         """
-        return self._molecules
+
+        _topology_deprecation("reference_molecules", "unique_molecules")
+        return self.unique_molecules
+
+    @property
+    def unique_molecules(self) -> List[Molecule]:
+        """
+        Get a list of chemically unique molecules in this Topology.
+
+        Returns
+        -------
+        iterable of openff.toolkit.topology.Molecule
+        """
+        import copy
+        for mol_idx in self.identical_molecule_groups.keys():
+            yield copy.deepcopy(self.molecule(mol_idx))
+
+    @property
+    def n_unique_molecules(self) -> int:
+        """Returns the number of unique molecules in this Topology
+        """
+        return len(self.identical_molecule_groups)
 
     @classmethod
     def from_molecules(cls, molecules: Union[Molecule, List[Molecule]]):
@@ -660,12 +680,8 @@ class Topology(Serializable):
         return self._constrained_atom_pairs
 
     @property
-    def n_molecules(self):
+    def n_molecules(self) -> int:
         """Returns the number of molecules in this Topology
-
-        Returns
-        -------
-        n_molecules : Iterable of Molecule
         """
         return len(self._molecules)
 
@@ -2385,9 +2401,9 @@ class Topology(Serializable):
 
     @property
     def n_reference_molecules(self) -> int:
-        """DEPRECATED: Use Topology.n_molecules instead."""
-        _topology_deprecation("n_reference_molecules", "n_molecules")
-        return self.n_molecules
+        """DEPRECATED: Use Topology.n_unique_molecules instead."""
+        _topology_deprecation("n_reference_molecules", "n_unique_molecules")
+        return self.n_unique_molecules
 
     @property
     def n_topology_molecules(self) -> int:

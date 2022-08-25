@@ -110,6 +110,7 @@ class TestTopology:
         """Test creation of empty topology"""
         topology = Topology()
         assert topology.n_molecules == 0
+        assert topology.n_unique_molecules == 0
         assert topology.n_atoms == 0
         assert topology.n_bonds == 0
         assert topology.box_vectors is None
@@ -224,6 +225,7 @@ class TestTopology:
         topology = Topology.from_molecules(ethane_from_smiles())
 
         assert topology.n_molecules == 1
+        assert topology.n_unique_molecules == 1
         assert topology.n_atoms == 8
         assert topology.n_bonds == 7
         assert topology.box_vectors is None
@@ -231,6 +233,7 @@ class TestTopology:
 
         topology.add_molecule(ethane_from_smiles())
         assert topology.n_molecules == 2
+        assert topology.n_unique_molecules == 1
         assert topology.n_atoms == 16
         assert topology.n_bonds == 14
         assert topology.box_vectors is None
@@ -242,6 +245,7 @@ class TestTopology:
             [ethane_from_smiles(), propane_from_smiles()]
         )
         assert topology.n_molecules == 2
+        assert topology.n_unique_molecules == 2
 
     def test_n_atoms(self):
         """Test n_atoms function"""
@@ -509,6 +513,7 @@ class TestTopology:
 
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         assert topology.n_molecules == 239
+        assert topology.n_unique_molecules == 2
 
     def test_from_openmm_missing_reference(self):
         """Test creation of an OpenFF Topology object from an OpenMM Topology when missing a unique molecule"""
@@ -571,9 +576,10 @@ class TestTopology:
         # The round-trip OpenFF Topology is identical to the original.
         # The reference molecules are the same.
         assert off_topology.n_molecules == off_topology_copy.n_molecules
-        reference_molecules_copy = list(off_topology_copy.reference_molecules)
-        for ref_mol_idx, ref_mol in enumerate(off_topology.reference_molecules):
-            assert ref_mol == reference_molecules_copy[ref_mol_idx]
+        assert off_topology.n_unique_molecules == off_topology_copy.n_unique_molecules
+        molecules_copy = list(off_topology_copy.molecules)
+        for mol_idx, mol in enumerate(off_topology.molecules):
+            assert mol == molecules_copy[mol_idx]
 
         # The number of topology molecules is the same.
         assert off_topology.n_molecules == off_topology_copy.n_molecules
