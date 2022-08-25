@@ -2267,6 +2267,13 @@ class ParameterHandler(_ParameterAttributeHandler):
             reference_molecule.get_bond_between(atom_i, atom_j)
 
     def create_force(self, *args, **kwarsg):
+        """
+        .. deprecated:: 0.11.0
+
+            This method was deprecated in v0.11.0, no longer has any
+            functionality, and will soon be removed. Use the `OpenFF Interchange
+            <https://docs.openforcefield.org/interchange>`_ package instead.
+        """
         raise NotImplementedError(
             "`ParameterHandler`s no longer create OpenMM forces. Use `openff-interchange` instead."
         )
