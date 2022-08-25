@@ -2391,6 +2391,12 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         self, molecule, use_conformers=None, strict_n_conformers=False
     ):
         """
+        .. deprecated:: 0.11.0
+
+            This method was deprecated in v0.11.0 and will soon be removed.
+            Use :py:meth:`assign_partial_charges(partial_charge_method='am1bcc')
+            <OpenEyeToolkitWrapper.assign_partial_charges>` instead.
+
         Compute AM1BCC partial charges with OpenEye quacpac. This function will attempt to use
         the OEAM1BCCELF10 charge generation method, but may print a warning and fall back to
         normal OEAM1BCC if an error is encountered. This error is known to occur with some

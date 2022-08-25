@@ -1322,6 +1322,11 @@ class FrozenMolecule(Serializable):
         HierarchySchemeWithIteratorNameAlreadyRegisteredException
             When ``overwrite_existing=False`` and either the ``chains`` or
             ``residues`` hierarchy scheme is already configured.
+
+        See also
+        --------
+        HierarchyScheme, Molecule.add_hierarchy_scheme,
+        Molecule.update_hierarchy_schemes, Molecule.perceive_residues,
         """
         self._add_chain_hierarchy_scheme(overwrite_existing=overwrite_existing)
         self._add_residue_hierarchy_scheme(overwrite_existing=overwrite_existing)
@@ -1385,6 +1390,11 @@ class FrozenMolecule(Serializable):
         new_hier_scheme : openff.toolkit.topology.HierarchyScheme
             The newly created HierarchyScheme
 
+        See also
+        --------
+        Molecule.add_default_hierarchy_schemes, Molecule.hierarchy_schemes,
+        Molecule.delete_hierarchy_scheme,  Molecule.update_hierarchy_schemes,
+        HierarchyScheme,
         """
         if iterator_name in self._hierarchy_schemes:
             msg = (
@@ -1414,6 +1424,12 @@ class FrozenMolecule(Serializable):
         -------
         A dict of the form {str: HierarchyScheme}
             The HierarchySchemes associated with the molecule.
+
+        See also
+        --------
+        Molecule.add_hierarchy_scheme, Molecule.delete_hierarchy_scheme,
+        Molecule.update_hierarchy_schemes, Topology.hierarchy_iterator,
+        HierarchyScheme
         """
         return self._hierarchy_schemes
 
@@ -1428,6 +1444,11 @@ class FrozenMolecule(Serializable):
         Parameters
         ----------
         iter_name : str
+
+        See also
+        --------
+        Molecule.add_hierarchy_scheme, Molecule.update_hierarchy_schemes,
+        Molecule.hierarchy_schemes, HierarchyScheme
         """
         if iter_name not in self._hierarchy_schemes:
             raise HierarchySchemeNotFoundException(
@@ -1451,6 +1472,11 @@ class FrozenMolecule(Serializable):
             Only perceive hierarchy for HierarchySchemes that expose these
             iterator names. If not provided, all known hierarchies will be
             perceived, overwriting previous results if applicable.
+
+        See also
+        --------
+        Molecule.add_hierarchy_scheme, Molecule.delete_hierarchy_schemes,
+        Molecule.hierarchy_schemes, HierarchyScheme
         """
         if iter_names is None:
             iter_names = self._hierarchy_schemes.keys()
@@ -2978,7 +3004,12 @@ class FrozenMolecule(Serializable):
 
     @property
     def n_particles(self) -> int:
-        """DEPRECATED: Use Molecule.n_atoms instead."""
+        """
+        .. deprecated:: 0.11.0
+            This property has been deprecated and will soon be removed. Use
+            :meth:`Molecule.n_atoms` instead.
+        ..
+        """
         _molecule_deprecation("n_particles", "n_atoms")
         return self.n_atoms
 
@@ -3022,17 +3053,30 @@ class FrozenMolecule(Serializable):
 
     @property
     def particles(self) -> List[Atom]:
-        """DEPRECATED: Use Molecule.atoms instead."""
+        """
+        .. deprecated:: 0.11.0
+            This property has been deprecated and will soon be removed. Use
+            :meth:`Molecule.atoms` instead.
+        ..
+        """
         _molecule_deprecation("particles", "atoms")
         return self.atoms
 
     def particle(self, index: int) -> Atom:
-        """DEPRECATED: Use Molecule.atom instead."""
+        """
+        .. deprecated:: 0.11.0
+            This method has been deprecated and will soon be removed. Use
+            :meth:`Molecule.atom` instead.
+        """
         _molecule_deprecation("particle", "atom")
         return self.atom(index)
 
     def particle_index(self, particle: Atom) -> int:
-        """DEPRECATED: Use Molecule.atom_index instead."""
+        """
+        .. deprecated:: 0.11.0
+            This method has been deprecated and will soon be removed. Use
+            :meth:`Molecule.atom_index` instead.
+        """
         _molecule_deprecation("particle_index", "atom_index")
         return self.atom_index(particle)
 
@@ -3742,20 +3786,6 @@ class FrozenMolecule(Serializable):
             return mols[0]
 
         return mols
-
-    @classmethod
-    def from_pdb(cls, file_path, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
-        """
-        .. deprecated:: 0.11.0
-            ``from_pdb`` is deprecated and will soon be removed. Use
-            :py:meth:`from_polymer_pdb` instead.
-        """
-        warnings.warn(
-            "Molecule.from_pdb will soon be deprecated in favor of the more explicit "
-            "Molecule.from_polymer_pdb",
-            UserWarning,
-        )
-        return cls.from_polymer_pdb(file_path, toolkit_registry=toolkit_registry)
 
     @classmethod
     @requires_package("openmm")
@@ -5493,6 +5523,13 @@ class HierarchyScheme:
     A ``HierarchyScheme`` contains the information needed to perceive
     ``HierarchyElement`` objects from a ``Molecule`` containing atoms with
     metadata.
+
+    See also
+    --------
+    Molecule.add_default_hierarchy_schemes, Molecule.add_hierarchy_scheme,
+    Molecule.hierarchy_schemes, Molecule.delete_hierarchy_scheme,
+    Molecule.update_hierarchy_schemes, Molecule.perceive_residues,
+    Topology.hierarchy_iterator, HierarchyElement
     """
 
     def __init__(
