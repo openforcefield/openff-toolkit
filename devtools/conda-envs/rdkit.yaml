@@ -26,7 +26,7 @@ dependencies:
 # - openmmforcefields
   - openmm >=7.6
   - openff-forcefields
-  - openff-units =>0.1.7
+  - openff-units >=0.1.7
   - openff-utilities >=0.1.5
   - openff-interchange-base >=0.2.0rc4
   - smirnoff99Frosst
