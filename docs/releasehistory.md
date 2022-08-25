@@ -95,6 +95,8 @@ In addition to these breaking changes, the `positions` argument is now optional.
 
 ## Current Development
 
+- [PR #1377](https://github.com/openforcefield/openff-toolkit/pull/1377): Adds 
+  `Topology.unique_molecules`, which largely replaces `Topology.reference_molecules`. 
 - [PR #1313](https://github.com/openforcefield/openff-toolkit/pull/1313): Fixes 
   [Issue #1287](https://github.com/openforcefield/openff-toolkit/issues/1287), where  
   `OpenEyeToolkitWrapper.assign_partial_charges` didn't request symmetrized charges when
