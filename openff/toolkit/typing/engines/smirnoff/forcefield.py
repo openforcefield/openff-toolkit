@@ -1084,9 +1084,32 @@ class ForceField:
 
         Parameters
         ----------
-        topology : openforcefield.topology.Topology
-            The ``Topology`` which is to be parameterized with this ``ForceField``.
+        topology
+            The ``Topology`` which is to be parameterized with this
+            ``ForceField``.
+        toolkit_registry
+            The toolkit registry to use for parametrization (eg, for calculating
+            partial charges and partial bond orders)
+        charge_from_molecules
+            Take partial charges from the input topology rather than calculating
+            them. This may be useful for avoiding recalculating charges, but
+            take care to ensure that your charges are appropriate for the force
+            field.
+        partial_bond_orders_from_molecules
+            Take partial bond orders from the input topology rather than
+            calculating them. This may be useful for avoiding recalculating
+            PBOs, but take to ensure that they are appropriate for the
+            force field.
+        allow_nonintegral_charges
+            Allow charges that do not sum to an integer.
+        return_topology
+            .. deprecated:: 0.11.0
+                The ``return_topology`` argument has been deprecated and will be
+                removed in v0.12.0. Call :meth:`ForceField.create_interchange`
+                and take the topology from `interchange.topology` instead.
 
+            Return the Topology with any modifications needed to parametrize it
+            in a tuple along with the OpenMM system.
         """
         return_topology = kwargs.pop("return_topology", False)
         toolkit_registry = kwargs.pop("toolkit_registry", None)
@@ -1148,9 +1171,20 @@ class ForceField:
         ----------
         topology : openff.toolkit.topology.Topology
             The topology to create this `Interchange` object from.
-        toolkit_registry :  ToolkitRegistry, optional
-            A `ToolkitRegistry` containing the toolkit wrappers to be used during parametriation,
-            i.e. for assigning partial charges and fractional bond orders.
+        toolkit_registry
+            The toolkit registry to use for parametrization (eg, for calculating
+            partial charges and partial bond orders)
+        charge_from_molecules
+            Take charges from the input topology rather than calculating them.
+            This may be useful for avoiding recalculating charges, but take care
+            to ensure that your charges are appropriate for the force field.
+        partial_bond_orders_from_molecules
+            Take partial bond orders from the input topology rather than
+            calculating them. This may be useful for avoiding recalculating
+            PBOs, but take to ensure that they are appropriate for the
+            force field.
+        allow_nonintegral_charges
+            Allow charges that do not sum to an integer.
 
         Returns
         -------
