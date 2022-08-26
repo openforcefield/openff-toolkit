@@ -1530,8 +1530,8 @@ class TestForceField:
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
         with pytest.raises(
-            ValueError,
-            match="Unsupported.* Found: {'invalid_kwarg': 'aaa",
+            TypeError,
+            match="got an unexpected keyword argument .*invalid_kwarg.*",
         ):
             # TODO: specify desired toolkit_registry behavior in Interchange
             forcefield.create_openmm_system(
