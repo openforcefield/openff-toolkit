@@ -326,6 +326,7 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 
 ## Current Development
 
+- [PR #1105](https://github.com/openforcefield/openff-toolkit/pull/1105), [PR #1195](https://github.com/openforcefield/openff-toolkit/pull/1195), [PR #1301](https://github.com/openforcefield/openff-toolkit/pull/1301), [PR #1331](https://github.com/openforcefield/openff-toolkit/pull/1331), [PR #1322](https://github.com/openforcefield/openff-toolkit/pull/1322), [PR #1372](https://github.com/openforcefield/openff-toolkit/pull/1372): Add `Molecule.from_polymer_pdb`
 - [PR #1377](https://github.com/openforcefield/openff-toolkit/pull/1377): Adds 
   `Topology.unique_molecules`, which largely replaces `Topology.reference_molecules`. 
 - [PR #1313](https://github.com/openforcefield/openff-toolkit/pull/1313): Fixes 
