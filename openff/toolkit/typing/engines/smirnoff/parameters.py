@@ -3685,7 +3685,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         from collections import defaultdict
 
         topology_atoms = {
-            i: topology_atom for i, topology_atom in enumerate(entity.topology_atoms)
+            i: topology_atom for i, topology_atom in enumerate(entity.atoms)
         }
 
         # We need to find all the parameters that would lead to a v-site being placed
