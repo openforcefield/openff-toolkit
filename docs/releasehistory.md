@@ -8,6 +8,12 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Migration guide
 
+### New [`Molecule.from_polymer_pdb()`] method for loading proteins from PDB files
+
+The Toolkit now supports loading protein PDB files through the [`Molecule.from_polymer_pdb()`] class method. For now, PDB files must consist of only a single protein molecule composed only of the 20 standard amino acids, their common protonated and deprotonated conjugates, and the N-methyl and acetyl caps.
+
+[`Molecule.from_polymer_pdb()`]: Molecule.from_polymer_pdb
+
 ### Important API points re-exported from `openff.toolkit`
 
 A number of commonly used API points have been re-exported from the package root. This should make using the Toolkit simpler for most people. The previous API points remain available. These API points are lazy-loaded so that parts of the toolkit can still be loaded without loading the entire code-base.
