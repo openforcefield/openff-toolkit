@@ -123,12 +123,12 @@ jobs:
 
           which python
           python -c "import pdbfixer"
-          python -c "from pdbfixer import PDBFixer"
+          python -c "from pdbfixer import PDBFixer, __file__; print(__file__)"
 
           # openmmforcefields incompatible with new toolkit
           NB_ARGS+=" --ignore=examples/external/swap_amber_parameters/swap_existing_ligand_parameters_with_openmmforcefields.ipynb"
 
-          pytest $NB_ARGS examples
+          python -m pytest $NB_ARGS examples
 
       - name: Codecov
         uses: codecov/codecov-action@v3.1.0
