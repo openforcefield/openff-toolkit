@@ -65,11 +65,11 @@ jobs:
           environment-name: offtk-examples
           extra-specs: |
             python=${{ matrix.python-version }}
-            mamba
+            micromamba
 
       - name: Install additional example dependencies
         run: |
-          mamba env update -v --file examples/environment.yaml --name offtk-examples
+          micromamba env update -v --file examples/environment.yaml --name offtk-examples
 
           # If openmmforcefields is included in examples/environment.yaml,
           # remove RDKit and AmberTools brought in by it. Currently it's not included,
@@ -120,6 +120,8 @@ jobs:
             NB_ARGS+=" --ignore=examples/conformer_energies"
             NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
           fi
+
+          which python
 
           # openmmforcefields incompatible with new toolkit
           NB_ARGS+=" --ignore=examples/external/swap_amber_parameters/swap_existing_ligand_parameters_with_openmmforcefields.ipynb"
