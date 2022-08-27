@@ -10,6 +10,7 @@ dependencies:
   - ambertools
   - openeye-toolkits
   # These dependencies are in addition to the toolkit itself
+  - pdbfixer
   - nglview
   - ipywidgets >=7,<8
   - notebook
