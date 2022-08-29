@@ -66,17 +66,17 @@ jobs:
           fi
 
       - name: Install conda environment with ${{ env.ENVFILE }}
-        uses: mamba-org/provision-with-micromamba@main
+        uses: conda-incubator/setup-miniconda@v2
         with:
           environment-file: devtools/conda-envs/${{env.ENVFILE}}.yaml
           environment-name: offtk-examples
-          extra-specs: |
-            python=${{ matrix.python-version }}
+          python-version: ${{ matrix.python-version }}
 
       - name: Install additional example dependencies
         run: |
           which python
-          micromamba env update -v --file examples/environment.yaml --name offtk-examples # --prefix /home/runner/micromamba-root/envs/offtk-examples/
+          conda env update -v --file examples/environment.yaml --name offtk-examples
+          # --prefix /home/runner/micromamba-root/envs/offtk-examples/
 
           # If openmmforcefields is included in examples/environment.yaml,
           # remove RDKit and AmberTools brought in by it. Currently it's not included,
@@ -85,7 +85,10 @@ jobs:
           if [[ true == false ]]; then
             conda remove --force rdkit ambertools
           fi
+
           which python
+          python -c "import pdbfixer"
+          python -c "from pdbfixer import PDBFixer, __file__; print(__file__)"
 
       - name: Additional info about the build
         run: |
@@ -133,10 +136,6 @@ jobs:
             NB_ARGS+=" --ignore=examples/conformer_energies"
             NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
           fi
-
-          which python
-          python -c "import pdbfixer"
-          python -c "from pdbfixer import PDBFixer, __file__; print(__file__)"
 
           # openmmforcefields incompatible with new toolkit
           NB_ARGS+=" --ignore=examples/external/swap_amber_parameters/swap_existing_ligand_parameters_with_openmmforcefields.ipynb"
