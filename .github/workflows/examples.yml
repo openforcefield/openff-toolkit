@@ -90,6 +90,9 @@ jobs:
           fi
 
           which python
+          conda activate offtk-examples
+          which python
+
           python -c "import pdbfixer"
           python -c "from pdbfixer import PDBFixer, __file__; print(__file__)"
 
