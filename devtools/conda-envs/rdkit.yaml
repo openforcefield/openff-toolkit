@@ -22,6 +22,7 @@ dependencies:
   - ambertools
   - rdkit
   - packaging
+  - pdbfixer
     # Removed until a compatible release is made
 # - openmmforcefields
   - openmm >=7.6
