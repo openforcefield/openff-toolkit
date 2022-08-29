@@ -60,16 +60,12 @@ jobs:
           fi
 
       - name: Install conda environment with ${{ env.ENVFILE }}
-        uses: conda-incubator/setup-miniconda@v2
+        uses: mamba-org/provision-with-micromamba@main
         with:
-          python-version: ${{ matrix.python-version }}
-          activate-environment: test
-          environment-file: devtools/conda-envs/${{env.ENVFILE}}-examples.yaml
-          auto-activate-base: false
-          miniforge-version: latest
-          miniforge-variant: Mambaforge
-          use-mamba: true
-
+          environment-file: devtools/conda-envs/${{env.ENVFILE}}.yaml
+          environment-name: offtk-examples
+          extra-specs: |
+            python=${{ matrix.python-version }}
 
       - name: Additional info about the build
         run: |
