@@ -77,7 +77,10 @@ jobs:
       - name: Install additional example dependencies
         run: |
           which python
-          mamba env update -v --file examples/environment.yaml  # --name offtk-examples
+          which mamba
+          # Maybe try telling it _where_ to install
+          # https://github.com/mamba-org/mamba/issues/631#issuecomment-768371029
+          mamba env update -v --file examples/environment.yaml --prefix /home/runner/micromamba-root/envs/offtk-examples/
 
           # If openmmforcefields is included in examples/environment.yaml,
           # remove RDKit and AmberTools brought in by it. Currently it's not included,
