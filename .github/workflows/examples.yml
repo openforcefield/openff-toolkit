@@ -62,7 +62,7 @@ jobs:
       - name: Install conda environment with ${{ env.ENVFILE }}
         uses: mamba-org/provision-with-micromamba@main
         with:
-          environment-file: devtools/conda-envs/${{env.ENVFILE}}.yaml
+          environment-file: devtools/conda-envs/${{env.ENVFILE}}-examples.yaml
           extra-specs: |
             python=${{ matrix.python-version }}
 
