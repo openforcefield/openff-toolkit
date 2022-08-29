@@ -141,7 +141,7 @@ jobs:
           # openmmforcefields incompatible with new toolkit
           NB_ARGS+=" --ignore=examples/external/swap_amber_parameters/swap_existing_ligand_parameters_with_openmmforcefields.ipynb"
 
-          python -m pytest $NB_ARGS examples/toolkit_showcase/toolkit_showcase.ipynb
+          python -m pytest $NB_ARGS examples
 
       - name: Codecov
         uses: codecov/codecov-action@v3.1.0
