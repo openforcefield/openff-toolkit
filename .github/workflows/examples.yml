@@ -68,14 +68,17 @@ jobs:
       - name: Install conda environment with ${{ env.ENVFILE }}
         uses: conda-incubator/setup-miniconda@v2
         with:
-          environment-file: devtools/conda-envs/${{env.ENVFILE}}.yaml
-          environment-name: offtk-examples
           python-version: ${{ matrix.python-version }}
+          activate-environment: test
+          environment-file: devtools/conda-envs/${{env.ENVFILE}}.yaml
+          auto-activate-base: false
+          miniforge-version: latest
+          miniforge-variant: Mambaforge
+          use-mamba: true
 
       - name: Install additional example dependencies
         run: |
-          which python
-          conda env update -v --file examples/environment.yaml --name offtk-examples
+          mamba env update -v --file examples/environment.yaml --name offtk-examples
           # --prefix /home/runner/micromamba-root/envs/offtk-examples/
 
           # If openmmforcefields is included in examples/environment.yaml,
