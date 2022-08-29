@@ -70,6 +70,27 @@ jobs:
           miniforge-variant: Mambaforge
           use-mamba: true
 
+
+      - name: Additional info about the build
+        run: |
+          uname -a
+          df -h
+          ulimit -a
+
+      - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
+        shell: bash
+        env:
+          OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
+        run: |
+          echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
+
+      - name: Install package
+        run: |
+          # Maybe remove the packaged openff-toolkit, installed as a dependency of openmmforcefields
+          # and/or Interchange
+          conda remove --force openff-toolkit-base
+          python setup.py develop --no-deps
+
       - name: Remove undesired toolkits
         run: |
           # If openmmforcefields is included in examples/environment.yaml,
@@ -95,27 +116,6 @@ jobs:
               python -c "from openff.toolkit.utils.toolkits import ${TK}_AVAILABLE; assert not ${TK}_AVAILABLE, '${TK} available'"
             done
           fi
-
-      - name: Additional info about the build
-        run: |
-          uname -a
-          df -h
-          ulimit -a
-
-      - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
-        shell: bash
-        env:
-          OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
-        run: |
-          echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
-
-      - name: Install package
-        run: |
-          # Maybe remove the packaged openff-toolkit, installed as a dependency of openmmforcefields
-          # and/or Interchange
-          conda remove --force openff-toolkit-base
-          python setup.py develop --no-deps
-
       - name: Environment Information
         run: |
           conda info
