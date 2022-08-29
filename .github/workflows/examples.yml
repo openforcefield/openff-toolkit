@@ -14,13 +14,6 @@ on:
     #   Scheduled workflows run on the latest commit on the default or base branch.
     #   (from https://help.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events-schedule)
     - cron: "0 0 * * *"
-  workflow_dispatch:
-    inputs:
-      debug_enabled:
-        type: boolean
-        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
-        required: false
-        default: false
 
 defaults:
   run:
@@ -35,17 +28,17 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["3.9"]
-        rdkit: [true]
-        openeye: [false]
-#       exclude:
-#         - rdkit: false
-#           openeye: false
-#         - rdkit: true
-#           openeye: true
+        python-version: ["3.8"]
+        rdkit: [true, false]
+        openeye: [true, false]
+        exclude:
+          - rdkit: false
+            openeye: false
+          - rdkit: true
+            openeye: true
 
     env:
-      # OE_LICENSE: ${{ github.workspace }}/oe_license.txt
+      OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openff
       PYTEST_ARGS: -r fE --tb=short --cov=openff --cov-config=setup.cfg --cov-append --cov-report=xml
       NB_ARGS: -v --nbval-lax --ignore=examples/deprecated
@@ -79,7 +72,6 @@ jobs:
       - name: Install additional example dependencies
         run: |
           mamba env update -v --file examples/environment.yaml --name offtk-examples
-          # --prefix /home/runner/micromamba-root/envs/offtk-examples/
 
           # If openmmforcefields is included in examples/environment.yaml,
           # remove RDKit and AmberTools brought in by it. Currently it's not included,
@@ -89,25 +81,18 @@ jobs:
             conda remove --force rdkit ambertools
           fi
 
-          which python
-          conda activate offtk-examples
-          which python
-
-          python -c "import pdbfixer"
-          python -c "from pdbfixer import PDBFixer, __file__; print(__file__)"
-
       - name: Additional info about the build
         run: |
           uname -a
           df -h
           ulimit -a
 
-#     - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
-#       shell: bash
-#       env:
-#         OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
-#       run: |
-#         echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
+      - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
+        shell: bash
+        env:
+          OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
+        run: |
+          echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
 
       - name: Install package
         run: |
@@ -120,11 +105,6 @@ jobs:
         run: |
           conda info
           conda list
-
-      # Enable tmate debugging of manually-triggered workflows if the input option was provided
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
       - name: Run example scripts
         run: |
