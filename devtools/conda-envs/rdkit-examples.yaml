@@ -1,0 +1,41 @@
+name: test
+channels:
+  - conda-forge/label/openff-interchange_rc
+  - conda-forge/label/openff-toolkit_rc
+  - conda-forge
+
+dependencies:
+  - python
+  - pip
+  - pytest
+  - pytest-cov
+  - pytest-xdist
+  - pytest-rerunfailures
+  - nbval
+  - codecov
+  - coverage
+  - numpy
+  - networkx
+  - ambertools
+  - rdkit
+  - packaging
+  - openmm >=7.6
+  - openff-forcefields
+  - openff-units >=0.1.7
+  - openff-utilities >=0.1.5
+  - openff-interchange-base >=0.2.0rc6
+  - smirnoff99Frosst
+  - cachetools
+  - cached-property
+  - pyyaml
+  - toml
+  - bson
+  - msgpack-python
+  - xmltodict
+  - python-constraint
+  - qcelemental
+  - qcportal >=0.15
+  - qcengine
+  - mdtraj
+  - ipywidgets >=7,<8
+  - pdbfixer
