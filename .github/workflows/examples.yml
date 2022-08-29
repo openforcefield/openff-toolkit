@@ -111,6 +111,11 @@ jobs:
           conda info
           conda list
 
+      # Enable tmate debugging of manually-triggered workflows if the input option was provided
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+
       - name: Run example scripts
         run: |
           if [[ ${{ matrix.rdkit }} == false ]]; then
@@ -118,11 +123,6 @@ jobs:
             PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
           fi
           pytest $PYTEST_ARGS openff/toolkit/tests/test_examples.py
-
-      # Enable tmate debugging of manually-triggered workflows if the input option was provided
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
       - name: Run example notebooks
         run: |
