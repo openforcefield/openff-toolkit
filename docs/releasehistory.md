@@ -10,6 +10,12 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Migration guide
 
+### New [`Molecule.from_polymer_pdb()`] method for loading proteins from PDB files
+
+The Toolkit now supports loading protein PDB files through the [`Molecule.from_polymer_pdb()`] class method. For now, PDB files must consist of only a single protein molecule composed only of the 20 standard amino acids, their common protonated and deprotonated conjugates, and the N-methyl and acetyl caps.
+
+[`Molecule.from_polymer_pdb()`]: Molecule.from_polymer_pdb
+
 ### Important API points re-exported from `openff.toolkit`
 
 A number of commonly used API points have been re-exported from the package root. This should make using the Toolkit simpler for most people. The previous API points remain available. These API points are lazy-loaded so that parts of the toolkit can still be loaded without loading the entire code-base.
@@ -337,6 +343,7 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 
 ### Additional changes and bugfixes
 
+- [PR #1105](https://github.com/openforcefield/openff-toolkit/pull/1105), [PR #1195](https://github.com/openforcefield/openff-toolkit/pull/1195), [PR #1301](https://github.com/openforcefield/openff-toolkit/pull/1301), [PR #1331](https://github.com/openforcefield/openff-toolkit/pull/1331), [PR #1322](https://github.com/openforcefield/openff-toolkit/pull/1322), [PR #1372](https://github.com/openforcefield/openff-toolkit/pull/1372): Add `Molecule.from_polymer_pdb`
 - [PR #1377](https://github.com/openforcefield/openff-toolkit/pull/1377): Adds 
   `Topology.unique_molecules`, which largely replaces `Topology.reference_molecules`. 
 - [PR #1313](https://github.com/openforcefield/openff-toolkit/pull/1313): Fixes 
