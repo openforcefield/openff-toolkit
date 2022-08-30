@@ -24,8 +24,8 @@ dependencies:
   - openff-forcefields
   - openff-units >=0.1.7
   - openff-utilities >=0.1.5
-  #- openff-toolkit >=0.11.0rc3
-  #- openff-interchange-base >=0.2.0rc6
+  - openff-toolkit >=0.11.0rc3
+  - openff-interchange-base >=0.2.0rc6
   - smirnoff99Frosst
   - cachetools
   - cached-property
@@ -41,6 +41,3 @@ dependencies:
   - mdtraj
   - ipywidgets >=7,<8
   - pdbfixer
-  - pip:
-    - git+https://github.com/openforcefield/openff-interchange.git@main
-    - git+https://github.com/openforcefield/openff-toolkit.git@main
