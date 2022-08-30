@@ -1,10 +1,9 @@
-# Environment file for Jupyter notebook examples
-name: binder-env
+name: test
 channels:
-  # Reduces image size by using empty cudatoolkit package
-  - jaimergp/label/unsupported-cudatoolkit-shim
+  - openeye
+  - conda-forge/label/openff-interchange_rc
+  - conda-forge/label/openff-toolkit_rc
   - conda-forge
-  - defaults
 dependencies:
   - python
   - pip
@@ -17,14 +16,13 @@ dependencies:
   - coverage
   - numpy
   - networkx
-  - ambertools
-  - rdkit
+  - parmed
+  - openeye-toolkits
   - packaging
-  - openmm >=7.6
+  - openmm =>7.6
   - openff-forcefields
   - openff-units >=0.1.7
   - openff-utilities >=0.1.5
-  - openff-toolkit >=0.11.0rc3
   - openff-interchange-base >=0.2.0rc6
   - smirnoff99Frosst
   - cachetools

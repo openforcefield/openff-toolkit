@@ -10,9 +10,6 @@ on:
       - "main"
       - "maintenance/.+"
   schedule:
-    # Nightly tests run on main by default:
-    #   Scheduled workflows run on the latest commit on the default or base branch.
-    #   (from https://help.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events-schedule)
     - cron: "0 0 * * *"
 
 defaults:
@@ -52,32 +49,22 @@ jobs:
         run: |
           if [[ ${{ matrix.openeye }} == true && ${{ matrix.rdkit }} == false ]]; then
               echo "ENVFILE=openeye" >> $GITHUB_ENV
+              echo "TOOLKIT_CHECKS=OPENEYE" >> $GITHUB_ENV
+              echo "PACKAGES_TO_REMOVE=ambertools rdkit" >> $GITHUB_ENV
           fi
 
           if [[ ${{ matrix.openeye }} == false && ${{ matrix.rdkit }} == true ]]; then
               echo "ENVFILE=rdkit" >> $GITHUB_ENV
+              echo "TOOLKIT_CHECKS=RDKIT" >> $GITHUB_ENV
+              echo "PACKAGES_TO_REMOVE=openeye-toolkits" >> $GITHUB_ENV
           fi
 
       - name: Install conda environment with ${{ env.ENVFILE }}
         uses: mamba-org/provision-with-micromamba@main
         with:
-          environment-file: devtools/conda-envs/${{env.ENVFILE}}.yaml
-          environment-name: offtk-examples
+          environment-file: devtools/conda-envs/${{env.ENVFILE}}-examples.yaml
           extra-specs: |
             python=${{ matrix.python-version }}
-            mamba
-
-      - name: Install additional example dependencies
-        run: |
-          mamba env update -v --file examples/environment.yaml --name offtk-examples
-
-          # If openmmforcefields is included in examples/environment.yaml,
-          # remove RDKit and AmberTools brought in by it. Currently it's not included,
-          # so don't remove it.
-          # if [[ ${{ matrix.rdkit }} == false ]]; then
-          if [[ true == false ]]; then
-            conda remove --force rdkit ambertools
-          fi
 
       - name: Additional info about the build
         run: |
@@ -96,9 +83,34 @@ jobs:
         run: |
           # Maybe remove the packaged openff-toolkit, installed as a dependency of openmmforcefields
           # and/or Interchange
-          # conda remove --force openff-toolkit-base
+          conda remove --force openff-toolkit-base
           python setup.py develop --no-deps
 
+      - name: Remove undesired toolkits
+        run: |
+          # If openmmforcefields is included in examples/environment.yaml,
+          # remove RDKit and AmberTools brought in by it. Currently it's not included,
+          # so don't remove it.
+          if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
+            for cpkg in ${{ env.PACKAGES_TO_REMOVE }}; do
+              if [[ $(conda list | grep $cpkg) ]]; then conda remove --force $cpkg --yes ; fi
+            done
+          fi
+
+      - name: Check installed toolkits
+        run: |
+          for tk in ${{ env.TOOLKIT_CHECKS }}; do
+            python -c "from openff.toolkit.utils.toolkits import ${tk}_AVAILABLE; assert ${tk}_AVAILABLE, '${tk} unavailable'"
+          done
+
+      - name: Check uninstalled toolkits
+        run: |
+          if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
+            for tk in ${{ env.PACKAGES_TO_REMOVE }}; do
+              TK=$(echo ${tk%-*} | tr 'a-z' 'A-Z')
+              python -c "from openff.toolkit.utils.toolkits import ${TK}_AVAILABLE; assert not ${TK}_AVAILABLE, '${TK} available'"
+            done
+          fi
       - name: Environment Information
         run: |
           conda info
@@ -119,23 +131,16 @@ jobs:
             NB_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             NB_ARGS+=" --ignore=examples/conformer_energies"
             NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
-            # Remove when #1322 is merged
-            NB_ARGS+=" --ignore=examples/using_smirnoff_with_amber_protein_forcefield"
           fi
-
-          # Working on in #1325
-          NB_ARGS+=" --ignore=examples/virtual_sites/vsite_showcase.ipynb"
 
           # openmmforcefields incompatible with new toolkit
           NB_ARGS+=" --ignore=examples/external/swap_amber_parameters/swap_existing_ligand_parameters_with_openmmforcefields.ipynb"
 
-          # JM will do some smithing on this before 0.11.0 release
-          NB_ARGS+=" --ignore=examples/toolkit_showcase/toolkit_showcase.ipynb"
-
-          pytest $NB_ARGS examples
+          python -m pytest $NB_ARGS examples
 
       - name: Codecov
         uses: codecov/codecov-action@v3.1.0
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage.xml
           fail_ci_if_error: true
