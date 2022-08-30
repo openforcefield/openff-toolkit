@@ -6,6 +6,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+## 0.11.0 Major release adding support for proteins and refactoring the Topology class.
+
 ## Migration guide
 
 ### Important API points re-exported from `openff.toolkit`
@@ -318,7 +320,7 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 [`assign_partial_charges()`]: Molecule.assign_partial_charges
 
 
-## Current Development
+### Additional changes and bugfixes
 
 - [PR #1377](https://github.com/openforcefield/openff-toolkit/pull/1377): Adds 
   `Topology.unique_molecules`, which largely replaces `Topology.reference_molecules`. 
@@ -374,9 +376,6 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 - [PR #1213](https://github.com/openforcefield/openff-toolkit/pull/1213): Removes
   `Topology.charge_model` and `Topology.fractional_bond_order_model`.
 - [PR #1140](https://github.com/openforcefield/openff-toolkit/pull/1140): Adds the `Topology.identical_molecule_groups` property, which provides a way of grouping the instances of a specific chemical species in the topology.
-
-### Critical bugfixes
-
 - [PR #1200](https://github.com/openforcefield/openforcefield/pull/1200): Fixes a bug
   ([Issue #1199](https://github.com/openforcefield/openff-toolkit/issues/428)) in which library
   charges were ignored in some force fields, including `openff-2.0.0` code name "Sage." This resulted in
@@ -385,9 +384,6 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
   believed to have any impact on the fitting or benchmarking of the first release of Sage (version
   2.0.0). The change causing regression only affected library charges and therefore no other
   parameter types are believed to be affected.
-
-### Behaviors changed and bugfixes
-
 - [PR #1346](https://github.com/openforcefield/openff-toolkit/pull/1346): Conformer generation with RDKit
   will use `useRandomCoords=True` on a second attempt if the first attempt fails, which sometimes
   happens with large molecules.
@@ -432,6 +428,10 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 - [PR #1368](https://github.com/openforcefield/openff-toolkit/pull/1368): Adds the `Topology.get_positions()` and `Topology.set_positions()` methods for working with topology positions. Positions are represented as the first conformer of each molecule in the topology.
 - [PR #1368](https://github.com/openforcefield/openff-toolkit/pull/1368): Allows setting the `ensure_unique_atom_names` argument of `Topology.to_openmm()`to the name of a hierarchy scheme, in which case atom names are guaranteed unique per element of that scheme rather than per molecule. Changes the default value to `"residues"`.
 - [PR #1368](https://github.com/openforcefield/openff-toolkit/pull/1368): Adds the `ensure_unique_atom_names` argument to the `Topology.to_file()`, which mimics the same argument in `Topology.to_openmm()`. Renames the `keepIds` argument to `keep_ids`. Renames the `filename` argument to `file` and allows a file-like object to be passed instead of a filename. Makes the `positions` argument optional; if it is not given, positions are take from the first conformer of each molecule in the Topology.
+- [PR #1290](https://github.com/openforcefield/openforcefield/pull/1290): Fixes
+  [Issue #1216](https://github.com/openforcefield/openff-toolkit/issues/1216) by adding internal logic to handle
+  the possibility that multiple vsites share the same parent atom, and makes the return value of 
+  `VirtualSiteHandler.find_matches` be closer to the base class.
 
 ### Examples added
 
@@ -444,12 +444,6 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 
 - [PR #1188](https://github.com/openforcefield/openff-toolkit/pull/1188): Add an `<Electrostatics>`
   section to the TIP3P force field file used in testing (`test_forcefields/tip3p.offxml`)
-
-### Minor bugfixes
-- [PR #1290](https://github.com/openforcefield/openforcefield/pull/1290): Fixes
-  [Issue #1216](https://github.com/openforcefield/openff-toolkit/issues/1216) by adding internal logic to handle
-  the possibility that multiple vsites share the same parent atom, and makes the return value of 
-  `VirtualSiteHandler.find_matches` be closer to the base class.
 
 
 

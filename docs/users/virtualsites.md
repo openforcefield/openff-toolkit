@@ -119,13 +119,7 @@ site parameters. Let us consider 4-, 5-, and 6-point water models:
 ## Ordering of atoms and virtual sites
 
 The toolkit handles the orders the atoms and virtual sites in a topology in a
-specific manner for internal convenience. 
-
-Virtual sites are expected to be added *after all molecules in the topology are present*. 
-This is because the Open Force Field Toolkit organizes a topology by placing all atoms 
-first, then all virtual sites last. This differs from the OpenMM Modeller object, for 
-example, which interleaves the order of atoms and virtual sites in such a way that all 
-particles of a molecule are contiguous. 
+specific manner for internal convenience.
 
 In addition, due to the fact that a virtual site may contain multiple particles coupled 
 to single parameters, the toolkit makes a distinction between a virtual *site*, and a virtual 
