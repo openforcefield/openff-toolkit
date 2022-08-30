@@ -1,19 +1,45 @@
 # Environment file for Jupyter notebook examples
 name: binder-env
 channels:
+  # Reduces image size by using empty cudatoolkit package
+  - jaimergp/label/unsupported-cudatoolkit-shim
   - conda-forge
   - defaults
 dependencies:
-  # Let conda pull in the toolkit and its deps
-  - openff-toolkit
-  # Optional(-ish) dependencies used in example(s)
-  - nglview
+  - python
+  - pip
+  - pytest
+  - pytest-cov
+  - pytest-xdist
+  - pytest-rerunfailures
+  - nbval
+  - codecov
+  - coverage
+  - numpy
+  - networkx
+  - ambertools
+  - rdkit
+  - packaging
+  - openmm >=7.6
+  - openff-forcefields
+  - openff-units >=0.1.7
+  - openff-utilities >=0.1.5
+  - openff-interchange-base >=0.2.0rc6
+  - smirnoff99Frosst
+  - cachetools
+  - cached-property
+  - pyyaml
+  - toml
+  - bson
+  - msgpack-python
+  - xmltodict
+  - python-constraint
   - qcelemental
-  - qcportal
+  - qcportal >=0.15
   - qcengine
-  - openmmforcefields
-  - openff-amber-ff-ports >=0.0.2
-  - gromacs >=2021=nompi*
-  - lammps
+  - mdtraj
+  - ipywidgets >=7,<8
+  - pdbfixer
   - pip:
     - git+https://github.com/openforcefield/openff-interchange.git@main
+    - git+https://github.com/openforcefield/openff-toolkit.git@main
