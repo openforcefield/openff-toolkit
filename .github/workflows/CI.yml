@@ -161,6 +161,11 @@ jobs:
         run: |
           pytest -v --doctest-glob="docs/*.rst" docs/
 
+      - name: Run notebooks in docs
+        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
+        run: |
+          pytest -v --nbval docs/
+
       - name: Codecov
         uses: codecov/codecov-action@v3.1.0
         with:
