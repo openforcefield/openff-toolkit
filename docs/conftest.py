@@ -5,7 +5,4 @@ def pytest_collectstart(collector):
     See https://nbval.readthedocs.io/en/latest/#Skipping-certain-output-types
     """
     if collector.fspath and collector.fspath.ext == ".ipynb":
-        collector.skip_compare += (
-            "image/svg+xml",
-            "stderr",
-        )
+        collector.skip_compare += ["stderr"]
