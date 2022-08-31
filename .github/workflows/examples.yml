@@ -38,7 +38,7 @@ jobs:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openff
       PYTEST_ARGS: -r fE --tb=short --cov=openff --cov-config=setup.cfg --cov-append --cov-report=xml
-      NB_ARGS: -v --nbval-lax --ignore=examples/deprecated --durations=0
+      NB_ARGS: -v --nbval-lax --ignore=examples/deprecated --durations=20
 
     steps:
       - uses: actions/checkout@v3.0.2
@@ -117,7 +117,6 @@ jobs:
           conda list
 
       - name: Run example scripts
-        if: ${{ matrix.python-version == 999 }}
         run: |
           if [[ ${{ matrix.rdkit }} == false ]]; then
             PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
@@ -137,7 +136,7 @@ jobs:
           # openmmforcefields incompatible with new toolkit
           NB_ARGS+=" --ignore=examples/external/swap_amber_parameters/swap_existing_ligand_parameters_with_openmmforcefields.ipynb"
 
-          python -m pytest $PYTEST_ARGS $NB_ARGS examples/toolkit_showcase/
+          python -m pytest $PYTEST_ARGS $NB_ARGS examples
 
       - name: Codecov
         uses: codecov/codecov-action@v3.1.0
