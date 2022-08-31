@@ -117,6 +117,7 @@ jobs:
           conda list
 
       - name: Run example scripts
+        if: ${{ matrix.python-version == 999 }}
         run: |
           if [[ ${{ matrix.rdkit }} == false ]]; then
             PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
@@ -136,7 +137,7 @@ jobs:
           # openmmforcefields incompatible with new toolkit
           NB_ARGS+=" --ignore=examples/external/swap_amber_parameters/swap_existing_ligand_parameters_with_openmmforcefields.ipynb"
 
-          python -m pytest $NB_ARGS examples
+          python -m pytest $NB_ARGS examples/toolkit_showcase/
 
       - name: Codecov
         uses: codecov/codecov-action@v3.1.0
