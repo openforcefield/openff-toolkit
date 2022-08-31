@@ -164,7 +164,7 @@ jobs:
       - name: Run notebooks in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: |
-          pytest -v --nbval docs/
+          pytest -v --nbval --sanitize-with docs/nbval-sanitize.cfg --ignore docs/_build/ docs/
 
       - name: Codecov
         uses: codecov/codecov-action@v3.1.0
