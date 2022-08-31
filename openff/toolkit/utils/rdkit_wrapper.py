@@ -61,7 +61,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     _toolkit_name = "The RDKit"
     _toolkit_installation_instructions = (
         "A conda-installable version of the free and open source RDKit cheminformatics "
-        "toolkit can be found at: https://anaconda.org/rdkit/rdkit"
+        "toolkit can be found at: https://anaconda.org/conda-forge/rdkit"
     )
 
     def __init__(self):
