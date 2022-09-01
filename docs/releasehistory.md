@@ -192,7 +192,7 @@ The following properties have been **deprecated** and will be removed in a futur
 - `Topology.n_topology_molecules` (use [`Topology.n_molecules`](Topology.n_molecules) instead)
 - `Topology.topology_molecules` (use [`Topology.molecules`](Topology.molecules) instead)
 - `Topology.n_particles` (use [`Topology.n_atoms`](Topology.n_atoms) instead)
-- `Topology.particles` (use [`Topology.molecules`](Topology.molecules) instead)
+- `Topology.particles` (use [`Topology.atoms`](Topology.atoms) instead)
 - `Topology.particle_index` (use [`Topology.atom_index`](Topology.atom_index) instead)
 
 In addition, the [`Topology.identical_molecule_groups`] property has been added, to facilitate iterating over copies of isomorphic molecules in a `Topology`.
