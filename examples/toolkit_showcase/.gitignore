@@ -1,5 +1,6 @@
 fep-benchmark/
 *.nc
+*.dcd
 *.top
 *.gro
 *.tpr
