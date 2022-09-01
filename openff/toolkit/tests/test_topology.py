@@ -4,10 +4,13 @@ Tests for Topology
 """
 
 import itertools
+import re
+from copy import deepcopy
 
 import numpy as np
 import pytest
 from openff.units import unit
+from openff.units.units import Quantity
 from openmm import app
 
 from openff.toolkit.tests.create_molecules import (
@@ -48,10 +51,12 @@ from openff.toolkit.utils import (
 from openff.toolkit.utils.exceptions import (
     AtomNotInTopologyError,
     DuplicateUniqueMoleculeError,
+    IncompatibleUnitError,
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
     MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
+    WrongShapeError,
 )
 
 
@@ -105,6 +110,7 @@ class TestTopology:
         """Test creation of empty topology"""
         topology = Topology()
         assert topology.n_molecules == 0
+        assert topology.n_unique_molecules == 0
         assert topology.n_atoms == 0
         assert topology.n_bonds == 0
         assert topology.box_vectors is None
@@ -219,6 +225,7 @@ class TestTopology:
         topology = Topology.from_molecules(ethane_from_smiles())
 
         assert topology.n_molecules == 1
+        assert topology.n_unique_molecules == 1
         assert topology.n_atoms == 8
         assert topology.n_bonds == 7
         assert topology.box_vectors is None
@@ -226,6 +233,7 @@ class TestTopology:
 
         topology.add_molecule(ethane_from_smiles())
         assert topology.n_molecules == 2
+        assert topology.n_unique_molecules == 1
         assert topology.n_atoms == 16
         assert topology.n_bonds == 14
         assert topology.box_vectors is None
@@ -237,6 +245,7 @@ class TestTopology:
             [ethane_from_smiles(), propane_from_smiles()]
         )
         assert topology.n_molecules == 2
+        assert topology.n_unique_molecules == 2
 
     def test_n_atoms(self):
         """Test n_atoms function"""
@@ -504,6 +513,7 @@ class TestTopology:
 
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         assert topology.n_molecules == 239
+        assert topology.n_unique_molecules == 2
 
     def test_from_openmm_missing_reference(self):
         """Test creation of an OpenFF Topology object from an OpenMM Topology when missing a unique molecule"""
@@ -566,9 +576,10 @@ class TestTopology:
         # The round-trip OpenFF Topology is identical to the original.
         # The reference molecules are the same.
         assert off_topology.n_molecules == off_topology_copy.n_molecules
-        reference_molecules_copy = list(off_topology_copy.reference_molecules)
-        for ref_mol_idx, ref_mol in enumerate(off_topology.reference_molecules):
-            assert ref_mol == reference_molecules_copy[ref_mol_idx]
+        assert off_topology.n_unique_molecules == off_topology_copy.n_unique_molecules
+        molecules_copy = list(off_topology_copy.molecules)
+        for mol_idx, mol in enumerate(off_topology.molecules):
+            assert mol == molecules_copy[mol_idx]
 
         # The number of topology molecules is the same.
         assert off_topology.n_molecules == off_topology_copy.n_molecules
@@ -619,6 +630,14 @@ class TestTopology:
             else:
                 assert omm_atom.residue.id == "0"
 
+            if "insertion_code" in orig_atom.metadata:
+                assert (
+                    orig_atom.metadata["insertion_code"]
+                    == omm_atom.residue.insertionCode
+                )
+            else:
+                assert omm_atom.residue.insertionCode == " "
+
             if "chain_id" in orig_atom.metadata:
                 assert orig_atom.metadata["chain_id"] == omm_atom.residue.chain.id
             else:
@@ -639,6 +658,13 @@ class TestTopology:
                 assert original == roundtrip
             else:
                 assert roundtrip_atom.metadata["residue_number"] == 0
+
+            if "insertion_code" in orig_atom.metadata:
+                original = orig_atom.metadata["insertion_code"]
+                roundtrip = roundtrip_atom.metadata["insertion_code"]
+                assert original == roundtrip
+            else:
+                assert roundtrip_atom.metadata["insertion_code"] == " "
 
             if "chain_id" in orig_atom.metadata:
                 original = orig_atom.metadata["chain_id"]
@@ -820,6 +846,146 @@ class TestTopology:
             "C",
         ]
 
+    @requires_rdkit
+    def test_to_file_object(self):
+        """
+        Checks that a file-like object can be written to (vs a path or str)
+        """
+        from io import StringIO
+        from tempfile import NamedTemporaryFile
+
+        from openff.toolkit.topology import Molecule, Topology
+
+        topology = Topology()
+        mol = Molecule.from_pdb_and_smiles(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO"
+        )
+        topology.add_molecule(mol)
+        positions = mol.conformers[0]
+
+        # Check a file-like wrapper around a str
+        with StringIO() as iofile:
+            topology.to_file(iofile, positions)
+            data1 = [line + "\n" for line in iofile.getvalue().splitlines()]
+
+        # Check an actual real file object
+        with NamedTemporaryFile(mode="w+", suffix=".pdb") as iofile:
+            topology.to_file(iofile, positions)
+            iofile.seek(0)
+            data2 = iofile.readlines()
+
+        # Do it the old fashioned way for comparison
+        with NamedTemporaryFile(mode="w+", suffix=".pdb") as iofile:
+            topology.to_file(iofile.name, positions)
+            data3 = iofile.readlines()
+
+        assert data1 == data3
+        assert data2 == data3
+
+    @requires_rdkit
+    def test_to_file_automatic_positions(self):
+        """
+        Checks that to_file can take positions from the topology
+        """
+        from io import StringIO
+
+        from openff.toolkit.topology import Molecule, Topology
+
+        topology = Topology()
+        mol = Molecule.from_pdb_and_smiles(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO"
+        )
+        topology.add_molecule(mol)
+
+        count = 1
+        with StringIO() as iofile:
+            topology.to_file(iofile)
+            data = iofile.getvalue().splitlines()
+            for line in data:
+                if line.startswith("HETATM") and count == 1:
+                    count = count + 1
+                    coord = line.split()[-6]
+        assert coord == "10.172"
+
+    def test_to_file_ensure_uniqueness_true(self):
+        """
+        Checks that ensure_unique_atom_names=True provides per-molecule unique atom names
+        """
+        from io import StringIO
+
+        from openff.toolkit.topology import Molecule, Topology
+
+        mol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+        )
+        topology = Topology.from_molecules([mol])
+
+        with StringIO() as iofile:
+            topology.to_file(iofile, ensure_unique_atom_names=True)
+            data = iofile.getvalue().splitlines()
+
+        atom_names = []
+        for line in data:
+            if line.startswith("ATOM") or line.startswith("HETATM"):
+                atom_name = line[12:16].strip()
+                atom_names.append(atom_name)
+        assert len(atom_names) == len(set(atom_names))
+
+    def test_to_file_ensure_uniqueness_false(self):
+        """
+        Checks that ensure_unique_atom_names=False preserves atom names
+        """
+        from io import StringIO
+
+        from openff.toolkit.topology import Molecule, Topology
+
+        mol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+        )
+        topology = Topology.from_molecules([mol])
+        atom_names = set([atom.name for atom in topology.atoms])
+        assert None not in atom_names, "All input atoms must be named"
+
+        with StringIO() as iofile:
+            topology.to_file(iofile, ensure_unique_atom_names=False)
+            data = iofile.getvalue().splitlines()
+
+        for line in data:
+            if line.startswith("ATOM") or line.startswith("HETATM"):
+                atom_name = line[12:16].strip()
+                assert atom_name in atom_names
+
+    def test_to_file_ensure_uniqueness_residues(self):
+        """
+        Checks that ensure_unique_atom_names="residues" provides per-residue unique atom names
+        """
+        from io import StringIO
+
+        from openff.toolkit.topology import Molecule, Topology
+
+        mol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+        )
+        topology = Topology.from_molecules([mol])
+
+        with StringIO() as iofile:
+            topology.to_file(iofile, ensure_unique_atom_names="residues")
+            data = iofile.getvalue().splitlines()
+
+        from collections import defaultdict
+
+        residues = defaultdict(list)
+        for line in data:
+            if line.startswith("ATOM") or line.startswith("HETATM"):
+                atom_name = line[12:16].strip()
+                res_name = line[17:20].strip()
+                res_number = line[22:26].strip()
+                res_icode = line[26].strip()
+                residues[(res_name, res_number, res_icode)].append(atom_name)
+
+        for residue_atom_names in residues.values():
+            assert len(residue_atom_names) == len(set(residue_atom_names))
+
     @requires_openeye
     def test_from_openmm_duplicate_unique_mol(self):
         """
@@ -846,7 +1012,8 @@ class TestTopology:
         # process doesn't encode stereochemistry.
         raise NotImplementedError
 
-    def test_to_openmm_assign_unique_atom_names(self):
+    @pytest.mark.parametrize("ensure_unique_atom_names", [True, "residues", "chains"])
+    def test_to_openmm_assign_unique_atom_names(self, ensure_unique_atom_names):
         """
         Ensure that OFF topologies with no pre-existing atom names have unique
         atom names applied when being converted to openmm
@@ -855,14 +1022,24 @@ class TestTopology:
         ethanol = Molecule.from_smiles("CCO")
         benzene = Molecule.from_smiles("c1ccccc1")
         off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
-        omm_topology = off_topology.to_openmm()
+
+        # This test uses molecules with no hierarchy schemes, so the parametrized
+        # ensure_unique_atom_names values should behave identically.
+        assert not any(
+            [mol._hierarchy_schemes for mol in off_topology.molecules]
+        ), "Test assumes no hierarchy schemes"
+
+        omm_topology = off_topology.to_openmm(
+            ensure_unique_atom_names=ensure_unique_atom_names
+        )
         atom_names = set()
         for atom in omm_topology.atoms():
             atom_names.add(atom.name)
         # There should be 6 unique Cs, 6 unique Hs, and 1 unique O, for a total of 13 unique atom names
         assert len(atom_names) == 13
 
-    def test_to_openmm_assign_some_unique_atom_names(self):
+    @pytest.mark.parametrize("ensure_unique_atom_names", [True, "residues", "chains"])
+    def test_to_openmm_assign_some_unique_atom_names(self, ensure_unique_atom_names):
         """
         Ensure that OFF topologies with some pre-existing atom names have unique
         atom names applied to the other atoms when being converted to openmm
@@ -873,7 +1050,16 @@ class TestTopology:
             atom.name = f"AT{atom.molecule_atom_index}"
         benzene = Molecule.from_smiles("c1ccccc1")
         off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
-        omm_topology = off_topology.to_openmm()
+
+        # This test uses molecules with no hierarchy schemes, so the parametrized
+        # ensure_unique_atom_names values should behave identically.
+        assert not any(
+            [mol._hierarchy_schemes for mol in off_topology.molecules]
+        ), "Test assumes no hierarchy schemes"
+
+        omm_topology = off_topology.to_openmm(
+            ensure_unique_atom_names=ensure_unique_atom_names
+        )
         atom_names = set()
         for atom in omm_topology.atoms():
             atom_names.add(atom.name)
@@ -881,7 +1067,10 @@ class TestTopology:
         # for a total of 21 unique atom names
         assert len(atom_names) == 21
 
-    def test_to_openmm_assign_unique_atom_names_some_duplicates(self):
+    @pytest.mark.parametrize("ensure_unique_atom_names", [True, "residues", "chains"])
+    def test_to_openmm_assign_unique_atom_names_some_duplicates(
+        self, ensure_unique_atom_names
+    ):
         """
         Ensure that OFF topologies where some molecules have invalid/duplicate
         atom names have unique atom names applied while the other molecules are unaffected.
@@ -902,7 +1091,16 @@ class TestTopology:
             atom.name = atom_name
 
         off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
-        omm_topology = off_topology.to_openmm()
+
+        # This test uses molecules with no hierarchy schemes, so the parametrized
+        # ensure_unique_atom_names values should behave identically.
+        assert not any(
+            [mol._hierarchy_schemes for mol in off_topology.molecules]
+        ), "Test assumes no hierarchy schemes"
+
+        omm_topology = off_topology.to_openmm(
+            ensure_unique_atom_names=ensure_unique_atom_names
+        )
         atom_names = set()
         for atom in omm_topology.atoms():
             atom_names.add(atom.name)
@@ -930,6 +1128,188 @@ class TestTopology:
         # and 12 atoms named "", for a total of 3 unique atom names
         assert len(atom_names) == 3
 
+    @pytest.mark.parametrize("explicit_arg", [True, False])
+    def test_to_openmm_preserve_per_residue_unique_atom_names(self, explicit_arg):
+        """
+        Test that to_openmm preserves atom names that are unique per-residue by default
+        """
+        # Create a topology from a capped dialanine
+        peptide = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+        )
+        off_topology = Topology.from_molecules([peptide])
+
+        # Assert the test's assumptions
+        _ace, ala1, ala2, _nme = off_topology.hierarchy_iterator("residues")
+        assert [a.name for a in ala1.atoms] == [
+            a.name for a in ala2.atoms
+        ], "Test assumes both alanines have same atom names"
+
+        for res in off_topology.hierarchy_iterator("residues"):
+            res_atomnames = [atom.name for atom in res.atoms]
+            assert len(set(res_atomnames)) == len(
+                res_atomnames
+            ), f"Test assumes atom names are already unique per-residue in {res}"
+
+        # Record the initial atom names
+        init_atomnames = [str(atom.name) for atom in off_topology.atoms]
+
+        # Perform the test
+        if explicit_arg:
+            omm_topology = off_topology.to_openmm(ensure_unique_atom_names="residues")
+        else:
+            omm_topology = off_topology.to_openmm()
+
+        # Check that the atom names were preserved
+        final_atomnames = [str(atom.name) for atom in omm_topology.atoms()]
+        assert final_atomnames == init_atomnames
+
+    @pytest.mark.parametrize("explicit_arg", [True, False])
+    def test_to_openmm_generate_per_residue_unique_atom_names(self, explicit_arg):
+        """
+        Test that to_openmm preserves atom names that are unique per-residue by default
+        """
+        # Create a topology from a capped dialanine
+        peptide = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+        )
+        off_topology = Topology.from_molecules([peptide])
+
+        # Remove atom names from some residues, make others have duplicate atom names
+        ace, ala1, ala2, nme = off_topology.hierarchy_iterator("residues")
+        for atom in ace.atoms:
+            atom._name = None
+        for atom in ala1.atoms:
+            atom.name = ""
+        for atom in ala2.atoms:
+            atom.name = "ATX2"
+        for atom in nme.atoms:
+            if atom.name == "H2":
+                atom.name = "H1"
+                break
+
+        # Assert assumptions
+        for res in off_topology.hierarchy_iterator("residues"):
+            res_atomnames = [atom.name for atom in res.atoms]
+            assert len(set(res_atomnames)) != len(
+                res_atomnames
+            ), f"Test assumes atom names are not unique per-residue in {res}"
+        assert off_topology.n_atoms == 32, "Test assumes topology has 32 atoms"
+
+        # Perform the test
+        if explicit_arg:
+            omm_topology = off_topology.to_openmm(ensure_unique_atom_names="residues")
+        else:
+            omm_topology = off_topology.to_openmm()
+
+        # Check that the atom names are now unique per-residue but not per-molecule
+        for res in omm_topology.residues():
+            res_atomnames = [atom.name for atom in res.atoms()]
+            assert len(set(res_atomnames)) == len(
+                res_atomnames
+            ), f"Final atom names are not unique in residue {res}"
+
+        atom_names = set()
+        for atom in omm_topology.atoms():
+            atom_names.add(atom.name)
+        assert (
+            len(atom_names) < 32
+        ), "There should be duplicate atom names in this output topology"
+
+    @pytest.mark.parametrize("ensure_unique_atom_names", ["chains", True])
+    def test_to_openmm_generate_per_molecule_unique_atom_names_with_residues(
+        self, ensure_unique_atom_names
+    ):
+        """
+        Test that to_openmm preserves atom names that are unique per-residue by default
+        """
+        # Create a topology from a capped dialanine
+        peptide = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
+        )
+        off_topology = Topology.from_molecules([peptide])
+
+        # Remove atom names from some residues, make others have duplicate atom names
+        ace, ala1, ala2, nme = off_topology.hierarchy_iterator("residues")
+        for atom in ace.atoms:
+            atom._name = None
+        for atom in ala1.atoms:
+            atom.name = ""
+        for atom in ala2.atoms:
+            atom.name = "ATX2"
+        for atom in nme.atoms:
+            if atom.name == "H2":
+                atom.name = "H1"
+                break
+
+        # Assert assumptions
+        for res in off_topology.hierarchy_iterator("residues"):
+            res_atomnames = [atom.name for atom in res.atoms]
+            assert len(set(res_atomnames)) != len(
+                res_atomnames
+            ), f"Test assumes atom names are not unique per-residue in {res}"
+        assert off_topology.n_atoms == 32, "Test assumes topology has 32 atoms"
+
+        # Perform the test
+        omm_topology = off_topology.to_openmm(
+            ensure_unique_atom_names=ensure_unique_atom_names
+        )
+
+        # Check that the atom names are now unique across the topology (of 1 molecule)
+        atom_names = set()
+        for atom in omm_topology.atoms():
+            atom_names.add(atom.name)
+        assert (
+            len(atom_names) == 32
+        ), "There should not be duplicate atom names in this output topology"
+
+    @pytest.mark.parametrize(
+        "ensure_unique_atom_names", [True, "residues", "chains", False]
+    )
+    def test_to_openmm_copies_molecules(self, ensure_unique_atom_names):
+        """
+        Check that generating new atom names doesn't affect the input topology
+        """
+        # Create OpenFF topology with 1 ethanol and 2 benzenes.
+        ethanol = Molecule.from_smiles("CCO")
+        for atom in ethanol.atoms:
+            atom.name = f"AT{atom.molecule_atom_index}"
+        benzene = Molecule.from_smiles("c1ccccc1")
+        off_topology = Topology.from_molecules(molecules=[ethanol, benzene, benzene])
+        # Record the initial atom names to compare to later
+        init_atomnames = [str(atom.name) for atom in off_topology.atoms]
+
+        # This test uses molecules with no hierarchy schemes, so the parametrized
+        # ensure_unique_atom_names values should behave identically (except False).
+        assert not any(
+            [mol._hierarchy_schemes for mol in off_topology.molecules]
+        ), "Test assumes no hierarchy schemes"
+
+        omm_topology = off_topology.to_openmm(
+            ensure_unique_atom_names=ensure_unique_atom_names
+        )
+
+        # Get the atom names back from the initial molecules after calling to_openmm
+        final_atomnames_mols = [
+            atom.name for atom in [*ethanol.atoms, *benzene.atoms, *benzene.atoms]
+        ]
+        # Get the atom names back from the initial topology after calling to_openmm
+        final_atomnames_offtop = [atom.name for atom in off_topology.atoms]
+        # Get the atom names back from the new OpenMM topology
+        final_atomnames_ommtop = [atom.name for atom in omm_topology.atoms()]
+
+        # Check the appropriate properties!
+        assert (
+            init_atomnames == final_atomnames_mols
+        ), "Molecules' atom names were changed"
+        assert (
+            init_atomnames == final_atomnames_offtop
+        ), "Topology's atom names were changed"
+        if ensure_unique_atom_names:
+            assert (
+                init_atomnames != final_atomnames_ommtop
+            ), "New atom names should've been generated but weren't"
+
     def test_group_chemically_identical_molecules(self):
         """Test behavior and caching of Topology.group_chemically_identical_molecules"""
         top = Topology()
@@ -942,7 +1322,7 @@ class TestTopology:
         groupings = top.identical_molecule_groups
 
         def assert_first_ethanol_is_grouped_correctly(groupings):
-            assert groupings[0][0] == [0, {i: i for i in range(9)}]
+            assert groupings[0][0] == (0, {i: i for i in range(9)})
 
         assert_first_ethanol_is_grouped_correctly(groupings)
 
@@ -968,7 +1348,7 @@ class TestTopology:
 
         def assert_cyclohexane_is_grouped_correctly(groupings):
             assert len(groupings[2]) == 1
-            assert groupings[2][0] == [2, {i: i for i in range(18)}]
+            assert groupings[2][0] == (2, {i: i for i in range(18)})
 
         groupings = top.identical_molecule_groups
         assert_first_ethanol_is_grouped_correctly(groupings)
@@ -1079,8 +1459,8 @@ class TestTopology:
         chains = list(top.hierarchy_iterator("chains"))
         assert chains == []
         assert [res.identifier for res in residues] == [
-            ("None", 1, "ACE"),
-            ("None", 2, "ALA"),
+            ("None", 1, " ", "ACE"),
+            ("None", 2, " ", "ALA"),
         ]
         # Ensure that adding molecules WITH hierarchy perceived DOES give the
         # topology residues and chains to iterate over
@@ -1089,16 +1469,16 @@ class TestTopology:
         residues = list(top.hierarchy_iterator("residues"))
         chains = list(top.hierarchy_iterator("chains"))
         assert [res.identifier for res in residues] == [
-            ("None", 1, "ACE"),
-            ("None", 2, "ALA"),
-            ("None", 1, "ACE"),
-            ("None", 2, "ALA"),
-            ("None", 1, "ACE"),
-            ("None", 2, "CYS"),
-            ("None", 3, "NME"),
-            ("None", 4, "ACE"),
-            ("None", 5, "CYS"),
-            ("None", 6, "NME"),
+            ("None", 1, " ", "ACE"),
+            ("None", 2, " ", "ALA"),
+            ("None", 1, " ", "ACE"),
+            ("None", 2, " ", "ALA"),
+            ("None", 1, " ", "ACE"),
+            ("None", 2, " ", "CYS"),
+            ("None", 3, " ", "NME"),
+            ("None", 4, " ", "ACE"),
+            ("None", 5, " ", "CYS"),
+            ("None", 6, " ", "NME"),
         ]
         # First chain hierarchy element is from dipeptide_hierarchy_added,
         # second is from cyx_hierarchy_added. Both have the same uniqueness
@@ -1112,16 +1492,16 @@ class TestTopology:
         residues = list(top.hierarchy_iterator("residues"))
         chains = list(top.hierarchy_iterator("chains"))
         assert [res.identifier for res in residues] == [
-            ("None", 1, "ACE"),
-            ("None", 2, "ALA"),
-            ("None", 1, "ACE"),
-            ("None", 2, "ALA"),
-            ("None", 1, "ACE"),
-            ("None", 2, "CYS"),
-            ("None", 3, "NME"),
-            ("None", 4, "ACE"),
-            ("None", 5, "CYS"),
-            ("None", 6, "NME"),
+            ("None", 1, " ", "ACE"),
+            ("None", 2, " ", "ALA"),
+            ("None", 1, " ", "ACE"),
+            ("None", 2, " ", "ALA"),
+            ("None", 1, " ", "ACE"),
+            ("None", 2, " ", "CYS"),
+            ("None", 3, " ", "NME"),
+            ("None", 4, " ", "ACE"),
+            ("None", 5, " ", "CYS"),
+            ("None", 6, " ", "NME"),
         ]
         assert len(chains) == 2
 
@@ -1156,10 +1536,17 @@ class TestAddTopology:
 
         assert topology1.constrained_atom_pairs[(0, 1)] == 1.01 * unit.angstrom
         assert len(topology2._cached_chemically_identical_molecules) == 1
+        # Do a basic test of topology.atom_index which forces topology2
+        # to build its atom index cache
+        assert topology2.atom_index(topology2.atom(2)) == 2
 
         topology3 = topology1 + topology2
 
         assert topology3._cached_chemically_identical_molecules is None
+        # Query the same atom as above, but in topology 3. If the cache isn't invalidated
+        # then this will still have the old atom index (2), but if it's correctly
+        # invalidated and rebuilt, it will have an index of 5.
+        assert topology3.atom_index(topology3.atom(5)) == 5
 
         # Constrained atom pairs are intentionally not removed
         assert topology3.constrained_atom_pairs[(0, 1)] == 1.01 * unit.angstrom
@@ -1342,3 +1729,257 @@ def test_tagsorted_dict_clear(tsd):
     tsd.clear()
 
     assert len(tsd) == 0
+
+
+class TestValenceDictKeyIndex:
+    @pytest.mark.parametrize(
+        "inkey, outkey",
+        [
+            [[0, 1], (0, 1)],
+            [[1, 0], (0, 1)],
+            [(1, 3, 2, 4), (1, 3, 2, 4)],
+            [(4, 2, 3, 1), (1, 3, 2, 4)],
+            [(1, 8, 3, 4, 2, 5), (1, 8, 3, 4, 2, 5)],
+            [(5, 2, 4, 3, 8, 1), (1, 8, 3, 4, 2, 5)],
+        ],
+    )
+    def test_key_transform(self, inkey, outkey):
+        assert ValenceDict.key_transform(inkey) == outkey
+
+    @pytest.mark.parametrize(
+        "key, possible, index",
+        [
+            [[0, 1], None, 0],
+            [[1, 0], None, 1],
+            [(1, 3, 2, 4), None, 0],
+            [(4, 2, 3, 1), None, 1],
+            [(4, 2, 3, 1), [(4, 2, 3, 1)], 0],
+            [(1, 8, 3, 4, 2, 5), None, 0],
+            [(5, 2, 4, 3, 8, 1), None, 1],
+            [(5, 2, 4, 3, 8, 1), [(5, 2, 4, 3, 8, 1)], 0],
+        ],
+    )
+    def test_index_of(self, key, possible, index):
+        assert ValenceDict.index_of(key, possible) == index
+
+    def test_impossible_error(self):
+        with pytest.raises(ValueError, match="Impossible permutations"):
+            ValenceDict.index_of([0, 1, 2, 4], possible=[(1, 2, 3, 4)])
+
+    def test_no_key(self):
+        with pytest.raises(ValueError, match="not in possible"):
+            ValenceDict.index_of([0, 1, 2, 4], possible=[(4, 2, 1, 0)])
+
+    def test_construct(self):
+        v = ValenceDict()
+        v[(4, 2, 3, 1)] = 0
+        assert (1, 3, 2, 4) in v
+        assert (4, 2, 3, 1) in v
+        assert v[(1, 3, 2, 4)] == 0
+
+
+class TestImproperDictKeyIndex:
+    @pytest.mark.parametrize(
+        "inkey, outkey",
+        [
+            [(0, 1, 2, 3), (0, 1, 2, 3)],
+            [(0, 1, 3, 2), (0, 1, 2, 3)],
+            [(2, 1, 0, 3), (0, 1, 2, 3)],
+            [(2, 1, 3, 0), (0, 1, 2, 3)],
+            [(3, 1, 2, 0), (0, 1, 2, 3)],
+            [(3, 1, 0, 2), (0, 1, 2, 3)],
+        ],
+    )
+    def test_key_transform(self, inkey, outkey):
+        assert ImproperDict.key_transform(inkey) == outkey
+
+    @pytest.mark.parametrize(
+        "key, index",
+        [
+            [(0, 1, 2, 3), 0],
+            [(0, 1, 3, 2), 1],
+            [(2, 1, 0, 3), 2],
+            [(2, 1, 3, 0), 3],
+            [(3, 1, 0, 2), 4],
+            [(3, 1, 2, 0), 5],
+        ],
+    )
+    def test_index_of_no_possible(self, key, index):
+        assert ImproperDict.index_of(key) == index
+
+    @pytest.mark.parametrize(
+        "possible, index",
+        [
+            [[(3, 1, 0, 2)], 0],
+            [[(3, 1, 0, 2), (3, 1, 0, 2)], 0],
+            [[(0, 1, 2, 3), (3, 1, 0, 2)], 1],
+            [[(2, 1, 3, 0), (3, 1, 0, 2)], 1],
+            [[(0, 1, 3, 2), (3, 1, 0, 2), (3, 1, 2, 0)], 1],
+            [[(0, 1, 3, 2), (0, 1, 2, 3), (3, 1, 0, 2)], 2],
+        ],
+    )
+    def test_index_of_possible(self, possible, index):
+        assert ImproperDict.index_of((3, 1, 0, 2), possible) == index
+
+    def test_impossible_error(self):
+        with pytest.raises(ValueError, match="Impossible permutations"):
+            ImproperDict.index_of([0, 1, 2, 4], possible=[(1, 2, 3, 4)])
+
+    def test_no_key(self):
+        with pytest.raises(ValueError, match="not in possible"):
+            ImproperDict.index_of([0, 1, 2, 4], possible=[(4, 1, 2, 0)])
+
+
+class TestTopologyPositions:
+    @pytest.mark.parametrize(
+        "generate_positions",
+        [
+            # Test an array
+            lambda n: np.arange(n * 3).reshape(n, 3),
+            # Test a list of lists
+            lambda n: [[i * 3, i * 3 + 1, i * 3 + 2] for i in range(n)],
+            # Test a list of tuples
+            lambda n: [(i * 3, i * 3 + 1, i * 3 + 2) for i in range(n)],
+        ],
+    )
+    def test_set_positions(self, generate_positions):
+        # Methane molecule with initial conformers
+        methane = Molecule.from_mapped_smiles("[H:2][C:1]([H:3])([H:4])[H:5]")
+        methane.generate_conformers()
+        init_conformers = deepcopy(methane.conformers)
+
+        # Water molecules without initial conformers
+        water = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
+        assert water._conformers is None
+
+        # Water molecules with empty list of conformers
+        water_emptyconfs = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
+        water_emptyconfs._conformers = []
+
+        # Compile topology
+        topology = Topology.from_molecules(
+            [
+                methane,
+                *[water] * 2,
+                *[water_emptyconfs] * 2,
+            ]
+        )
+
+        # Generate positions deterministically
+        positions = Quantity(generate_positions(topology.n_atoms), unit.nanometer)
+
+        # Run the method under test
+        topology.set_positions(positions)
+
+        # Make sure the input molecules haven't changed
+        # (because adding them to the topology copies them)
+        assert all(np.all(a == b) for a, b in zip(methane.conformers, init_conformers))
+        assert not water.conformers
+
+        # Now we're going to check all the molecules
+        mol_iter = topology.molecules
+
+        # Make sure the methane's first conformation is changed, but the others are left
+        first_mol = next(mol_iter)
+        assert np.all(first_mol.conformers[0] == positions[0:5, :])
+        assert np.all(first_mol.conformers[1:] == init_conformers[1:])
+
+        # Check the other molecules in the topology.
+        # Reusing the iterator to skip the methane
+        for i, mol in enumerate(mol_iter):
+            # Methane is indices 0-4, so the first water we want to iterate
+            # over (i==0) is indices 5, 6, 7, ie slice [5:8].
+            start = i * 3 + 5
+            stop = i * 3 + 8
+            assert np.all(mol.conformers[0] == positions[start:stop, :])
+
+    @pytest.fixture()
+    def topology(self) -> Topology:
+        methane = Molecule.from_mapped_smiles("[H:2][C:1]([H:3])([H:4])[H:5]")
+        water = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
+        topology = Topology.from_molecules([methane] + [water] * 4)
+
+        return topology
+
+    def test_set_positions_fails_without_units(self, topology):
+        # Generate positions without units deterministically
+        positions_no_units = np.arange(topology.n_atoms * 3).reshape(-1, 3)
+
+        with pytest.raises(
+            IncompatibleUnitError,
+            match=re.escape(
+                "array should be an OpenFF Quantity with dimensions of length"
+            ),
+        ):
+            topology.set_positions(positions_no_units)
+
+    @pytest.mark.parametrize(
+        "generate_shape",
+        [
+            lambda n: (3, n),  # right size, backwards
+            lambda n: (n, 1, 3),  # right size, one extra dimension
+            lambda n: (n * 3,),  # right size, 1D array
+            lambda _: (0,),  # No positions
+            lambda n: (n + 1, 3),  # Right shape, one too many atoms
+            lambda n: (n - 1, 3),  # Right shape, one too few atoms
+            lambda n: (n * 3, 3),  # Right shape, 3 times too many atoms
+            lambda n: (n, 1),  # 1D chemistry is not real
+        ],
+    )
+    def test_set_positions_fails_with_wrong_shape(
+        self,
+        topology,
+        generate_shape,
+    ):
+        # Generate positions without units deterministically
+        n_atoms = topology.n_atoms
+        shape = generate_shape(n_atoms)
+        size = np.prod(shape)
+        positions_wrong_shape = Quantity(
+            np.arange(size).reshape(*shape),
+            unit.nanometer,
+        )
+
+        with pytest.raises(
+            WrongShapeError,
+            match=re.escape(
+                f"Array has shape {shape} but should have shape {(n_atoms, 3)}"
+            ),
+        ):
+            topology.set_positions(positions_wrong_shape)
+
+    def test_get_positions(self, topology):
+        # Generate positions deterministically
+        positions = Quantity(
+            np.arange(topology.n_atoms * 3).reshape(-1, 3), unit.nanometer
+        )
+        topology.set_positions(positions)
+
+        # Check that the positions match
+        positions_out = topology.get_positions()
+        assert np.all(positions_out == positions)
+        assert positions_out is not positions
+
+        # Set a position in positions_out and check that it does not alter the
+        # underlying conformer
+        positions_out[0, 0] = (
+            -1.0 * unit.nanometer
+        )  # Negative positions cannot be generated
+        assert np.all(next(topology.molecules).conformers[0] != -1.0 * unit.nanometer)
+
+    def test_get_positions_none(self, topology):
+        # No positions when conformers are None
+        assert topology.get_positions() is None
+
+        # No positions when conformer is empty
+        topology._molecules[0]._conformers = []
+        assert topology.get_positions() is None
+
+        # Positions for everything but first molecule
+        positions = Quantity(
+            np.arange(topology.n_atoms * 3).reshape(-1, 3),
+            unit.nanometer,
+        )
+        topology.set_positions(positions)
+        topology._molecules[0]._conformers = None
+        assert topology.get_positions() is None

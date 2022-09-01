@@ -1,5 +1,6 @@
 fep-benchmark/
 *.nc
+*.dcd
 *.top
 *.gro
 *.tpr
@@ -8,6 +9,10 @@ fep-benchmark/
 *.edr
 *.cpt
 *.xtc
+receptor.pdb
+receptor_solvated.pdb
+_tmp_pdb_file.pdb
 system.pdb
 mdout.mdp
 \#*\#
+topology.json

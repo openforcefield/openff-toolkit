@@ -1,12 +1,13 @@
-name: test
+name: latest-deployment
 channels:
   - conda-forge
 
 dependencies:
     # Base depends
-  - openff-toolkit
+  - openff-toolkit-examples
 
   - openmmforcefields
+  - qcportal >=0.15
   - pytest
   - pytest-rerunfailures
   - nbval

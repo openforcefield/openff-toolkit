@@ -5,6 +5,7 @@ Tests for cheminformatics toolkit wrappers
 
 import logging
 import os
+import pathlib
 from tempfile import NamedTemporaryFile
 from typing import Dict
 
@@ -463,7 +464,12 @@ class TestOpenEyeToolkitWrapper:
             # OpenEye wrapper always adds hierarchy metadata (residue name + num) info, so account for that
             atom1_dict = atom1.to_dict()
             atom1_dict["metadata"].update(
-                {"residue_name": "UNL", "residue_number": 1, "chain_id": " "}
+                {
+                    "residue_name": "UNL",
+                    "residue_number": 1,
+                    "insertion_code": " ",
+                    "chain_id": " ",
+                }
             )
             assert atom1_dict == atom2.to_dict()
         for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
@@ -518,7 +524,12 @@ class TestOpenEyeToolkitWrapper:
             # OpenEye wrapper always adds hierarchy metadata (residue name + num) info, so account for that
             atom1_dict = atom1.to_dict()
             atom1_dict["metadata"].update(
-                {"residue_name": "UNL", "residue_number": 1, "chain_id": " "}
+                {
+                    "residue_name": "UNL",
+                    "residue_number": 1,
+                    "insertion_code": " ",
+                    "chain_id": " ",
+                }
             )
             assert atom1_dict == atom2.to_dict()
         for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
@@ -593,6 +604,12 @@ class TestOpenEyeToolkitWrapper:
                         == oechem.OEAtomGetResidue(oe_atom).GetResidueNumber()
                     )
 
+                if "insertion_code" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["insertion_code"]
+                        == oechem.OEAtomGetResidue(oe_atom).GetInsertCode()
+                    )
+
                 if "chain_id" in orig_atom.metadata:
                     assert (
                         orig_atom.metadata["chain_id"]
@@ -616,6 +633,12 @@ class TestOpenEyeToolkitWrapper:
                             == roundtrip_atom.metadata["residue_number"]
                         )
 
+                    if "insertion_code" in orig_atom.metadata:
+                        assert (
+                            orig_atom.metadata["insertion_code"]
+                            == roundtrip_atom.metadata["insertion_code"]
+                        )
+
                     if "chain_id" in orig_atom.metadata:
                         assert (
                             orig_atom.metadata["chain_id"]
@@ -625,6 +648,7 @@ class TestOpenEyeToolkitWrapper:
                 else:
                     assert "residue_name" not in roundtrip_atom.metadata
                     assert "residue_number" not in roundtrip_atom.metadata
+                    assert "insertion_code" not in roundtrip_atom.metadata
                     assert "chain_id" not in roundtrip_atom.metadata
 
     def test_from_openeye_mutable_input(self):
@@ -848,6 +872,15 @@ class TestOpenEyeToolkitWrapper:
         for oeatom, atom2 in zip(oemol.GetAtoms(), molecule2.atoms):
             assert oeatom.GetName() == atom2.name
 
+    def test_from_pathlib_path(self):
+        ethanol = create_ethanol()
+        with NamedTemporaryFile(suffix=".sdf") as outfile:
+            filename = str(outfile.name)
+            ethanol.to_file(filename, file_format="sdf")
+
+            toolkit = OpenEyeToolkitWrapper()
+            toolkit.from_file(pathlib.Path(filename), file_format="sdf")
+
     def test_write_multiconformer_pdb(self):
         """
         Make sure OpenEye can write multi conformer PDB files.
@@ -893,6 +926,11 @@ class TestOpenEyeToolkitWrapper:
         water.to_file(sio, "pdb", toolkit_registry=toolkit)
         water_from_pdb = sio.getvalue()
         water_from_pdb_split = water_from_pdb.split("\n")
+        # Check serial number
+        assert water_from_pdb_split[0].split()[1].rstrip() == "1"
+        assert water_from_pdb_split[1].split()[1].rstrip() == "2"
+        assert water_from_pdb_split[2].split()[1].rstrip() == "3"
+        # Check atom name
         assert water_from_pdb_split[0].split()[2].rstrip() == "H"
         assert water_from_pdb_split[1].split()[2].rstrip() == "O"
         assert water_from_pdb_split[2].split()[2].rstrip() == "H"
@@ -1384,6 +1422,11 @@ class TestOpenEyeToolkitWrapper:
         )
         charge_sum = np.sum(molecule.partial_charges)
         assert 1.0e-10 > abs(charge_sum.m_as(unit.elementary_charge))
+
+        # Atoms 6 and 7 are hydrogens on the central C. If we don't symmetrize charges they'll have slight differences
+        assert 1.0e-10 > abs(
+            molecule.partial_charges[6] - molecule.partial_charges[7]
+        ).m_as(unit.elementary_charge)
 
     @pytest.mark.parametrize("partial_charge_method", ["am1bcc", "am1-mulliken"])
     def test_assign_partial_charges_conformer_dependence(self, partial_charge_method):
@@ -2304,6 +2347,7 @@ class TestRDKitToolkitWrapper:
                 atom_has_any_metadata = (
                     ("residue_name" in orig_atom.metadata)
                     or ("residue_number" in orig_atom.metadata)
+                    or ("insertion_code" in orig_atom.metadata)
                     or ("chain_id" in orig_atom.metadata)
                 )
 
@@ -2327,6 +2371,14 @@ class TestRDKitToolkitWrapper:
                 else:
                     assert rd_atom.GetPDBResidueInfo().GetResidueNumber() == 0
 
+                if "insertion_code" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["insertion_code"]
+                        == rd_atom.GetPDBResidueInfo().GetInsertionCode()
+                    )
+                else:
+                    assert rd_atom.GetPDBResidueInfo().GetInsertionCode() == " "
+
                 if "chain_id" in orig_atom.metadata:
                     assert (
                         orig_atom.metadata["chain_id"]
@@ -2340,6 +2392,7 @@ class TestRDKitToolkitWrapper:
                 atom_has_any_metadata = (
                     ("residue_name" in orig_atom.metadata)
                     or ("residue_number" in orig_atom.metadata)
+                    or ("insertion_code" in orig_atom.metadata)
                     or ("chain_id" in orig_atom.metadata)
                 )
                 if not (atom_has_any_metadata):
@@ -2361,6 +2414,14 @@ class TestRDKitToolkitWrapper:
                     )
                 else:
                     assert roundtrip_atom.metadata["residue_number"] == 0
+
+                if "insertion_code" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["insertion_code"]
+                        == roundtrip_atom.metadata["insertion_code"]
+                    )
+                else:
+                    assert roundtrip_atom.metadata["insertion_code"] == 0
 
                 if "chain_id" in orig_atom.metadata:
                     assert (
@@ -2406,6 +2467,15 @@ class TestRDKitToolkitWrapper:
 
         off_molecule = Molecule.from_rdkit(Chem.MolFromSmiles(smiles))
         assert off_molecule.properties["atom_map"] == expected_map
+
+    def test_from_pathlib_path(self):
+        ethanol = create_ethanol()
+        with NamedTemporaryFile(suffix=".sdf") as outfile:
+            filename = str(outfile.name)
+            ethanol.to_file(filename, file_format="sdf")
+
+            toolkit = RDKitToolkitWrapper()
+            toolkit.from_file(pathlib.Path(filename), file_format="sdf")
 
     def test_file_extension_case(self):
         """
@@ -2692,6 +2762,15 @@ class TestRDKitToolkitWrapper:
 
         with pytest.raises(ConformerGenerationError, match="RDKit conf.*fail"):
             toolkit.generate_conformers(molecule, n_conformers=1)
+
+    def test_generate_conformers_large_molecule(self):
+        """Ensure that we don't get error caused by this molecule being too big for conf gen.  See issue #882 / OpenMM #3550."""
+        ql8 = Molecule.from_file(get_data_file_path("molecules/QL8.sdf"))
+
+        ql8.generate_conformers(
+            n_conformers=1,
+            toolkit_registry=RDKitToolkitWrapper(),
+        )
 
     @pytest.mark.parametrize("partial_charge_method", ["mmff94"])
     def test_assign_partial_charges_neutral(self, partial_charge_method):

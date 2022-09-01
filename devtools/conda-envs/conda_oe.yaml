@@ -1,14 +1,15 @@
-name: test
+name: latest-deployment
 channels:
   - conda-forge
   - openeye
 
 dependencies:
     # Base depends
-  - openff-toolkit
+  - openff-toolkit-examples
 
   - openmmforcefields
   - openeye-toolkits
+  - qcportal >=0.15
   - pytest
   - pytest-rerunfailures
   - nbval

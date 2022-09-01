@@ -9,7 +9,9 @@ import functools
 import importlib
 import itertools
 import logging
+import pathlib
 import tempfile
+from collections import defaultdict
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -25,6 +27,7 @@ from openff.toolkit.utils.exceptions import (
     RadicalsNotSupportedError,
     SMILESParseError,
     ToolkitUnavailableException,
+    UnassignedChemistryInPDBError,
     UndefinedStereochemistryError,
 )
 
@@ -59,7 +62,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     _toolkit_name = "The RDKit"
     _toolkit_installation_instructions = (
         "A conda-installable version of the free and open source RDKit cheminformatics "
-        "toolkit can be found at: https://anaconda.org/rdkit/rdkit"
+        "toolkit can be found at: https://anaconda.org/conda-forge/rdkit"
     )
 
     def __init__(self):
@@ -239,14 +242,15 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             raise InvalidConformerError("The PDB and SMILES structures do not match.")
 
     def _polymer_openmm_topology_to_offmol(self, omm_top, substructure_dictionary):
-        rdkit_mol = self._polymer_openmm_topology_to_rdmol(omm_top)
-        rdkit_mol = self._add_chemical_info(rdkit_mol, substructure_dictionary)
+        rdkit_mol = self._polymer_openmm_topology_to_rdmol(
+            omm_top, substructure_dictionary
+        )
         offmol = self.from_rdkit(rdkit_mol)
         return offmol
 
-    def _add_chemical_info(
+    def _polymer_openmm_topology_to_rdmol(
         self,
-        rdkit_mol,
+        omm_top,
         substructure_library,
     ):
         """
@@ -263,6 +267,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         -------
         rdkit_mol : rdkit.Chem.Mol
             a copy of the original molecule with charges and bond order added
+
+        Raises
+        ------
+        MissingChemistryFromPolymerError
+            Raised when bonds or atoms in ``rdkit_mol`` are missing from the
+            substructure library
         """
         from rdkit import Chem
 
@@ -272,11 +282,17 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Notably assumes all bonds *between* fragments are single
         already_assigned_edges = set()
 
+        # Keeping track of which atoms are matched where will help us with error
+        # messages
+        matches = defaultdict(list)
+
+        rdkit_mol = self._get_connectivity_from_openmm_top(omm_top)
         mol = Chem.Mol(rdkit_mol)
 
         for res_name in substructure_library:
             # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes
             # so it just does the biggest substructures first
+            # NOTE: If this changes, MissingChemistryFromPolymerError needs to be updated too
             sorted_substructure_smarts = sorted(
                 substructure_library[res_name], key=len, reverse=True
             )
@@ -291,6 +307,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 # info is added to `mol`. If we use the same rdkit molecule for search AND info addition,
                 # then single bonds may no longer be present for subsequent overlapping matches.
                 for match in rdkit_mol.GetSubstructMatches(fuzzy, maxMatches=0):
+                    for i in match:
+                        matches[i].append(res_name)
+
                     if any(m in already_assigned_nodes for m in match) and (
                         res_name not in ["PEPTIDE_BOND", "DISULFIDE"]
                     ):
@@ -311,36 +330,29 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         b2.SetBondType(b.GetBondType())
                         already_assigned_edges.add(tuple(sorted([x, y])))
 
-        if not (len(already_assigned_nodes) == rdkit_mol.GetNumAtoms()):
-            unassigned_atom_indices = (
-                set(range(rdkit_mol.GetNumAtoms())) - already_assigned_nodes
-            )
-            unassigned_atom_indices = sorted(list(unassigned_atom_indices))
-            print(unassigned_atom_indices)
-            print(
-                [
-                    rdkit_mol.GetAtomWithIdx(i).GetPDBResidueInfo().GetResidueName()
-                    for i in unassigned_atom_indices
-                ]
-            )
+        unassigned_atoms = sorted(
+            set(range(rdkit_mol.GetNumAtoms())) - already_assigned_nodes
+        )
         all_bonds = set(
             [
                 tuple(sorted([bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()]))
                 for bond in rdkit_mol.GetBonds()
             ]
         )
+        unassigned_bonds = sorted(all_bonds - already_assigned_edges)
 
-        if all_bonds != already_assigned_edges:
-            print("Bonds were unassigned:")
-            print(len(all_bonds), len(already_assigned_edges))
-            for bond in sorted(all_bonds - already_assigned_edges):
-                print(bond)
-
-        # assert len(already_assigned_edges) == len(omm_topology_G.edges)
+        if unassigned_atoms or unassigned_bonds:
+            raise UnassignedChemistryInPDBError(
+                substructure_library=substructure_library,
+                omm_top=omm_top,
+                unassigned_atoms=unassigned_atoms,
+                unassigned_bonds=unassigned_bonds,
+                matches=matches,
+            )
 
         return mol
 
-    def _polymer_openmm_topology_to_rdmol(self, omm_top):
+    def _get_connectivity_from_openmm_top(self, omm_top):
         from rdkit import Chem
 
         # convert openmm topology to rdkit Molecule
@@ -474,6 +486,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         """
         from rdkit import Chem
+
+        if isinstance(file_path, pathlib.Path):
+            file_path: str = file_path.as_posix()
 
         file_format = normalize_file_format(file_format)
 
@@ -1074,7 +1089,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         rdmol = self.to_rdkit(molecule)
         # TODO: This generates way more conformations than omega, given the same
         # nConfs and RMS threshold. Is there some way to set an energy cutoff as well?
-        conformer_generation_status = AllChem.EmbedMultipleConfs(
+        first_conformer_generation_status = AllChem.EmbedMultipleConfs(
             rdmol,
             numConfs=n_conformers,
             pruneRmsThresh=rms_cutoff.m_as(unit.angstrom),
@@ -1082,8 +1097,19 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # params=AllChem.ETKDG()
         )
 
-        if not conformer_generation_status:
-            raise ConformerGenerationError("RDKit conformer generation failed.")
+        if not first_conformer_generation_status:
+            # For some large molecules, conformer generation fails without `useRandomCoords`;
+            # Landrum recommends it https://github.com/rdkit/rdkit/issues/3764#issuecomment-769367489
+            fallback_conformer_generation_status = AllChem.EmbedMultipleConfs(
+                rdmol,
+                numConfs=n_conformers,
+                pruneRmsThresh=rms_cutoff.m_as(unit.angstrom),
+                randomSeed=1,
+                useRandomCoords=True,
+            )
+
+            if not fallback_conformer_generation_status:
+                raise ConformerGenerationError("RDKit conformer generation failed.")
 
         molecule2 = self.from_rdkit(
             rdmol, allow_undefined_stereo=True, _cls=molecule.__class__
@@ -1446,35 +1472,22 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         rms_matrix = cls._elf_compute_rms_matrix(molecule)
 
         # Apply the greedy selection process.
-        closed_list = np.zeros(limit).astype(int)
-        closed_mask = np.zeros(rms_matrix.shape[0], dtype=bool)
-
-        n_selected = 1
-
-        for i in range(min(molecule.n_conformers, limit - 1)):
-
-            distances = rms_matrix[closed_list[: i + 1], :].sum(axis=0)
-
-            # Exclude already selected conformers or conformers which are too similar
-            # to those already selected.
-            closed_mask[
-                np.any(
-                    rms_matrix[closed_list[: i + 1], :]
-                    < rms_tolerance.m_as(unit.angstrom),
-                    axis=0,
-                )
-            ] = True
-
-            if np.all(closed_mask):
-                # Stop of there are no more distinct conformers to select from.
+        selected_indices = [0]
+        angstrom_tol = rms_tolerance.m_as(unit.angstrom)
+        for i in range(min(limit, molecule.n_conformers) - 1):
+            selected_rms = rms_matrix[selected_indices]
+            any_too_close = np.any(selected_rms < angstrom_tol, axis=0)
+            if np.all(any_too_close):
+                # stop if all conformers remaining are within RMS
+                # threshold of any selected conformer
                 break
 
-            distant_index = np.ma.array(distances, mask=closed_mask).argmax()
-            closed_list[i + 1] = distant_index
+            # add the next conformer with the largest summed RMS distance
+            # to current selected conformers
+            rmsdist = np.where(any_too_close, -np.inf, selected_rms.sum(axis=0))
+            selected_indices.append(int(rmsdist.argmax()))
 
-            n_selected += 1
-
-        return [ranked_conformers[i.item()] for i in closed_list[:n_selected]]
+        return [ranked_conformers[i] for i in selected_indices]
 
     def apply_elf_conformer_selection(
         self,
@@ -1731,6 +1744,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             if res is not None:
                 metadata["residue_name"] = res.GetResidueName()
                 metadata["residue_number"] = res.GetResidueNumber()
+                metadata["insertion_code"] = res.GetInsertionCode()
                 metadata["chain_id"] = res.GetChainId()
 
             atom_index = offmol._add_atom(
@@ -2050,6 +2064,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             if "residue_number" in atom.metadata:
                 atom_has_any_metadata = True
                 res.SetResidueNumber(int(atom.metadata["residue_number"]))
+
+            if "insertion_code" in atom.metadata:
+                atom_has_any_metadata = True
+                res.SetInsertionCode(atom.metadata["insertion_code"])
 
             if "chain_id" in atom.metadata:
                 atom_has_any_metadata = True

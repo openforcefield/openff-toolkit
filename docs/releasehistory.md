@@ -6,9 +6,64 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+## Current development
+
+## 0.11.0 Major release adding support for proteins and refactoring the Topology class.
+
 ## Migration guide
 
+### New [`Molecule.from_polymer_pdb()`] method for loading proteins from PDB files
+
+The Toolkit now supports loading protein PDB files through the [`Molecule.from_polymer_pdb()`] class method. For now, PDB files must consist of only a single protein molecule composed only of the 20 standard amino acids, their common protonated and deprotonated conjugates, and the N-methyl and acetyl caps.
+
+[`Molecule.from_polymer_pdb()`]: Molecule.from_polymer_pdb
+
+### Important API points re-exported from `openff.toolkit`
+
+A number of commonly used API points have been re-exported from the package root. This should make using the Toolkit simpler for most people. The previous API points remain available. These API points are lazy-loaded so that parts of the toolkit can still be loaded without loading the entire code-base.
+
+The most important of these are the `ForceField`, `Molecule`, and `Topology` classes:
+
+```diff
+- from openff.toolkit.typing.engines.smirnoff import ForceField
+- from openff.toolkit.topology import Molecule, Topology
++ from openff.toolkit import ForceField, Molecule, Topology
+```
+
+A number of other useful API points are also available through this mechanism:
+
+```diff
+- from openff.toolkit.typing.engines.smirnoff import get_available_force_fields
+- from openff.toolkit.utils.toolkits import (
+-     GLOBAL_TOOLKIT_REGISTRY,
+-     AmberToolsToolkitWrapper,
+-     BuiltInToolkitWrapper,
+-     OpenEyeToolkitWrapper,
+-     RDKitToolkitWrapper,
+-     ToolkitRegistry,
+- )
++ from openff.toolkit import (
++     get_available_force_fields,
++     GLOBAL_TOOLKIT_REGISTRY,
++     AmberToolsToolkitWrapper,
++     BuiltInToolkitWrapper,
++     OpenEyeToolkitWrapper,
++     RDKitToolkitWrapper,
++     ToolkitRegistry,
++ )
+```
+
+The `topology`, `typing`, and `utils` modules can also be lazy loaded after importing only the top-level module:
+
+```diff
+- import openff.toolkit.topology
++ import openff.toolkit
+  atom = openff.toolkit.topology.Atom()
+```
+
 ### Units
+
+The use of OpenMM units has been replaced by the new OpenFF Units package, based on Pint.
 
 Import the [unit registry](https://pint.readthedocs.io/en/stable/developers_reference.html?highlight=unitregistry#pint.UnitRegistry) provided by `openff-units`:
 
@@ -55,9 +110,251 @@ print(value_roundtrip)
 # 1.0 <Unit('nanometer')>
 ```
 
+#### Breaking change: Removal of `openff.toolkit.utils.check_units_are_compatible()`
 
-## Current Development
+The `openff.toolkit.utils.check_units_are_compatible()` function has been removed. Use [`openff.units.Quantity.is_compatible_with()`] and [`openff.units.openmm.from_openmm()`] instead:
 
+```diff
+- check_units_are_compatible("length", length, openmm.unit.angstrom)
++ from_openmm(length).is_compatible_with(openff.units.unit.angstrom)
+```
+
+[`openff.units.Quantity.is_compatible_with()`]: openff.units.Quantity.is_compatible_with
+[`openff.units.openmm.from_openmm()`]: openff.units.openmm.from_openmm
+
+### Breaking change: Interchange now responsible for system parametrization
+
+Code for applying parameters to topologies has been removed from the Toolkit. This is now the responsibility of [OpenFF Interchange]. This change improves support for working with parametrized systems (through the [`Interchange`] class), and adds support for working with simulation engines other than OpenMM.
+
+The [`ForceField.create_interchange()`] method has been added, and the [`ForceField.create_openmm_system()`] method now uses Interchange under the hood.
+
+As part of this change, the `UnsupportedKeywordArgumentsError` has been removed;
+passing unknown arguments to `create_openmm_system` now raises a `TypeError`, as is normal in Python.
+
+The following classes and methods have been **removed** from `openff.toolkit.typing.engines.smirnoff.parameters`:
+- `NonintegralMoleculeChargeException`
+- `NonbondedMethod`
+- `ParameterHandler.assign_parameters()`
+- `ParameterHandler.postprocess_system()`
+- `ParameterHandler.check_partial_bond_orders_from_molecules_duplicates()`
+- `ParameterHandler.assign_partial_bond_orders_from_molecules()`
+
+In addition, the `ParameterHandler.create_force()` method has been deprecated and its functionality has been removed. It will be removed in a future release. 
+
+The `return_topology` argument of `create_openmm_system` has also been deprecated, and will be removed in 0.12.0. To create an OpenMM topology, use `Interchange`:
+
+```diff
+- omm_sys, off_top = force_field.create_openmm_system(
+-     topology,
+-     return_topology=True,
+- )
+- omm_top = off_top.to_openmm()
++ interchange = force_field.create_interchange(topology)
++ omm_sys = interchange.to_openmm(combine_nonbonded_forces=True)
++ omm_top = interchange.to_openmm_topology()
+```
+
+If you need access to the modified OpenFF topology for some other reason, create an `Interchange` and retrieve it there:
+
+```diff
+- omm_sys, off_top = force_field.create_openmm_system(
+-     topology,
+-     return_topology=True,
+- )
++ interchange = force_field.create_interchange(topology)
++ off_top = interchange.topology
++ omm_sys = interchange.to_openmm(combine_nonbonded_forces=True)
+```
+
+[`Interchange`]: openff.interchange.Interchange
+[`ForceField.create_interchange()`]: openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.create_interchange
+[`ForceField.create_openmm_system()`]: openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system
+[OpenFF Interchange]: https://docs.openforcefield.org/interchange
+
+### Breaking change: `Topology` molecule representation
+
+`Topology` objects now store complete copies of their constituent `Molecule` objects, rather than using simplified classes specific to `Topology`. This dramatically simplifies the code base and allows the use of the full `Molecule` API on molecules inside topologies.
+
+The following classes have been **removed**:
+- `TopologyAtom` (use [`Atom`](Atom) instead)
+- `TopologyBond` (use [`Bond`](Bond) instead)
+- `TopologyMolecule` (use [`Molecule`](Molecule) instead)
+
+The following properties have been **deprecated** and will be removed in a future release:
+- `Topology.n_topology_atoms` (use [`Topology.n_atoms`](Topology.n_atoms) instead)
+- `Topology.topology_atoms` (use [`Topology.atoms`](Topology.atoms) instead)
+- `Topology.n_topology_bonds` (use [`Topology.n_bonds`](Topology.n_bonds) instead)
+- `Topology.topology_bonds` (use [`Topology.bonds`](Topology.bonds) instead)
+- `Topology.n_topology_particles` (use [`Topology.n_particles`](Topology.n_particles) instead)
+- `Topology.topology_particles` (use [`Topology.particles`](Topology.particles) instead)
+- `Topology.reference_molecules` (use [`Topology.unique_molecules`](Topology.unique_molecules) instead)
+- `Topology.n_reference_molecules` (use [`Topology.n_unique_molecules`](Topology.n_unique_molecules) instead)
+- `Topology.n_topology_molecules` (use [`Topology.n_molecules`](Topology.n_molecules) instead)
+- `Topology.topology_molecules` (use [`Topology.molecules`](Topology.molecules) instead)
+- `Topology.n_particles` (use [`Topology.n_atoms`](Topology.n_atoms) instead)
+- `Topology.particles` (use [`Topology.atoms`](Topology.atoms) instead)
+- `Topology.particle_index` (use [`Topology.atom_index`](Topology.atom_index) instead)
+
+In addition, the [`Topology.identical_molecule_groups`] property has been added, to facilitate iterating over copies of isomorphic molecules in a `Topology`.
+
+[`Topology.identical_molecule_groups`]: Topology.identical_molecule_groups
+
+### Breaking change: Removed virtual site handling from topologies
+
+To maintain a clear distinction between a model and the chemistry it represents, virtual site handling has been removed from the Toolkit's `Topology` and `Molecule` classes. Virtual site support remains in the force field side of the toolkit, but creating virtual sites for particular molecules is now the responsibility of OpenFF Interchange. This allows the same `Topology` to be used for force fields that use different virtual sites; for example, a topology representing a solvated protein might be parametrized separately with a 3-point and 4-point water model.
+
+As part of this change, the distinction between `Atom` and `Particle` is deprecated. The `Particle` class will be removed in a future release.
+
+The following classes have been **removed**:
+- `BondChargeVirtualSite`
+- `DivalentLonePairVirtualSite`
+- `MonovalentLonePairVirtualSite`
+- `TrivalentLonePairVirtualSite`
+- `VirtualParticle`
+- `VirtualSite`
+- `TopologyVirtualParticle`
+- `TopologyVirtualSite`
+
+The following methods and properties have been **removed**:
+- `Atom.add_virtual_site()`
+- `Atom.virtual_sites`
+- `FrozenMolecule.compute_virtual_site_positions_from_conformer()`
+- `FrozenMolecule.compute_virtual_site_positions_from_atom_positions()`
+- `FrozenMolecule.n_virtual_sites`
+- `FrozenMolecule.n_virtual_particles`
+- `FrozenMolecule.virtual_sites()`
+- `Molecule.add_bond_charge_virtual_site()`
+- `Molecule.add_monovalent_lone_pair_virtual_site()`
+- `Molecule.add_divalent_lone_pair_virtual_site()`
+- `Molecule.add_trivalent_lone_pair_virtual_site()`
+- `Molecule.add_bond_charge_virtual_site()`
+- `Topology.n_topology_virtual_sites`
+- `Topology.topology_virtual_sites`
+- `Topology.virtual_site()`
+- `Topology.add_particle()`
+
+The following properties have been **deprecated** and will be removed in a future release:
+
+- `Molecule.n_particles` (use [`Molecule.n_atoms`](Molecule.n_atoms) instead)
+- `Molecule.particles` (use [`Molecule.atoms`](Molecule.atoms) instead)
+- `Molecule.particle` (use [`Molecule.atom`](Molecule.atom) instead)
+- `Molecule.particle_index` (use [`Topology.n_atoms`](Topology.n_atoms) instead)
+
+### Atom metadata and hierarchy schemes for iterating over residues, chains, etc.
+
+The new `Atom.metadata` attribute is a dictionary that can store arbitrary metadata. Atom metadata commonly includes residue names, residue sequence numbers, chain identifiers, and other metadata that is not essential to the functioning of the Toolkit. Metadata can then be passed on when a `Molecule` is converted to another package; see [](users/molecule_conversion).
+
+Metadata can also support iteration through the [`HierarchyScheme`](openff.toolkit.topology.HierarchyScheme) class. A hierarchy scheme is defined by some uniqueness criteria. Iterating over the scheme iterates over groups of atoms that have identical metadata values for the defined uniqueness criteria. For more information, see the API docs for [`HierarchyScheme`](openff.toolkit.topology.HierarchyScheme) and its related methods.
+
+### Breaking change: Removed `Topology.charge_model` and `Topology.fractional_bond_order_model`
+
+Due to flaws in previous versions of the OFF Toolkit, these properties never had an effect on the assigned parameters. To resolve this bug and maintain a clear distinction between a model and the chemistry it represents, the `Topology.charge_model` and `Topology.fractional_bond_order_model` properties have been removed. Charge models and FBOs are now the responsibility of the ForceField.
+
+### Breaking change: Removed `Atom.element`
+
+`Atom.element` has been removed to reduce our dependency on OpenMM for core functions:
+
+```diff
+- atomic_number = atom.element.atomic_number
++ atomic_number = atom.atomic_number
+- atom_mass = atom.element.mass
++ atom_mass = atom.mass
+- atom_elem_symbol = atom.element.symbol
++ atom_elem_symbol = atom.symbol
+```
+
+### `Topology.to_file()`
+
+The [`Topology.to_file()`](openff.toolkit.topology.Topology.to_file) method has been significantly revised, including three breaking changes.
+
+#### Breaking change: `filename` argument renamed `file`
+
+The `filename` argument has been renamed `file`, and now supports file-like objects in addition to file names:
+
+```diff
+-  topology.to_file(filename="out.pdb", positions=xyz)
++  topology.to_file(file="out.pdb", positions=xyz)
+```
+
+#### Breaking change: Atom names guaranteed unique per residue by default
+
+The default behavior is now to ensure that atom names are unique within a residue, rather than within a molecule. The `ensure_unique_atom_names` argument has been added to control this behavior. The previous behavior can be achieved by passing `True` to `ensure_unique_atom_names`:
+
+```diff
+- topology.to_file("out.pdb", xyz)
++ topology.to_file("out.pdb", xyz, ensure_unique_atom_names=True)
+```
+
+The `ensure_unique_atom_names` argument can also take the name of a `HierarchyScheme`, in which case atom names will be unique within the elements of that scheme (instead of within the atoms of a molecule). If the scheme is missing from a molecule, atom names will be unique within that molecule. The default value of this argument is `"residues"` to preserve atom names from the PDB.
+
+#### Breaking change: `keepIds` argument renamed `keep_ids`
+
+The `keepIds` argument has been renamed to the more Pythonic `keep_ids`. Its behavior and position in the argument list has not changed.
+
+```diff
+- topology.to_file("out.pdb", xyz, keepIds=True)
++ topology.to_file("out.pdb", xyz, keep_ids=True)
+```
+
+#### Non-breaking changes
+
+In addition to these breaking changes, the `positions` argument is now optional. If it is not provided, positions will be taken from the first conformer of each molecule in the topology. If any molecule has no conformers, an error will be raised.
+
+### Positions in topologies
+
+The [`Topology.get_positions()`] and [`Topology.set_positions()`] methods have been added to facilitate working with coordinates in topologies. A topology's positions are defined by the zeroth conformer of each molecule. If any molecule lacks conformers, the entire topology has no positions.
+
+[`Topology.get_positions()`]: Topology.get_positions
+[`Topology.set_positions()`]: Topology.set_positions
+
+### Parameter types moved out of handler classes
+
+To facilitate their discovery and documentation, re-exports for the `ParameterType` classes have been added to the `openff.toolkit.typing.engines.smirnoff.parameters` module. Previously, they were accessible only within their associated `ParameterHandler` classes. This is not a breaking change.
+
+```diff
+- from openff.toolkit.typing.engines.smirnoff.parameters import BondHandler
+- BondType = BondHandler.BondType
++ from openff.toolkit.typing.engines.smirnoff.parameters import BondType
+```
+
+### Breaking change: `MissingDependencyError` renamed `MissingPackageError`
+
+The `MissingDependencyError` exception has been renamed [`MissingPackageError`] to better reflect its purpose.
+
+```diff
+  try:
+      ...
+- except MissingDependencyError:
++ except MissingPackageError:
+      pass
+```
+
+[`MissingPackageError`]: openff.toolkit.utils.exceptions.MissingPackageError
+
+### `compute_partial_charges_am1bcc()` deprecated
+
+The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToolkitWrapper` and `OpenEyeToolkitWrapper` classes have been deprecated and will be removed in a future release. Their functionality has been incorporated into [`assign_partial_charges()`] for more consistency with other charge generation methods:
+
+```diff
+- mol.compute_partial_charges_am1bcc()
++ mol.assign_partial_charges(partial_charge_method='am1bcc')
+```
+
+[`assign_partial_charges()`]: Molecule.assign_partial_charges
+
+
+### Additional changes and bugfixes
+
+- [PR #1105](https://github.com/openforcefield/openff-toolkit/pull/1105), [PR #1195](https://github.com/openforcefield/openff-toolkit/pull/1195), [PR #1301](https://github.com/openforcefield/openff-toolkit/pull/1301), [PR #1331](https://github.com/openforcefield/openff-toolkit/pull/1331), [PR #1322](https://github.com/openforcefield/openff-toolkit/pull/1322), [PR #1372](https://github.com/openforcefield/openff-toolkit/pull/1372): Add `Molecule.from_polymer_pdb`
+- [PR #1377](https://github.com/openforcefield/openff-toolkit/pull/1377): Adds 
+  `Topology.unique_molecules`, which largely replaces `Topology.reference_molecules`. 
+- [PR #1313](https://github.com/openforcefield/openff-toolkit/pull/1313): Fixes 
+  [Issue #1287](https://github.com/openforcefield/openff-toolkit/issues/1287), where  
+  `OpenEyeToolkitWrapper.assign_partial_charges` didn't request symmetrized charges when
+  the charge model was set to `AM1-Mulliken`.
+- [PR #1348](https://github.com/openforcefield/openff-toolkit/pull/1348): Allows
+  `pathlib.Path` objects to be passed to
+  [`Molecule.from_file`](openff.toolkit.topology.Molecule.from_file).
 - [PR #1276](https://github.com/openforcefield/openff-toolkit/pull/1276): Removes the
   `use_interchange` argument to
   [`create_openmm_system`](openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system).
@@ -102,9 +399,7 @@ print(value_roundtrip)
   width is correctly set and enabled.
 - [PR #1213](https://github.com/openforcefield/openff-toolkit/pull/1213): Removes
   `Topology.charge_model` and `Topology.fractional_bond_order_model`.
-
-### Critical bugfixes
-
+- [PR #1140](https://github.com/openforcefield/openff-toolkit/pull/1140): Adds the `Topology.identical_molecule_groups` property, which provides a way of grouping the instances of a specific chemical species in the topology.
 - [PR #1200](https://github.com/openforcefield/openforcefield/pull/1200): Fixes a bug
   ([Issue #1199](https://github.com/openforcefield/openff-toolkit/issues/428)) in which library
   charges were ignored in some force fields, including `openff-2.0.0` code name "Sage." This resulted in
@@ -113,9 +408,9 @@ print(value_roundtrip)
   believed to have any impact on the fitting or benchmarking of the first release of Sage (version
   2.0.0). The change causing regression only affected library charges and therefore no other
   parameter types are believed to be affected.
-
-### Behaviors changed and bugfixes
-
+- [PR #1346](https://github.com/openforcefield/openff-toolkit/pull/1346): Conformer generation with RDKit
+  will use `useRandomCoords=True` on a second attempt if the first attempt fails, which sometimes
+  happens with large molecules.
 - [PR #1277](https://github.com/openforcefield/openff-toolkit/pull/1277): Version 0.3 `<Electrostatics>`
   sections of OFFXML files will automatically be up-converted (in memory) to version 0.4 according
   to the recomendations provided in
@@ -154,22 +449,25 @@ print(value_roundtrip)
   double bond stereo would cause `to_rdkit` to raise an error. The transfer of double bond stereochemistry
   from OpenFF's E/Z representation to RDKit's local representation is now handled as a constraint
   satisfaction problem.
+- [PR #1368](https://github.com/openforcefield/openff-toolkit/pull/1368): Adds the `Topology.get_positions()` and `Topology.set_positions()` methods for working with topology positions. Positions are represented as the first conformer of each molecule in the topology.
+- [PR #1368](https://github.com/openforcefield/openff-toolkit/pull/1368): Allows setting the `ensure_unique_atom_names` argument of `Topology.to_openmm()`to the name of a hierarchy scheme, in which case atom names are guaranteed unique per element of that scheme rather than per molecule. Changes the default value to `"residues"`.
+- [PR #1368](https://github.com/openforcefield/openff-toolkit/pull/1368): Adds the `ensure_unique_atom_names` argument to the `Topology.to_file()`, which mimics the same argument in `Topology.to_openmm()`. Renames the `keepIds` argument to `keep_ids`. Renames the `filename` argument to `file` and allows a file-like object to be passed instead of a filename. Makes the `positions` argument optional; if it is not given, positions are take from the first conformer of each molecule in the Topology.
+- [PR #1290](https://github.com/openforcefield/openforcefield/pull/1290): Fixes
+  [Issue #1216](https://github.com/openforcefield/openff-toolkit/issues/1216) by adding internal logic to handle
+  the possibility that multiple vsites share the same parent atom, and makes the return value of 
+  `VirtualSiteHandler.find_matches` be closer to the base class.
 
 ### Examples added
 
 - [PR #1113](https://github.com/openforcefield/openff-toolkit/pull/1113): Updates the Amber/GROMACS
   example to use Interchange.
 
+- [PR #1368](https://github.com/openforcefield/openff-toolkit/pull/1368): Updates the Toolkit showcase with the new polymer handling and Interchange support
+
 ### Tests updated
 
 - [PR #1188](https://github.com/openforcefield/openff-toolkit/pull/1188): Add an `<Electrostatics>`
   section to the TIP3P force field file used in testing (`test_forcefields/tip3p.offxml`)
-
-### Minor bugfixes
-- [PR #1290](https://github.com/openforcefield/openforcefield/pull/1290): Fixes
-  [Issue #1216](https://github.com/openforcefield/openff-toolkit/issues/1216) by adding internal logic to handle
-  the possibility that multiple vsites share the same parent atom, and makes the return value of 
-  `VirtualSiteHandler.find_matches` be closer to the base class.
 
 
 
@@ -250,6 +548,10 @@ print(value_roundtrip)
 [`Molecule.generate_conformers()`]: openff.toolkit.topology.Molecule.generate_conformers
 [`Molecule.assign_partial_charges()`]: openff.toolkit.topology.Molecule.assign_partial_charges
 [`Molecule.assign_fractional_bond_orders()`]: openff.toolkit.topology.Molecule.assign_fractional_bond_orders
+
+### Behaviors changed and bugfixes
+- [PR #1185](https://github.com/openforcefield/openff-toolkit/pull/1185):
+  Removed length check in ValenceDict and fixed checking the permutations of dihedrals
 
 ### Improved documentation and warnings
 - [PR #1172](https://github.com/openforcefield/openff-toolkit/pull/1172): Adding

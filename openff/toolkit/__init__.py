@@ -4,8 +4,26 @@ A modern, extensible library for molecular mechanics force field science from th
 """
 
 import importlib
+from typing import TYPE_CHECKING
 
 from openff.toolkit._version import get_versions  # type: ignore
+
+if TYPE_CHECKING:
+    # These types are imported lazily at runtime, but we need to tell type
+    # checkers what they are
+    from openff.toolkit.topology import Molecule, Topology
+    from openff.toolkit.typing.engines.smirnoff import (
+        ForceField,
+        get_available_force_fields,
+    )
+    from openff.toolkit.utils.toolkits import (
+        GLOBAL_TOOLKIT_REGISTRY,
+        AmberToolsToolkitWrapper,
+        BuiltInToolkitWrapper,
+        OpenEyeToolkitWrapper,
+        RDKitToolkitWrapper,
+        ToolkitRegistry,
+    )
 
 __version__ = get_versions()["version"]
 
@@ -21,9 +39,6 @@ __all__ = [
     "OpenEyeToolkitWrapper",
     "RDKitToolkitWrapper",
     "ToolkitRegistry",
-    "topology",
-    "typing",
-    "utils",
 ]
 
 # Dictionary of objects to lazily import; maps the object's name to its module path
@@ -38,6 +53,7 @@ _lazy_imports_obj = {
     "OpenEyeToolkitWrapper": "openff.toolkit.utils.toolkits",
     "RDKitToolkitWrapper": "openff.toolkit.utils.toolkits",
     "ToolkitRegistry": "openff.toolkit.utils.toolkits",
+    # Remember to add new lazy imports to __all__ and the if TYPE_CHECKING imports
 }
 
 # Dictionary of modules to lazily import; maps the modules's name to its path

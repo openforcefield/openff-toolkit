@@ -1078,35 +1078,44 @@ class ForceField:
     def create_openmm_system(
         self,
         topology: "Topology",
-        **kwargs,
+        *,
+        return_topology: bool = False,
+        toolkit_registry: Optional[Union["ToolkitRegistry", "ToolkitWrapper"]] = None,
+        charge_from_molecules: Optional[List["Molecule"]] = None,
+        partial_bond_orders_from_molecules: Optional[List["Molecule"]] = None,
+        allow_nonintegral_charges: bool = False,
     ) -> Union["openmm.System", Tuple["openmm.System", "Topology"]]:
         """Create an OpenMM System from this ForceField and a Topology.
 
         Parameters
         ----------
-        topology : openforcefield.topology.Topology
-            The ``Topology`` which is to be parameterized with this ``ForceField``.
+        topology
+            The ``Topology`` which is to be parameterized with this
+            ``ForceField``.
+        toolkit_registry
+            The toolkit registry to use for parametrization (eg, for calculating
+            partial charges and partial bond orders)
+        charge_from_molecules
+            Take partial charges from the input topology rather than calculating
+            them. This may be useful for avoiding recalculating charges, but
+            take care to ensure that your charges are appropriate for the force
+            field.
+        partial_bond_orders_from_molecules
+            Take partial bond orders from the input topology rather than
+            calculating them. This may be useful for avoiding recalculating
+            PBOs, but take to ensure that they are appropriate for the
+            force field.
+        allow_nonintegral_charges
+            Allow charges that do not sum to an integer.
+        return_topology
+            .. deprecated:: 0.11.0
+                The ``return_topology`` argument has been deprecated and will be
+                removed in v0.12.0. Call :meth:`ForceField.create_interchange`
+                and take the topology from `interchange.topology` instead.
 
+            Return the Topology with any modifications needed to parametrize it
+            in a tuple along with the OpenMM system.
         """
-        return_topology = kwargs.pop("return_topology", False)
-        toolkit_registry = kwargs.pop("toolkit_registry", None)
-        charge_from_molecules = kwargs.pop("charge_from_molecules", None)
-        partial_bond_orders_from_molecules = kwargs.pop(
-            "partial_bond_orders_from_molecules", None
-        )
-        allow_nonintegral_charges = kwargs.pop("allow_nonintegral_charges", False)
-
-        if len(kwargs) > 0:
-            from openff.toolkit.utils.exceptions import UnsupportedKeywordArgumentsError
-
-            msg = (
-                "Unsupported keyword arguments found passed to `ForceField.create_openmm_system`. Supported "
-                "keyword arguments are `return_topology`, `toolkit_registry`, `charge_from_molecules`, "
-                f"`partial_bond_orders_from_molecules`, and `allow_nonintegral_charges`. Found: {kwargs}"
-            )
-
-            raise UnsupportedKeywordArgumentsError(msg)
-
         interchange = self.create_interchange(
             topology,
             toolkit_registry,
@@ -1148,9 +1157,20 @@ class ForceField:
         ----------
         topology : openff.toolkit.topology.Topology
             The topology to create this `Interchange` object from.
-        toolkit_registry :  ToolkitRegistry, optional
-            A `ToolkitRegistry` containing the toolkit wrappers to be used during parametriation,
-            i.e. for assigning partial charges and fractional bond orders.
+        toolkit_registry
+            The toolkit registry to use for parametrization (eg, for calculating
+            partial charges and partial bond orders)
+        charge_from_molecules
+            Take charges from the input topology rather than calculating them.
+            This may be useful for avoiding recalculating charges, but take care
+            to ensure that your charges are appropriate for the force field.
+        partial_bond_orders_from_molecules
+            Take partial bond orders from the input topology rather than
+            calculating them. This may be useful for avoiding recalculating
+            PBOs, but take to ensure that they are appropriate for the
+            force field.
+        allow_nonintegral_charges
+            Allow charges that do not sum to an integer.
 
         Returns
         -------
@@ -1211,7 +1231,11 @@ class ForceField:
 
         # Loop over molecules and label
         molecule_labels = list()
-        for molecule_idx, molecule in enumerate(topology.reference_molecules):
+
+        # TODO: This was previously ... enumerate(topology.reference_molecules). It's currently
+        # unclear if this should be topology.unique_molecules instead, since that might be faster
+        # (if also modifying this to label _all_ duplicates of each unique molecule)
+        for molecule_idx, molecule in enumerate(topology.molecules):
             top_mol = Topology.from_molecules([molecule])
             current_molecule_labels = dict()
             for tag, parameter_handler in self._parameter_handlers.items():

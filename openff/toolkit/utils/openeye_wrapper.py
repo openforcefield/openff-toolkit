@@ -36,6 +36,7 @@ from openff.toolkit.utils.exceptions import (
     RadicalsNotSupportedError,
     SMILESParseError,
     ToolkitUnavailableException,
+    UnassignedChemistryInPDBError,
     UndefinedStereochemistryError,
 )
 from openff.toolkit.utils.utils import inherit_docstrings
@@ -233,32 +234,38 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         )
 
     def _polymer_openmm_topology_to_offmol(self, omm_top, substructure_dictionary):
-        oemol = self._polymer_openmm_topology_to_oemol(omm_top)
-        oemol = self._add_chemical_info(oemol, substructure_dictionary)
+        oemol = self._polymer_openmm_topology_to_oemol(omm_top, substructure_dictionary)
         offmol = self.from_openeye(oemol, allow_undefined_stereo=True)
         return offmol
 
-    def _add_chemical_info(
+    def _polymer_openmm_topology_to_oemol(
         self,
-        oemol,
+        omm_top,
         substructure_library,
     ):
         """
         Parameters
         ----------
-        oemol : oechem.OEMol
-            Currently invalid (bond orders and charge) Molecule
+        omm_top : openmm.app.Topology
+            OpenMM Topology loaded from PDB
         substructure_library : dict{str:list[str, list[str]]}
             A dictionary of substructures. substructure_library[aa_name] = list[tagged SMARTS, list[atom_names]]
 
         Returns
         -------
         oemol : oechem.OEMol
-            a copy of the original molecule with charges and bond order added
+            a new molecule with charges and bond order added
         """
+        from openeye import oechem
+
+        oemol = self._get_connectivity_from_openmm_top(omm_top)
 
         already_assigned_nodes = set()
         already_assigned_edges = set()
+
+        # Keeping track of which atoms are matched where will help us with error
+        # messages
+        matches = defaultdict(list)
 
         for res_name in substructure_library:
             # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes
@@ -272,6 +279,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     match_mol_atom_indices = [
                         at.GetIdx() for at in match.GetTargetAtoms()
                     ]
+                    for i in match_mol_atom_indices:
+                        matches[i].append(res_name)
+
                     if any(
                         m in already_assigned_nodes for m in match_mol_atom_indices
                     ) and (res_name not in ["PEPTIDE_BOND", "DISULFIDE"]):
@@ -281,6 +291,15 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                         match.GetPatternAtoms(), match.GetTargetAtoms()
                     ):
                         mol_atom.SetFormalCharge(substructure_atom.GetFormalCharge())
+                        # Set arbitrary initial stereochemistry to avoid
+                        # spamming "undefined stereo" warnings. In the from_polymer_pdb
+                        # code path, the "real stereo" will be assigned later by a
+                        # call to _assign_aromaticity_and_stereo_from_3d.
+                        neighs = [n for n in mol_atom.GetAtoms()]
+                        mol_atom.SetStereo(
+                            neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Left
+                        )
+
                         already_assigned_nodes.add(mol_atom.GetIdx())
                     for substructure_bond, mol_bond in zip(
                         match.GetPatternBonds(), match.GetTargetBonds()
@@ -291,11 +310,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                         )
 
         oemol_n_atoms = len([*oemol.GetAtoms()])
-        if not (len(already_assigned_nodes) == oemol_n_atoms):
-            unassigned_atom_indices = set(range(oemol_n_atoms)) - already_assigned_nodes
-            unassigned_atom_indices = sorted(list(unassigned_atom_indices))
-            print("Atoms were unassigned:")
-            print(unassigned_atom_indices)
+        unassigned_atoms = sorted(set(range(oemol_n_atoms)) - already_assigned_nodes)
 
         all_bonds = set(
             [
@@ -303,15 +318,20 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 for bond in oemol.GetBonds()
             ]
         )
+        unassigned_bonds = sorted(all_bonds - already_assigned_edges)
 
-        if all_bonds != already_assigned_edges:
-            print("Bonds were unassigned:")
-            print(len(all_bonds), len(already_assigned_edges))
-            for bond in sorted(all_bonds - already_assigned_edges):
-                print(bond)
+        if unassigned_atoms or unassigned_bonds:
+            raise UnassignedChemistryInPDBError(
+                substructure_library=substructure_library,
+                omm_top=omm_top,
+                unassigned_atoms=unassigned_atoms,
+                unassigned_bonds=unassigned_bonds,
+                matches=matches,
+            )
+
         return oemol
 
-    def _polymer_openmm_topology_to_oemol(self, omm_top):
+    def _get_connectivity_from_openmm_top(self, omm_top):
         from openeye import oechem
 
         oemol = oechem.OEMol()
@@ -397,6 +417,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         """
         from openeye import oechem
+
+        if isinstance(file_path, pathlib.Path):
+            file_path: str = file_path.as_posix()
 
         oeformat = get_oeformat(file_format)
         ifs = oechem.oemolistream(file_path)
@@ -1156,6 +1179,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 metadata_dict["residue_number"] = oechem.OEAtomGetResidue(
                     oeatom
                 ).GetResidueNumber()
+                metadata_dict["insertion_code"] = oechem.OEAtomGetResidue(
+                    oeatom
+                ).GetInsertCode()
                 metadata_dict["chain_id"] = oechem.OEAtomGetResidue(oeatom).GetChainID()
             # print('from', metadata_dict)
 
@@ -1446,6 +1472,15 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     off_atom.partial_charge.m_as(unit.elementary_charge)
                 )
             res = oechem.OEAtomGetResidue(oe_atom)
+            # If we add residue info without updating the serial number, all of the atom
+            # serial numbers in a written PDB will be 0. Note two things:
+            # 1) the "res" object is specific to this atom, so its serial number
+            #    applies only to this atom
+            # 2) we do NOT preserve
+            #    PDB serial numbers in our infrastructure, we merely set these to the
+            #    atom index in the molecule so that OpenEye-written PDBs have
+            #    nonzero atom serial numbers.
+            res.SetSerialNumber(oe_to_off_idx[oe_idx] + 1)
 
             if "residue_name" in off_atom.metadata:
                 res.SetName(off_atom.metadata["residue_name"])
@@ -1456,6 +1491,11 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 res.SetResidueNumber(int(off_atom.metadata["residue_number"]))
             else:
                 res.SetResidueNumber(1)
+
+            if "insertion_code" in off_atom.metadata:
+                res.SetInsertCode(off_atom.metadata["insertion_code"])
+            else:
+                res.SetInsertCode(" ")
 
             if "chain_id" in off_atom.metadata:
                 res.SetChainID(off_atom.metadata["chain_id"])
@@ -2311,10 +2351,16 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 oemol, charge_method["oe_charge_method"](optimize, symmetrize)
             )
         else:
+            # symmetrize is implicit in gasteiger and mmff and is already set to True in am1bccelf10
+            if partial_charge_method in ["gasteiger", "mmff94", "am1bccelf10"]:
+                kwargs = {}
+            else:
+                kwargs = {"symmetrize": True}
+
             oe_charge_method = charge_method["oe_charge_method"]
 
             if callable(oe_charge_method):
-                oe_charge_method = oe_charge_method()
+                oe_charge_method = oe_charge_method(**kwargs)
 
             quacpac_status = oequacpac.OEAssignCharges(oemol, oe_charge_method)
 
@@ -2365,6 +2411,12 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         self, molecule, use_conformers=None, strict_n_conformers=False
     ):
         """
+        .. deprecated:: 0.11.0
+
+            This method was deprecated in v0.11.0 and will soon be removed.
+            Use :py:meth:`assign_partial_charges(partial_charge_method='am1bcc')
+            <OpenEyeToolkitWrapper.assign_partial_charges>` instead.
+
         Compute AM1BCC partial charges with OpenEye quacpac. This function will attempt to use
         the OEAM1BCCELF10 charge generation method, but may print a warning and fall back to
         normal OEAM1BCC if an error is encountered. This error is known to occur with some

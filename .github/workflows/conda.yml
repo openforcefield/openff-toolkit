@@ -1,4 +1,4 @@
-name: Conda
+name: Conda latest
 
 on:
   release:
@@ -11,14 +11,14 @@ on:
 
 jobs:
   test:
-    name: Test on ${{ matrix.os }}, Python ${{ matrix.cfg.python-version }}, OpenEye=${{ matrix.cfg.openeye }}
+    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenEye=${{ matrix.openeye }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
         python-version: ["3.8", "3.9"]
-        openeye: [true, false]
+        openeye: ["true", "false"]
 
     env:
       CI_OS: ${{ matrix.os }}
@@ -30,28 +30,20 @@ jobs:
     steps:
       - uses: actions/checkout@v3.0.2
 
-      - uses: conda-incubator/setup-miniconda@v2.1.1
-        name: Vanilla install from conda
+      - name: Vanilla install from conda
+        uses: mamba-org/provision-with-micromamba@main
         if: ${{ matrix.openeye == 'false' }}
         with:
-          python-version: ${{ matrix.python-version }}
-          activate-environment: test
           environment-file: devtools/conda-envs/conda.yaml
-          auto-activate-base: false
-          miniforge-version: latest
-          miniforge-variant: Mambaforge
-          use-mamba: true
-      - uses: conda-incubator/setup-miniconda@v2.1.1
-        name: Install from conda with OpenEye
+          extra-specs: |
+            python=${{ matrix.python-version }}
+      - name: Install from conda with OpenEye
+        uses: mamba-org/provision-with-micromamba@main
         if: ${{ matrix.openeye == 'true' }}
         with:
-          python-version: ${{ matrix.python-version }}
-          activate-environment: test
           environment-file: devtools/conda-envs/conda_oe.yaml
-          auto-activate-base: false
-          miniforge-version: latest
-          miniforge-variant: Mambaforge
-          use-mamba: true
+          extra-specs: |
+            python=${{ matrix.python-version }}
 
       - name: Additional info about the build
         shell: bash -l {0}
@@ -76,6 +68,12 @@ jobs:
       - name: Check installed toolkits
         shell: bash -l {0}
         run: |
+          # Checkout the state of the repo as of the last release (including RCs)
+          export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openff-toolkit.git | cut -f2 | grep -E "([0-9]+)\.([0-9]+)\.([0-9]+)$" | sort --version-sort | tail -1 | sed 's/refs\/tags\///')
+          git fetch --tags
+          git checkout tags/$LATEST_TAG
+          git log -1 | cat
+
           if [[ "$OPENEYE" == true ]]; then
             python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert OPENEYE_AVAILABLE, 'OpenEye unavailable'"
           fi
@@ -110,12 +108,6 @@ jobs:
       - name: Test the package
         shell: bash -l {0}
         run: |
-          # Checkout the state of the repo as of the last release
-          export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openff-toolkit.git | cut -f2 | grep -E "([0-9]+)\.([0-9]+)\.([0-9]+)$" | sort --version-sort | tail -1 | sed 's/refs\/tags\///')
-          git fetch --tags
-          git checkout tags/$LATEST_TAG
-          git log -1 | cat
-
           # Install test plugins
           cd utilities/test_plugins
           python setup.py develop --no-deps
