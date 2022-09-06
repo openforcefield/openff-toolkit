@@ -111,11 +111,10 @@ myst_enable_extensions = [
 myst_heading_anchors = 3
 
 # Myst NB settings
-# Execute all notebooks on build
-nb_execution_mode = "force"
-# List of notebooks NOT to execute (use output stored in notebook instead)
-nb_execution_excludepatterns = []
-
+# Never execute notebooks - this should be done by CI
+# Output is stored in the notebook itself
+# Remember `Widgets -> Save Notebook Widget State` in the notebook.
+nb_execution_mode = "off"
 
 # sphinx-notfound-page
 # https://github.com/readthedocs/sphinx-notfound-page
