@@ -132,6 +132,12 @@ class NotBondedError(OpenFFToolkitException):
     """
 
 
+class InvalidBondOrderError(OpenFFToolkitException):
+    """
+    Exception for passing a non-int to `Molecule.bond_order`
+    """
+
+
 class InvalidBoxVectorsError(OpenFFToolkitException):
     """
     Exception for setting invalid box vectors
