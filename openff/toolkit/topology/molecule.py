@@ -700,8 +700,11 @@ class Bond(Serializable):
             self._bond_order = value
         else:
             raise InvalidBondOrderError(
-                "Non-integer bond order passed to `Bond.bond_order` setter.  Consider using "
-                "`Bond.fractional_bond_order` for fractional/partial bond orders."
+                "Only integer bond orders may be passed to `Bond.bond_order` setter. "
+                "For aromatic bonds, instead kekulize the input structure and use "
+                "the resulting integer bond orders. If performing partial bond "
+                "order-based parameter interpolation, consider using "
+                "`Bond.fractional_bond_order`."
             )
 
     @property
