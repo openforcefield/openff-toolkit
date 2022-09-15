@@ -1996,51 +1996,164 @@ class TestMolecule:
             Molecule.from_file("foo.xyz", file_format="xyz")
 
     @requires_rdkit
-    def test_from_pdb_and_smiles(self):
-        """Test the ability to make a valid molecule using RDKit and SMILES together"""
-        # try and make a molecule from a pdb and smiles that don't match
-        with pytest.raises(InvalidConformerError):
-            mol = Molecule.from_pdb_and_smiles(
-                get_data_file_path("proteins/MainChain_ALA_ALA.pdb"), "CC"
+    @pytest.mark.parametrize(
+        "pdb_path,smiles,sdf_path",
+        [
+            (
+                "proteins/MainChain_ALA_ALA.pdb",
+                "C[C@@H](C(=O)N[C@@H](C)C(=O)NC)NC(=O)C",
+                "proteins/MainChain_ALA_ALA.sdf",
+            ),
+            (
+                "molecules/toluene.pdb",
+                "CC1=CC=CC=C1",
+                "molecules/toluene.sdf",
+            ),
+        ],
+    )
+    class TestFromPDBAndSmiles:
+        """
+        Tests for the ``Molecule.from_pdb_and_smiles()`` method
+
+        Parametrized with different molecules to test on. Each molecule should
+        be a single-molecule PDB, the corresponding SMILES, and a matching SDF
+        with identical coordinates and atom ordering to the PDB.
+        """
+
+        def test_wrong_smiles_fails(self, pdb_path, smiles, sdf_path):
+            """Providing an incorrect SMILES should raise an ``InvalidConformerError``"""
+            pdb_path = get_data_file_path(pdb_path)
+
+            # Guarantee wrong_smiles is wrong, even if more parameter options
+            # are added in future
+            wrong_smiles = "CC"
+            if Molecule.from_smiles(wrong_smiles).is_isomorphic_with(
+                Molecule.from_smiles(smiles)
+            ):
+                wrong_smiles = "CCC"
+
+            # Run the test
+            with pytest.raises(InvalidConformerError):
+                Molecule.from_pdb_and_smiles(pdb_path, wrong_smiles)
+
+        def test_atom_order_matches_pdb(self, pdb_path, smiles, sdf_path):
+            """The produced Molecule's atom order should match the PDB
+
+            This test uses MDTraj as an alternative PDB parser to check atom
+            ordering. However, it can only check that the elements are correct,
+            not connectivity."""
+            import mdtraj
+
+            pdb_path = get_data_file_path(pdb_path)
+            mol = Molecule.from_pdb_and_smiles(pdb_path, smiles)
+
+            pdb_mdtraj = mdtraj.load_pdb(pdb_path)
+
+            assert pdb_mdtraj.n_atoms == mol.n_atoms
+            for i in range(mol.n_atoms):
+                mdtraj_element = pdb_mdtraj.top.atom(i).element.number
+                off_element = mol.atom(i).atomic_number
+                assert mdtraj_element == off_element
+
+        def test_conformers_match_pdb(self, pdb_path, smiles, sdf_path):
+            """The produced conformers should match the coordinates in the PDB
+
+            This test uses MDTraj as an alternative PDB parser to check
+            coordinates."""
+            import mdtraj
+
+            pdb_path = get_data_file_path(pdb_path)
+            mol = Molecule.from_pdb_and_smiles(pdb_path, smiles)
+
+            pdb_mdtraj = mdtraj.load_pdb(pdb_path)
+
+            mdtraj_coordinates = pdb_mdtraj.xyz
+            pdb_coordinates = np.asarray(
+                [conformer.m_as(unit.nanometer) for conformer in mol.conformers]
             )
 
-        # make a molecule from the capped alanine 2-mer pdb file and the correct smiles
-        mol = Molecule.from_pdb_and_smiles(
-            get_data_file_path("proteins/MainChain_ALA_ALA.pdb"),
-            "[H][C@@](C(=O)N([H])[C@]([H])(C(=O)N([H])C([H])([H])[H])C([H])([H])[H])(C([H])([H])[H])N([H])C(=O)C([H])([H])[H]",
-        )
+            assert np.all(np.abs(mdtraj_coordinates - pdb_coordinates) < 1e-3)
 
-        # Make capped alanine 2-mer from the sdf file.
-        # This SDF has the same atom order as the PDB.
-        mol_sdf = Molecule.from_file(
-            get_data_file_path("proteins/MainChain_ALA_ALA.sdf")
-        )
-        # get the mapping between them and compare the properties
-        isomorphic, atom_map = Molecule.are_isomorphic(
-            mol, mol_sdf, return_atom_map=True
-        )
-        assert isomorphic is True
-        for pdb_atom, sdf_atom in atom_map.items():
-            assert mol.atoms[pdb_atom].to_dict() == mol_sdf.atoms[sdf_atom].to_dict()
-        # Make sure the coordinates match
-        mol_sdf_remapped = mol_sdf.remap(atom_map)
-        assert np.all(
-            np.asarray(mol_sdf_remapped.conformers) - np.asarray(mol.conformers) < 1e-4
-        )
-        # Make sure the atom ordering matches between pdb and sdf
-        assert atom_map == {i: i for i in range(mol_sdf.n_atoms)}
-        # check bonds match, however there order might not
-        sdf_bonds = dict(
-            ((bond.atom1_index, bond.atom2_index), bond) for bond in mol_sdf.bonds
-        )
-        for bond in mol.bonds:
-            key = (atom_map[bond.atom1_index], atom_map[bond.atom2_index])
-            if key not in sdf_bonds:
-                key = tuple(reversed(key))
-            assert key in sdf_bonds
-            # now compare the attributes
-            assert bond.is_aromatic == sdf_bonds[key].is_aromatic
-            assert bond.stereochemistry == sdf_bonds[key].stereochemistry
+        def test_connectivity_matches_pdb(self, pdb_path, smiles, sdf_path):
+            """
+            The produced Molecule's connectivity should match RDKit's interpretation
+
+            This test is essential to check for jumbling of atom orders that do
+            not alter element order. RDKit is used as a PDB parser to minimise
+            differences in bond perception between parsers.
+            """
+            pdb_path = get_data_file_path(pdb_path)
+            mol = Molecule.from_pdb_and_smiles(pdb_path, smiles)
+            from rdkit import Chem
+
+            rdkit_mol = Molecule.from_rdkit(
+                Chem.MolFromPDBFile(pdb_path, removeHs=False),
+                allow_undefined_stereo=True,
+                hydrogens_are_explicit=True,
+            )
+
+            expected_connectivity = sorted(
+                sorted([bond.atom1_index, bond.atom2_index]) for bond in rdkit_mol.bonds
+            )
+            actual_connectivity = sorted(
+                sorted([bond.atom1_index, bond.atom2_index]) for bond in mol.bonds
+            )
+
+            assert expected_connectivity == actual_connectivity
+
+        def test_is_isomorphic_to_smiles(self, pdb_path, smiles, sdf_path):
+            """The produced Molecule should be isomorphic to the SMILES string"""
+            pdb_path = get_data_file_path(pdb_path)
+            pdb_mol = Molecule.from_pdb_and_smiles(pdb_path, smiles)
+
+            smiles_mol = Molecule.from_smiles(smiles)
+
+            assert pdb_mol.is_isomorphic_with(smiles_mol)
+
+        def test_matches_sdf(self, pdb_path, smiles, sdf_path):
+            """The produced Molecule should exactly match the corresponding SDF
+
+            This test is designed to catch anything missed by the above
+            property tests."""
+            pdb_path = get_data_file_path(pdb_path)
+            pdb_mol = Molecule.from_pdb_and_smiles(pdb_path, smiles)
+
+            sdf_path = get_data_file_path(sdf_path)
+            sdf_mol = Molecule.from_file(sdf_path)
+
+            # Check that the SDF and PDB are isomorphic with identical atom ordering
+            isomorphic, atom_map = Molecule.are_isomorphic(
+                pdb_mol, sdf_mol, return_atom_map=True
+            )
+            assert isomorphic, "SDF and PDB must be the same molecule"
+            assert atom_map == {
+                i: i for i in range(pdb_mol.n_atoms)
+            }, "SDF and PDB must have same atom ordering"
+
+            # Check that the coordinates are identical
+            assert np.all(
+                np.abs(np.asarray(sdf_mol.conformers) - np.asarray(pdb_mol.conformers))
+                < 1e-4
+            ), "SDF and PDB must have identical conformers"
+
+            # Not sure that the following are necessary given are_isomorphic,
+            # but keeping them from previous test implementations
+
+            # Check that the atom properties are identical
+            for pdb_atom, sdf_atom in zip(pdb_mol.atoms, sdf_mol.atoms):
+                assert pdb_atom.to_dict() == sdf_atom.to_dict()
+
+            # Check that the bonds match, though possibly in a different order
+            sdf_bonds = {
+                tuple(sorted([bond.atom1_index, bond.atom2_index])): bond
+                for bond in sdf_mol.bonds
+            }
+
+            for pdb_bond in pdb_mol.bonds:
+                key = tuple(sorted([pdb_bond.atom1_index, pdb_bond.atom2_index]))
+                assert key in sdf_bonds
+                assert pdb_bond.is_aromatic == sdf_bonds[key].is_aromatic
+                assert pdb_bond.stereochemistry == sdf_bonds[key].stereochemistry
 
     @requires_pkg("qcportal")
     def test_to_qcschema(self):
