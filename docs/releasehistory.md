@@ -11,6 +11,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ## Behavior changes
 - [PR #1398](https://github.com/openforcefield/openff-toolkit/pull/1398): Updates the [`Bond.bond_order`] setter to only accept int values.
 
+## Bug fixes
+- [PR #1400](https://github.com/openforcefield/openff-toolkit/pull/1400): Fixes a bug where `Molecule.from_pdb_and_smiles` could incorrectly order coordinates.
+
 [`Bond.bond_order`]: Bond.bond_order
 
 ## 0.11.0 Major release adding support for proteins and refactoring the Topology class.
