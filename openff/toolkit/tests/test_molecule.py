@@ -2001,16 +2001,19 @@ class TestMolecule:
         # try and make a molecule from a pdb and smiles that don't match
         with pytest.raises(InvalidConformerError):
             mol = Molecule.from_pdb_and_smiles(
-                get_data_file_path("molecules/toluene.pdb"), "CC"
+                get_data_file_path("proteins/MainChain_ALA_ALA.pdb"), "CC"
             )
 
-        # make a molecule from the toluene pdb file and the correct smiles
+        # make a molecule from the capped alanine 2-mer pdb file and the correct smiles
         mol = Molecule.from_pdb_and_smiles(
-            get_data_file_path("molecules/toluene.pdb"), "Cc1ccccc1"
+            get_data_file_path("proteins/MainChain_ALA_ALA.pdb"),
+            "[H][C@@](C(=O)N([H])[C@]([H])(C(=O)N([H])C([H])([H])[H])C([H])([H])[H])(C([H])([H])[H])N([H])C(=O)C([H])([H])[H]",
         )
 
-        # make toluene from the sdf file
-        mol_sdf = Molecule.from_file(get_data_file_path("molecules/toluene.sdf"))
+        # make capped capped alanine 2-mer from the sdf file
+        mol_sdf = Molecule.from_file(
+            get_data_file_path("proteins/MainChain_ALA_ALA.sdf")
+        )
         # get the mapping between them and compare the properties
         isomorphic, atom_map = Molecule.are_isomorphic(
             mol, mol_sdf, return_atom_map=True
@@ -2018,6 +2021,13 @@ class TestMolecule:
         assert isomorphic is True
         for pdb_atom, sdf_atom in atom_map.items():
             assert mol.atoms[pdb_atom].to_dict() == mol_sdf.atoms[sdf_atom].to_dict()
+        # Make sure the coordinates match
+        mol_sdf_remapped = mol_sdf.remap(atom_map)
+        assert np.all(
+            np.asarray(mol_sdf_remapped.conformers) - np.asarray(mol.conformers) < 1e-4
+        )
+        # Make sure the atom ordering matches between pdb and sdf
+        assert atom_map == {i: i for i in range(mol_sdf.n_atoms)}
         # check bonds match, however there order might not
         sdf_bonds = dict(
             ((bond.atom1_index, bond.atom2_index), bond) for bond in mol_sdf.bonds
