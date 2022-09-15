@@ -2010,7 +2010,8 @@ class TestMolecule:
             "[H][C@@](C(=O)N([H])[C@]([H])(C(=O)N([H])C([H])([H])[H])C([H])([H])[H])(C([H])([H])[H])N([H])C(=O)C([H])([H])[H]",
         )
 
-        # make capped alanine 2-mer from the sdf file
+        # Make capped alanine 2-mer from the sdf file.
+        # This SDF has the same atom order as the PDB.
         mol_sdf = Molecule.from_file(
             get_data_file_path("proteins/MainChain_ALA_ALA.sdf")
         )
