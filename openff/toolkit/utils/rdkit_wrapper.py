@@ -215,7 +215,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         logger.setLevel(prev_log_level)
 
         # check isomorphic and get the mapping if true the mapping will be
-        # Dict[pdb_index: offmol_index] sorted by pdb_index
+        # Dict[offmol_index, pdbmol_index] sorted by offmol index
         isomorphic, mapping = _cls.are_isomorphic(
             offmol,
             pdbmol,
