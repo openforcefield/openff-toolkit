@@ -217,8 +217,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # check isomorphic and get the mapping if true the mapping will be
         # Dict[pdb_index: offmol_index] sorted by pdb_index
         isomorphic, mapping = _cls.are_isomorphic(
-            pdbmol,
             offmol,
+            pdbmol,
             return_atom_map=True,
             aromatic_matching=False,
             formal_charge_matching=False,
