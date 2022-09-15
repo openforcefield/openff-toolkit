@@ -2472,7 +2472,7 @@ class TestRDKitToolkitWrapper:
         assert len(molecule.conformers) == 1
         assert molecule.conformers[0].shape == (15, 3)
         assert_almost_equal(
-            molecule.conformers[0][5][1].m_as(unit.angstrom), 2.0104, decimal=4
+            molecule.conformers[0][5][1].m_as(unit.angstrom), 22.9800, decimal=4
         )
 
     def test_read_sdf_charges(self):

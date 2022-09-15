@@ -1106,8 +1106,8 @@ class TestMolecule:
                 assert data.count("C7H8\n") == 1
                 # now check that we can find the first and last coords
                 coords = [
-                    "C        0.0000000000    0.0000000000    0.0000000000\n",
-                    "H       -0.0000000000    3.7604000568    0.0000000000\n",
+                    "C        22.3700008392    21.6800003052    29.7700004578\n",
+                    "H        26.7900009155    23.1900005341    28.7199993134\n",
                 ]
                 for coord in coords:
                     assert coord in data
@@ -1194,8 +1194,8 @@ class TestMolecule:
                 assert data.count("C7H8\n") == 1
                 # now check that we can find the first and last coords
                 coords = [
-                    "C        0.0000000000    0.0000000000    0.0000000000\n",
-                    "H       -0.0000000000    3.7604000000    0.0000000000\n",
+                    "C        22.3700000000    21.6800000000    29.7700000000\n",
+                    "H        26.7900000000    23.1900000000    28.7200000000\n",
                 ]
                 for coord in coords:
                     assert coord in data
