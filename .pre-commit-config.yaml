@@ -27,3 +27,6 @@ repos:
       args:
         - --py37-plus
     - id: nbqa-isort
+    - id: nbqa-flake8
+      args:
+        - '--select=F'
