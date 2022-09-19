@@ -321,8 +321,17 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         unassigned_bonds = sorted(all_bonds - already_assigned_edges)
 
         if unassigned_atoms or unassigned_bonds:
+            # Some advanced error reporting needs to interpret the substructure smarts to do things like
+            # compare atom counts. Since OFFTK doesn't have a native class to hold fragments, we convert
+            # the smarts into networkx graphs inside the toolkit wrapper.
+            nx_substructure_library = {}
+            for resname, smarts_to_atom_names in substructure_library.items():
+                nx_substructure_library[resname] = [
+                    (self._smarts_to_networkx(smarts), atom_name_list)
+                    for smarts, atom_name_list in smarts_to_atom_names.items()
+                ]
             raise UnassignedChemistryInPDBError(
-                substructure_library=substructure_library,
+                substructure_library=nx_substructure_library,
                 omm_top=omm_top,
                 unassigned_atoms=unassigned_atoms,
                 unassigned_bonds=unassigned_bonds,

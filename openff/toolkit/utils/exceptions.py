@@ -1,5 +1,8 @@
 from typing import TYPE_CHECKING, DefaultDict, Dict, List, Mapping, Optional, Set, Tuple
 
+import networkx as nx
+from openff.units.elements import SYMBOLS
+
 if TYPE_CHECKING:
     from openmm.app import Atom as OpenMMAtom
     from openmm.app import Residue as OpenMMResidue
@@ -322,7 +325,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
     def __init__(
         self,
         msg: Optional[str] = None,
-        substructure_library: Optional[Dict[str, Dict[str, List[str]]]] = None,
+        substructure_library: Optional[Dict[str, Tuple[nx.Graph, List[str]]]] = None,
         omm_top: Optional["OpenMMTopology"] = None,
         unassigned_bonds: Optional[List[Tuple[int, int]]] = None,
         unassigned_atoms: Optional[List[int]] = None,
@@ -550,9 +553,13 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
                 # Residue is not in substructure library at all!
                 atoms.clear()
                 continue
-            for smiles, names in library_res.items():
-                offmol = Molecule.from_smiles(smiles, allow_undefined_stereo=True)
-                library_elements = sorted(atom.symbol for atom in offmol.atoms)
+            for nx_graph, names in library_res:
+                library_elements = sorted(
+                    [
+                        SYMBOLS[nx_graph.nodes[node_idx]["atomic_number"]]
+                        for node_idx in nx_graph.nodes()
+                    ]
+                )
                 residue_elements = sorted(atom.element.symbol for atom in res.atoms())
                 if library_elements == residue_elements:
                     # Prune the atoms down to just those whose names don't match
