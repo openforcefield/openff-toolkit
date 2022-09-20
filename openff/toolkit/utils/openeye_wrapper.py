@@ -22,6 +22,8 @@ from openff.units import unit
 if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import Molecule, Bond, Atom
 
+from openff.units.elements import SYMBOLS
+
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
@@ -323,15 +325,22 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         if unassigned_atoms or unassigned_bonds:
             # Some advanced error reporting needs to interpret the substructure smarts to do things like
             # compare atom counts. Since OFFTK doesn't have a native class to hold fragments, we convert
-            # the smarts into networkx graphs inside the toolkit wrapper.
-            nx_substructure_library = {}
+            # the smarts into a sorted list of symbols to help with generating the error message.
+            resname_to_symbols_and_atomnames = {}
             for resname, smarts_to_atom_names in substructure_library.items():
-                nx_substructure_library[resname] = [
-                    (self._smarts_to_networkx(smarts), atom_name_list)
-                    for smarts, atom_name_list in smarts_to_atom_names.items()
-                ]
+                resname_to_symbols_and_atomnames[resname] = list()
+                for smarts, atom_names in smarts_to_atom_names.items():
+                    qmol = oechem.OEQMol()
+                    oechem.OEParseSmiles(qmol, smarts)
+                    symbols = sorted(
+                        [SYMBOLS[atom.GetAtomicNum()] for atom in qmol.GetAtoms()]
+                    )
+                    resname_to_symbols_and_atomnames[resname].append(
+                        (symbols, atom_names)
+                    )
+
             raise UnassignedChemistryInPDBError(
-                substructure_library=nx_substructure_library,
+                substructure_library=resname_to_symbols_and_atomnames,
                 omm_top=omm_top,
                 unassigned_atoms=unassigned_atoms,
                 unassigned_bonds=unassigned_bonds,
