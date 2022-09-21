@@ -227,18 +227,22 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             bond_stereochemistry_matching=False,
         )
 
-        if mapping is not None:
-            new_mol = offmol.remap(mapping)
-
-            # the pdb conformer is in the correct order so just attach it here
-            new_mol._add_conformer(pdbmol.conformers[0])
-
-            return new_mol
-
-        else:
+        if mapping is None:
             from openff.toolkit.topology.molecule import InvalidConformerError
 
             raise InvalidConformerError("The PDB and SMILES structures do not match.")
+
+        new_mol = offmol.remap(mapping)
+
+        # the pdb conformer is in the correct order so just attach it here
+        new_mol._add_conformer(pdbmol.conformers[0])
+
+        # Take residue info from PDB
+        for pdbatom, newatom in zip(pdbmol.atoms, new_mol.atoms):
+            newatom.metadata.update(pdbatom.metadata)
+        new_mol.add_default_hierarchy_schemes()
+
+        return new_mol
 
     def _polymer_openmm_topology_to_offmol(self, omm_top, substructure_dictionary):
         rdkit_mol = self._polymer_openmm_topology_to_rdmol(
