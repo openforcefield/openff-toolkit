@@ -770,7 +770,19 @@ class TestOpenEyeToolkitWrapper:
         with pytest.raises(RuntimeError):
             Molecule.from_inchi(inchi, toolkit_registry=toolkit)
 
-    @pytest.mark.parametrize("molecule", get_mini_drug_bank(OpenEyeToolkitWrapper))
+    @pytest.mark.parametrize(
+        "molecule",
+        get_mini_drug_bank(
+            OpenEyeToolkitWrapper,
+            xfail_mols={
+                "DrugBank_3046": "Molecule is corrupted and is interpreted as a radical",
+                "DrugBank_3655": "Molecule is corrupted and is interpreted as a radical",
+                "DrugBank_1594": "Molecule is corrupted and is interpreted as a radical",
+                "DrugBank_4346": "Molecule is corrupted and is interpreted as a radical",
+                "DrugBank_6947": "Molecule is corrupted and is interpreted as a radical",
+            },
+        ),
+    )
     def test_non_standard_inchi_round_trip(self, molecule):
         """Test if a molecule can survive an InChi round trip test in some cases the standard InChI
         will not enough to ensure information is preserved so we test the non-standard inchi here."""
