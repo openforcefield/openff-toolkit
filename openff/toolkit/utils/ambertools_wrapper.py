@@ -7,7 +7,7 @@ __all__ = ("AmberToolsToolkitWrapper",)
 import subprocess
 import tempfile
 from collections import defaultdict
-from distutils.spawn import find_executable
+from shutil import which
 
 import numpy as np
 from openff.units import unit
@@ -68,8 +68,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         """
         # TODO: Check all tools needed
-        # TODO: How should we implement find_executable?
-        ANTECHAMBER_PATH = find_executable("antechamber")
+        ANTECHAMBER_PATH = which("antechamber")
         if ANTECHAMBER_PATH is None:
             return False
         # AmberToolsToolkitWrapper needs RDKit to do basically anything, since its interface requires SDF I/O
@@ -193,9 +192,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
                 strict_n_conformers=strict_n_conformers,
             )
 
-        # Find the path to antechamber
-        # TODO: How should we implement find_executable?
-        ANTECHAMBER_PATH = find_executable("antechamber")
+        ANTECHAMBER_PATH = which("antechamber")
         if ANTECHAMBER_PATH is None:
             raise AntechamberNotFoundError(
                 "Antechamber not found, cannot run charge_mol()"
@@ -283,6 +280,12 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         self, molecule, use_conformers=None, strict_n_conformers=False
     ):
         """
+        .. deprecated:: 0.11.0
+
+            This method was deprecated in v0.11.0 and will soon be removed.
+            Use :py:meth:`assign_partial_charges(partial_charge_method='am1bcc')
+            <AmberToolsToolkitWrapper.assign_partial_charges>` instead.
+
         Compute partial charges with AmberTools using antechamber/sqm. This will calculate AM1-BCC charges on the first
         conformer only.
 
@@ -459,9 +462,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         from openff.toolkit.topology import Molecule
 
-        # Find the path to antechamber
-        # TODO: How should we implement find_executable?
-        ANTECHAMBER_PATH = find_executable("antechamber")
+        ANTECHAMBER_PATH = which("antechamber")
         if ANTECHAMBER_PATH is None:
             raise AntechamberNotFoundError(
                 "Antechamber not found, cannot run "

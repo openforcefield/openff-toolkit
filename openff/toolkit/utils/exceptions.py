@@ -132,6 +132,12 @@ class NotBondedError(OpenFFToolkitException):
     """
 
 
+class InvalidBondOrderError(OpenFFToolkitException):
+    """
+    Exception for passing a non-int to `Molecule.bond_order`
+    """
+
+
 class InvalidBoxVectorsError(OpenFFToolkitException):
     """
     Exception for setting invalid box vectors
@@ -302,12 +308,12 @@ class UnsupportedFileTypeError(OpenFFToolkitException):
     """Error raised when attempting to parse an unsupported file type."""
 
 
-class UnsupportedKeywordArgumentsError(OpenFFToolkitException, ValueError):
-    """Error raised when an unexpected keyword argument is passed to `ForceField.create_openmm_system`."""
-
-
 class MultipleMoleculesInPDBError(OpenFFToolkitException):
     """Error raised when a multiple molecules are found when one was expected"""
+
+
+class WrongShapeError(OpenFFToolkitException):
+    """Error raised when an array of the wrong shape is found"""
 
 
 class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):

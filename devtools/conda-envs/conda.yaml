@@ -1,14 +1,12 @@
 name: latest-deployment
 channels:
-  - conda-forge/label/openff-toolkit_rc
-  - conda-forge/label/openff-interchange_rc
   - conda-forge
 
 dependencies:
     # Base depends
   - openff-toolkit-examples
 
-  - openmmforcefields >=0.11.1
+  - openmmforcefields >=0.11.2
   - qcportal >=0.15
   - pytest
   - pytest-rerunfailures

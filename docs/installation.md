@@ -24,10 +24,18 @@ $ conda install -c conda-forge openff-toolkit
 Installation via the Conda package manager is the preferred method since all dependencies are automatically fetched and installed for you.
 :::
 
+(installation/platforms)=
+
 ### OS support
 
 The OpenFF Toolkit is pure Python, and we expect it to work on any platform that supports its dependencies.
-Our automated testing takes place on both MacOS and Ubuntu Linux.
+Our automated testing takes place on both (x86) MacOS and Ubuntu Linux.
+
+
+(installation/windows)=
+
+#### Windows
+
 For Windows support, we recommend using the [Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/install-win10) (WSL) to run a Linux system integrated into Windows.
 We strongly suggest using WSL2, if your hardware supports it, for a smoother experience.
 WSL2 requires virtualization support in hardware.
@@ -39,6 +47,32 @@ Note that by default, Jupyter Notebook will not be able to open a browser window
 :::{note}
 WSL2 [does support](https://docs.microsoft.com/en-us/windows/wsl/tutorials/gpu-compute) GPU compute, at least with nvidia cards, but setting it up [takes some work](https://developer.nvidia.com/cuda/wsl).
 :::
+
+
+(installation/m1)=
+
+#### macOS with M1 chips
+
+The Toolkit supports Apple Silicon (M1, M2, etc.), but only through [Rosetta] because (as of August 2022) some upstream dependencies are not yet built for the `osx-arm64` architecture. 
+Conda can be configured to [use Rosetta] with the `CONDA_SUBDIR=osx-64` environment variable or the `subdir` Conda config variable. 
+We recommend using this on a per-environment basis so that it persists across updates and new installs, but does not affect existing setups:
+
+```shell-session
+$ CONDA_SUBDIR=osx-64 conda create --name openff -c conda-forge openff-toolkit
+$ conda activate
+$ conda config --env --set subdir osx-64
+```
+
+Alternatively, make this setting the global default by updating the system Conda config:
+
+```
+$ conda config --system --set subdir osx-64
+```
+
+Note that this will affect how Conda behaves with other environments.
+
+[Rosetta]: https://support.apple.com/en-au/HT211861
+[use Rosetta]: https://conda-forge.org/docs/user/tipsandtricks.html#installing-apple-intel-packages-on-apple-silicon
 
 (conda_envs)=
 

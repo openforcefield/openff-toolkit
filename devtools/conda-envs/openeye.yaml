@@ -1,8 +1,6 @@
 name: test
 channels:
   - openeye
-  - conda-forge/label/openff-interchange_rc
-  - conda-forge/label/openff-toolkit_rc
   - conda-forge
 
 dependencies:
@@ -23,12 +21,12 @@ dependencies:
   - parmed
   - openeye-toolkits
   - packaging
-  - openmmforcefields >=0.11.1
+  - openmmforcefields >=0.11.2
   - openmm =>7.6
   - openff-forcefields
-  - openff-units >=0.1.6
+  - openff-units >=0.1.7
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.2.0rc1
+  - openff-interchange-base >=0.2.0rc6
   - smirnoff99Frosst
   - cachetools
   - cached-property
@@ -42,3 +40,4 @@ dependencies:
   - qcportal >=0.15
   - qcengine
   - mdtraj
+  - ipywidgets >=7,<8

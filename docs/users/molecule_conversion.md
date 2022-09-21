@@ -69,14 +69,17 @@ name: table-hierarchy-across-toolkits
 * - Toolkit
   - residue_name
   - residue_number
+  - insertion_code
   - chain_id
 * - PDB file ATOM/HETATM columns
   - Columns 18-20 (`resName`)
   - Columns 23-26 (`resSeq`)
+  - Columns 27 (`iCode`)
   - Columns 22 (`chainID`)
 * - PDBx/MMCIF fields
   - `label_comp_id`
   - `label_seq_id`
+  - `label_ins_code`
   - `label_asym_id`
 * - OpenFF getter (defined)
   - ```
@@ -84,6 +87,9 @@ name: table-hierarchy-across-toolkits
     ```
   - ```
     atom.metadata["residue_number"]
+    ```
+  - ```
+    atom.metadata["insertion_code"]
     ```
   - ```
     atom.metadata["chain_id"]
@@ -96,6 +102,9 @@ name: table-hierarchy-across-toolkits
     "residue_number" not in atom.metadata
     ```
   - ```
+    "insertion_code" not in atom.metadata
+    ```
+  - ```
     "chain_id" not in atom.metadata
     ```
 * - OpenFF setter (defined)
@@ -104,6 +113,9 @@ name: table-hierarchy-across-toolkits
     ```
   - ```
     atom.metadata["residue_number"] = X
+    ```
+  - ```
+    atom.metadata["insertion_code"] = X
     ```
   - ```
     atom.metadata["chain_id"] = X
@@ -116,6 +128,9 @@ name: table-hierarchy-across-toolkits
     del atom.metadata['residue_number']
     ```
   - ```
+    del atom.metadata['insertion_code']
+    ```
+  - ```
     del atom.metadata['chain_id']
     ```
 * - OpenMM getter (defined)
@@ -126,9 +141,13 @@ name: table-hierarchy-across-toolkits
     omm_atom.residue.id
     ```
   - ```
+    omm_atom.residue.insertionCode
+    ```
+  - ```
     omm_atom.residue.chain.id
     ```
 * - OpenMM getter (undefined)
+  - All particles in an OpenMM Topology belong to a chain and residue
   - All particles in an OpenMM Topology belong to a chain and residue
   - All particles in an OpenMM Topology belong to a chain and residue
   - All particles in an OpenMM Topology belong to a chain and residue
@@ -138,6 +157,9 @@ name: table-hierarchy-across-toolkits
     ```
   - ```
     omm_atom.residue.id = X
+    ```
+  - ```
+    omm_atom.residue.insertionCode = X
     ```
   - ```
     omm_atom.residue.chain.id = X
@@ -150,6 +172,9 @@ name: table-hierarchy-across-toolkits
     omm_atom.residue.id = 0
     ```
   - ```
+    omm_atom.residue.insertionCode = " "
+    ```
+  - ```
     omm_atom.residue.chain.id = "X"
     ```
 * - RDKit getter (defined)
@@ -160,9 +185,15 @@ name: table-hierarchy-across-toolkits
     rda.GetPDBResidueInfo().GetResidueNumber()
     ```
   - ```
+    rda.GetPDBResidueInfo().GetInsertionCode()
+    ```
+  - ```
     rda.GetPDBResidueInfo().GetChainId()
     ```
 * - RDKit getter (undefined)
+  - ```
+    rda.GetPDBResidueInfo() is None
+    ```
   - ```
     rda.GetPDBResidueInfo() is None
     ```
@@ -184,6 +215,11 @@ name: table-hierarchy-across-toolkits
     rdatom.SetPDBResidueInfo(res)
     ```
   - ```
+    res = rda.GetPDBResidueInfo() 
+    res.SetInsertionCode(X) 
+    rdatom.SetPDBResidueInfo(res)
+    ```
+  - ```
     .res = rda.GetPDBResidueInfo() 
     res.SetSetChainId(X) 
     rdatom.SetPDBResidueInfo(res)
@@ -201,7 +237,12 @@ name: table-hierarchy-across-toolkits
     res = rda.GetPDBResidueInfo() 
     rdatom.SetPDBResidueInfo(res)
     ```
+  - ```
+    res = rda.GetPDBResidueInfo() 
+    rdatom.SetPDBResidueInfo(res)
+    ```
 * - RDKit setter (if ALL fields are undefined)
+  - No action
   - No action
   - No action
   - No action
@@ -213,9 +254,15 @@ name: table-hierarchy-across-toolkits
     oechem.OEAtomGetResidue(atom).GetResidueNumber()
     ```
   - ```
+    oechem.OEAtomGetResidue(atom).GetInsertCode()
+    ```
+  - ```
     oechem.OEAtomGetResidue(atom).GetChainID()
     ```
 * - OpenEye getter (undefined)
+  - ```
+    oechem.OEHasResidues(oemol) == False
+    ```
   - ```
     oechem.OEHasResidues(oemol) == False
     ```
@@ -238,6 +285,11 @@ name: table-hierarchy-across-toolkits
     ```
   - ```
     res = oechem.OEAtomGetResidue(atom) 
+    res.SetInsertCode(X) 
+    oechem.OEAtomSetResidue(atom, res)
+    ```
+  - ```
+    res = oechem.OEAtomGetResidue(atom) 
     res.SetChainID(X) 
     oechem.OEAtomSetResidue(atom, res)
     ```
@@ -250,6 +302,11 @@ name: table-hierarchy-across-toolkits
   - ```
     res = oechem.OEAtomGetResidue(atom) 
     res.SetResidueNumber(1) 
+    oechem.OEAtomSetResidue(atom, res)
+    ```
+  - ```
+    res = oechem.OEAtomGetResidue(atom) 
+    res.SetInsertCode(" ") 
     oechem.OEAtomSetResidue(atom, res)
     ```
   - ```

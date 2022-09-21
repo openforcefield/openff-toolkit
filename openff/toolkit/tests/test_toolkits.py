@@ -458,7 +458,12 @@ class TestOpenEyeToolkitWrapper:
             # OpenEye wrapper always adds hierarchy metadata (residue name + num) info, so account for that
             atom1_dict = atom1.to_dict()
             atom1_dict["metadata"].update(
-                {"residue_name": "UNL", "residue_number": 1, "chain_id": " "}
+                {
+                    "residue_name": "UNL",
+                    "residue_number": 1,
+                    "insertion_code": " ",
+                    "chain_id": " ",
+                }
             )
             assert atom1_dict == atom2.to_dict()
         for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
@@ -513,7 +518,12 @@ class TestOpenEyeToolkitWrapper:
             # OpenEye wrapper always adds hierarchy metadata (residue name + num) info, so account for that
             atom1_dict = atom1.to_dict()
             atom1_dict["metadata"].update(
-                {"residue_name": "UNL", "residue_number": 1, "chain_id": " "}
+                {
+                    "residue_name": "UNL",
+                    "residue_number": 1,
+                    "insertion_code": " ",
+                    "chain_id": " ",
+                }
             )
             assert atom1_dict == atom2.to_dict()
         for bond1, bond2 in zip(molecule.bonds, molecule2.bonds):
@@ -588,6 +598,12 @@ class TestOpenEyeToolkitWrapper:
                         == oechem.OEAtomGetResidue(oe_atom).GetResidueNumber()
                     )
 
+                if "insertion_code" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["insertion_code"]
+                        == oechem.OEAtomGetResidue(oe_atom).GetInsertCode()
+                    )
+
                 if "chain_id" in orig_atom.metadata:
                     assert (
                         orig_atom.metadata["chain_id"]
@@ -611,6 +627,12 @@ class TestOpenEyeToolkitWrapper:
                             == roundtrip_atom.metadata["residue_number"]
                         )
 
+                    if "insertion_code" in orig_atom.metadata:
+                        assert (
+                            orig_atom.metadata["insertion_code"]
+                            == roundtrip_atom.metadata["insertion_code"]
+                        )
+
                     if "chain_id" in orig_atom.metadata:
                         assert (
                             orig_atom.metadata["chain_id"]
@@ -620,6 +642,7 @@ class TestOpenEyeToolkitWrapper:
                 else:
                     assert "residue_name" not in roundtrip_atom.metadata
                     assert "residue_number" not in roundtrip_atom.metadata
+                    assert "insertion_code" not in roundtrip_atom.metadata
                     assert "chain_id" not in roundtrip_atom.metadata
 
     def test_from_openeye_mutable_input(self):
@@ -834,10 +857,12 @@ class TestOpenEyeToolkitWrapper:
 
     def test_from_pathlib_path(self):
         ethanol = create_ethanol()
-        ethanol.to_file("ethanol.sdf", file_format="sdf")
+        with NamedTemporaryFile(suffix=".sdf") as outfile:
+            filename = str(outfile.name)
+            ethanol.to_file(filename, file_format="sdf")
 
-        toolkit = OpenEyeToolkitWrapper()
-        toolkit.from_file(pathlib.Path("ethanol.sdf"), file_format="sdf")
+            toolkit = OpenEyeToolkitWrapper()
+            toolkit.from_file(pathlib.Path(filename), file_format="sdf")
 
     def test_write_multiconformer_pdb(self):
         """
@@ -2300,6 +2325,7 @@ class TestRDKitToolkitWrapper:
                 atom_has_any_metadata = (
                     ("residue_name" in orig_atom.metadata)
                     or ("residue_number" in orig_atom.metadata)
+                    or ("insertion_code" in orig_atom.metadata)
                     or ("chain_id" in orig_atom.metadata)
                 )
 
@@ -2323,6 +2349,14 @@ class TestRDKitToolkitWrapper:
                 else:
                     assert rd_atom.GetPDBResidueInfo().GetResidueNumber() == 0
 
+                if "insertion_code" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["insertion_code"]
+                        == rd_atom.GetPDBResidueInfo().GetInsertionCode()
+                    )
+                else:
+                    assert rd_atom.GetPDBResidueInfo().GetInsertionCode() == " "
+
                 if "chain_id" in orig_atom.metadata:
                     assert (
                         orig_atom.metadata["chain_id"]
@@ -2336,6 +2370,7 @@ class TestRDKitToolkitWrapper:
                 atom_has_any_metadata = (
                     ("residue_name" in orig_atom.metadata)
                     or ("residue_number" in orig_atom.metadata)
+                    or ("insertion_code" in orig_atom.metadata)
                     or ("chain_id" in orig_atom.metadata)
                 )
                 if not (atom_has_any_metadata):
@@ -2357,6 +2392,14 @@ class TestRDKitToolkitWrapper:
                     )
                 else:
                     assert roundtrip_atom.metadata["residue_number"] == 0
+
+                if "insertion_code" in orig_atom.metadata:
+                    assert (
+                        orig_atom.metadata["insertion_code"]
+                        == roundtrip_atom.metadata["insertion_code"]
+                    )
+                else:
+                    assert roundtrip_atom.metadata["insertion_code"] == 0
 
                 if "chain_id" in orig_atom.metadata:
                     assert (
@@ -2396,10 +2439,12 @@ class TestRDKitToolkitWrapper:
 
     def test_from_pathlib_path(self):
         ethanol = create_ethanol()
-        ethanol.to_file("ethanol.sdf", file_format="sdf")
+        with NamedTemporaryFile(suffix=".sdf") as outfile:
+            filename = str(outfile.name)
+            ethanol.to_file(filename, file_format="sdf")
 
-        toolkit = RDKitToolkitWrapper()
-        toolkit.from_file(pathlib.Path("ethanol.sdf"), file_format="sdf")
+            toolkit = RDKitToolkitWrapper()
+            toolkit.from_file(pathlib.Path(filename), file_format="sdf")
 
     def test_file_extension_case(self):
         """

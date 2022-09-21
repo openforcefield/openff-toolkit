@@ -61,7 +61,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     _toolkit_name = "The RDKit"
     _toolkit_installation_instructions = (
         "A conda-installable version of the free and open source RDKit cheminformatics "
-        "toolkit can be found at: https://anaconda.org/rdkit/rdkit"
+        "toolkit can be found at: https://anaconda.org/conda-forge/rdkit"
     )
 
     def __init__(self):
@@ -1731,6 +1731,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             if res is not None:
                 metadata["residue_name"] = res.GetResidueName()
                 metadata["residue_number"] = res.GetResidueNumber()
+                metadata["insertion_code"] = res.GetInsertionCode()
                 metadata["chain_id"] = res.GetChainId()
 
             atom_index = offmol._add_atom(
@@ -2050,6 +2051,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             if "residue_number" in atom.metadata:
                 atom_has_any_metadata = True
                 res.SetResidueNumber(int(atom.metadata["residue_number"]))
+
+            if "insertion_code" in atom.metadata:
+                atom_has_any_metadata = True
+                res.SetInsertionCode(atom.metadata["insertion_code"])
 
             if "chain_id" in atom.metadata:
                 atom_has_any_metadata = True

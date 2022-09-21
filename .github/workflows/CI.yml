@@ -161,8 +161,14 @@ jobs:
         run: |
           pytest -v --doctest-glob="docs/*.rst" docs/
 
+      - name: Run notebooks in docs
+        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
+        run: |
+          pytest -v --nbval --ignore docs/_build/ docs/
+
       - name: Codecov
-        uses: codecov/codecov-action@v3.1.0
+        uses: codecov/codecov-action@v3.1.1
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage.xml
           fail_ci_if_error: true
