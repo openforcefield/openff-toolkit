@@ -240,6 +240,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Take residue info from PDB
         for pdbatom, newatom in zip(pdbmol.atoms, new_mol.atoms):
             newatom.metadata.update(pdbatom.metadata)
+            newatom.name = pdbatom.name
         new_mol.add_default_hierarchy_schemes()
 
         return new_mol
