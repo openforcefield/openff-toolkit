@@ -2139,9 +2139,14 @@ class TestMolecule:
             # Not sure that the following are necessary given are_isomorphic,
             # but keeping them from previous test implementations
 
-            # Check that the atom properties are identical
+            # Check that the atom properties are identical (except metadata)
             for pdb_atom, sdf_atom in zip(pdb_mol.atoms, sdf_mol.atoms):
-                assert pdb_atom.to_dict() == sdf_atom.to_dict()
+                pdb_atom_dict = pdb_atom.to_dict()
+                del pdb_atom_dict["metadata"]
+
+                sdf_atom_dict = sdf_atom.to_dict()
+                del sdf_atom_dict["metadata"]
+                assert sdf_atom_dict == pdb_atom_dict
 
             # Check that the bonds match, though possibly in a different order
             sdf_bonds = {
