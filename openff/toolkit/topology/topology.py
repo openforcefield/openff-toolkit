@@ -1297,6 +1297,8 @@ class Topology(Serializable):
         This method guarantees that the order of atoms in the input OpenMM Topology will be the same as the ordering
         of atoms in the output OpenFF Topology. However it does not guarantee the order of the bonds will be the same.
 
+        Hierarchy schemes are taken from the OpenMM topology, not from `unique_molecules`.
+
         Parameters
         ----------
         openmm_topology : openmm.app.Topology
