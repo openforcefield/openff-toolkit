@@ -101,7 +101,7 @@ print(converted)
 
 Report the value in compatible units:
 ```
-print(value.magnitude_as(unit.angstrom))  $ or .m_as()
+print(value.m_as(unit.angstrom))  # Note that value.magnitude_as() does not exist
 # 10.0 <Unit('angstrom')>
 ```
 
