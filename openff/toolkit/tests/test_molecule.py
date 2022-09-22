@@ -2059,7 +2059,7 @@ class TestMolecule:
         def test_conformers_match_pdb(self, pdb_path, smiles, sdf_path):
             """The produced conformers should match the coordinates in the PDB
 
-            This test uses OpenMM as an alternative PDB parser to check
+            This test uses MDTraj as an alternative PDB parser to check
             coordinates."""
             import mdtraj
 

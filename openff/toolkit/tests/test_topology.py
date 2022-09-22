@@ -514,6 +514,7 @@ class TestTopology:
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         assert topology.n_molecules == 239
         assert topology.n_unique_molecules == 2
+        # Ensure that hierarchy iterators are initialized
         assert all(
             all([molecule.residues, molecule.chains]) for molecule in topology.molecules
         )
