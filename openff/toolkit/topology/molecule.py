@@ -1228,14 +1228,14 @@ class FrozenMolecule(Serializable):
             # even if that conflicts with the current values in atom metadata.
             new_hier_scheme = HierarchyScheme(
                 self,
-                hierarchy_scheme_dict["uniqueness_criteria"],
+                tuple(hierarchy_scheme_dict["uniqueness_criteria"]),
                 iter_name,
             )
             self._hierarchy_schemes[iter_name] = new_hier_scheme
 
             for element_dict in hierarchy_scheme_dict["hierarchy_elements"]:
                 new_hier_scheme.add_hierarchy_element(
-                    element_dict["identifier"], element_dict["atom_indices"]
+                    tuple(element_dict["identifier"]), element_dict["atom_indices"]
                 )
 
     def __repr__(self):

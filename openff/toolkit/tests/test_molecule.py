@@ -2036,25 +2036,26 @@ class TestMolecule:
             with pytest.raises(InvalidConformerError):
                 Molecule.from_pdb_and_smiles(pdb_path, wrong_smiles)
 
+        @requires_pkg("mdtraj")
         def test_atom_order_matches_pdb(self, pdb_path, smiles, sdf_path):
             """The produced Molecule's atom order should match the PDB
 
             This test uses MDTraj as an alternative PDB parser to check atom
-            ordering. However, it can only check that the elements are correct,
-            not connectivity."""
+            ordering. However, it can only check that the elements and atom
+            names are correct, not connectivity."""
             import mdtraj
 
             pdb_path = get_data_file_path(pdb_path)
             mol = Molecule.from_pdb_and_smiles(pdb_path, smiles)
 
-            pdb_mdtraj = mdtraj.load_pdb(pdb_path)
+            pdb_mdtraj = mdtraj.load_pdb(pdb_path, standard_names=False)
 
             assert pdb_mdtraj.n_atoms == mol.n_atoms
-            for i in range(mol.n_atoms):
-                mdtraj_element = pdb_mdtraj.top.atom(i).element.number
-                off_element = mol.atom(i).atomic_number
-                assert mdtraj_element == off_element
+            for mdtraj_atom, off_atom in zip(pdb_mdtraj.topology.atoms, mol.atoms):
+                assert mdtraj_atom.element.number == off_atom.atomic_number
+                assert mdtraj_atom.name == off_atom.name
 
+        @requires_pkg("mdtraj")
         def test_conformers_match_pdb(self, pdb_path, smiles, sdf_path):
             """The produced conformers should match the coordinates in the PDB
 
@@ -2074,6 +2075,29 @@ class TestMolecule:
 
             assert np.all(np.abs(mdtraj_coordinates - pdb_coordinates) < 1e-3)
 
+        @requires_pkg("openmm")
+        def test_metadata_matches_pdb(self, pdb_path, smiles, sdf_path):
+            """The produced conformers should match the coordinates in the PDB
+
+            This test uses OpenMM as an alternative PDB parser to check
+            metadata."""
+            from openmm.app import PDBFile
+
+            pdb_path = get_data_file_path(pdb_path)
+            mol = Molecule.from_pdb_and_smiles(pdb_path, smiles)
+
+            pdb_omm = PDBFile(pdb_path)
+
+            for omm_atom, off_atom in zip(pdb_omm.getTopology().atoms(), mol.atoms):
+                omm_metadata = {
+                    "residue_name": omm_atom.residue.name,
+                    "residue_number": int(omm_atom.residue.id),
+                    "insertion_code": omm_atom.residue.insertionCode,
+                    "chain_id": omm_atom.residue.chain.id,
+                }
+                assert omm_metadata == off_atom.metadata
+
+        @requires_rdkit
         def test_connectivity_matches_pdb(self, pdb_path, smiles, sdf_path):
             """
             The produced Molecule's connectivity should match RDKit's interpretation
@@ -2139,9 +2163,16 @@ class TestMolecule:
             # Not sure that the following are necessary given are_isomorphic,
             # but keeping them from previous test implementations
 
-            # Check that the atom properties are identical
+            # Check that the atom properties are identical (except metadata)
             for pdb_atom, sdf_atom in zip(pdb_mol.atoms, sdf_mol.atoms):
-                assert pdb_atom.to_dict() == sdf_atom.to_dict()
+                pdb_atom_dict = pdb_atom.to_dict()
+                del pdb_atom_dict["metadata"]
+                del pdb_atom_dict["name"]
+
+                sdf_atom_dict = sdf_atom.to_dict()
+                del sdf_atom_dict["metadata"]
+                del sdf_atom_dict["name"]
+                assert sdf_atom_dict == pdb_atom_dict
 
             # Check that the bonds match, though possibly in a different order
             sdf_bonds = {
