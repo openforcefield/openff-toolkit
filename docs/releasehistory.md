@@ -8,6 +8,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+## Behavior changes
+- [PR #1398](https://github.com/openforcefield/openff-toolkit/pull/1398): Updates the [`Bond.bond_order`] setter to only accept int values.
+
+[`Bond.bond_order`]: Bond.bond_order
+
 ## 0.11.0 Major release adding support for proteins and refactoring the Topology class.
 
 ## Migration guide

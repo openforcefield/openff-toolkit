@@ -57,6 +57,7 @@ from openff.toolkit.utils.exceptions import (
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
     IncompatibleUnitError,
     InvalidAtomMetadataError,
+    InvalidBondOrderError,
     InvalidConformerError,
     MultipleMoleculesInPDBError,
     SmilesParsingError,
@@ -695,7 +696,16 @@ class Bond(Serializable):
 
     @bond_order.setter
     def bond_order(self, value):
-        self._bond_order = value
+        if isinstance(value, int):
+            self._bond_order = value
+        else:
+            raise InvalidBondOrderError(
+                "Only integer bond orders may be passed to `Bond.bond_order` setter. "
+                "For aromatic bonds, instead kekulize the input structure and use "
+                "the resulting integer bond orders. If performing partial bond "
+                "order-based parameter interpolation, consider using "
+                "`Bond.fractional_bond_order`."
+            )
 
     @property
     def fractional_bond_order(self):

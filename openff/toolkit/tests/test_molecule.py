@@ -38,7 +38,6 @@ from openff.toolkit.tests.utils import (
     requires_pkg,
     requires_rdkit,
 )
-from openff.toolkit.topology import NotBondedError
 from openff.toolkit.topology.molecule import (
     Atom,
     FrozenMolecule,
@@ -54,8 +53,10 @@ from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import (
     ConformerGenerationError,
     IncompatibleUnitError,
+    InvalidBondOrderError,
     InvalidConformerError,
     MultipleMoleculesInPDBError,
+    NotBondedError,
     UnassignedChemistryInPDBError,
     UnsupportedFileTypeError,
 )
@@ -353,6 +354,14 @@ class TestAtom:
         atom.molecule = mol
         with pytest.raises(AssertionError, match="already has an associated molecule"):
             atom.molecule = mol
+
+
+class TestBond:
+    def test_float_bond_order(self):
+        molecule = create_ethanol()
+
+        with pytest.raises(InvalidBondOrderError):
+            molecule.bond(0).bond_order = 1.2
 
 
 class TestMolecule:
