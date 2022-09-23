@@ -10,8 +10,19 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Behavior changes
 - [PR #1398](https://github.com/openforcefield/openff-toolkit/pull/1398): Updates the [`Bond.bond_order`] setter to only accept int values.
+- [PR #1236](https://github.com/openforcefield/openff-toolkit/pull/1236): [`from_rdkit`] and [`from_openeye`] now 
+  raise an `RadicalsNotSupportedError` when loading radicals. It's not clear that the OpenFF Toolkit was ever safely 
+  handling radicals - they appear to be the root cause of many instances of unintended hydrogen addition and other 
+  connection table changes. If this change affects a workflow that was previously working correctly, please let us 
+  know on [this issue](https://github.com/openforcefield/openff-toolkit/issues/1075) so we can refine this behavior. 
+
+## Examples changed
+- [PR #1236](https://github.com/openforcefield/openff-toolkit/pull/1236): `examples/check_dataset_parameter_coverage` has
+  been deprecated. 
 
 [`Bond.bond_order`]: Bond.bond_order
+[`from_rdkit`]: Molecule.from_rdkit
+[`from_openeye`]: Molecule.from_openeye
 
 ## 0.11.0 Major release adding support for proteins and refactoring the Topology class.
 
