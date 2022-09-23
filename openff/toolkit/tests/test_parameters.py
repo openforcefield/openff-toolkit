@@ -2210,7 +2210,7 @@ class TestVirtualSiteHandler:
     @pytest.mark.parametrize(
         "parameters, smiles, expected_matches",
         [
-            # Check that a basic BOndCharge virtual site can be applied
+            # Check that a basic BondCharge virtual site can be applied
             (
                 [VirtualSiteMocking.bond_charge_parameter("[Cl:1]-[C:2]")],
                 "[Cl:2][C:1]([H:3])([H:4])[H:5]",
@@ -2229,7 +2229,7 @@ class TestVirtualSiteHandler:
             # Check that a bond charge vsite can be applied to a symmetric moiety
             (
                 [VirtualSiteMocking.bond_charge_parameter("[C:1]#[C:2]")],
-                "[H:1][C:2]#[C:3][C:4]",
+                "[H:1][C:2]#[C:3][Cl:4]",
                 {(1, 2): {("[C:1]#[C:2]", "EP")}, (2, 1): {("[C:1]#[C:2]", "EP")}},
             ),
             # Check that a monovalent lone pair vsite can be applied to a relatively symmetric moiety

@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 import numpy as np
 from cachetools import LRUCache, cached
 from openff.units import unit
+from openff.units.elements import SYMBOLS
 
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
@@ -24,6 +25,7 @@ from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ConformerGenerationError,
     NotAttachedToMoleculeError,
+    RadicalsNotSupportedError,
     SMILESParseError,
     ToolkitUnavailableException,
     UnassignedChemistryInPDBError,
@@ -346,8 +348,23 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         unassigned_bonds = sorted(all_bonds - already_assigned_edges)
 
         if unassigned_atoms or unassigned_bonds:
+            # Some advanced error reporting needs to interpret the substructure smarts to do things like
+            # compare atom counts. Since OFFTK doesn't have a native class to hold fragments, we convert
+            # the smarts into a sorted list of symbols to help with generating the error message.
+            resname_to_symbols_and_atomnames = {}
+            for resname, smarts_to_atom_names in substructure_library.items():
+                resname_to_symbols_and_atomnames[resname] = list()
+                for smarts, atom_names in smarts_to_atom_names.items():
+                    ref = Chem.MolFromSmarts(smarts)
+                    symbols = sorted(
+                        [SYMBOLS[atom.GetAtomicNum()] for atom in ref.GetAtoms()]
+                    )
+                    resname_to_symbols_and_atomnames[resname].append(
+                        (symbols, atom_names)
+                    )
+
             raise UnassignedChemistryInPDBError(
-                substructure_library=substructure_library,
+                substructure_library=resname_to_symbols_and_atomnames,
                 omm_top=omm_top,
                 unassigned_atoms=unassigned_atoms,
                 unassigned_bonds=unassigned_bonds,
@@ -934,6 +951,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         -------
         molecule : openff.toolkit.topology.Molecule
             An OpenFF style molecule.
+
+        Raises
+        ------
+        RadicalsNotSupportedError : If any atoms in the RDKit molecule contain radical electrons.
         """
         from rdkit import Chem
 
@@ -1691,6 +1712,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # if we are loading from a mapped smiles extract the mapping
         atom_mapping = {}
         for rda in rdmol.GetAtoms():
+
+            # See issues #1075 for some discussion on radicals
+            if rda.GetNumRadicalElectrons() != 0:
+                raise RadicalsNotSupportedError(
+                    "The OpenFF Toolkit does not currently support parsing molecules with radicals. "
+                    f"Found {rda.GetNumRadicalElectrons()} radical electrons on molecule {Chem.MolToSmiles(rdmol)}."
+                )
+
             rd_idx = rda.GetIdx()
             # if the molecule was made from a mapped smiles this has been hidden
             # so that it does not affect the sterochemistry tags

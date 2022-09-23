@@ -22,6 +22,8 @@ from openff.units import unit
 if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import Molecule, Bond, Atom
 
+from openff.units.elements import SYMBOLS
+
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
@@ -33,6 +35,7 @@ from openff.toolkit.utils.exceptions import (
     InvalidIUPACNameError,
     LicenseError,
     NotAttachedToMoleculeError,
+    RadicalsNotSupportedError,
     SMILESParseError,
     ToolkitUnavailableException,
     UnassignedChemistryInPDBError,
@@ -320,8 +323,24 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         unassigned_bonds = sorted(all_bonds - already_assigned_edges)
 
         if unassigned_atoms or unassigned_bonds:
+            # Some advanced error reporting needs to interpret the substructure smarts to do things like
+            # compare atom counts. Since OFFTK doesn't have a native class to hold fragments, we convert
+            # the smarts into a sorted list of symbols to help with generating the error message.
+            resname_to_symbols_and_atomnames = {}
+            for resname, smarts_to_atom_names in substructure_library.items():
+                resname_to_symbols_and_atomnames[resname] = list()
+                for smarts, atom_names in smarts_to_atom_names.items():
+                    qmol = oechem.OEQMol()
+                    oechem.OEParseSmiles(qmol, smarts)
+                    symbols = sorted(
+                        [SYMBOLS[atom.GetAtomicNum()] for atom in qmol.GetAtoms()]
+                    )
+                    resname_to_symbols_and_atomnames[resname].append(
+                        (symbols, atom_names)
+                    )
+
             raise UnassignedChemistryInPDBError(
-                substructure_library=substructure_library,
+                substructure_library=resname_to_symbols_and_atomnames,
                 omm_top=omm_top,
                 unassigned_atoms=unassigned_atoms,
                 unassigned_bonds=unassigned_bonds,
@@ -1148,6 +1167,21 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             atomic_number = oeatom.GetAtomicNum()
             # Carry with implicit units of elementary charge for faster route through _add_atom
             formal_charge = oeatom.GetFormalCharge()
+            explicit_valence = oeatom.GetExplicitValence()
+            mdl_valence = oechem.OEMDLGetValence(
+                atomic_number, formal_charge, explicit_valence
+            )
+            number_radical_electrons = mdl_valence - (
+                oeatom.GetImplicitHCount() + explicit_valence
+            )
+
+            if number_radical_electrons > 0:
+                raise RadicalsNotSupportedError(
+                    "The OpenFF Toolkit does not currently support parsing molecules with radicals. "
+                    f"Found {number_radical_electrons} radical electrons on molecule "
+                    f"{oechem.OECreateSmiString(oemol)}."
+                )
+
             is_aromatic = oeatom.IsAromatic()
             stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(
                 oemol, oeatom
@@ -1882,10 +1916,15 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             is passed into this function.
         _cls : class
             Molecule constructor
+
         Returns
         -------
         molecule : openff.toolkit.topology.Molecule
             An OpenFF style molecule.
+
+        Raises
+        ------
+        RadicalsNotSupportedError : If any atoms in the OpenEye molecule contain radical electrons.
         """
         from openeye import oechem
 
