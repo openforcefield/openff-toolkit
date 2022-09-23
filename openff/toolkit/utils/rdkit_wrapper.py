@@ -215,10 +215,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         logger.setLevel(prev_log_level)
 
         # check isomorphic and get the mapping if true the mapping will be
-        # Dict[pdb_index: offmol_index] sorted by pdb_index
+        # Dict[offmol_index, pdbmol_index] sorted by offmol index
         isomorphic, mapping = _cls.are_isomorphic(
-            pdbmol,
             offmol,
+            pdbmol,
             return_atom_map=True,
             aromatic_matching=False,
             formal_charge_matching=False,
@@ -227,18 +227,23 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             bond_stereochemistry_matching=False,
         )
 
-        if mapping is not None:
-            new_mol = offmol.remap(mapping)
-
-            # the pdb conformer is in the correct order so just attach it here
-            new_mol._add_conformer(pdbmol.conformers[0])
-
-            return new_mol
-
-        else:
+        if mapping is None:
             from openff.toolkit.topology.molecule import InvalidConformerError
 
             raise InvalidConformerError("The PDB and SMILES structures do not match.")
+
+        new_mol = offmol.remap(mapping)
+
+        # the pdb conformer is in the correct order so just attach it here
+        new_mol._add_conformer(pdbmol.conformers[0])
+
+        # Take residue info from PDB
+        for pdbatom, newatom in zip(pdbmol.atoms, new_mol.atoms):
+            newatom.metadata.update(pdbatom.metadata)
+            newatom.name = pdbatom.name
+        new_mol.add_default_hierarchy_schemes()
+
+        return new_mol
 
     def _polymer_openmm_topology_to_offmol(self, omm_top, substructure_dictionary):
         rdkit_mol = self._polymer_openmm_topology_to_rdmol(

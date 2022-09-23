@@ -13,6 +13,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 [`Bond.bond_order`]: Bond.bond_order
 
+## Bug fixes
+- [PR #1400](https://github.com/openforcefield/openff-toolkit/pull/1400): Fixes a bug where `Molecule.from_pdb_and_smiles` could incorrectly order coordinates.
+- [PR #1404](https://github.com/openforcefield/openff-toolkit/pull/1404): Support default hierarchy schemes in outputs of `Molecule.from_pdb_and_smiles()` and `Topology.from_openmm()`
+
 ## 0.11.0 Major release adding support for proteins and refactoring the Topology class.
 
 ## Migration guide
@@ -98,7 +102,7 @@ print(converted)
 
 Report the value in compatible units:
 ```
-print(value.magnitude_as(unit.angstrom))  $ or .m_as()
+print(value.m_as(unit.angstrom))  # Note that value.magnitude_as() does not exist
 # 10.0 <Unit('angstrom')>
 ```
 

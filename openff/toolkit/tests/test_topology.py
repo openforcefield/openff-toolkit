@@ -514,6 +514,10 @@ class TestTopology:
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         assert topology.n_molecules == 239
         assert topology.n_unique_molecules == 2
+        # Ensure that hierarchy iterators are initialized
+        assert all(
+            all([molecule.residues, molecule.chains]) for molecule in topology.molecules
+        )
 
     def test_from_openmm_missing_reference(self):
         """Test creation of an OpenFF Topology object from an OpenMM Topology when missing a unique molecule"""
