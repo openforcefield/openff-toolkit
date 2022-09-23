@@ -1712,7 +1712,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             if rda.GetNumRadicalElectrons() != 0:
                 raise RadicalsNotSupportedError(
                     "The OpenFF Toolkit does not currently support parsing molecules with radicals. "
-                    f"Found {rda.GetNumRadicalElectrons()} radical electrons on atom {rda}."
+                    f"Found {rda.GetNumRadicalElectrons()} radical electrons on molecule {Chem.MolToSmiles(rdmol)}."
                 )
 
             rd_idx = rda.GetIdx()

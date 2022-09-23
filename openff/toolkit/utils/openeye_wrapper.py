@@ -1178,7 +1178,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             if number_radical_electrons > 0:
                 raise RadicalsNotSupportedError(
                     "The OpenFF Toolkit does not currently support parsing molecules with radicals. "
-                    f"Found {number_radical_electrons} radical electrons on atom {oeatom}."
+                    f"Found {number_radical_electrons} radical electrons on molecule {oechem.OECreateSmiString(oemol)}."
                 )
 
             is_aromatic = oeatom.IsAromatic()
