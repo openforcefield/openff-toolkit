@@ -900,7 +900,7 @@ class TestMolecule:
 
         # Ensure that attempting to initialize a single Molecule from a file
         # containing multiple molecules raises a ValueError
-        filename = get_data_file_path("molecules/zinc-subset-tripos.mol2.gz")
+        filename = get_data_file_path("molecules/butane_multi.sdf")
         with pytest.raises(ValueError):
             Molecule(filename, allow_undefined_stereo=True)
 
