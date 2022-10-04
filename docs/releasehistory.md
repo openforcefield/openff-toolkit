@@ -8,6 +8,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+## Bug fixes
+
+- [PR #1417](https://github.com/openforcefield/openff-toolkit/pull/1417): Ensure the properties dict is copied when a `Molecule` is.
+
 ## 0.11.1 Minor release forbidding loading radicals
 
 ## Behavior changes
