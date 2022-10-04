@@ -1218,7 +1218,7 @@ class FrozenMolecule(Serializable):
                 conformer = unit.Quantity(conformer_unitless, c_unit)
                 self._conformers.append(conformer)
 
-        self._properties = molecule_dict["properties"]
+        self._properties = deepcopy(molecule_dict["properties"])
 
         for iter_name, hierarchy_scheme_dict in molecule_dict[
             "hierarchy_schemes"
