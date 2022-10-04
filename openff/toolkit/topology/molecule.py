@@ -5666,7 +5666,9 @@ class HierarchyScheme:
         Semantically sort the HierarchyElements belonging to this object, according to
         their identifiers.
         """
-        self.hierarchy_elements.sort(key=lambda x: [int(y) for y in x.split(".")])
+        self.hierarchy_elements.sort(
+            key=lambda x: ".".join([str(i) for i in x.identifier])
+        )
 
     def __str__(self):
         return (
