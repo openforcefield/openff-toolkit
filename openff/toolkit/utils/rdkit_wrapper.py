@@ -1711,12 +1711,23 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         map_bonds = {}
         # if we are loading from a mapped smiles extract the mapping
         atom_mapping = {}
+        # We need the elements of the lanthanides, actinides, and transition
+        # metals as we don't want to exclude radicals in these blocks.
+        d_and_f_block_elements = {
+            *range(21, 31),
+            *range(39, 49),
+            *range(57, 81),
+            *range(89, 113),
+        }
         for rda in rdmol.GetAtoms():
 
             # See issues #1075 for some discussion on radicals
-            if rda.GetNumRadicalElectrons() != 0:
+            if (
+                rda.atomic_number not in d_and_f_block_elements
+                and rda.GetNumRadicalElectrons() != 0
+            ):
                 raise RadicalsNotSupportedError(
-                    "The OpenFF Toolkit does not currently support parsing molecules with radicals. "
+                    "The OpenFF Toolkit does not currently support parsing molecules with S- and P-block radicals. "
                     f"Found {rda.GetNumRadicalElectrons()} radical electrons on molecule {Chem.MolToSmiles(rdmol)}."
                 )
 
