@@ -1096,9 +1096,9 @@ class FrozenMolecule(Serializable):
         # Or not allow user-defined properties at all (just use our internal _cached_properties)
         # molecule_dict['properties'] = dict([(key, value._to_dict()) for key.value in self._properties])
         # TODO: Assuming "simple stuff" properties right now, figure out a better standard
-        molecule_dict["properties"] = self._properties
+        molecule_dict["properties"] = deepcopy(self._properties)
         if hasattr(self, "_cached_properties"):
-            molecule_dict["cached_properties"] = self._cached_properties
+            molecule_dict["cached_properties"] = deepcopy(self._cached_properties)
         # TODO: Conformers
         if self._conformers is None:
             molecule_dict["conformers"] = None
@@ -1218,7 +1218,7 @@ class FrozenMolecule(Serializable):
                 conformer = unit.Quantity(conformer_unitless, c_unit)
                 self._conformers.append(conformer)
 
-        self._properties = molecule_dict["properties"]
+        self._properties = deepcopy(molecule_dict["properties"])
 
         for iter_name, hierarchy_scheme_dict in molecule_dict[
             "hierarchy_schemes"
@@ -4734,7 +4734,7 @@ class FrozenMolecule(Serializable):
                 new_molecule._add_conformer(new_conformer * unit.angstrom)
 
         # move any properties across
-        new_molecule._properties = self._properties
+        new_molecule._properties = deepcopy(self._properties)
 
         return new_molecule
 
