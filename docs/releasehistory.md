@@ -8,6 +8,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+## Behavior changes
+- [PR #1421](https://github.com/openforcefield/openff-toolkit/pull/1421): Allow `Molecule.from_rdkit()` to load D- and F- block radicals, which cannot have implicit hydrogens.
+
 ## 0.11.1 Minor release forbidding loading radicals
 
 ## Behavior changes
