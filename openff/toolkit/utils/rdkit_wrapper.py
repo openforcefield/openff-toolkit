@@ -1723,7 +1723,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
             # See issues #1075 for some discussion on radicals
             if (
-                rda.atomic_number not in d_and_f_block_elements
+                rda.GetAtomicNum() not in d_and_f_block_elements
                 and rda.GetNumRadicalElectrons() != 0
             ):
                 raise RadicalsNotSupportedError(
