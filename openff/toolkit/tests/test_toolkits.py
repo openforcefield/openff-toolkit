@@ -2052,7 +2052,7 @@ class TestRDKitToolkitWrapper:
 
     def test_rdkit_from_smiles_transition_metal_radical(self):
         """Test that parsing an SMILES with a transition metal radical works."""
-        RDKitToolkitWrapper().from_smiles("[Zn2+]")
+        RDKitToolkitWrapper().from_smiles("[Zn+2]")
 
     def test_rdkit_from_smiles_hydrogens_are_explicit(self):
         """
