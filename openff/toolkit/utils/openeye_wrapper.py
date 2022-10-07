@@ -1168,6 +1168,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             # Carry with implicit units of elementary charge for faster route through _add_atom
             formal_charge = oeatom.GetFormalCharge()
             explicit_valence = oeatom.GetExplicitValence()
+            # Implicit hydrogens are never added to D- and F- block elements,
+            # and the MDL valence is always the explicit valence for these
+            # elements, so this does not count radical electrons in these blocks.
             mdl_valence = oechem.OEMDLGetValence(
                 atomic_number, formal_charge, explicit_valence
             )
