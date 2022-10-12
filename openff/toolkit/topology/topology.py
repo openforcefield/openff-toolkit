@@ -1462,6 +1462,8 @@ class Topology(Serializable):
 
     def _ensure_unique_atom_names(self, ensure_unique_atom_names: Union[str, bool]):
         """See `Topology.to_openmm`"""
+        if not ensure_unique_atom_names:
+            return
         for molecule in self._molecules:
             if isinstance(ensure_unique_atom_names, str) and hasattr(
                 molecule, ensure_unique_atom_names
@@ -1521,9 +1523,7 @@ class Topology(Serializable):
         off_topology = Topology(self)
         omm_topology = app.Topology()
 
-        # Create unique atom names
-        if ensure_unique_atom_names:
-            off_topology._ensure_unique_atom_names(ensure_unique_atom_names)
+        off_topology._ensure_unique_atom_names(ensure_unique_atom_names)
 
         # Go through atoms in OpenFF to preserve the order.
         omm_atoms = []
