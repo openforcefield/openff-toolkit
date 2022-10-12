@@ -1460,6 +1460,18 @@ class Topology(Serializable):
         # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?
         return topology
 
+    def _ensure_unique_atom_names(self, ensure_unique_atom_names: Union[str, bool]):
+        """See `Topology.to_openmm`"""
+        for molecule in self._molecules:
+            if isinstance(ensure_unique_atom_names, str) and hasattr(
+                molecule, ensure_unique_atom_names
+            ):
+                for hier_elem in getattr(molecule, ensure_unique_atom_names):
+                    if not hier_elem.has_unique_atom_names:
+                        hier_elem.generate_unique_atom_names()
+            elif not molecule.has_unique_atom_names:
+                molecule.generate_unique_atom_names()
+
     @requires_package("openmm")
     def to_openmm(self, ensure_unique_atom_names: Union[str, bool] = "residues"):
         """
@@ -1511,15 +1523,7 @@ class Topology(Serializable):
 
         # Create unique atom names
         if ensure_unique_atom_names:
-            for molecule in off_topology._molecules:
-                if isinstance(ensure_unique_atom_names, str) and hasattr(
-                    molecule, ensure_unique_atom_names
-                ):
-                    for hier_elem in getattr(molecule, ensure_unique_atom_names):
-                        if not hier_elem.has_unique_atom_names:
-                            hier_elem.generate_unique_atom_names()
-                elif not molecule.has_unique_atom_names:
-                    molecule.generate_unique_atom_names()
+            off_topology._ensure_unique_atom_names(ensure_unique_atom_names)
 
         # Go through atoms in OpenFF to preserve the order.
         omm_atoms = []
