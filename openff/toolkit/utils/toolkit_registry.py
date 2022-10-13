@@ -12,6 +12,7 @@ from openff.toolkit.utils.base_wrapper import ToolkitWrapper
 from openff.toolkit.utils.builtin_wrapper import BuiltInToolkitWrapper
 from openff.toolkit.utils.exceptions import (
     InvalidToolkitError,
+    LicenseError,
     ToolkitUnavailableException,
 )
 from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
@@ -162,24 +163,19 @@ class ToolkitRegistry:
         if isinstance(toolkit_wrapper, type):
             try:
                 toolkit_wrapper = toolkit_wrapper()
+
+            # This exception can only be raised by OpenEyeToolkitWrapper
+            except LicenseError as openeye_exception:
+                if exception_if_unavailable:
+                    raise ToolkitUnavailableException(openeye_exception)
+                else:
+                    logger.warning(openeye_exception)
             except ToolkitUnavailableException:
                 msg = "Unable to load toolkit '{}'. ".format(
                     toolkit_wrapper._toolkit_name
                 )
                 if exception_if_unavailable:
                     raise ToolkitUnavailableException(msg)
-                else:
-                    if "OpenEye" in msg:
-                        msg += (
-                            "The Open Force Field Toolkit does not require the OpenEye Toolkits, and can "
-                            "use RDKit/AmberTools instead. However, if you have a valid license for the "
-                            "OpenEye Toolkits, consider installing them for faster performance and additional "
-                            "file format support: "
-                            "https://docs.eyesopen.com/toolkits/python/quickstart-python/linuxosx.html "
-                            "OpenEye offers free Toolkit licenses for academics: "
-                            "https://www.eyesopen.com/academic-licensing"
-                        )
-                    logger.warning(f"Warning: {msg}")
                 return
 
         # Add toolkit to the registry.
