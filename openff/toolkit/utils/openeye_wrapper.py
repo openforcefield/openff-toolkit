@@ -74,8 +74,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         "`conda install openeye-toolkits -c openeye`"
     )
     _toolkit_license_instructions = (
-        "The OpenEye Toolkits require a (free for academics) license which can be found at "
-        "https://docs.eyesopen.com/toolkits/python/quickstart-python/install.html"
+        "The OpenEye Toolkits require a (free for academics) license, see "
+        "https://docs.eyesopen.com/toolkits/python/quickstart-python/license.html"
     )
     # This could belong to ToolkitWrapper, although it seems strange
     # to carry that data for open-source toolkits
