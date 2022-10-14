@@ -164,12 +164,12 @@ class ToolkitRegistry:
             try:
                 toolkit_wrapper = toolkit_wrapper()
 
-            # This exception can only be raised by OpenEyeToolkitWrapper
-            except LicenseError as openeye_exception:
+            # This exception can be raised by OpenEyeToolkitWrapper
+            except LicenseError as license_exception:
                 if exception_if_unavailable:
-                    raise ToolkitUnavailableException(openeye_exception)
+                    raise ToolkitUnavailableException(license_exception.msg)
                 else:
-                    logger.warning(openeye_exception)
+                    logger.warning(license_exception)
             except ToolkitUnavailableException:
                 msg = "Unable to load toolkit '{}'. ".format(
                     toolkit_wrapper._toolkit_name

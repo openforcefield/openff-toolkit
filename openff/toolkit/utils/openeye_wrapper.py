@@ -146,10 +146,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             if self._is_installed is False:
                 raise ToolkitUnavailableException(
                     "OpenEye Toolkits are not installed."
-                    "{self._toolkit_installation_instructions}"
+                    + self._toolkit_installation_instructions
                 )
             if self._is_licensed is False:
-                raise LicenseError(self._toolkit_license_instructions)
+                raise LicenseError(
+                    "The OpenEye Toolkits are found to be installed but not licensed and "
+                    + "therefore will not be used.\n"
+                    + self._toolkit_license_instructions
+                )
 
         from openeye import __version__ as openeye_version
 
@@ -158,7 +162,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
     @classmethod
     def _check_licenses(cls) -> bool:
         """Check license of all known OpenEye tools. Returns True if any are found
-        to be licensed, False if any are not."""
+        to be licensed, False if all are not."""
         for tool, license_func in cls._license_functions.items():
             try:
                 module = importlib.import_module("openeye." + tool)
@@ -199,10 +203,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     cls._is_available = True
                 else:
                     cls._is_available = False
-                    logger.warning(
-                        "The OpenEye Toolkits are found to be installed but not licensed and "
-                        "therefore will not be used."
-                    )
             cls._is_available = cls._is_installed and cls._is_licensed
         return cls._is_available
 
