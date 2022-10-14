@@ -14,6 +14,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Bug fixes
 - [PR #1417](https://github.com/openforcefield/openff-toolkit/pull/1417): Ensure the properties dict is copied when a `Molecule` is.
 
+### Improved documentation and warnings
+- [PR #1426](https://github.com/openforcefield/openff-toolkit/pull/1426): A warning about OpenEye Toolkits being unavailable is only emitted when they are installed but the license file is not found.
+
 ## 0.11.1 Minor release forbidding loading radicals
 
 ## Behavior changes
