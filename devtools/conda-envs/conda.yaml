@@ -6,7 +6,7 @@ dependencies:
     # Base depends
   - openff-toolkit-examples
 
-  - openmmforcefields
+  - openmmforcefields >=0.11.2
   - qcportal >=0.15
   - pytest
   - pytest-rerunfailures
