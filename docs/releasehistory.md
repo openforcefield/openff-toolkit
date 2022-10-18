@@ -8,10 +8,32 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### Behavior changes
+- [PR #1421](https://github.com/openforcefield/openff-toolkit/pull/1421): Allow `Molecule.from_rdkit()` to load D- and F- block radicals, which cannot have implicit hydrogens.
+
+### Bug fixes
+- [PR #1417](https://github.com/openforcefield/openff-toolkit/pull/1417): Ensure the properties dict is copied when a `Molecule` is.
+
+### Improved documentation and warnings
+- [PR #1426](https://github.com/openforcefield/openff-toolkit/pull/1426): A warning about OpenEye Toolkits being unavailable is only emitted when they are installed but the license file is not found.
+
+## 0.11.1 Minor release forbidding loading radicals
+
 ## Behavior changes
 - [PR #1398](https://github.com/openforcefield/openff-toolkit/pull/1398): Updates the [`Bond.bond_order`] setter to only accept int values.
+- [PR #1236](https://github.com/openforcefield/openff-toolkit/pull/1236): [`from_rdkit`] and [`from_openeye`] now 
+  raise an `RadicalsNotSupportedError` when loading radicals. It's not clear that the OpenFF Toolkit was ever safely 
+  handling radicals - they appear to be the root cause of many instances of unintended hydrogen addition and other 
+  connection table changes. If this change affects a workflow that was previously working correctly, please let us 
+  know on [this issue](https://github.com/openforcefield/openff-toolkit/issues/1075) so we can refine this behavior. 
+
+## Examples changed
+- [PR #1236](https://github.com/openforcefield/openff-toolkit/pull/1236): `examples/check_dataset_parameter_coverage` has
+  been deprecated. 
 
 [`Bond.bond_order`]: Bond.bond_order
+[`from_rdkit`]: Molecule.from_rdkit
+[`from_openeye`]: Molecule.from_openeye
 
 ## Bug fixes
 - [PR #1400](https://github.com/openforcefield/openff-toolkit/pull/1400): Fixes a bug where `Molecule.from_pdb_and_smiles` could incorrectly order coordinates.
