@@ -3768,7 +3768,7 @@ class TestAmberToolsToolkitWrapper:
         without_oe = [b.fractional_bond_order for b in mol.bonds]
         GLOBAL_TOOLKIT_REGISTRY.register_toolkit(OpenEyeToolkitWrapper)
 
-        assert with_oe == without_oe
+        assert with_oe == pytest.approx(without_oe, abs=1e-5)
 
 
 class TestBuiltInToolkitWrapper:
