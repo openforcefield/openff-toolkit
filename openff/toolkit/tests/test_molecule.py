@@ -900,7 +900,7 @@ class TestMolecule:
 
         # Ensure that attempting to initialize a single Molecule from a file
         # containing multiple molecules raises a ValueError
-        filename = get_data_file_path("molecules/zinc-subset-tripos.mol2.gz")
+        filename = get_data_file_path("molecules/butane_multi.sdf")
         with pytest.raises(ValueError):
             Molecule(filename, allow_undefined_stereo=True)
 
@@ -3286,6 +3286,40 @@ class TestMolecule:
         for toolkit in toolkits:
             with pytest.warns(UserWarning, match="compute_.*_am1bcc.*0.12"):
                 toolkit.compute_partial_charges_am1bcc(molecule)
+
+    def test_deepcopy_not_shallow(self):
+        """
+        Check that deep copies don't re-use any mutable data structures
+
+        Mutable attributes set in ``Molecule._initialize_from_dict()`` and their
+        mutable values should be tested here. Other attributes are either not
+        copied by ``deepcopy``, or else are immutable, so copies may be the same
+        object (eg, ``deepcopy(None)``).
+        """
+        mol_source = create_ethanol()
+        mol_source.generate_conformers()
+
+        mol_copy = copy.deepcopy(mol_source)
+
+        assert mol_source._conformers is not mol_copy._conformers
+        assert all(
+            a is not b for a, b in zip(mol_source._conformers, mol_copy._conformers)
+        )
+
+        assert mol_source._atoms is not mol_copy._atoms
+        assert all(a is not b for a, b in zip(mol_source._atoms, mol_copy._atoms))
+
+        assert mol_source._bonds is not mol_copy._bonds
+        assert all(a is not b for a, b in zip(mol_source._bonds, mol_copy._bonds))
+
+        assert mol_source._hierarchy_schemes is not mol_copy._hierarchy_schemes
+        assert all(
+            a is not b
+            for a, b in zip(mol_source._hierarchy_schemes, mol_copy._hierarchy_schemes)
+        )
+
+        assert mol_source._properties is not mol_copy._properties
+        assert mol_source._partial_charges is not mol_copy._partial_charges
 
 
 class TestMoleculeVisualization:

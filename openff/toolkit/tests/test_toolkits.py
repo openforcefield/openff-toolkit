@@ -342,6 +342,10 @@ class TestOpenEyeToolkitWrapper:
         with pytest.raises(RadicalsNotSupportedError):
             OpenEyeToolkitWrapper().from_smiles("[CH3]")
 
+    def test_openeye_from_smiles_transition_metal_radical(self):
+        """Test that parsing an SMILES with a transition metal radical works."""
+        OpenEyeToolkitWrapper().from_smiles("[Zn+2]")
+
     # TODO: test_smiles_round_trip
 
     def test_smiles_add_H(self):
@@ -665,7 +669,7 @@ class TestOpenEyeToolkitWrapper:
         assert oechem.OEHasImplicitHydrogens(oe_molecule)
 
     def test_from_openeye_radical(self):
-        """Test that parsing an rdmol with a radical raises RadicalsNotSupportedError."""
+        """Test that parsing an oemol with a radical raises RadicalsNotSupportedError."""
         from openeye import oechem
 
         smiles = "[H][C]([H])[H]"
@@ -674,6 +678,16 @@ class TestOpenEyeToolkitWrapper:
 
         with pytest.raises(RadicalsNotSupportedError):
             OpenEyeToolkitWrapper().from_openeye(oemol)
+
+    def test_from_openeye_transition_metal_radical(self):
+        """Test that parsing an oemol with a transition metal radical works."""
+        from openeye import oechem
+
+        smiles = "[Zn+2]"
+        oemol = oechem.OEGraphMol()
+        oechem.OESmilesToMol(oemol, smiles)
+
+        OpenEyeToolkitWrapper().from_openeye(oemol)
 
     def test_from_openeye_implicit_hydrogen(self):
         """
@@ -2036,6 +2050,10 @@ class TestRDKitToolkitWrapper:
         with pytest.raises(RadicalsNotSupportedError):
             RDKitToolkitWrapper().from_smiles("[CH3]")
 
+    def test_rdkit_from_smiles_transition_metal_radical(self):
+        """Test that parsing an SMILES with a transition metal radical works."""
+        RDKitToolkitWrapper().from_smiles("[Zn+2]")
+
     def test_rdkit_from_smiles_hydrogens_are_explicit(self):
         """
         Test to ensure that RDKitToolkitWrapper.from_smiles has the proper behavior with
@@ -2466,6 +2484,14 @@ class TestRDKitToolkitWrapper:
 
         with pytest.raises(RadicalsNotSupportedError):
             RDKitToolkitWrapper().from_rdkit(rdmol)
+
+    def test_from_rdkit_transition_metal_radical(self):
+        """Test that parsing an rdmol with a transition metal radical works."""
+        from rdkit import Chem
+
+        rdmol = Chem.MolFromSmiles("[Zn+2]")
+
+        RDKitToolkitWrapper().from_rdkit(rdmol)
 
     @pytest.mark.parametrize(
         "smiles, expected_map", [("[Cl:1][Cl]", {0: 1}), ("[Cl:1][Cl:2]", {0: 1, 1: 2})]
@@ -3742,7 +3768,7 @@ class TestAmberToolsToolkitWrapper:
         without_oe = [b.fractional_bond_order for b in mol.bonds]
         GLOBAL_TOOLKIT_REGISTRY.register_toolkit(OpenEyeToolkitWrapper)
 
-        assert with_oe == without_oe
+        assert with_oe == pytest.approx(without_oe, abs=1e-5)
 
 
 class TestBuiltInToolkitWrapper:

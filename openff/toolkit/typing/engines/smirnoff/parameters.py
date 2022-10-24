@@ -57,12 +57,11 @@ import inspect
 import logging
 import re
 from collections import OrderedDict, defaultdict
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union, cast, get_args
 
 import numpy as np
 from openff.units import unit
 from packaging.version import Version
-from typing_extensions import Literal, get_args
 
 from openff.toolkit.topology import ImproperDict, TagSortedDict, Topology, ValenceDict
 from openff.toolkit.topology.molecule import Molecule
