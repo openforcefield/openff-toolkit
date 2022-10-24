@@ -170,6 +170,7 @@ class ToolkitRegistry:
                     raise ToolkitUnavailableException(license_exception.msg)
                 else:
                     logger.warning(license_exception)
+                return
             except ToolkitUnavailableException:
                 msg = "Unable to load toolkit '{}'. ".format(
                     toolkit_wrapper._toolkit_name
