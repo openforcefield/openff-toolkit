@@ -1,3 +1,10 @@
-# Tools dealing with chemical environments or chemistry
-
-from openff.toolkit.typing.chemistry.environment import *
+from openff.toolkit.typing.chemistry.environment import (
+    AngleChemicalEnvironment,
+    AtomChemicalEnvironment,
+    BondChemicalEnvironment,
+    ChemicalEnvironment,
+    ImproperChemicalEnvironment,
+    SMIRKSMismatchError,
+    SMIRKSParsingError,
+    TorsionChemicalEnvironment,
+)

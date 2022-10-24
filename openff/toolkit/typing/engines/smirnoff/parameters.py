@@ -1806,7 +1806,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         SMIRNOFFVersionError if an incompatible version is passed in.
 
         """
-        from openff.toolkit.typing.engines.smirnoff import SMIRNOFFVersionError
+        from openff.toolkit.utils.exceptions import SMIRNOFFVersionError
 
         if isinstance(new_version, Version):
             pass
