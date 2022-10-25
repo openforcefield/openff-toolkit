@@ -5083,10 +5083,12 @@ class Molecule(FrozenMolecule):
         >>> H2 = molecule.add_atom(1, 0, False)
         >>> H3 = molecule.add_atom(1, 0, False)
         >>> H4 = molecule.add_atom(1, 0, False)
-        >>> bond_idx = molecule.add_bond(C, H1, False, 1)
-        >>> bond_idx = molecule.add_bond(C, H2, False, 1)
-        >>> bond_idx = molecule.add_bond(C, H3, False, 1)
-        >>> bond_idx = molecule.add_bond(C, H4, False, 1)
+        >>> bond_idx = molecule.add_bond(C, H1, 1, False)
+        >>> bond_idx = molecule.add_bond(C, H2, 1, False)
+        >>> bond_idx = molecule.add_bond(C, H3, 1, False)
+        >>> bond_idx = molecule.add_bond(C, H4, 1, False)
+        >>> molecule.to_smiles(explicit_hydrogens=False)
+        'C'
 
         """
         atom_index = self._add_atom(
