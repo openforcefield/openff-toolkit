@@ -5134,6 +5134,9 @@ class Molecule(FrozenMolecule):
         index: int
             Index of the bond in this molecule
 
+        Examples
+        --------
+        For an example of use, see :py:meth:`add_atom`.
         """
         bond_index = self._add_bond(
             atom1,
