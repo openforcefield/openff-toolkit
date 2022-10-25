@@ -177,6 +177,7 @@ class ForceField:
 
     Retrieve the vdW parameters by SMIRKS string and manipulate it:
 
+    >>> from openff.units import unit
     >>> parameter = forcefield.get_parameter_handler('vdW').parameters['[#1:1]-[#7]']
     >>> parameter.rmin_half += 0.1 * unit.angstroms
     >>> parameter.epsilon *= 1.02
@@ -1326,7 +1327,7 @@ class ForceField:
         Use the assigned partial charges when creating an OpenMM ``System``:
 
         >>> topology = ethanol.to_topology()
-        >>> system = forcefield.create_openmm_system(
+        >>> system = force_field.create_openmm_system(
         ...    topology,
         ...    charge_from_molecules=[ethanol]
         ... )

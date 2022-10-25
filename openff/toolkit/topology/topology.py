@@ -38,7 +38,7 @@ from openff.utilities import requires_package
 
 from openff.toolkit.topology import Molecule
 from openff.toolkit.topology._mm_molecule import _SimpleBond, _SimpleMolecule
-from openff.toolkit.topology.molecule import HierarchyElement
+from openff.toolkit.topology.molecule import FrozenMolecule, HierarchyElement
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.exceptions import (
@@ -513,7 +513,7 @@ class Topology(Serializable):
             The Topology created from the specified molecule(s)
         """
         # Ensure that we are working with an iterable
-        if isinstance(molecules, (Molecule, _SimpleMolecule)):
+        if isinstance(molecules, (FrozenMolecule, _SimpleMolecule)):
             molecules = [molecules]
 
         # Create Topology and populate it with specified molecules
@@ -1092,18 +1092,24 @@ class Topology(Serializable):
         >>> # Create a water ordered as OHH
         >>> water1 = Molecule()
         >>> water1.add_atom(8, 0, False)
+        0
         >>> water1.add_atom(1, 0, False)
+        1
         >>> water1.add_atom(1, 0, False)
-        >>> water1.add_bond(0, 1, 1, False)
-        >>> water1.add_bond(0, 2, 1, False)
+        2
+        >>> _ = water1.add_bond(0, 1, 1, False)
+        >>> _ = water1.add_bond(0, 2, 1, False)
         ...
         >>> # Create a different water ordered as HOH
         >>> water2 = Molecule()
         >>> water2.add_atom(1, 0, False)
+        0
         >>> water2.add_atom(8, 0, False)
+        1
         >>> water2.add_atom(1, 0, False)
-        >>> water2.add_bond(0, 1, 1, False)
-        >>> water2.add_bond(1, 2, 1, False)
+        2
+        >>> _ = water2.add_bond(0, 1, 1, False)
+        >>> _ = water2.add_bond(1, 2, 1, False)
         ...
         >>> top = Topology.from_molecules([water1, water2])
         >>> top.identical_molecule_groups

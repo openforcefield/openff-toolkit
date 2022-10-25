@@ -4463,29 +4463,36 @@ class FrozenMolecule(Serializable):
 
         >>> from qcportal import FractalClient
         >>> client = FractalClient()
-        >>> offmol = Molecule.from_qcschema(client.query_molecules(molecular_formula="C16H20N3O5")[0])
+        >>> offmol = Molecule.from_qcschema(
+        ...     client.query_molecules(molecular_formula="C16H20N3O5")[0]
+        ... )
 
         Get Molecule from a QCArchive optimization entry:
 
         >>> from qcportal import FractalClient
         >>> client = FractalClient()
-        >>> optds = client.get_collection("OptimizationDataset",
-                                          "SMIRNOFF Coverage Set 1")
+        >>> optds = client.get_collection(
+        ...     "OptimizationDataset",
+        ...     "SMIRNOFF Coverage Set 1"
+        ... )
         >>> offmol = Molecule.from_qcschema(optds.get_entry('coc(o)oc-0'))
 
-        Same as above, but with conformer(s) from initial molecule(s) by providing client to database:
+        Same as above, but with conformer(s) from initial molecule(s) by
+        providing client to database:
 
-        >>> offmol = Molecule.from_qcschema(optds.get_entry('coc(o)oc-0'), client=client)
+        >>> offmol = Molecule.from_qcschema(
+        ...     optds.get_entry('coc(o)oc-0'),
+        ...     client=client
+        ... )
 
         Raises
         -------
         AttributeError
-            - If the record dict can not be made from ``qca_record``.
-            - If a ``client`` is passed and it could not retrieve the initial molecule.
-
+            If the record dict can not be made from ``qca_record``, or if the
+            provided ``client`` could not retrieve the initial molecule.
         KeyError
-            If the dict does not contain the ``canonical_isomeric_explicit_hydrogen_mapped_smiles``.
-
+            If the record does not contain the
+            ``canonical_isomeric_explicit_hydrogen_mapped_smiles``.
         InvalidConformerError
             Silent error, if the conformer could not be attached.
         """

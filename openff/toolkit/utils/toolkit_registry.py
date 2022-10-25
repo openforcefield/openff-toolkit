@@ -35,7 +35,7 @@ class ToolkitRegistry:
     >>> toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper]
     >>> toolkit_registry = ToolkitRegistry(toolkit_precedence)
     >>> toolkit_registry
-    ToolkitRegistry containing OpenEye Toolkit, The RDKit, AmberTools
+    <ToolkitRegistry containing OpenEye Toolkit, The RDKit, AmberTools>
 
     Register all available toolkits (in the order OpenEye, RDKit, AmberTools, built-in)
 

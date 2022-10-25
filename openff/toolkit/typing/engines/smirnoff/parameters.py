@@ -709,7 +709,7 @@ class _ParameterAttributeHandler:
     These are automatically converted to ``Quantity`` objects.
 
     >>> my_par.length
-    Quantity(value=1.01, unit=angstrom)
+    <Quantity(1.01, 'angstrom')>
 
     While assigning incompatible units is forbidden.
 
@@ -1632,7 +1632,7 @@ class ParameterType(_ParameterAttributeHandler):
     ...     k=5 * unit.kilocalorie / unit.mole / unit.angstrom**2
     ... )
     >>> my_par.length
-    Quantity(value=1.01, unit=angstrom)
+    <Quantity(1.01, 'angstrom')>
     >>> my_par.k = 3.0 * unit.gram
     Traceback (most recent call last):
     ...
@@ -2108,7 +2108,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         Look up, from this handler, all parameters matching some SMIRKS pattern
 
         >>> handler.get_parameter({'smirks': '[*:1]-[*:2]'})
-        [<BondType with smirks: [*:1]-[*:2]  length: 1 A  k: 10 kcal/(A**2 mol)  >]
+        [<BondType with smirks: [*:1]-[*:2]  length: 1 angstrom  k: 10 kilocalorie / angstrom ** 2 / mole  >]
 
         """
         params = list()
