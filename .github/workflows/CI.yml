@@ -159,7 +159,7 @@ jobs:
       - name: Run code snippets in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: |
-          pytest -v --doctest-glob="docs/*.rst" docs/
+          pytest -v --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
 
       - name: Run notebooks in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
