@@ -198,3 +198,14 @@ $ conda install -c openeye -c conda-forge openeye-toolkits
 
 Though OpenEye can be installed for free, using it requires a license file. 
 No essential `openff-toolkit` release capabilities *require* the OpenEye toolkit, but the Open Force Field developers make use of it in parameterizing new open source force fields.
+
+
+### Check installed toolkits
+
+All available toolkits are automatically registered in the `GLOBAL_TOOLKIT_REGISTRY`. The available toolkits and their versions can be inspected through the `registered_toolkit_versions` dictionary:
+
+```python
+from openff.toolkit import GLOBAL_TOOLKIT_REGISTRY
+print(GLOBAL_TOOLKIT_REGISTRY.registered_toolkit_versions)
+# {'The RDKit': '2022.03.5', 'AmberTools': '22.0', 'Built-in Toolkit': None}
+```

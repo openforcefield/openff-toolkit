@@ -13,7 +13,7 @@ import re
 import tempfile
 from collections import defaultdict
 from functools import wraps
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 from cachetools import LRUCache, cached
@@ -70,16 +70,19 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     _toolkit_name = "OpenEye Toolkit"
     _toolkit_installation_instructions = (
-        "The OpenEye toolkit requires a (free for academics) license, and can be "
-        "found at: "
-        "https://docs.eyesopen.com/toolkits/python/quickstart-python/install.html"
+        "The OpenEye Toolkits can be installed via "
+        "`conda install openeye-toolkits -c openeye`"
+    )
+    _toolkit_license_instructions = (
+        "The OpenEye Toolkits require a (free for academics) license, see "
+        "https://docs.eyesopen.com/toolkits/python/quickstart-python/license.html"
     )
     # This could belong to ToolkitWrapper, although it seems strange
     # to carry that data for open-source toolkits
-    _is_licensed = None
+    _is_licensed: Optional[bool] = None
     # Only for OpenEye is there potentially a difference between
     # being available and installed
-    _is_installed = None
+    _is_installed: Optional[bool] = None
     _license_functions = {
         "oechem": "OEChemIsLicensed",
         "oequacpac": "OEQuacPacIsLicensed",
@@ -140,24 +143,27 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # check if the toolkit can be loaded
         if not self.is_available():
-            msg = (
-                f"The required toolkit {self._toolkit_name} is not "
-                f"available. {self._toolkit_installation_instructions}"
-            )
             if self._is_installed is False:
-                raise ToolkitUnavailableException(msg)
+                raise ToolkitUnavailableException(
+                    "OpenEye Toolkits are not installed."
+                    + self._toolkit_installation_instructions
+                )
             if self._is_licensed is False:
-                raise LicenseError(msg)
+                raise LicenseError(
+                    "The OpenEye Toolkits are found to be installed but not licensed and "
+                    + "therefore will not be used.\n"
+                    + self._toolkit_license_instructions
+                )
 
         from openeye import __version__ as openeye_version
 
         self._toolkit_version = openeye_version
 
     @classmethod
-    def _check_licenses(cls):
+    def _check_licenses(cls) -> bool:
         """Check license of all known OpenEye tools. Returns True if any are found
-        to be licensed, False if any are not."""
-        for (tool, license_func) in cls._license_functions.items():
+        to be licensed, False if all are not."""
+        for tool, license_func in cls._license_functions.items():
             try:
                 module = importlib.import_module("openeye." + tool)
             except (ImportError, ModuleNotFoundError):
@@ -192,6 +198,11 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                         importlib.import_module("openeye." + tool)
                     except (ImportError, ModuleNotFoundError):
                         cls._is_installed = False
+            if cls._is_installed:
+                if cls._is_licensed:
+                    cls._is_available = True
+                else:
+                    cls._is_available = False
             cls._is_available = cls._is_installed and cls._is_licensed
         return cls._is_available
 
@@ -1168,6 +1179,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             # Carry with implicit units of elementary charge for faster route through _add_atom
             formal_charge = oeatom.GetFormalCharge()
             explicit_valence = oeatom.GetExplicitValence()
+            # Implicit hydrogens are never added to D- and F- block elements,
+            # and the MDL valence is always the explicit valence for these
+            # elements, so this does not count radical electrons in these blocks.
             mdl_valence = oechem.OEMDLGetValence(
                 atomic_number, formal_charge, explicit_valence
             )

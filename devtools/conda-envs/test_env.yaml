@@ -8,8 +8,7 @@ dependencies:
   - pip
   - packaging
   - openmm >=7.6
-    # Removed until a compatible release is made
-# - openmmforcefields
+  - openmmforcefields >=0.11.2
   - openff-forcefields
   - openff-units >=0.1.7
   - openff-utilities >=0.1.5
