@@ -10,6 +10,7 @@ dependencies:
   - openmmforcefields >=0.11.2
   - openeye-toolkits
   - qcportal >=0.15
+  - py  # Remove after pytest 7.2 dust settles
   - pytest
   - pytest-rerunfailures
   - nbval
