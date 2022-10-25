@@ -1,4 +1,0 @@
-% This is an example of SMIRKS that would be removed
-% one column of smirks patterns like:
-[#103:1]
-% There are no Lawerencium atoms in any set so this won't affect the current filtering
