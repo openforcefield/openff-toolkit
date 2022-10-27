@@ -39,5 +39,5 @@ dependencies:
   - ipywidgets >=7,<8
   - pdbfixer
   - pip:
-    - pint ==0.20.0
+    - pint ==0.20.1
     - git+https://github.com/openforcefield/openff-units@pint-0.20
