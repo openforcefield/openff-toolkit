@@ -159,16 +159,16 @@ jobs:
       - name: Run code snippets in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: |
-          pytest -v --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
+          pytest -v --no-cov --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
 
       - name: Run notebooks in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: |
-          pytest -v --nbval --ignore docs/_build/ docs/
+          pytest -v --no-cov --nbval --ignore docs/_build/ docs/
 
       - name: Run examples in docstrings
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: pytest -v --doctest-modules --ignore openff/toolkit/tests/ --ignore openff/toolkit/utils/utils.py openff/
+        run: pytest -v --no-cov --doctest-modules --ignore openff/toolkit/tests/ --ignore openff/toolkit/utils/utils.py openff/
 
       - name: Codecov
         uses: codecov/codecov-action@v3.1.1
