@@ -50,7 +50,6 @@ from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
 from openff.utilities.exceptions import MissingOptionalDependencyError
 
-import openff.toolkit
 from openff.toolkit.utils.exceptions import (
     HierarchySchemeNotFoundException,
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
@@ -939,10 +938,10 @@ class FrozenMolecule(Serializable):
             # if there turned out to be no way to load this input
             value_errors = list()
 
-            if isinstance(other, openff.toolkit.topology.FrozenMolecule) and not loaded:
+            if isinstance(other, FrozenMolecule) and not loaded:
                 self._copy_initializer(other)
                 loaded = True
-            if isinstance(other, openff.toolkit.topology.Molecule) and not loaded:
+            if isinstance(other, Molecule) and not loaded:
                 # TODO: This will need to be updated once FrozenMolecules and Molecules are significantly different
                 self._copy_initializer(other)
                 loaded = True
@@ -2583,6 +2582,7 @@ class FrozenMolecule(Serializable):
         Examples
         --------
 
+        >>> from openff.toolkit import Molecule
         >>> molecule = Molecule.from_smiles('CCCCCC')
         >>> molecule.assign_fractional_bond_orders()
 
@@ -3619,7 +3619,7 @@ class FrozenMolecule(Serializable):
 
         Create a molecule from a Topology object that contains exactly one molecule
 
-        >>> from openff.toolkit import Topology
+        >>> from openff.toolkit import Molecule, Topology
         >>> topology = Topology.from_molecules(Molecule.from_smiles('[CH4]'))
         >>> molecule = Molecule.from_topology(topology)
 
@@ -3642,6 +3642,7 @@ class FrozenMolecule(Serializable):
         Examples
         --------
 
+        >>> from openff.toolkit import Molecule
         >>> molecule = Molecule.from_iupac('imatinib')
         >>> topology = molecule.to_topology()
 

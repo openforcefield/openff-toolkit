@@ -748,7 +748,7 @@ class _ParameterAttributeHandler:
     Traceback (most recent call last):
     ...
     openff.toolkit.utils.exceptions.SMIRNOFFSpecError:
-    <class 'openff.toolkit.typing.engines.parameters.ParameterTypeOrHandler'> require the following missing
+    <class '...ParameterTypeOrHandler'> require the following missing
     parameters: ['k']. Defined kwargs are ['length']
 
     Each attribute can be made optional by specifying a default value,
