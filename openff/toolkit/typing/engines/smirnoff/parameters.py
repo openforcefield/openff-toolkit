@@ -419,7 +419,7 @@ class ParameterAttribute:
             except AttributeError:
                 # This is not a Quantity object.
                 raise IncompatibleUnitError(
-                    f"{self.name}={value!r} should be a Quantity with units of {self._unit}"
+                    f"{self.name}={value} should have units of {self._unit}"
                 )
         return value
 
