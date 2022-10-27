@@ -218,9 +218,7 @@ def _validate_units(attr, value: Union[str, unit.Quantity], units: unit.Unit):
                 f"{attr.name}={value} should have units of {units}"
             )
     except AttributeError:
-        raise IncompatibleUnitError(
-            f"{attr.name}={value!r} should be a Quantity with units of {units}"
-        )
+        raise IncompatibleUnitError(f"{attr.name}={value} should have units of {units}")
     return value
 
 
