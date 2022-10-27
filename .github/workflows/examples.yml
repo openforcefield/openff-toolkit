@@ -124,9 +124,6 @@ jobs:
           fi
           pytest $PYTEST_ARGS openff/toolkit/tests/test_examples.py
 
-      - name: Run examples in docstrings
-        run: pytest $PYTEST_ARGS --doctest-modules --doctest-continue-on-failure --ignore openff/toolkit/tests/ --ignore openff/toolkit/utils/utils.py openff/
-
       - name: Run example notebooks
         run: |
           if [[ ${{ matrix.rdkit }} == false ]]; then
