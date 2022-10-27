@@ -57,7 +57,18 @@ import inspect
 import logging
 import re
 from collections import OrderedDict, defaultdict
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union, cast, get_args
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Tuple,
+    Union,
+    cast,
+    get_args,
+)
 
 import numpy as np
 from openff.units import unit
@@ -100,19 +111,20 @@ _cal_mol_a2 = unit.calorie / unit.mole / unit.angstrom**2
 
 def _linear_inter_or_extrapolate(points_dict, x_query):
     """
-    Linearly interpolate or extrapolate based on a piecewise linear function defined by a set of points.
-    This function is designed to work with key:value pairs where the value may be a openmm.unit.Quantity.
+    Linearly interpolate or extrapolate based on a piecewise linear function
+    defined by a set of points. This function is designed to work with
+    key:value pairs where the value may be a ``openff.units.Quantity``.
 
     Parameters
     ----------
-    points_dict : dict{float: float or float-valued openmm.unit.Quantity}
+    points_dict : dict{float: float or float-valued openff.units.Quantity}
         A dictionary with each item representing a point, where the key is the X value and the value is the Y value.
     x_query : float
         The X value of the point to interpolate or extrapolate.
 
     Returns
     -------
-    y_value : float or float-valued openmm.unit.Quantity
+    y_value : float or float-valued openff.units.Quantity
         The result of interpolation/extrapolation.
     """
 
@@ -206,7 +218,9 @@ def _validate_units(attr, value: Union[str, unit.Quantity], units: unit.Unit):
                 f"{attr.name}={value} should have units of {units}"
             )
     except AttributeError:
-        raise IncompatibleUnitError(f"{attr.name}={value} should have units of {units}")
+        raise IncompatibleUnitError(
+            f"{attr.name}={value!r} should be a Quantity with units of {units}"
+        )
     return value
 
 
@@ -232,7 +246,7 @@ class ParameterAttribute:
     default : object, optional
         When specified, the descriptor makes this attribute optional by
         attaching a default value to it.
-    unit : openmm.unit.Quantity, optional
+    unit : openff.units.Quantity, optional
         When specified, only quantities with compatible units are allowed
         to be set, and string expressions are automatically parsed into a
         ``Quantity``.
@@ -271,18 +285,19 @@ class ParameterAttribute:
 
     The attribute allow automatic conversion and validation of units.
 
-    >>> from openmm import unit
+    >>> from openff.units import unit
     >>> class MyParameter:
     ...     attr_quantity = ParameterAttribute(unit=unit.angstrom)
     ...
     >>> my_par = MyParameter()
     >>> my_par.attr_quantity = '1.0 * nanometer'
     >>> my_par.attr_quantity
-    Quantity(value=1.0, unit=nanometer)
+    <Quantity(1.0, 'nanometer')>
     >>> my_par.attr_quantity = 3.0
     Traceback (most recent call last):
     ...
-    openff.toolkit.utils.utils.IncompatibleUnitError: attr_quantity=3.0 dimensionless should have units of angstrom
+    openff.toolkit.utils.exceptions.IncompatibleUnitError:
+    attr_quantity=3.0 dimensionless should have units of angstrom
 
     You can attach a custom converter to an attribute.
 
@@ -328,7 +343,13 @@ class ParameterAttribute:
 
         pass
 
-    def __init__(self, default=UNDEFINED, unit=None, converter=None, docstring=""):
+    def __init__(
+        self,
+        default: Any = UNDEFINED,
+        unit: Optional[unit.Unit] = None,
+        converter: Optional[Callable] = None,
+        docstring: str = "",
+    ):
         self.default = default
         self._unit = unit
         self._converter = converter
@@ -393,13 +414,14 @@ class ParameterAttribute:
             # Check if units are compatible.
             try:
                 if not self._unit.is_compatible_with(value.units):
+                    print(value.units)
                     raise IncompatibleUnitError(
                         f"{self.name}={value} should have units of {self._unit}"
                     )
             except AttributeError:
                 # This is not a Quantity object.
                 raise IncompatibleUnitError(
-                    f"{self.name}={value} should have units of {self._unit}"
+                    f"{self.name}={value!r} should be a Quantity with units of {self._unit}"
                 )
         return value
 
@@ -436,7 +458,7 @@ class IndexedParameterAttribute(ParameterAttribute):
     default : object, optional
         When specified, the descriptor makes this attribute optional by
         attaching a default value to it.
-    unit : openmm.unit.Quantity, optional
+    unit : openff.units.Quantity, optional
         When specified, only sequences of quantities with compatible units
         are allowed to be set.
     converter : callable, optional
@@ -457,7 +479,7 @@ class IndexedParameterAttribute(ParameterAttribute):
 
     Create an optional indexed attribute with unit of angstrom.
 
-    >>> from openmm import unit
+    >>> from openff.units import unit
     >>> class MyParameter:
     ...     length = IndexedParameterAttribute(default=None, unit=unit.angstrom)
     ...
@@ -469,7 +491,7 @@ class IndexedParameterAttribute(ParameterAttribute):
 
     >>> my_par.length = ['1 * angstrom', 0.5 * unit.nanometer]
     >>> my_par.length[0]
-    Quantity(value=1, unit=angstrom)
+    <Quantity(1, 'angstrom')>
 
     Similarly, custom converters work as with ``ParameterAttribute``, but
     they are used to validate each value in the sequence.
@@ -513,7 +535,7 @@ class MappedParameterAttribute(ParameterAttribute):
     default : object, optional
         When specified, the descriptor makes this attribute optional by
         attaching a default value to it.
-    unit : openmm.unit.Quantity, optional
+    unit : openff.units.Quantity, optional
         When specified, only sequences of mappings where values are quantities with
         compatible units are allowed to be set.
     converter : callable, optional
@@ -532,7 +554,7 @@ class MappedParameterAttribute(ParameterAttribute):
 
     Create an optional indexed attribute with unit of angstrom.
 
-    >>> from openmm import unit
+    >>> from openff.units import unit
     >>> class MyParameter:
     ...     length = MappedParameterAttribute(default=None, unit=unit.angstrom)
     ...
@@ -544,7 +566,7 @@ class MappedParameterAttribute(ParameterAttribute):
 
     >>> my_par.length = {1:'1.5 * angstrom', 2: '1.4 * angstrom'}
     >>> my_par.length[1]
-    Quantity(value=1.5, unit=angstrom)
+    <Quantity(1.5, 'angstrom')>
 
     Unlike other ParameterAttribute objects, the reference points can do not need ot be
     zero-indexed, non-adjancent, such as interpolating defining a bond parameter for
@@ -552,7 +574,7 @@ class MappedParameterAttribute(ParameterAttribute):
 
     >>> my_par.length = {2:'1.42 * angstrom', 3: '1.35 * angstrom'}
     >>> my_par.length[2]
-    Quantity(value=1.42, unit=angstrom)
+    <Quantity(1.42, 'angstrom')>
 
     """
 
@@ -589,7 +611,7 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
     default : object, optional
         When specified, the descriptor makes this attribute optional by
         attaching a default value to it.
-    unit : openmm.unit.Quantity, optional
+    unit : openff.units.Quantity, optional
         When specified, only sequences of mappings where values are quantities with
         compatible units are allowed to be set.
     converter : callable, optional
@@ -608,7 +630,7 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
 
     Create an optional indexed attribute with unit of angstrom.
 
-    >>> from openmm import unit
+    >>> from openff.units import unit
     >>> class MyParameter:
     ...     length = IndexedMappedParameterAttribute(default=None, unit=unit.angstrom)
     ...
@@ -620,7 +642,7 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
 
     >>> my_par.length = [{1:'1 * angstrom'}, {1: 0.5 * unit.nanometer}]
     >>> my_par.length[0]
-    {1: Quantity(value=1, unit=angstrom)}
+    {1: <Quantity(1, 'angstrom')>}
 
     Similarly, custom converters work as with ``ParameterAttribute``, but
     they are used to validate each value in the sequence.
@@ -716,7 +738,8 @@ class _ParameterAttributeHandler:
     >>> my_par.k = 3.0 * unit.gram
     Traceback (most recent call last):
     ...
-    openff.toolkit.utils.utils.IncompatibleUnitError: k=3.0 g should have units of kilocalorie/(angstrom**2*mole)
+    openff.toolkit.utils.exceptions.IncompatibleUnitError:
+    k=3.0 gram should have units of kilocalorie / angstrom ** 2 / mole
 
     On top of type checking, the constructor implemented in ``_ParameterAttributeHandler``
     checks if some required parameters are not given.
@@ -724,8 +747,8 @@ class _ParameterAttributeHandler:
     >>> ParameterTypeOrHandler(length=3.0*unit.nanometer)
     Traceback (most recent call last):
     ...
-    openff.toolkit.typing.engines.smirnoff.parameters.SMIRNOFFSpecError:
-    <class 'openff.toolkit.typing.engines.smirnoff.parameters.ParameterTypeOrHandler'> require the following missing
+    openff.toolkit.utils.exceptions.SMIRNOFFSpecError:
+    <class 'openff.toolkit.typing.engines.parameters.ParameterTypeOrHandler'> require the following missing
     parameters: ['k']. Defined kwargs are ['length']
 
     Each attribute can be made optional by specifying a default value,
@@ -1636,7 +1659,8 @@ class ParameterType(_ParameterAttributeHandler):
     >>> my_par.k = 3.0 * unit.gram
     Traceback (most recent call last):
     ...
-    openff.toolkit.utils.utils.IncompatibleUnitError: k=3.0 g should have units of kilocalorie/(angstrom**2*mole)
+    openff.toolkit.utils.exceptions.IncompatibleUnitError:
+    k=3.0 gram should have units of kilocalorie / angstrom ** 2 / mole
 
     Each attribute can be made optional by specifying a default value,
     and you can attach a converter function by passing a callable as an
@@ -2015,7 +2039,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Given an existing parameter handler and a new parameter to add to it:
 
-        >>> from openmm import unit
+        >>> from openff.units import unit
         >>> bh = BondHandler(skip_version_check=True)
         >>> length = 1.5 * unit.angstrom
         >>> k = 100 * unit.kilocalorie / unit.mole / unit.angstrom ** 2
@@ -2095,7 +2119,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Create a parameter handler and populate it with some data.
 
-        >>> from openmm import unit
+        >>> from openff.units import unit
         >>> handler = BondHandler(skip_version_check=True)
         >>> handler.add_parameter(
         ...     {
@@ -2108,7 +2132,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         Look up, from this handler, all parameters matching some SMIRKS pattern
 
         >>> handler.get_parameter({'smirks': '[*:1]-[*:2]'})
-        [<BondType with smirks: [*:1]-[*:2]  length: 1 angstrom  k: 10 kilocalorie / angstrom ** 2 / mole  >]
+        [<BondType with smirks: [*:1]-[*:2]  length: 1 angstrom  k: 10.0 kilocalorie / angstrom ** 2 / mole  >]
 
         """
         params = list()
