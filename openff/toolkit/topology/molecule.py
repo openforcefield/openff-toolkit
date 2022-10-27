@@ -3619,7 +3619,9 @@ class FrozenMolecule(Serializable):
 
         Create a molecule from a Topology object that contains exactly one molecule
 
-        >>> molecule = Molecule.from_topology(topology)  # doctest: +SKIP
+        >>> from openff.toolkit import Topology
+        >>> topology = Topology.from_molecules(Molecule.from_smiles('[CH4]'))
+        >>> molecule = Molecule.from_topology(topology)
 
         """
         # TODO: Ensure we are dealing with an OpenFF Topology object
