@@ -913,7 +913,7 @@ class FrozenMolecule(Serializable):
         Convert the molecule into a dictionary and back again:
 
         >>> serialized_molecule = molecule.to_dict()
-        >>> molecule_copy = Molecule(serialized_molecule)
+        >>> molecule_copy = FrozenMolecule(serialized_molecule)
 
         """
 
