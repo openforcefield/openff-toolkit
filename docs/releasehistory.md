@@ -9,6 +9,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### Improved documentation and warnings
+- [PR #1442](https://github.com/openforcefield/openff-toolkit/pull/1442): Doctests added to CI, leading to numerous fixed docstrings and examples.
+
 
 ## 0.11.2 Bugfix release
 
