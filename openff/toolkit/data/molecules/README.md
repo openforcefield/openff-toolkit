@@ -14,11 +14,6 @@ has the following structure:
 * `AlkEthOH_test_filt1_*.mol2`: A test set of 42 alkanes, ethers, and alcohols from the AlkEthOH set. This is file
 contains all the molecules in `AlkEthOH_tripos.tar.gz/AlkEthOH_test_filt1`.
 * `*.crd`, `*.mol2`, and `*.top` for benzene
-* `zinc-subset-*.mol2.gz`: set of 7505 molecules
-* `PhEthOH_pFrosstTyped.oeb`: 5082 molecules with phenyl groups in addition to alkanes, ethers, and alcohols
-* `PhEthOH_pFrosstTyped_first200.oeb`: first 200 in PhEthOH set used for testing smarty and smirky
-* `DrugBank_atyped.oeb`: 7133 parm@Frosst atom typed molecules from the [DrugBank Release Version 5.0.1](http://www.drugbank.ca/releases/latest)
-* `DrugBank_*.mol2`: 5928 molecules with 3D coordinates generated with `utilities/filter_molecules/coordinates_for_DrugBank.py` from `DrugBank_atyped.oeb`
 * `MiniDrugBank_*.mol2`: A subset of `DrugBank_*.oeb`. A version record is available on gitHub at [openforcefield/MiniDrugBank](https://github.com/openforcefield/MiniDrugBank)
 **For all molecule sets**
         - `*` = `ff` for parm@frosst atom types
