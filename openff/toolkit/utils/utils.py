@@ -25,6 +25,7 @@ __all__ = [
     "convert_0_2_smirnoff_to_0_3",
     "get_molecule_parameterIDs",
 ]
+
 import contextlib
 import functools
 import logging
@@ -228,6 +229,8 @@ def convert_all_strings_to_quantity(smirnoff_data):
         A hierarchical dict structured in compliance with the SMIRNOFF spec,
         with quantity-defining strings converted to openff.units.unit.Quantity objects
     """
+    from pint import DefinitionSyntaxError
+
     if isinstance(smirnoff_data, dict):
         for key, value in smirnoff_data.items():
             smirnoff_data[key] = convert_all_strings_to_quantity(value)
@@ -244,7 +247,7 @@ def convert_all_strings_to_quantity(smirnoff_data):
     else:
         try:
             obj_to_return = object_to_quantity(smirnoff_data)
-        except (AttributeError, TypeError, SyntaxError):
+        except (TypeError, DefinitionSyntaxError):
             obj_to_return = smirnoff_data
 
     return obj_to_return
