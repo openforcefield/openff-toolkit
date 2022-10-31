@@ -9,6 +9,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### Examples updates
+- [PR #1447](https://github.com/openforcefield/openff-toolkit/pull/1447): Fixed units of tolerance used in OpenMM minimization in Toolkit Showcase example notebook (from @ziyuanzhao2000)
+
 ### Miscellaneous
 - [PR #1413](https://github.com/openforcefield/openff-toolkit/pull/1413): Remove some large and unused data files from the test suite.
 
