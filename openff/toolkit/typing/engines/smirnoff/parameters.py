@@ -412,7 +412,6 @@ class ParameterAttribute:
             # Check if units are compatible.
             try:
                 if not self._unit.is_compatible_with(value.units):
-                    print(value.units)
                     raise IncompatibleUnitError(
                         f"{self.name}={value} should have units of {self._unit}"
                     )
