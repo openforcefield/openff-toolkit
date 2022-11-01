@@ -4,7 +4,7 @@ channels:
   - conda-forge
 
 dependencies:
-  - python =3.9
+  - python
   - pip
   - py  # Remove after pytest 7.2 dust settles
   - pytest
