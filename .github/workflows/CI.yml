@@ -46,7 +46,7 @@ jobs:
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openff
-      PYTEST_ARGS: -x -r fE --tb=short -nauto --cov=openff --cov-config=setup.cfg --cov-append --cov-report=xml
+      PYTEST_ARGS: -r fE --tb=short -nauto --cov=openff --cov-config=setup.cfg --cov-append --cov-report=xml
 
     steps:
       - uses: actions/checkout@v3.1.0
@@ -110,11 +110,6 @@ jobs:
         run: |
           cd utilities/test_plugins
           python setup.py develop --no-deps
-
-      - name: Install openff-units#51
-        run: |
-          python -c "import pint; assert pint.__version__ == '0.20.1'"
-          python -m pip install git+https://github.com/openforcefield/openff-units@pint-0.20
 
       - name: Remove undesired toolkits
         run: |
