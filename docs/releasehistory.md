@@ -10,7 +10,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ## Current development
 
 ### Improved documentation and warnings
-- [PR #1442](https://github.com/openforcefield/openff-toolkit/pull/1442): Doctests added to CI, leading to numerous fixed docstrings and examples.
+- [PR #1442](https://github.com/openforcefield/openff-toolkit/pull/1442): Doctests added to CI, leading to numerous fixed docstrings and examples therein.
 
 ### Miscellaneous
 - [PR #1413](https://github.com/openforcefield/openff-toolkit/pull/1413): Remove some large and unused data files from the test suite.
