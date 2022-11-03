@@ -21,7 +21,6 @@ dependencies:
   - xmltodict
   - python-constraint
     # Test-only/optional/dev
-  - py  # Remove after pytest 7.2 dust settles
   - pytest
   - pytest-cov
   - pytest-xdist
