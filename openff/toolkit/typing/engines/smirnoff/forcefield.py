@@ -158,32 +158,33 @@ class ForceField:
     Create a new ForceField containing the smirnoff99Frosst parameter set:
 
     >>> from openff.toolkit import ForceField
-    >>> forcefield = ForceField('test_forcefields/test_forcefield.offxml')
+    >>> force_field = ForceField('test_forcefields/test_forcefield.offxml')
 
     Create an OpenMM system from a :class:`openff.toolkit.topology.Topology` object:
 
     >>> from openff.toolkit import Molecule, Topology
     >>> ethanol = Molecule.from_smiles('CCO')
     >>> topology = Topology.from_molecules(molecules=[ethanol])
-    >>> system = forcefield.create_openmm_system(topology)
+    >>> system = force_field.create_openmm_system(topology)
 
     Modify the long-range electrostatics method:
 
-    >>> forcefield.get_parameter_handler('Electrostatics').periodic_potential = 'PME'
+    >>> force_field.get_parameter_handler('Electrostatics').periodic_potential = 'PME'
 
     Inspect the first few vdW parameters:
 
-    >>> low_precedence_parameters = forcefield.get_parameter_handler('vdW').parameters[0:3]
+    >>> low_precedence_parameters = force_field.get_parameter_handler('vdW').parameters[0:3]
 
     Retrieve the vdW parameters by SMIRKS string and manipulate it:
 
-    >>> parameter = forcefield.get_parameter_handler('vdW').parameters['[#1:1]-[#7]']
+    >>> from openff.units import unit
+    >>> parameter = force_field.get_parameter_handler('vdW').parameters['[#1:1]-[#7]']
     >>> parameter.rmin_half += 0.1 * unit.angstroms
     >>> parameter.epsilon *= 1.02
 
     Make a child vdW type more specific (checking modified SMIRKS for validity):
 
-    >>> forcefield.get_parameter_handler('vdW').parameters[-1].smirks += '~[#53]'
+    >>> force_field.get_parameter_handler('vdW').parameters[-1].smirks += '~[#53]'
 
     .. warning ::
 
@@ -193,17 +194,17 @@ class ForceField:
 
     Delete a parameter:
 
-    >>> del forcefield.get_parameter_handler('vdW').parameters['[#1:1]-[#6X4]']
+    >>> del force_field.get_parameter_handler('vdW').parameters['[#1:1]-[#6X4]']
 
     Insert a parameter at a specific point in the parameter tree:
 
     >>> from openff.toolkit.typing.engines.smirnoff import vdWHandler
     >>> new_parameter = vdWHandler.vdWType(
-    >>>     smirks='[*:1]',
-    >>>     epsilon=0.0157*unit.kilocalories_per_mole,
-    >>>     rmin_half=0.6000*unit.angstroms,
-    >>> )
-    >>> forcefield.get_parameter_handler('vdW').parameters.insert(0, new_parameter)
+    ...     smirks='[*:1]',
+    ...     epsilon=0.0157*unit.kilocalories_per_mole,
+    ...     rmin_half=0.6000*unit.angstroms,
+    ... )
+    >>> force_field.get_parameter_handler('vdW').parameters.insert(0, new_parameter)
 
     .. warning ::
 
@@ -1326,7 +1327,7 @@ class ForceField:
         Use the assigned partial charges when creating an OpenMM ``System``:
 
         >>> topology = ethanol.to_topology()
-        >>> system = forcefield.create_openmm_system(
+        >>> system = force_field.create_openmm_system(
         ...    topology,
         ...    charge_from_molecules=[ethanol]
         ... )

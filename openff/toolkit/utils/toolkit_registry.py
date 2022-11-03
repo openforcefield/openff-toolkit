@@ -35,21 +35,21 @@ class ToolkitRegistry:
     >>> toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper]
     >>> toolkit_registry = ToolkitRegistry(toolkit_precedence)
     >>> toolkit_registry
-    ToolkitRegistry containing OpenEye Toolkit, The RDKit, AmberTools
+    <ToolkitRegistry containing OpenEye Toolkit, The RDKit, AmberTools>
 
     Register all available toolkits (in the order OpenEye, RDKit, AmberTools, built-in)
 
     >>> toolkits = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, BuiltInToolkitWrapper]
     >>> toolkit_registry = ToolkitRegistry(toolkit_precedence=toolkits)
     >>> toolkit_registry
-    ToolkitRegistry containing OpenEye Toolkit, The RDKit, AmberTools, Built-in Toolkit
+    <ToolkitRegistry containing OpenEye Toolkit, The RDKit, AmberTools, Built-in Toolkit>
 
     Retrieve the global singleton toolkit registry, which is created when this module is imported from all available
     toolkits:
 
     >>> from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
     >>> toolkit_registry
-    ToolkitRegistry containing OpenEye Toolkit, The RDKit, AmberTools, Built-in Toolkit
+    <ToolkitRegistry containing OpenEye Toolkit, The RDKit, AmberTools, Built-in Toolkit>
 
     Note that this will contain different ToolkitWrapper objects based on what toolkits
     are currently installed.
