@@ -19,7 +19,6 @@ dependencies:
   - xmltodict
     # Test-only/optional/dev
   - mdtraj
-  - py  # Remove after pytest 7.2 dust settles
   - pytest
   - pytest-cov
   - nbval
