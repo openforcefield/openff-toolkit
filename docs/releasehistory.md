@@ -7,7 +7,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `micro` increments represent bugfix releases or improvements in documentation
 
 
-## Current development
+## 0.11.3 Bugfix release
+
+### Bugfixes
+- [PR #1436](https://github.com/openforcefield/openff-toolkit/pull/1436): Fix a small bug introduced in 0.11.2, where running with OpenEye installed but not licensed could lead to a crash.
+- [PR #1444](https://github.com/openforcefield/openff-toolkit/pull/1444): Update for pint 0.20.
 
 ### Examples updates
 - [PR #1447](https://github.com/openforcefield/openff-toolkit/pull/1447): Fixed units of tolerance used in OpenMM minimization in Toolkit Showcase example notebook (from @ziyuanzhao2000)
@@ -17,6 +21,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Miscellaneous
 - [PR #1413](https://github.com/openforcefield/openff-toolkit/pull/1413): Remove some large and unused data files from the test suite.
+- [PR #1434](https://github.com/openforcefield/openff-toolkit/pull/1434): Remove dependency on `typing_extensions`.
 
 ## 0.11.2 Bugfix release
 
