@@ -9,6 +9,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### Examples updates
+- [PR #1447](https://github.com/openforcefield/openff-toolkit/pull/1447): Fixed units of tolerance used in OpenMM minimization in Toolkit Showcase example notebook (from @ziyuanzhao2000)
+
 ### Improved documentation and warnings
 - [PR #1442](https://github.com/openforcefield/openff-toolkit/pull/1442): Doctests added to CI, leading to numerous fixed docstrings and examples therein.
 
