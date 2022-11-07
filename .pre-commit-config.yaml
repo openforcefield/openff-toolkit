@@ -21,7 +21,7 @@ repos:
         'flake8-no-pep420',
     ]
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 1.5.2
+  rev: 1.5.3
   hooks:
     - id: nbqa-pyupgrade
       args:
