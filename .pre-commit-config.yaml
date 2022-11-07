@@ -1,5 +1,5 @@
 ci:
-  autoupdate_schedule: "monthly"
+  autoupdate_schedule: "quarterly"
 files: ^openff|(^examples/((?!deprecated).)*$)
 repos:
 - repo: https://github.com/psf/black
