@@ -151,9 +151,7 @@ jobs:
         run: |
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_examples.py"
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
-          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
-            PYTEST_ARGS+=" --runslow"
-          fi
+          PYTEST_ARGS+=" --runslow"
           pytest $PYTEST_ARGS openff/toolkit/tests/
 
       - name: Run code snippets in docs
@@ -168,7 +166,9 @@ jobs:
 
       - name: Run examples in docstrings
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: pytest -v --no-cov --doctest-modules --ignore openff/toolkit/tests/ --ignore openff/toolkit/utils/utils.py openff/
+        run: pytest -v --no-cov --doctest-modules openff \
+            --ignore openff/toolkit/tests/ \
+            --ignore openff/toolkit/utils/utils.py \
 
       - name: Codecov
         uses: codecov/codecov-action@v3.1.1
