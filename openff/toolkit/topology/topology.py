@@ -1459,7 +1459,9 @@ class Topology(Serializable):
                     "insertion_code"
                 ]
 
-                off_atom.metadata["chain_id"] = omm_mol_G.nodes[omm_atom_idx]["chain_id"]
+                off_atom.metadata["chain_id"] = omm_mol_G.nodes[omm_atom_idx][
+                    "chain_id"
+                ]
 
             remapped_mol.add_default_hierarchy_schemes()
             topology._add_molecule_keep_cache(remapped_mol)
