@@ -10,6 +10,13 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## 0.11.3 Bugfix release
 
+
+- [PR #1460](https://github.com/openforcefield/openff-toolkit/pull/1460): Disables error causing 
+  [Issue #1432](https://github.com/openforcefield/openff-toolkit/issues/1432), where 
+  `Molecule.from_polymer_pdb` would sometimes issue stereochemistry errors when reading valid 
+  PDBs using the RDKit backend.  
+
+
 ### Bugfixes
 - [PR #1436](https://github.com/openforcefield/openff-toolkit/pull/1436): Fix a small bug introduced in 0.11.2, where running with OpenEye installed but not licensed could lead to a crash.
 - [PR #1444](https://github.com/openforcefield/openff-toolkit/pull/1444): Update for pint 0.20.
