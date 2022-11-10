@@ -166,10 +166,8 @@ jobs:
 
       - name: Run examples in docstrings
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: pytest -v --no-cov --doctest-modules openff \
-            --ignore openff/toolkit/tests/ \
-            --ignore openff/toolkit/data/ \
-            --ignore openff/toolkit/utils/utils.py
+        run: |
+          pytest -v --no-cov --doctest-modules --ignore=openff/toolkit/tests/ --ignore=openff/toolkit/data/ --ignore=openff/toolkit/utils/utils.py openff/
 
       - name: Codecov
         uses: codecov/codecov-action@v3.1.1
