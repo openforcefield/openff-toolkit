@@ -1443,19 +1443,24 @@ class Topology(Serializable):
             unq_mol = graph_to_unq_mol[unq_mol_G]
             remapped_mol = unq_mol.remap(local_top_to_ref_index, current_to_new=False)
             # Transfer hierarchy metadata from openmm mol graph to offmol metadata
-            for omm_atom, off_atom in zip(omm_mol_G.nodes, remapped_mol.atoms):
-                off_atom.name = omm_mol_G.nodes[omm_atom]["atom_name"]
-                off_atom.metadata["residue_name"] = omm_mol_G.nodes[omm_atom][
+            for off_atom_idx in range(remapped_mol.n_atoms):
+                off_atom = remapped_mol.atom(off_atom_idx)
+
+                omm_atom_idx = off_atom_idx + first_index
+
+                off_atom.name = omm_mol_G.nodes[omm_atom_idx]["atom_name"]
+                off_atom.metadata["residue_name"] = omm_mol_G.nodes[omm_atom_idx][
                     "residue_name"
                 ]
                 off_atom.metadata["residue_number"] = int(
-                    omm_mol_G.nodes[omm_atom]["residue_id"]
+                    omm_mol_G.nodes[omm_atom_idx]["residue_id"]
                 )
-                off_atom.metadata["insertion_code"] = omm_mol_G.nodes[omm_atom][
+                off_atom.metadata["insertion_code"] = omm_mol_G.nodes[omm_atom_idx][
                     "insertion_code"
                 ]
 
-                off_atom.metadata["chain_id"] = omm_mol_G.nodes[omm_atom]["chain_id"]
+                off_atom.metadata["chain_id"] = omm_mol_G.nodes[omm_atom_idx]["chain_id"]
+
             remapped_mol.add_default_hierarchy_schemes()
             topology._add_molecule_keep_cache(remapped_mol)
         topology._invalidate_cached_properties()
