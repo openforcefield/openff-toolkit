@@ -518,6 +518,8 @@ class TestTopology:
         assert all(
             all([molecule.residues, molecule.chains]) for molecule in topology.molecules
         )
+        for omm_atom, off_atom in zip(pdbfile.topology.atoms(), topology.atoms):
+            assert omm_atom.name == off_atom.name
 
     def test_from_openmm_missing_reference(self):
         """Test creation of an OpenFF Topology object from an OpenMM Topology when missing a unique molecule"""
