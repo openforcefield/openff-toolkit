@@ -80,6 +80,7 @@ jobs:
         uses: mamba-org/provision-with-micromamba@main
         with:
           environment-file: devtools/conda-envs/${{ env.ENVFILE }}.yaml
+          channel-priority: "flexible"
           extra-specs: |
             python=${{ matrix.python-version }}
 
@@ -151,9 +152,7 @@ jobs:
         run: |
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_examples.py"
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
-          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
-            PYTEST_ARGS+=" --runslow"
-          fi
+          PYTEST_ARGS+=" --runslow"
           pytest $PYTEST_ARGS openff/toolkit/tests/
 
       - name: Run code snippets in docs

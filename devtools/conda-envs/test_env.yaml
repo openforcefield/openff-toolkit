@@ -1,5 +1,6 @@
 name: test
 channels:
+  - conda-forge/label/openmm_dev
   - conda-forge/label/openmm_rc
   - openeye
   - conda-forge
@@ -8,7 +9,7 @@ dependencies:
   - python
   - pip
   - packaging
-  - openmm >=7.6
+  - openmm==8.0.0dev2
   - openmmforcefields >=0.11.2
   - openff-forcefields
   - openff-units >=0.1.7
