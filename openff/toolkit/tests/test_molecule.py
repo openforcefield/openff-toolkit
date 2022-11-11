@@ -4197,24 +4197,24 @@ class TestHierarchies:
 
         assert (
             str(dipeptide_hierarchy_perceived.residues[0])
-            == "HierarchyElement ('None', 1, ' ', 'ACE') of iterator 'residues' containing 6 atom(s)"
+            == "HierarchyElement ('None', '1', ' ', 'ACE') of iterator 'residues' containing 6 atom(s)"
         )
         assert dipeptide_hierarchy_perceived.residues[0].chain_id == "None"
         assert dipeptide_hierarchy_perceived.residues[0].residue_name == "ACE"
         assert dipeptide_hierarchy_perceived.residues[0].insertion_code == " "
-        assert dipeptide_hierarchy_perceived.residues[0].residue_number == 1
+        assert dipeptide_hierarchy_perceived.residues[0].residue_number == "1"
         assert set(dipeptide_hierarchy_perceived.residues[0].atom_indices) == set(
             range(6)
         )
 
         assert (
             str(dipeptide_hierarchy_perceived.residues[1])
-            == "HierarchyElement ('None', 2, ' ', 'ALA') of iterator 'residues' containing 11 atom(s)"
+            == "HierarchyElement ('None', '2', ' ', 'ALA') of iterator 'residues' containing 11 atom(s)"
         )
         assert dipeptide_hierarchy_perceived.residues[1].chain_id == "None"
         assert dipeptide_hierarchy_perceived.residues[1].residue_name == "ALA"
         assert dipeptide_hierarchy_perceived.residues[1].insertion_code == " "
-        assert dipeptide_hierarchy_perceived.residues[1].residue_number == 2
+        assert dipeptide_hierarchy_perceived.residues[1].residue_number == "2"
         assert set(dipeptide_hierarchy_perceived.residues[1].atom_indices) == set(
             range(6, 17)
         )
@@ -4235,10 +4235,10 @@ class TestHierarchies:
 
         for atom in dipeptide_hierarchy_perceived.atoms:
             atom.metadata["chain_id"] = "A"
-        assert ("A", 1, " ", "ACE") != dipeptide_hierarchy_perceived.residues[
+        assert ("A", "1", " ", "ACE") != dipeptide_hierarchy_perceived.residues[
             0
         ].identifier
         dipeptide_hierarchy_perceived.update_hierarchy_schemes()
-        assert ("A", 1, " ", "ACE") == dipeptide_hierarchy_perceived.residues[
+        assert ("A", "1", " ", "ACE") == dipeptide_hierarchy_perceived.residues[
             0
         ].identifier

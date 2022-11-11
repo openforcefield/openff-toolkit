@@ -49,6 +49,7 @@ import numpy as np
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
 from openff.utilities.exceptions import MissingOptionalDependencyError
+from packaging import version
 
 from openff.toolkit.utils.exceptions import (
     HierarchySchemeNotFoundException,
