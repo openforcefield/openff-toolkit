@@ -3551,7 +3551,7 @@ class TestMoleculeResiduePerception:
 
     def test_perceive_residues_sorting(self, strict_chirality):
         """Ensure residues are sorted consecutively when `Molecule.perceive_residues` is used. See issue #1461."""
-        molecule = Molecule.from_file(get_data_file_path('proteins/ace-a10-nme.sdf'))
+        molecule = Molecule.from_file(get_data_file_path("proteins/ace-a10-nme.sdf"))
 
         molecule.perceive_residues(strict_chirality=strict_chirality)
 
