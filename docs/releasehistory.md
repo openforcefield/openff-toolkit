@@ -8,13 +8,20 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current release
 
+### Behavior changes
+- [PR #1462](https://github.com/openforcefield/openff-toolkit/pull/1462): Makes residue
+  numbers added by `Molecule.perceive_residues` strings (previously they were ints), to 
+  match the behavior of `Topology.from_openmm` and other hierarchy info-setting methods. 
 
 ### Bugfixes
 - [PR #1459](https://github.com/openforcefield/openff-toolkit/pull/1459): Fixes
   [#1430](https://github.com/openforcefield/openff-toolkit/issues/1430), where 
   `Topology.from_openmm` would mis-assign atom names (and probably also 
   hierarchy metadata as well).
-
+- [PR #1462](https://github.com/openforcefield/openff-toolkit/pull/1462): Fixes
+  [#1461](https://github.com/openforcefield/openff-toolkit/issues/1461), where the 
+  default `Molecule.residues` iterator wouldn't sort by residue number correctly 
+  when residue information was added by `Molecule.perceive_residues`.
 
 
 ## 0.11.3 Bugfix release
