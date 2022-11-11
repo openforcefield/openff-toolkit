@@ -3796,6 +3796,21 @@ class TestMoleculeFromPDB:
             expected_mol, atom_stereochemistry_matching=False
         )
 
+    def test_molecule_from_pdb_neutral_arg_dipeptide(self):
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/neutral_arginine.pdb")
+        )
+        assert offmol.n_atoms == 26
+        assert offmol.total_charge == 0 * unit.elementary_charge
+        expected_mol = Molecule.from_smiles(
+            "[NH3+][C@H](CCCNC(N)(=N))C(=O)[O-]", allow_undefined_stereo=True
+        )
+        assert offmol.is_isomorphic_with(
+            expected_mol,
+            atom_stereochemistry_matching=False,
+            bond_stereochemistry_matching=False,
+        )
+
     def test_molecule_from_pdb_error_no_hydrogens(self):
         """Test that a PDB without hydrogens raises a descriptive error"""
         with pytest.raises(
