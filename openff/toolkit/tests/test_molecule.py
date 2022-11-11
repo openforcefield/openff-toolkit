@@ -3549,6 +3549,24 @@ class TestMoleculeResiduePerception:
                 counter += 1
         assert counter == offmol.n_atoms
 
+    def test_perceive_residues_sorting(self):
+        """Ensure residues are sorted consecuitvely when `Molecule.perceive_residues` is used. See issue #1461."""
+        molecule = Molecule.from_smiles(
+            "CC(=O)N[C@@H](CS1)C(=O)N2[C@@H](CCC2)C(=O)"
+            + "N[C@@H](C)C(=O)" * 20
+            + "N[C@@H](CS1)C(=O)NC",
+            allow_undefined_stereo=True,
+        )
+
+        molecule.perceive_residues()
+
+        for index, residue in enumerate(molecule.residues):
+            found = residue.residue_number
+            expected = str(index + 1)
+
+            assert isinstance(found, str)
+            assert found == expected
+
 
 class TestMoleculeFromPDB:
     """
