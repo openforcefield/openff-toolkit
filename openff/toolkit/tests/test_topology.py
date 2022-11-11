@@ -1463,8 +1463,8 @@ class TestTopology:
         chains = list(top.hierarchy_iterator("chains"))
         assert chains == []
         assert [res.identifier for res in residues] == [
-            ("None", 1, " ", "ACE"),
-            ("None", 2, " ", "ALA"),
+            ("None", "1", " ", "ACE"),
+            ("None", "2", " ", "ALA"),
         ]
         # Ensure that adding molecules WITH hierarchy perceived DOES give the
         # topology residues and chains to iterate over
@@ -1473,16 +1473,16 @@ class TestTopology:
         residues = list(top.hierarchy_iterator("residues"))
         chains = list(top.hierarchy_iterator("chains"))
         assert [res.identifier for res in residues] == [
-            ("None", 1, " ", "ACE"),
-            ("None", 2, " ", "ALA"),
-            ("None", 1, " ", "ACE"),
-            ("None", 2, " ", "ALA"),
-            ("None", 1, " ", "ACE"),
-            ("None", 2, " ", "CYS"),
-            ("None", 3, " ", "NME"),
-            ("None", 4, " ", "ACE"),
-            ("None", 5, " ", "CYS"),
-            ("None", 6, " ", "NME"),
+            ("None", "1", " ", "ACE"),
+            ("None", "2", " ", "ALA"),
+            ("None", "1", " ", "ACE"),
+            ("None", "2", " ", "ALA"),
+            ("None", "1", " ", "ACE"),
+            ("None", "2", " ", "CYS"),
+            ("None", "3", " ", "NME"),
+            ("None", "4", " ", "ACE"),
+            ("None", "5", " ", "CYS"),
+            ("None", "6", " ", "NME"),
         ]
         # First chain hierarchy element is from dipeptide_hierarchy_added,
         # second is from cyx_hierarchy_added. Both have the same uniqueness
@@ -1496,16 +1496,16 @@ class TestTopology:
         residues = list(top.hierarchy_iterator("residues"))
         chains = list(top.hierarchy_iterator("chains"))
         assert [res.identifier for res in residues] == [
-            ("None", 1, " ", "ACE"),
-            ("None", 2, " ", "ALA"),
-            ("None", 1, " ", "ACE"),
-            ("None", 2, " ", "ALA"),
-            ("None", 1, " ", "ACE"),
-            ("None", 2, " ", "CYS"),
-            ("None", 3, " ", "NME"),
-            ("None", 4, " ", "ACE"),
-            ("None", 5, " ", "CYS"),
-            ("None", 6, " ", "NME"),
+            ("None", "1", " ", "ACE"),
+            ("None", "2", " ", "ALA"),
+            ("None", "1", " ", "ACE"),
+            ("None", "2", " ", "ALA"),
+            ("None", "1", " ", "ACE"),
+            ("None", "2", " ", "CYS"),
+            ("None", "3", " ", "NME"),
+            ("None", "4", " ", "ACE"),
+            ("None", "5", " ", "CYS"),
+            ("None", "6", " ", "NME"),
         ]
         assert len(chains) == 2
 
