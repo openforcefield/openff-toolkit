@@ -3550,13 +3550,8 @@ class TestMoleculeResiduePerception:
         assert counter == offmol.n_atoms
 
     def test_perceive_residues_sorting(self, strict_chirality):
-        """Ensure residues are sorted consecuitvely when `Molecule.perceive_residues` is used. See issue #1461."""
-        molecule = Molecule.from_smiles(
-            "CC(=O)N[C@@H](CS1)C(=O)N2[C@@H](CCC2)C(=O)"
-            + "N[C@@H](C)C(=O)" * 20
-            + "N[C@@H](CS1)C(=O)NC",
-            allow_undefined_stereo=True,
-        )
+        """Ensure residues are sorted consecutively when `Molecule.perceive_residues` is used. See issue #1461."""
+        molecule = Molecule.from_file(get_data_file_path('proteins/ace-a10-nme.sdf'))
 
         molecule.perceive_residues(strict_chirality=strict_chirality)
 
