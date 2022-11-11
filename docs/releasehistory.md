@@ -8,6 +8,15 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current release
 
+
+### Bugfixes
+- [PR #1459](https://github.com/openforcefield/openff-toolkit/pull/1459): Fixes
+  [#1430](https://github.com/openforcefield/openff-toolkit/issues/1430), where 
+  `Topology.from_openmm` would mis-assign atom names (and probably also 
+  hierarchy metadata as well).
+
+
+
 ## 0.11.3 Bugfix release
 
 ### Bugfixes
