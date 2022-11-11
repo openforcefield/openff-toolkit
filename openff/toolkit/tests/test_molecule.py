@@ -3549,7 +3549,7 @@ class TestMoleculeResiduePerception:
                 counter += 1
         assert counter == offmol.n_atoms
 
-    def test_perceive_residues_sorting(self):
+    def test_perceive_residues_sorting(self, strict_chirality):
         """Ensure residues are sorted consecuitvely when `Molecule.perceive_residues` is used. See issue #1461."""
         molecule = Molecule.from_smiles(
             "CC(=O)N[C@@H](CS1)C(=O)N2[C@@H](CCC2)C(=O)"
@@ -3558,7 +3558,7 @@ class TestMoleculeResiduePerception:
             allow_undefined_stereo=True,
         )
 
-        molecule.perceive_residues()
+        molecule.perceive_residues(strict_chirality=strict_chirality)
 
         for index, residue in enumerate(molecule.residues):
             found = residue.residue_number
@@ -4059,11 +4059,11 @@ class TestHierarchies:
         dipeptide_residues_perceived = create_dipeptide()
 
         assert "ACE" == dipeptide_residues_perceived.atoms[0].metadata["residue_name"]
-        assert 1 == dipeptide_residues_perceived.atoms[0].metadata["residue_number"]
+        assert "1" == dipeptide_residues_perceived.atoms[0].metadata["residue_number"]
         assert " " == dipeptide_residues_perceived.atoms[0].metadata["insertion_code"]
 
         assert "ALA" == dipeptide_residues_perceived.atoms[10].metadata["residue_name"]
-        assert 2 == dipeptide_residues_perceived.atoms[10].metadata["residue_number"]
+        assert "2" == dipeptide_residues_perceived.atoms[10].metadata["residue_number"]
         assert " " == dipeptide_residues_perceived.atoms[10].metadata["insertion_code"]
 
         assert isinstance(dipeptide_residues_perceived.residues[0], HierarchyElement)
@@ -4101,7 +4101,7 @@ class TestHierarchies:
         assert len(dipeptide_residues_perceived.hierarchy_schemes) == 3
 
         # update_hierarchy_schemes() was called by add_hierarchy_scheme
-        assert dipeptide_residues_perceived.res_by_num[0].residue_number == 1
+        assert dipeptide_residues_perceived.res_by_num[0].residue_number == "1"
         # Delete the hierarchyscheme and ensure that the iterators are no longer available
         dipeptide_residues_perceived.delete_hierarchy_scheme("res_by_num")
         assert len(dipeptide_residues_perceived.hierarchy_schemes) == 2
