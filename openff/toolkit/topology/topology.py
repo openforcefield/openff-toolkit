@@ -38,7 +38,7 @@ from openff.utilities import requires_package
 
 from openff.toolkit.topology import Molecule
 from openff.toolkit.topology._mm_molecule import _SimpleBond, _SimpleMolecule
-from openff.toolkit.topology.molecule import HierarchyElement
+from openff.toolkit.topology.molecule import FrozenMolecule, HierarchyElement
 from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.exceptions import (
@@ -513,7 +513,7 @@ class Topology(Serializable):
             The Topology created from the specified molecule(s)
         """
         # Ensure that we are working with an iterable
-        if isinstance(molecules, (Molecule, _SimpleMolecule)):
+        if isinstance(molecules, (FrozenMolecule, _SimpleMolecule)):
             molecules = [molecules]
 
         # Create Topology and populate it with specified molecules
@@ -1092,18 +1092,24 @@ class Topology(Serializable):
         >>> # Create a water ordered as OHH
         >>> water1 = Molecule()
         >>> water1.add_atom(8, 0, False)
+        0
         >>> water1.add_atom(1, 0, False)
+        1
         >>> water1.add_atom(1, 0, False)
-        >>> water1.add_bond(0, 1, 1, False)
-        >>> water1.add_bond(0, 2, 1, False)
+        2
+        >>> _ = water1.add_bond(0, 1, 1, False)
+        >>> _ = water1.add_bond(0, 2, 1, False)
         ...
         >>> # Create a different water ordered as HOH
         >>> water2 = Molecule()
         >>> water2.add_atom(1, 0, False)
+        0
         >>> water2.add_atom(8, 0, False)
+        1
         >>> water2.add_atom(1, 0, False)
-        >>> water2.add_bond(0, 1, 1, False)
-        >>> water2.add_bond(1, 2, 1, False)
+        2
+        >>> _ = water2.add_bond(0, 1, 1, False)
+        >>> _ = water2.add_bond(1, 2, 1, False)
         ...
         >>> top = Topology.from_molecules([water1, water2])
         >>> top.identical_molecule_groups
@@ -1437,19 +1443,26 @@ class Topology(Serializable):
             unq_mol = graph_to_unq_mol[unq_mol_G]
             remapped_mol = unq_mol.remap(local_top_to_ref_index, current_to_new=False)
             # Transfer hierarchy metadata from openmm mol graph to offmol metadata
-            for omm_atom, off_atom in zip(omm_mol_G.nodes, remapped_mol.atoms):
-                off_atom.name = omm_mol_G.nodes[omm_atom]["atom_name"]
-                off_atom.metadata["residue_name"] = omm_mol_G.nodes[omm_atom][
+            for off_atom_idx in range(remapped_mol.n_atoms):
+                off_atom = remapped_mol.atom(off_atom_idx)
+
+                omm_atom_idx = off_atom_idx + first_index
+
+                off_atom.name = omm_mol_G.nodes[omm_atom_idx]["atom_name"]
+                off_atom.metadata["residue_name"] = omm_mol_G.nodes[omm_atom_idx][
                     "residue_name"
                 ]
                 off_atom.metadata["residue_number"] = int(
-                    omm_mol_G.nodes[omm_atom]["residue_id"]
+                    omm_mol_G.nodes[omm_atom_idx]["residue_id"]
                 )
-                off_atom.metadata["insertion_code"] = omm_mol_G.nodes[omm_atom][
+                off_atom.metadata["insertion_code"] = omm_mol_G.nodes[omm_atom_idx][
                     "insertion_code"
                 ]
 
-                off_atom.metadata["chain_id"] = omm_mol_G.nodes[omm_atom]["chain_id"]
+                off_atom.metadata["chain_id"] = omm_mol_G.nodes[omm_atom_idx][
+                    "chain_id"
+                ]
+
             remapped_mol.add_default_hierarchy_schemes()
             topology._add_molecule_keep_cache(remapped_mol)
         topology._invalidate_cached_properties()

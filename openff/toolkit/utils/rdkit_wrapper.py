@@ -251,7 +251,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         rdkit_mol = self._polymer_openmm_topology_to_rdmol(
             omm_top, substructure_dictionary
         )
-        offmol = self.from_rdkit(rdkit_mol)
+        offmol = self.from_rdkit(rdkit_mol, allow_undefined_stereo=True)
         return offmol
 
     def _polymer_openmm_topology_to_rdmol(

@@ -76,7 +76,7 @@ jobs:
       - name: Run code snippets in docs
         shell: bash -l {0}
         run: |
-          pytest -v --doctest-glob="docs/*.rst" docs/
+          pytest -v --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
 
       - name: Run mypy
         shell: bash -l {0}

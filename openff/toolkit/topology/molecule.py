@@ -49,8 +49,8 @@ import numpy as np
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
 from openff.utilities.exceptions import MissingOptionalDependencyError
+from packaging import version
 
-import openff.toolkit
 from openff.toolkit.utils.exceptions import (
     HierarchySchemeNotFoundException,
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
@@ -913,7 +913,7 @@ class FrozenMolecule(Serializable):
         Convert the molecule into a dictionary and back again:
 
         >>> serialized_molecule = molecule.to_dict()
-        >>> molecule_copy = Molecule(serialized_molecule)
+        >>> molecule_copy = FrozenMolecule(serialized_molecule)
 
         """
 
@@ -939,10 +939,10 @@ class FrozenMolecule(Serializable):
             # if there turned out to be no way to load this input
             value_errors = list()
 
-            if isinstance(other, openff.toolkit.topology.FrozenMolecule) and not loaded:
+            if isinstance(other, FrozenMolecule) and not loaded:
                 self._copy_initializer(other)
                 loaded = True
-            if isinstance(other, openff.toolkit.topology.Molecule) and not loaded:
+            if isinstance(other, Molecule) and not loaded:
                 # TODO: This will need to be updated once FrozenMolecules and Molecules are significantly different
                 self._copy_initializer(other)
                 loaded = True
@@ -2583,6 +2583,7 @@ class FrozenMolecule(Serializable):
         Examples
         --------
 
+        >>> from openff.toolkit import Molecule
         >>> molecule = Molecule.from_smiles('CCCCCC')
         >>> molecule.assign_fractional_bond_orders()
 
@@ -3619,7 +3620,9 @@ class FrozenMolecule(Serializable):
 
         Create a molecule from a Topology object that contains exactly one molecule
 
-        >>> molecule = Molecule.from_topology(topology)  # doctest: +SKIP
+        >>> from openff.toolkit import Molecule, Topology
+        >>> topology = Topology.from_molecules(Molecule.from_smiles('[CH4]'))
+        >>> molecule = Molecule.from_topology(topology)
 
         """
         # TODO: Ensure we are dealing with an OpenFF Topology object
@@ -3640,6 +3643,7 @@ class FrozenMolecule(Serializable):
         Examples
         --------
 
+        >>> from openff.toolkit import Molecule
         >>> molecule = Molecule.from_iupac('imatinib')
         >>> topology = molecule.to_topology()
 
@@ -4463,29 +4467,36 @@ class FrozenMolecule(Serializable):
 
         >>> from qcportal import FractalClient
         >>> client = FractalClient()
-        >>> offmol = Molecule.from_qcschema(client.query_molecules(molecular_formula="C16H20N3O5")[0])
+        >>> offmol = Molecule.from_qcschema(
+        ...     client.query_molecules(molecular_formula="C16H20N3O5")[0]
+        ... )
 
         Get Molecule from a QCArchive optimization entry:
 
         >>> from qcportal import FractalClient
         >>> client = FractalClient()
-        >>> optds = client.get_collection("OptimizationDataset",
-                                          "SMIRNOFF Coverage Set 1")
+        >>> optds = client.get_collection(
+        ...     "OptimizationDataset",
+        ...     "SMIRNOFF Coverage Set 1"
+        ... )
         >>> offmol = Molecule.from_qcschema(optds.get_entry('coc(o)oc-0'))
 
-        Same as above, but with conformer(s) from initial molecule(s) by providing client to database:
+        Same as above, but with conformer(s) from initial molecule(s) by
+        providing client to database:
 
-        >>> offmol = Molecule.from_qcschema(optds.get_entry('coc(o)oc-0'), client=client)
+        >>> offmol = Molecule.from_qcschema(
+        ...     optds.get_entry('coc(o)oc-0'),
+        ...     client=client
+        ... )
 
         Raises
         -------
         AttributeError
-            - If the record dict can not be made from ``qca_record``.
-            - If a ``client`` is passed and it could not retrieve the initial molecule.
-
+            If the record dict can not be made from ``qca_record``, or if the
+            provided ``client`` could not retrieve the initial molecule.
         KeyError
-            If the dict does not contain the ``canonical_isomeric_explicit_hydrogen_mapped_smiles``.
-
+            If the record does not contain the
+            ``canonical_isomeric_explicit_hydrogen_mapped_smiles``.
         InvalidConformerError
             Silent error, if the conformer could not be attached.
         """
@@ -5083,10 +5094,12 @@ class Molecule(FrozenMolecule):
         >>> H2 = molecule.add_atom(1, 0, False)
         >>> H3 = molecule.add_atom(1, 0, False)
         >>> H4 = molecule.add_atom(1, 0, False)
-        >>> bond_idx = molecule.add_bond(C, H1, False, 1)
-        >>> bond_idx = molecule.add_bond(C, H2, False, 1)
-        >>> bond_idx = molecule.add_bond(C, H3, False, 1)
-        >>> bond_idx = molecule.add_bond(C, H4, False, 1)
+        >>> bond_idx = molecule.add_bond(C, H1, 1, False)
+        >>> bond_idx = molecule.add_bond(C, H2, 1, False)
+        >>> bond_idx = molecule.add_bond(C, H3, 1, False)
+        >>> bond_idx = molecule.add_bond(C, H4, 1, False)
+        >>> molecule.to_smiles(explicit_hydrogens=False)
+        'C'
 
         """
         atom_index = self._add_atom(
@@ -5132,6 +5145,9 @@ class Molecule(FrozenMolecule):
         index: int
             Index of the bond in this molecule
 
+        Examples
+        --------
+        For an example of use, see :py:meth:`add_atom`.
         """
         bond_index = self._add_bond(
             atom1,
@@ -5390,7 +5406,7 @@ class Molecule(FrozenMolecule):
                 self.atoms[atom_idx].metadata["residue_name"] = match_dict[
                     "residue_name"
                 ]
-                self.atoms[atom_idx].metadata["residue_number"] = residue_num + 1
+                self.atoms[atom_idx].metadata["residue_number"] = str(residue_num + 1)
                 self.atoms[atom_idx].metadata["insertion_code"] = " "
                 self.atoms[atom_idx].metadata["atom_name"] = match_dict["atom_names"][
                     smarts_idx
@@ -5666,9 +5682,11 @@ class HierarchyScheme:
         Semantically sort the HierarchyElements belonging to this object, according to
         their identifiers.
         """
-        self.hierarchy_elements.sort(
-            key=lambda x: ".".join([str(i) for i in x.identifier])
-        )
+        # hard-code the sort_func value here, since it's hard to serialize safely
+        def sort_func(x):
+            return version.parse(".".join([str(i) for i in x.identifier]))
+
+        self.hierarchy_elements.sort(key=sort_func)
 
     def __str__(self):
         return (

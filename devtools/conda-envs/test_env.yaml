@@ -12,7 +12,7 @@ dependencies:
   - openmm==8.0.0dev2
   - openmmforcefields >=0.11.2
   - openff-forcefields
-  - openff-units >=0.1.7
+  - openff-units >=0.2
   - openff-utilities >=0.1.5
   - openff-interchange-base >0.2.0rc6
   - smirnoff99Frosst
@@ -23,7 +23,6 @@ dependencies:
   - xmltodict
   - python-constraint
     # Test-only/optional/dev
-  - py  # Remove after pytest 7.2 dust settles
   - pytest
   - pytest-cov
   - pytest-xdist

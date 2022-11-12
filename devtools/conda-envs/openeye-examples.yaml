@@ -7,7 +7,7 @@ channels:
 dependencies:
   - python
   - pip
-  - py  # Remove after pytest 7.2 dust settles
+  - packaging
   - pytest
   - pytest-cov
   - pytest-xdist
@@ -22,7 +22,7 @@ dependencies:
   - packaging
   - openmm==8.0.0dev2
   - openff-forcefields
-  - openff-units >=0.1.7
+  - openff-units >=0.2
   - openff-utilities >=0.1.5
   - openff-interchange-base >0.2.0rc6
   - smirnoff99Frosst

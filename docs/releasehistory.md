@@ -6,15 +6,46 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+## Current release
 
-## Current development
+### Behavior changes
+- [PR #1462](https://github.com/openforcefield/openff-toolkit/pull/1462): Makes residue
+  numbers added by `Molecule.perceive_residues` strings (previously they were ints), to 
+  match the behavior of `Topology.from_openmm` and other hierarchy info-setting methods. 
+
+### Bugfixes
+- [PR #1459](https://github.com/openforcefield/openff-toolkit/pull/1459): Fixes
+  [#1430](https://github.com/openforcefield/openff-toolkit/issues/1430), where 
+  `Topology.from_openmm` would mis-assign atom names (and probably also 
+  hierarchy metadata as well).
+- [PR #1462](https://github.com/openforcefield/openff-toolkit/pull/1462): Fixes
+  [#1461](https://github.com/openforcefield/openff-toolkit/issues/1461), where the 
+  default `Molecule.residues` iterator wouldn't sort by residue number correctly 
+  when residue information was added by `Molecule.perceive_residues`.
+
+
+## 0.11.3 Bugfix release
+
+
+- [PR #1460](https://github.com/openforcefield/openff-toolkit/pull/1460): Disables error causing 
+  [Issue #1432](https://github.com/openforcefield/openff-toolkit/issues/1432), where 
+  `Molecule.from_polymer_pdb` would sometimes issue stereochemistry errors when reading valid 
+  PDBs using the RDKit backend.  
+
+
+### Bugfixes
+- [PR #1436](https://github.com/openforcefield/openff-toolkit/pull/1436): Fix a small bug introduced in 0.11.2, where running with OpenEye installed but not licensed could lead to a crash.
+- [PR #1444](https://github.com/openforcefield/openff-toolkit/pull/1444): Update for pint 0.20.
 
 ### Examples updates
 - [PR #1447](https://github.com/openforcefield/openff-toolkit/pull/1447): Fixed units of tolerance used in OpenMM minimization in Toolkit Showcase example notebook (from @ziyuanzhao2000)
 
+### Improved documentation and warnings
+- [PR #1442](https://github.com/openforcefield/openff-toolkit/pull/1442): Doctests added to CI, leading to numerous fixed docstrings and examples therein.
+
 ### Miscellaneous
 - [PR #1413](https://github.com/openforcefield/openff-toolkit/pull/1413): Remove some large and unused data files from the test suite.
-
+- [PR #1434](https://github.com/openforcefield/openff-toolkit/pull/1434): Remove dependency on `typing_extensions`.
 
 ## 0.11.2 Bugfix release
 
