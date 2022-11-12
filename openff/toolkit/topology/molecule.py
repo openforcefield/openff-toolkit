@@ -49,6 +49,7 @@ import numpy as np
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
 from openff.utilities.exceptions import MissingOptionalDependencyError
+from packaging import version
 
 from openff.toolkit.utils.exceptions import (
     HierarchySchemeNotFoundException,
@@ -5405,7 +5406,7 @@ class Molecule(FrozenMolecule):
                 self.atoms[atom_idx].metadata["residue_name"] = match_dict[
                     "residue_name"
                 ]
-                self.atoms[atom_idx].metadata["residue_number"] = residue_num + 1
+                self.atoms[atom_idx].metadata["residue_number"] = str(residue_num + 1)
                 self.atoms[atom_idx].metadata["insertion_code"] = " "
                 self.atoms[atom_idx].metadata["atom_name"] = match_dict["atom_names"][
                     smarts_idx
@@ -5681,9 +5682,11 @@ class HierarchyScheme:
         Semantically sort the HierarchyElements belonging to this object, according to
         their identifiers.
         """
-        self.hierarchy_elements.sort(
-            key=lambda x: ".".join([str(i) for i in x.identifier])
-        )
+        # hard-code the sort_func value here, since it's hard to serialize safely
+        def sort_func(x):
+            return version.parse(".".join([str(i) for i in x.identifier]))
+
+        self.hierarchy_elements.sort(key=sort_func)
 
     def __str__(self):
         return (
