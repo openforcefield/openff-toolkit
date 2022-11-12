@@ -151,7 +151,9 @@ jobs:
         run: |
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_examples.py"
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
-          PYTEST_ARGS+=" --runslow"
+          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
+            PYTEST_ARGS+=" --runslow"
+          fi
           pytest $PYTEST_ARGS openff/toolkit/tests/
 
       - name: Run code snippets in docs
