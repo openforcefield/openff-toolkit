@@ -6,7 +6,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-## Current release
+## 0.11.4 Bugfix release
 
 ### Behavior changes
 - [PR #1462](https://github.com/openforcefield/openff-toolkit/pull/1462): Makes residue
