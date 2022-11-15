@@ -774,7 +774,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return molecules
 
-    def enumerate_tautomers(self, molecule, max_states=20):
+    def enumerate_tautomers(
+        self,
+        molecule: "Molecule",
+        max_states: int = 20,
+    ) -> List["Molecule"]:
         """
         Enumerate the possible tautomers of the current molecule.
 
@@ -789,7 +793,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         Returns
         -------
         molecules: List[openff.toolkit.topology.Molecule]
-            A list of openff.toolkit.topology.Molecule instances not including the input molecule.
+            A list of openff.toolkit.topology.Molecule instances including the input molecule.
         """
 
         from rdkit import Chem
@@ -808,8 +812,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             mol = self.from_smiles(
                 Chem.MolToSmiles(taut_hs), allow_undefined_stereo=True
             )
-            if mol != molecule:
-                molecules.append(mol)
+            molecules.append(mol)
 
         return molecules[:max_states]
 

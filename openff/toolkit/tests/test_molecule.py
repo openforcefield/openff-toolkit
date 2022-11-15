@@ -1700,9 +1700,9 @@ class TestMolecule:
             ethanol.remap(wrong_index_mapping, current_to_new=True)
 
     tautomer_data = [
-        {"molecule": "Oc1c(cccc3)c3nc2ccncc12", "tautomers": 2},
-        {"molecule": "CN=c1nc[nH]cc1", "tautomers": 2},
-        {"molecule": "c1[nH]c2c(=O)[nH]c(nc2n1)N", "tautomers": 14},
+        {"smiles": "Oc1c(cccc3)c3nc2ccncc12", "n_tautomers": 3},
+        {"smiles": "CN=c1nc[nH]cc1", "n_tautomers": 3},
+        {"smiles": "c1[nH]c2c(=O)[nH]c(nc2n1)N", "n_tautomers": 15},
     ]
 
     @pytest.mark.parametrize(
@@ -1715,19 +1715,15 @@ class TestMolecule:
         if toolkit_class.is_available():
             toolkit = toolkit_class()
             mol = Molecule.from_smiles(
-                molecule_data["molecule"],
+                molecule_data["smiles"],
                 allow_undefined_stereo=True,
                 toolkit_registry=toolkit,
             )
 
             tautomers = mol.enumerate_tautomers(toolkit_registry=toolkit)
 
-            assert len(tautomers) == molecule_data["tautomers"]
-            assert mol not in tautomers
-            # check that the molecules are not isomorphic of the input
-            for taut in tautomers:
-                assert taut.n_conformers == 0
-                assert mol.is_isomorphic_with(taut) is False
+            assert len(tautomers) == molecule_data["n_tautomers"]
+            assert mol in tautomers
 
         else:
             pytest.skip("Required toolkit is unavailable")
@@ -1735,37 +1731,36 @@ class TestMolecule:
     @pytest.mark.parametrize(
         "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
     )
-    def test_enumerating_tautomers_options(self, toolkit_class):
-        """Test the enumeration options"""
+    def test_enumerating_tautomers_max_states(self, toolkit_class):
+        """Test the `max_states` argument."""
 
         if toolkit_class.is_available():
             toolkit = toolkit_class()
-            # test the max molecules option
             mol = Molecule.from_smiles(
                 "c1[nH]c2c(=O)[nH]c(nc2n1)N",
                 toolkit_registry=toolkit,
                 allow_undefined_stereo=True,
             )
 
-            tauts_no = 5
+            n_tautomers = 5
             tautomers = mol.enumerate_tautomers(
-                max_states=tauts_no, toolkit_registry=toolkit
+                max_states=n_tautomers, toolkit_registry=toolkit
             )
-            assert len(tautomers) <= tauts_no
-            assert mol not in tautomers
+            assert len(tautomers) <= n_tautomers + 1
+            assert mol in tautomers
 
     @pytest.mark.parametrize(
         "toolkit_class", [RDKitToolkitWrapper, OpenEyeToolkitWrapper]
     )
     def test_enumerating_no_tautomers(self, toolkit_class):
-        """Test that the toolkits return an empty list if there are no tautomers to enumerate."""
+        """Test that the toolkits return a list of the input molecule if no tautomers were found."""
 
         if toolkit_class.is_available():
             toolkit = toolkit_class()
             mol = Molecule.from_smiles("CC", toolkit_registry=toolkit)
 
             tautomers = mol.enumerate_tautomers(toolkit_registry=toolkit)
-            assert tautomers == []
+            assert tautomers == [mol]
 
         else:
             pytest.skip("Required toolkit is unavailable")

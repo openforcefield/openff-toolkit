@@ -13,7 +13,7 @@ import re
 import tempfile
 from collections import defaultdict
 from functools import wraps
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 import numpy as np
 from cachetools import LRUCache, cached
@@ -879,7 +879,11 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return molecules[:max_isomers]
 
-    def enumerate_tautomers(self, molecule, max_states=20):
+    def enumerate_tautomers(
+        self,
+        molecule: "Molecule",
+        max_states: int = 20,
+    ) -> List["Molecule"]:
         """
         Enumerate the possible tautomers of the current molecule
 
@@ -894,7 +898,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         Returns
         -------
         molecules: List[openff.toolkit.topology.Molecule]
-            A list of openff.toolkit.topology.Molecule instances excluding the input molecule.
+            A list of openff.toolkit.topology.Molecule instances including the input molecule.
         """
         from openeye import oequacpac
 
@@ -911,16 +915,11 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         tautomer_options.SetCarbonHybridization(False)
 
         for tautomer in oequacpac.OEEnumerateTautomers(oemol, tautomer_options):
-            # remove the input tautomer from the output
-            taut = self.from_openeye(
-                tautomer, allow_undefined_stereo=True, _cls=molecule.__class__
-            )
-            if taut != molecule:
-                tautomers.append(
-                    self.from_openeye(
-                        tautomer, allow_undefined_stereo=True, _cls=molecule.__class__
-                    )
+            tautomers.append(
+                self.from_openeye(
+                    tautomer, allow_undefined_stereo=True, _cls=molecule.__class__
                 )
+            )
 
         return tautomers
 
