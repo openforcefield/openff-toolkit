@@ -4061,7 +4061,7 @@ class FrozenMolecule(Serializable):
             )
 
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            molecules = toolkit_registry.enumerate_tautomers(
+            molecules = toolkit_registry.enumerate_tautomers(  # type: ignore[attr-defined]
                 self, max_states=max_states
             )
 
