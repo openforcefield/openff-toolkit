@@ -38,6 +38,8 @@ def test_force_field_custom_handler():
     assert parameter_handler is not None
     assert parameter_handler.__class__.__name__ == "CustomHandler"
 
+    assert parameter_handler.__class__ in force_field._plugin_parameter_handler_classes
+
 
 def test_load_handler_plugins():
     """Tests that parameter handlers can be registered as plugins."""
