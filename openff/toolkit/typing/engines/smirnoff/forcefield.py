@@ -953,7 +953,7 @@ class ForceField:
         # file handler or a simple XML string.
         if isinstance(source, str):
             # Try first the simple path.
-            searched_dirs_paths = [""]
+            searched_dirs_paths: List[str] = [""]
             # Then try a relative file path w.r.t. an installed directory.
             searched_dirs_paths.extend(_get_installed_offxml_dir_paths())
             # Finally, search in openff/toolkit/data/.
@@ -965,8 +965,7 @@ class ForceField:
             # Determine the actual path of the file.
             # TODO: What is desired toolkit behavior if two files with the desired name are available?
             for dir_path in searched_dirs_paths:
-                dir_path = pathlib.Path(dir_path)
-                for file_path in dir_path.glob("*.offxml"):
+                for file_path in pathlib.Path(dir_path).glob("*.offxml"):
                     if str(file_path).lower().endswith(source.lower()):
                         source = str(file_path.absolute())
                         break
