@@ -765,17 +765,20 @@ class ForceField:
                 smirnoff_data, allow_cosmetic_attributes=allow_cosmetic_attributes
             )
 
-    def _to_smirnoff_data(self, discard_cosmetic_attributes=False):
+    def _to_smirnoff_data(self, discard_cosmetic_attributes=False) -> dict:
         """
-        Convert this ForceField and all related ParameterHandlers to an dict representing a SMIRNOFF
+        Convert this ForceField and all related ParameterHandlers to a dict representing a SMIRNOFF
         data object.
+
+        Parameters
+        ----------
+        discard_cosmetic_attributes : bool, optional. Default=False
+            Whether to discard any non-spec attributes stored in the ForceField.
 
         Returns
         -------
-        smirnoff_dict : dict
+        smirnoff_data : dict
             A nested dict representing this ForceField as a SMIRNOFF data object.
-        discard_cosmetic_attributes : bool, optional. Default=False
-            Whether to discard any non-spec attributes stored in the ForceField.
 
         """
         l1_dict = dict()
@@ -800,19 +803,19 @@ class ForceField:
                 discard_cosmetic_attributes=discard_cosmetic_attributes
             )
 
-        smirnoff_dict = dict()
-        smirnoff_dict["SMIRNOFF"] = l1_dict
-        smirnoff_dict = convert_all_quantities_to_string(smirnoff_dict)
-        return smirnoff_dict
+        smirnoff_data = dict()
+        smirnoff_data["SMIRNOFF"] = l1_dict
+        smirnoff_data = convert_all_quantities_to_string(smirnoff_data)
+        return smirnoff_data
 
     # TODO: Should we call this "from_dict"?
-    def _load_smirnoff_data(self, smirnoff_data, allow_cosmetic_attributes=False):
+    def _load_smirnoff_data(self, smirnoff_data: dict, allow_cosmetic_attributes=False):
         """
         Add parameters from a SMIRNOFF-format data structure to this ForceField.
 
         Parameters
         ----------
-        smirnoff_data : dict()
+        smirnoff_data : dict
             A representation of a SMIRNOFF-format data structure. Begins at top-level 'SMIRNOFF' key.
         allow_cosmetic_attributes : bool, optional. Default = False
             Whether to permit non-spec kwargs in smirnoff_data.
@@ -925,7 +928,7 @@ class ForceField:
                 parameter_list_dict, allow_cosmetic_attributes=allow_cosmetic_attributes
             )
 
-    def parse_smirnoff_from_source(self, source):
+    def parse_smirnoff_from_source(self, source) -> dict:
         """
         Reads a SMIRNOFF data structure from a source, which can be one of many types.
 

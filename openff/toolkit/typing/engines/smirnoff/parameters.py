@@ -2300,7 +2300,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
     def to_dict(self, discard_cosmetic_attributes=False):
         """
-        Convert this ParameterHandler to an dict, compliant with the SMIRNOFF data spec.
+        Convert this ParameterHandler to a dict, compliant with the SMIRNOFF data spec.
 
         Parameters
         ----------
