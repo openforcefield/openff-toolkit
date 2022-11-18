@@ -29,7 +29,7 @@ __all__ = [
 import contextlib
 import functools
 import logging
-from typing import List, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import pint
@@ -341,7 +341,7 @@ except ImportError:
     pass
 
 
-def extract_serialized_units_from_dict(input_dict):
+def extract_serialized_units_from_dict(input_dict: dict) -> Tuple[Dict, Dict]:
     """
     Create a mapping of (potentially unit-bearing) quantities from a dictionary, where some keys exist in pairs like
     {'length': 8, 'length_unit':'angstrom'}.
@@ -362,9 +362,7 @@ def extract_serialized_units_from_dict(input_dict):
     """
 
     # TODO: Should this scheme also convert "1" to int(1) and "8.0" to float(8.0)?
-    from collections import OrderedDict
-
-    attached_units = OrderedDict()
+    attached_units = dict()
     unitless_dict = input_dict.copy()
     keys_to_delete = []
     for key in input_dict.keys():
@@ -916,7 +914,7 @@ def sort_smirnoff_dict(data):
             sorted_dict[key] = sort_smirnoff_dict(val)
         elif isinstance(val, list):
             # Handle case of ParameterLists, which show up in
-            # the smirnoff dicts as lists of OrderedDicts
+            # the smirnoff dicts as lists of OrderedDicts or dicts
             new_parameter_list = list()
             for param in val:
                 new_parameter_list.append(sort_smirnoff_dict(param))
