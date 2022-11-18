@@ -138,3 +138,9 @@ jobs:
           NB_ARGS+=" --ignore=examples/external/swap_amber_parameters/swap_existing_ligand_parameters_with_openmmforcefields.ipynb"
 
           python -m pytest $PYTEST_ARGS $NB_ARGS examples
+
+      - name: Upload OpenMM files
+        uses: actions/upload-artifact@v3
+        with:
+          name: my-artifact
+          path: examples/toolkit_showcase/archive.tar
