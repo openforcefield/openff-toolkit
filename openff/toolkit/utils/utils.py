@@ -338,7 +338,7 @@ try:
         return from_openmm(obj)
 
 except ImportError:
-    pass  # prgama: nocover
+    pass  # pragma: nocover
 
 
 def extract_serialized_units_from_dict(input_dict: dict) -> Tuple[Dict, Dict]:
