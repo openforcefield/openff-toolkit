@@ -141,6 +141,7 @@ jobs:
           python -m pytest $PYTEST_ARGS $NB_ARGS examples
 
       - name: Upload OpenMM files
+        if: always()
         uses: actions/upload-artifact@v3
         with:
           name: my-artifact
