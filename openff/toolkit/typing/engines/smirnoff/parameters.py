@@ -97,11 +97,7 @@ from openff.toolkit.utils.exceptions import (
     UnassignedValenceParameterException,
 )
 from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
-from openff.toolkit.utils.utils import (
-    attach_units,
-    extract_serialized_units_from_dict,
-    object_to_quantity,
-)
+from openff.toolkit.utils.utils import object_to_quantity
 
 logger = logging.getLogger(__name__)
 
@@ -1896,12 +1892,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             attribute of the parameter. If False, non-spec kwargs will raise an exception.
 
         """
-        unitless_kwargs, attached_units = extract_serialized_units_from_dict(
-            section_dict
-        )
-        smirnoff_data = attach_units(unitless_kwargs, attached_units)
-
-        for key, val in smirnoff_data.items():
+        for key, val in section_dict.items():
             if self._INFOTYPE is not None:
                 element_name = self._INFOTYPE._ELEMENT_NAME
                 # Skip sections that aren't the parameter list
@@ -1913,9 +1904,8 @@ class ParameterHandler(_ParameterAttributeHandler):
 
             # If we're reading the parameter list, iterate through and attach units to
             # each parameter_dict, then use it to initialize a ParameterType
-            for unitless_param_dict in val:
+            for param_dict in val:
 
-                param_dict = attach_units(unitless_param_dict, attached_units)
                 new_parameter = self._INFOTYPE(
                     **param_dict, allow_cosmetic_attributes=allow_cosmetic_attributes
                 )

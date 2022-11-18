@@ -1,13 +1,10 @@
 from openff.toolkit.utils.utils import (
     all_subclasses,
-    attach_units,
     convert_0_1_smirnoff_to_0_2,
     convert_0_2_smirnoff_to_0_3,
     convert_all_quantities_to_string,
     convert_all_strings_to_quantity,
     deserialize_numpy,
-    detach_units,
-    extract_serialized_units_from_dict,
     get_data_file_path,
     get_molecule_parameterIDs,
     inherit_docstrings,
