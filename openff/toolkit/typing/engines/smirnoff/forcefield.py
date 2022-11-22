@@ -1486,11 +1486,7 @@ class ForceField:
         for molecule_idx, molecule in enumerate(topology.reference_molecules):
             top_mol = Topology.from_molecules([molecule])
             current_molecule_labels = dict()
-            param_is_list = False
             for tag, parameter_handler in self._parameter_handlers.items():
-
-                if type(parameter_handler) == VirtualSiteHandler:
-                    param_is_list = True
 
                 matches = parameter_handler.find_matches(top_mol)
                 print(matches)
@@ -1506,6 +1502,8 @@ class ForceField:
 
                 # Now make parameter_matches into a dict mapping
                 # match objects to ParameterTypes
+
+                param_is_list = issubclass(type(parameter_handler), VirtualSiteHandler)
 
                 if param_is_list:
                     for match in matches:
