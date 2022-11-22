@@ -34,7 +34,7 @@ dependencies:
   - qcelemental
   - qcportal
   - qcengine
-  - openff-interchange
+  - openff-interchange <0.2
   # Typing
   - mypy
   - typing-extensions
