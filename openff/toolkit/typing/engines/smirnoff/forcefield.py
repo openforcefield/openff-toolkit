@@ -1503,7 +1503,7 @@ class ForceField:
                 # Now make parameter_matches into a dict mapping
                 # match objects to ParameterTypes
 
-                param_is_list = issubclass(type(parameter_handler), VirtualSiteHandler)
+                param_is_list = isinstance(parameter_handler, VirtualSiteHandler)
 
                 if param_is_list:
                     for match in matches:
