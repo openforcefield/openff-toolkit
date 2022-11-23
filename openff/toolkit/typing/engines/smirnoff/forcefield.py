@@ -287,14 +287,12 @@ class ForceField:
             parameter_handler_classes = all_subclasses(ParameterHandler)
         if load_plugins:
 
-            registered_handlers = load_handler_plugins()
+            plugin_classes = load_handler_plugins()
 
-            # Make sure the same handlers aren't added twice.
-            parameter_handler_classes += [
-                handler
-                for handler in registered_handlers
-                if handler not in parameter_handler_classes
-            ]
+            for handler in plugin_classes:
+                if handler not in parameter_handler_classes:
+                    parameter_handler_classes.append(handler)
+                    self._plugin_parameter_handler_classes.append(handler)
 
         self._register_parameter_handler_classes(parameter_handler_classes)
 
@@ -323,6 +321,8 @@ class ForceField:
         self._parameter_handlers = (
             OrderedDict()
         )  # ParameterHandler classes to be instantiated for each parameter type
+        # ParameterHandlers that were registered via the plugin interface
+        self._plugin_parameter_handler_classes = list()
         self._parameter_io_handler_classes = (
             OrderedDict()
         )  # ParameterIOHandler classes that _can_ be initialiazed if needed
