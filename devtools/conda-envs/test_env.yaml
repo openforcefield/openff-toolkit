@@ -32,7 +32,7 @@ dependencies:
   - bson
   - msgpack-python
   - qcelemental
-  - qcportal
+  - qcportal >= 0.15
   - qcengine
   - openff-interchange <0.2
   # Typing
