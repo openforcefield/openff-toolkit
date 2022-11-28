@@ -1026,7 +1026,9 @@ class FrozenMolecule(Serializable):
             self.generate_unique_atom_names()
 
     def strip_atom_stereochemistry(
-        self, smarts, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
+        self,
+        smarts: str,
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """Delete stereochemistry information for certain atoms, if it is present.
         This method can be used to "normalize" molecules imported from different cheminformatics
@@ -1034,7 +1036,7 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        smarts: str or ChemicalEnvironment
+        smarts: str
             Tagged SMARTS with a single atom with index 1. Any matches for this atom will have any assigned
             stereocheistry information removed.
         toolkit_registry : a :class:`ToolkitRegistry` or :class:`ToolkitWrapper` object, optional,
@@ -1042,11 +1044,9 @@ class FrozenMolecule(Serializable):
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for I/O operations
 
         """
-        from openff.toolkit.typing.chemistry.environment import AtomChemicalEnvironment
-
-        chem_env = AtomChemicalEnvironment(smarts)
         matches = self.chemical_environment_matches(
-            chem_env, toolkit_registry=toolkit_registry
+            smarts,
+            toolkit_registry=toolkit_registry,
         )
 
         for match in set(matches):
@@ -1802,15 +1802,15 @@ class FrozenMolecule(Serializable):
 
     @staticmethod
     def are_isomorphic(
-        mol1,
-        mol2,
-        return_atom_map=False,
-        aromatic_matching=True,
-        formal_charge_matching=True,
-        bond_order_matching=True,
-        atom_stereochemistry_matching=True,
-        bond_stereochemistry_matching=True,
-        strip_pyrimidal_n_atom_stereo=True,
+        mol1: Union["FrozenMolecule", nx.Graph],
+        mol2: Union["FrozenMolecule", nx.Graph],
+        return_atom_map: bool = False,
+        aromatic_matching: bool = True,
+        formal_charge_matching: bool = True,
+        bond_order_matching: bool = True,
+        atom_stereochemistry_matching: bool = True,
+        bond_stereochemistry_matching: bool = True,
+        strip_pyrimidal_n_atom_stereo: bool = True,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
@@ -1958,7 +1958,7 @@ class FrozenMolecule(Serializable):
                 return is_equal
 
         else:
-            edge_match_func = None
+            edge_match_func = None  # type: ignore
 
         # Here we should work out what data type we have, also deal with lists?
         def to_networkx(data):
@@ -1972,7 +1972,7 @@ class FrozenMolecule(Serializable):
                 # Molecule class instance
                 if strip_pyrimidal_n_atom_stereo:
                     # Make a copy of the molecule so we don't modify the original
-                    data = deepcopy(data)
+                    data: FrozenMolecule = deepcopy(data)
                     data.strip_atom_stereochemistry(
                         SMARTS, toolkit_registry=toolkit_registry
                     )
@@ -2010,7 +2010,7 @@ class FrozenMolecule(Serializable):
         else:
             return isomorphic, None
 
-    def is_isomorphic_with(self, other, **kwargs):
+    def is_isomorphic_with(self, other: Union["FrozenMolecule", nx.Graph], **kwargs):
         """
         Check if the molecule is isomorphic with the other molecule which can be an openff.toolkit.topology.Molecule
         or nx.Graph(). Full matching is done using the options described bellow.
@@ -3425,17 +3425,17 @@ class FrozenMolecule(Serializable):
 
     def chemical_environment_matches(
         self,
-        query,
-        unique=False,
+        query: str,
+        unique: bool = False,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
-        """Find matches in the molecule for a SMARTS string or ``ChemicalEnvironment`` query
+        """Find matches in the molecule for a SMARTS string
 
         Parameters
         ----------
-        query : str or ChemicalEnvironment
-            SMARTS string (with one or more tagged atoms) or ``ChemicalEnvironment`` query.
-            Query will internally be resolved to SMIRKS using ``query.asSMIRKS()`` if it has an ``.asSMIRKS`` method.
+        query : str
+            SMARTS string (with one or more tagged atoms).
+        unique : bool, default=False
         toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
             or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for chemical environment matches
@@ -3460,14 +3460,10 @@ class FrozenMolecule(Serializable):
              ``chemical_environment_matches``
 
         """
-        # Resolve to SMIRKS if needed
-        # TODO: Update this to use updated ChemicalEnvironment API
-        if hasattr(query, "smirks"):
-            smirks = query.smirks
-        elif type(query) == str:
+        if isinstance(query, str):
             smirks = query
         else:
-            raise ValueError("'query' must be either a string or a ChemicalEnvironment")
+            raise ValueError("'query' must be a SMARTS/SMIRKS string")
 
         # Use specified cheminformatics toolkit to determine matches with specified aromaticity model
         # TODO: Simplify this by requiring a toolkit registry for the molecule?
@@ -3480,7 +3476,7 @@ class FrozenMolecule(Serializable):
                 unique=unique,
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            matches = toolkit_registry.find_smarts_matches(
+            matches = toolkit_registry.find_smarts_matches(  # type: ignore[attr-defined]
                 self,
                 smirks,
                 unique=unique,
