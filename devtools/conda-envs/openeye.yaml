@@ -31,8 +31,8 @@ dependencies:
   - msgpack-python
   - xmltodict
   - qcelemental
-  - qcportal
+  - qcportal >= 0.15
   - qcengine
   - mdtraj
-  - openff-interchange
+  - openff-interchange < 0.2
   - python-constraint
