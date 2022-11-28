@@ -1489,9 +1489,6 @@ class ForceField:
             for tag, parameter_handler in self._parameter_handlers.items():
                 param_is_list = False
 
-                if type(parameter_handler) == VirtualSiteHandler:
-                    param_is_list = True
-
                 matches = parameter_handler.find_matches(top_mol)
                 # Remove the chemical environment matches from the
                 # matched results.
@@ -1505,6 +1502,8 @@ class ForceField:
 
                 # Now make parameter_matches into a dict mapping
                 # match objects to ParameterTypes
+
+                param_is_list = isinstance(parameter_handler, VirtualSiteHandler)
 
                 if param_is_list:
                     for match in matches:
