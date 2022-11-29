@@ -76,7 +76,14 @@ from packaging.version import Version
 
 from openff.toolkit.topology import ImproperDict, TagSortedDict, Topology, ValenceDict
 from openff.toolkit.topology.molecule import Molecule
-from openff.toolkit.typing.chemistry import ChemicalEnvironment
+from openff.toolkit.typing.chemistry import (
+    ChemicalEnvironment,
+    AtomChemicalEnvironment,
+    BondChemicalEnvironment,
+    AngleChemicalEnvironment,
+    TorsionChemicalEnvironment,
+    ImproperChemicalEnvironment
+)
 from openff.toolkit.utils.collections import ValidatedDict, ValidatedList
 from openff.toolkit.utils.exceptions import (
     DuplicateParameterError,
@@ -1635,7 +1642,7 @@ class ParameterType(_ParameterAttributeHandler):
     parameter and the automatic serialization/deserialization into a ``dict``.
 
     >>> class MyBondParameter(ParameterType):
-    ...     _VALENCE_TYPE = 'Bond'
+    ...     _VALENCE_TYPE = BondChemicalEnvironment
     ...     _ELEMENT_NAME = 'Bond'
     ...     length = ParameterAttribute(unit=unit.angstrom)
     ...     k = ParameterAttribute(unit=unit.kilocalorie / unit.mole / unit.angstrom**2)
@@ -1664,7 +1671,7 @@ class ParameterType(_ParameterAttributeHandler):
     argument or through the decorator syntax.
 
     >>> class MyParameterType(ParameterType):
-    ...     _VALENCE_TYPE = 'Atom'
+    ...     _VALENCE_TYPE = AtomChemicalEnvironment
     ...     _ELEMENT_NAME = 'Atom'
     ...
     ...     attr_optional = ParameterAttribute(default=2)
@@ -1704,7 +1711,7 @@ class ParameterType(_ParameterAttributeHandler):
     is performed for each indexed attribute.
 
     >>> class MyTorsionType(ParameterType):
-    ...     _VALENCE_TYPE = 'ProperTorsion'
+    ...     _VALENCE_TYPE = TorsionChemicalEnvironment
     ...     _ELEMENT_NAME = 'Proper'
     ...     periodicity = IndexedParameterAttribute(converter=int)
     ...     k = IndexedParameterAttribute(unit=unit.kilocalorie / unit.mole)
@@ -1730,7 +1737,7 @@ class ParameterType(_ParameterAttributeHandler):
     """
 
     # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
-    _VALENCE_TYPE: Optional[str] = None
+    _VALENCE_TYPE: Optional[ChemicalEnvironment] = None
     # The string mapping to this ParameterType in a SMIRNOFF data source
     _ELEMENT_NAME: Optional[str] = None
 
@@ -1745,9 +1752,8 @@ class ParameterType(_ParameterAttributeHandler):
         # parameter type, raising an exception if it is invalid or doesn't
         # tag a valid set of atoms.
 
-        # TODO: Add check to make sure we can't make tree non-hierarchical
-        #       This would require parameter type knows which ParameterList it belongs to
-        ChemicalEnvironment.validate_smirks(smirks, validate_valence_type=True)
+        if self._VALENCE_TYPE is not None:
+            self._VALENCE_TYPE.validate_smirks(smirks, validate_valence_type=True)
         return smirks
 
     def __init__(self, smirks, allow_cosmetic_attributes=False, **kwargs):
@@ -2417,7 +2423,7 @@ class ConstraintHandler(ParameterHandler):
         .. warning :: This API is experimental and subject to change.
         """
 
-        _VALENCE_TYPE = "Bond"
+        _VALENCE_TYPE = None
         _ELEMENT_NAME = "Constraint"
 
         distance = ParameterAttribute(default=None, unit=unit.angstrom)
@@ -2440,7 +2446,7 @@ class BondHandler(ParameterHandler):
         """
 
         # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
-        _VALENCE_TYPE = "Bond"
+        _VALENCE_TYPE = BondChemicalEnvironment
         _ELEMENT_NAME = "Bond"
 
         length = ParameterAttribute(default=None, unit=unit.angstrom)
@@ -2579,7 +2585,7 @@ class AngleHandler(ParameterHandler):
         .. warning :: This API is experimental and subject to change.
         """
 
-        _VALENCE_TYPE = "Angle"  # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
+        _VALENCE_TYPE = AngleChemicalEnvironment
         _ELEMENT_NAME = "Angle"
 
         angle = ParameterAttribute(unit=unit.degree)
@@ -2625,7 +2631,7 @@ class ProperTorsionHandler(ParameterHandler):
         .. warning :: This API is experimental and subject to change.
         """
 
-        _VALENCE_TYPE = "ProperTorsion"
+        _VALENCE_TYPE = TorsionChemicalEnvironment
         _ELEMENT_NAME = "Proper"
 
         periodicity = IndexedParameterAttribute(converter=int)
@@ -2700,7 +2706,7 @@ class ImproperTorsionHandler(ParameterHandler):
         .. warning :: This API is experimental and subject to change.
         """
 
-        _VALENCE_TYPE = "ImproperTorsion"
+        _VALENCE_TYPE = ImproperChemicalEnvironment
         _ELEMENT_NAME = "Improper"
 
         periodicity = IndexedParameterAttribute(converter=int)
@@ -2784,7 +2790,7 @@ class vdWHandler(_NonbondedHandler):
         .. warning :: This API is experimental and subject to change.
         """
 
-        _VALENCE_TYPE = "Atom"  # ChemicalEnvironment valence type expected for SMARTS
+        _VALENCE_TYPE = AtomChemicalEnvironment
         _ELEMENT_NAME = "Atom"
 
         epsilon = ParameterAttribute(unit=unit.kilocalorie / unit.mole)
@@ -3325,7 +3331,7 @@ class GBSAHandler(ParameterHandler):
         .. warning :: This API is experimental and subject to change.
         """
 
-        _VALENCE_TYPE = "Atom"
+        _VALENCE_TYPE = AtomChemicalEnvironment
         _ELEMENT_NAME = "Atom"
 
         radius = ParameterAttribute(unit=unit.angstrom)
