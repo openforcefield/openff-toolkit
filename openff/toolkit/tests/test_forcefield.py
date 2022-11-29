@@ -2224,6 +2224,27 @@ class TestForceField:
         )
         force_field.label_molecules(Molecule.from_smiles("CF").to_topology())
 
+    def test_issue_1422(self):
+        """ Inherited plugin VirtualSite handlers should be detected
+        and treated like VirtualSites
+
+        https://github.com/openforcefield/openff-toolkit/issues/1422
+        """
+        class PluginVirtualSites(VirtualSiteHandler):
+            _TAGNAME = "InheritedTestVirtualSites"
+
+            def _find_matches(
+                    self,
+                    entity: Topology,
+                    transformed_dict_cls=dict,
+                    unique=False,
+            ) -> Dict[Tuple[int], List[ParameterHandler._Match]]:
+                return {(0,): [ParameterHandler._Match(None, None), ParameterHandler._Match(None, None)]}
+
+        force_field = ForceField()
+        force_field.get_parameter_handler("InheritedTestVirtualSites")
+        force_field.label_molecules(Molecule.from_smiles("CO").to_topology())
+
 
 def generate_monatomic_ions():
     return (
