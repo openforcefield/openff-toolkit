@@ -965,7 +965,7 @@ class TestParameterList:
             k=6 * unit.kilocalorie / unit.mole / unit.angstrom**2,
         )
         p3 = BondHandler.BondType(
-            smirks="[*:1]#[*:3]",
+            smirks="[*:1]#[*:2]",
             length=1.03 * unit.angstrom,
             k=7 * unit.kilocalorie / unit.mole / unit.angstrom**2,
         )
@@ -987,7 +987,7 @@ class TestParameterList:
             k=6 * unit.kilocalorie / unit.mole / unit.angstrom**2,
         )
         p3 = BondHandler.BondType(
-            smirks="[*:1]#[*:3]",
+            smirks="[*:1]#[*:2]",
             length=1.03 * unit.angstrom,
             k=7 * unit.kilocalorie / unit.mole / unit.angstrom**2,
         )

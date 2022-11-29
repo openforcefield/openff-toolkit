@@ -65,6 +65,7 @@ from typing import (
     Literal,
     Optional,
     Tuple,
+    Type,
     Union,
     cast,
     get_args,
@@ -1736,8 +1737,8 @@ class ParameterType(_ParameterAttributeHandler):
 
     """
 
-    # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
-    _VALENCE_TYPE: Optional[ChemicalEnvironment] = None
+    # ChemicalEnvironment valence type expected by SMARTS string for this Handler
+    _VALENCE_TYPE: Optional[Type[ChemicalEnvironment]] = None
     # The string mapping to this ParameterType in a SMIRNOFF data source
     _ELEMENT_NAME: Optional[str] = None
 

@@ -891,7 +891,9 @@ class TestForceField:
     @pytest.mark.parametrize("force_field_file", [*get_available_force_fields()])
     def test_get_available_force_fields_loadable(self, full_path, force_field_file):
         """Ensure get_available_force_fields returns load-able files"""
-        if "ff14sb" in force_field_file and "off_imp" not in force_field_file:
+        if ("ff14sb" in force_field_file and "off_imp" not in force_field_file) or (
+            "ff14sb_off_impropers_0.0.1.offxml" == force_field_file
+        ):
             pytest.skip(
                 "Only the variants of the ff14SB port with SMIRNOFF-style impropers "
                 "can be loaded by the toolkit by default. Those with Amber-style impropers"
