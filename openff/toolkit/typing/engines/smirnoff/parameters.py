@@ -77,12 +77,12 @@ from packaging.version import Version
 from openff.toolkit.topology import ImproperDict, TagSortedDict, Topology, ValenceDict
 from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.typing.chemistry import (
-    ChemicalEnvironment,
+    AngleChemicalEnvironment,
     AtomChemicalEnvironment,
     BondChemicalEnvironment,
-    AngleChemicalEnvironment,
+    ChemicalEnvironment,
+    ImproperChemicalEnvironment,
     TorsionChemicalEnvironment,
-    ImproperChemicalEnvironment
 )
 from openff.toolkit.utils.collections import ValidatedDict, ValidatedList
 from openff.toolkit.utils.exceptions import (
