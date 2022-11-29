@@ -564,6 +564,9 @@ class ForceField:
             )
 
         self._parameter_handlers[parameter_handler._TAGNAME] = parameter_handler
+        self._parameter_handler_classes[parameter_handler._TAGNAME] = type(
+            parameter_handler
+        )
 
     def register_parameter_io_handler(self, parameter_io_handler):
         """
