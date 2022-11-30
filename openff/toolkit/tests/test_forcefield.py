@@ -1883,6 +1883,25 @@ class TestForceField:
         )
         force_field.label_molecules(Molecule.from_smiles("CF").to_topology())
 
+    def test_issue_1475(self):
+        """Reproduce issue #1475."""
+        force_field = ForceField("openff-2.0.0.offxml")
+
+        class BogusHandler(ParameterHandler):
+            _TAGNAME = "bogus"
+
+        bogus_handler = BogusHandler(version=0.3)
+
+        force_field.register_parameter_handler(bogus_handler)
+
+        assert "bogus" in force_field._parameter_handlers.keys()
+        assert bogus_handler in force_field._parameter_handlers.values()
+
+        assert "bogus" in force_field._parameter_handler_classes.keys()
+        assert BogusHandler in force_field._parameter_handler_classes.values()
+
+        assert force_field["bogus"] is not None
+
 
 class TestForceFieldSerializaiton:
     def test_json_dump(self):
