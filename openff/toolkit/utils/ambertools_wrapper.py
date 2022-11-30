@@ -233,19 +233,27 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
                 )
 
                 # rdkit method
-                from rdkit import Chem ## DON'T MERGE UNTIL THIS LINE IS REMOVED
-                rdmol = Chem.MolFromPDBFile('sqm.pdb', removeHs=False)
-                new_mol = Molecule.from_rdkit(rdmol, allow_undefined_stereo=True, hydrogens_are_explicit=True)
-                are_isomorphic, _ = Molecule.are_isomorphic(new_mol, mol_copy,
-                                                            aromatic_matching=False,
-                                                            formal_charge_matching=False,
-                                                            bond_order_matching=False,
-                                                            atom_stereochemistry_matching=False,
-                                                            bond_stereochemistry_matching=False,
-                                                            strip_pyrimidal_n_atom_stereo=True)
+                from rdkit import Chem  # # DON'T MERGE UNTIL THIS LINE IS REMOVED
+
+                rdmol = Chem.MolFromPDBFile("sqm.pdb", removeHs=False)
+                new_mol = Molecule.from_rdkit(
+                    rdmol, allow_undefined_stereo=True, hydrogens_are_explicit=True
+                )
+                are_isomorphic, _ = Molecule.are_isomorphic(
+                    new_mol,
+                    mol_copy,
+                    aromatic_matching=False,
+                    formal_charge_matching=False,
+                    bond_order_matching=False,
+                    atom_stereochemistry_matching=False,
+                    bond_stereochemistry_matching=False,
+                    strip_pyrimidal_n_atom_stereo=True,
+                )
                 if not are_isomorphic:
-                    print("Warning: A connectivity change was detected during AM1 optimization. Falling back to "
-                          "determining charges using AM1 on initial conformer with no optimization.")
+                    print(
+                        "Warning: A connectivity change was detected during AM1 optimization. Falling back to "
+                        "determining charges using AM1 on initial conformer with no optimization."
+                    )
                     subprocess.check_output(
                         [
                             "antechamber",
@@ -266,7 +274,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
                             "-nc",
                             str(net_charge),
                             "-ek",
-                            "maxcyc=0"
+                            "maxcyc=0",
                         ]
                     )
                 # Write out just charges

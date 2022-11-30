@@ -3497,11 +3497,15 @@ class TestAmberToolsToolkitWrapper:
             toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
         )
         mol = Molecule.from_smiles("C1=[NH+]C=C(C(=O)[O-])C=[NH+]1")
-        toolkit_registry.call("assign_partial_charges", mol, partial_charge_method='am1bcc')
+        toolkit_registry.call(
+            "assign_partial_charges", mol, partial_charge_method="am1bcc"
+        )
         for atom in mol.atoms:
             if atom.symbol == "O":
-                assert abs(atom.partial_charge - (-0.65 * unit.elementary_charge)) < 0.05 * unit.elementary_charge
-
+                assert (
+                    abs(atom.partial_charge - (-0.65 * unit.elementary_charge))
+                    < 0.05 * unit.elementary_charge
+                )
 
     def test_assign_partial_charges_bad_charge_method(self):
         """Test AmberToolsToolkitWrapper assign_partial_charges() for a nonexistent charge method"""
