@@ -8,6 +8,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### Bugfixes
+- [PR #1476](https://github.com/openforcefield/openff-toolkit/pull/1476): Fixes
+  [#1475](https://github.com/openforcefield/openff-toolkit/issues/1475), by also registering
+  a `ParameterHandler`'s class when calling `ForceField.register_parameter_handler`.
+
 
 ## 0.11.4 Bugfix release
 
