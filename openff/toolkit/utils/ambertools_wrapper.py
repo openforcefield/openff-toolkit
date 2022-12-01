@@ -231,7 +231,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
                         str(net_charge),
                     ]
                 )
-                if charge_method['rec_confs'] != 0:
+                if charge_method["rec_confs"] != 0:
                     # rdkit method
                     from rdkit import Chem  # # DON'T MERGE UNTIL THIS LINE IS REMOVED
 
@@ -274,7 +274,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
                                 "-nc",
                                 str(net_charge),
                                 "-ek",
-                                "maxcyc=0, grms_tol=0.0005, scfconv=1.d-10, ndiis_attempts=700"
+                                "maxcyc=0, grms_tol=0.0005, scfconv=1.d-10, ndiis_attempts=700",
                             ]
                         )
                 # Write out just charges

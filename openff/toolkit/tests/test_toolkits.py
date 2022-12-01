@@ -3495,21 +3495,26 @@ class TestAmberToolsToolkitWrapper:
         """Test that AmberToolsToolkitWrapper assign_partial_charges() does a point calculation
         from the starting conformer if a proton transfer is detected"""
         import copy
-        #mol = Molecule.from_smiles("[NH+](C)(C)CC[O-]")
-        mol = Molecule.from_file(get_data_file_path('molecules/proton_transfer_initial.sdf'))
+
+        # mol = Molecule.from_smiles("[NH+](C)(C)CC[O-]")
+        mol = Molecule.from_file(
+            get_data_file_path("molecules/proton_transfer_initial.sdf")
+        )
         mol2 = copy.deepcopy(mol)
         # This should have a proton transfer, so it should trigger the maxcyc=0 behavior
-        AmberToolsToolkitWrapper().assign_partial_charges(mol,
-                                                          partial_charge_method="am1bcc",
-                                                          use_conformers=mol.conformers)
+        AmberToolsToolkitWrapper().assign_partial_charges(
+            mol, partial_charge_method="am1bcc", use_conformers=mol.conformers
+        )
         # This does a single-point calc using openeye which should be close to the AT-derived charges above
-        OpenEyeToolkitWrapper().assign_partial_charges(mol2,
-                                                       partial_charge_method="am1bccnosymspt",
-                                                       use_conformers=mol2.conformers)
+        OpenEyeToolkitWrapper().assign_partial_charges(
+            mol2, partial_charge_method="am1bccnosymspt", use_conformers=mol2.conformers
+        )
         print([*zip(mol.partial_charges, mol2.partial_charges)])
-        assert np.testing.assert_allclose(mol.partial_charges.m_as(unit.elementary_charge),
-                                          mol2.partial_charges.m_as(unit.elementary_charge),
-                                          atol=0.05)
+        assert np.testing.assert_allclose(
+            mol.partial_charges.m_as(unit.elementary_charge),
+            mol2.partial_charges.m_as(unit.elementary_charge),
+            atol=0.05,
+        )
         for atom in mol.atoms:
             if atom.symbol == "O":
                 assert (
