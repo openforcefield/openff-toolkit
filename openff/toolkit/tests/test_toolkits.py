@@ -3496,9 +3496,10 @@ class TestAmberToolsToolkitWrapper:
         toolkit_registry = ToolkitRegistry(
             toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
         )
-        mol = Molecule.from_smiles("C1=[NH+]C=C(C(=O)[O-])C=[NH+]1")
+        #mol = Molecule.from_smiles("[NH+](C)(C)CC[O-]")
+        mol = Molecule.from_file(get_data_file_path('molecules/proton_transfer_initial.sdf'))
         toolkit_registry.call(
-            "assign_partial_charges", mol, partial_charge_method="am1bcc"
+            "assign_partial_charges", mol, partial_charge_method="am1bcc", use_conformers=mol.conformers
         )
         for atom in mol.atoms:
             if atom.symbol == "O":
