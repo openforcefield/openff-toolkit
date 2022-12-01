@@ -3490,28 +3490,44 @@ class TestAmberToolsToolkitWrapper:
         charge_sum = np.sum(molecule.partial_charges)
         assert 1e-10 > abs(charge_sum.m_as(unit.elementary_charge) + 1)
 
+    @requires_openeye
     def test_assign_partial_charges_proton_transfer(self):
         """Test that AmberToolsToolkitWrapper assign_partial_charges() does a point calculation
         from the starting conformer if a proton transfer is detected"""
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
-        )
-        # mol = Molecule.from_smiles("[NH+](C)(C)CC[O-]")
-        mol = Molecule.from_file(
-            get_data_file_path("molecules/proton_transfer_initial.sdf")
-        )
-        toolkit_registry.call(
-            "assign_partial_charges",
-            mol,
-            partial_charge_method="am1bcc",
-            use_conformers=mol.conformers,
-        )
+        import copy
+        #mol = Molecule.from_smiles("[NH+](C)(C)CC[O-]")
+        mol = Molecule.from_file(get_data_file_path('molecules/proton_transfer_initial.sdf'))
+        mol2 = copy.deepcopy(mol)
+        # This should have a proton transfer, so it should trigger the maxcyc=0 behavior
+        AmberToolsToolkitWrapper().assign_partial_charges(mol,
+                                                          partial_charge_method="am1bcc",
+                                                          use_conformers=mol.conformers)
+        # This does a single-point calc using openeye which should be close to the AT-derived charges above
+        OpenEyeToolkitWrapper().assign_partial_charges(mol2,
+                                                       partial_charge_method="am1bccnosymspt",
+                                                       use_conformers=mol2.conformers)
+        print([*zip(mol.partial_charges, mol2.partial_charges)])
+        assert np.testing.assert_allclose(mol.partial_charges.m_as(unit.elementary_charge),
+                                          mol2.partial_charges.m_as(unit.elementary_charge),
+                                          atol=0.05)
         for atom in mol.atoms:
             if atom.symbol == "O":
                 assert (
                     abs(atom.partial_charge - (-0.65 * unit.elementary_charge))
                     < 0.05 * unit.elementary_charge
                 )
+
+        # # Calculate charges with no opt and just using AM1 in OpenEye
+        # oemol = mol2.to_openeye()
+        # quacpac_status = oequacpac.OEAssignCharges(
+        #     oemol, oequacpac.OEAM1Charges(optimize=False, symmetrize=True)
+        # )
+        # mol2_oe = Molecule.from_openeye(oemol)
+
+        # # Calculate charges with just AM1 in antechamber (should trigger proton transfer/no-opt logic)
+        # mol2.assign_partial_charges('am1-mulliken',
+        #                             toolkit_registry=AmberToolsToolkitWrapper(),
+        #                             use_conformers=[mol2.conformers[0]])
 
     def test_assign_partial_charges_bad_charge_method(self):
         """Test AmberToolsToolkitWrapper assign_partial_charges() for a nonexistent charge method"""
