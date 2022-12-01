@@ -241,7 +241,13 @@ class Atom(Particle):
         >>> atom = Atom(6, 0, False, stereochemistry='R', name='CT')
 
         """
+        if not isinstance(atomic_number, int):
+            raise ValueError(f"atomic number must be int, found {type(atomic_number)}")
+        if atomic_number <= 0:
+            raise ValueError(f"atomic number must be positive, given {atomic_number}.")
+
         self._atomic_number = atomic_number
+
         # Use the setter here, since it will handle either ints or Quantities
         if hasattr(formal_charge, "units"):
             # Faster check than ` == unit.dimensionless`
