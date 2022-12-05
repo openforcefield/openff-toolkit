@@ -208,7 +208,7 @@ class Atom(Particle):
         Parameters
         ----------
         atomic_number : int
-            Atomic number of the atom, assumed to be non-zero
+            Atomic number of the atom. Must be non-negative and non-zero.
         formal_charge : int or openff.units.unit.Quantity-wrapped int with dimension "charge"
             Formal charge of the atom
         is_aromatic : bool
