@@ -182,13 +182,10 @@ class Atom(Particle):
 
     .. todo::
 
-       * Should ``Atom`` objects be immutable or mutable?
        * Do we want to support the addition of arbitrary additional properties,
          such as floating point quantities (e.g. ``charge``), integral
          quantities (such as ``id`` or ``serial`` index in a PDB file),
          or string labels (such as Lennard-Jones types)?
-
-    .. todo :: Allow atoms to have associated properties.
 
     .. warning :: This API is experimental and subject to change.
     """
@@ -208,14 +205,10 @@ class Atom(Particle):
 
         Object is serializable and immutable.
 
-        .. todo :: Use attrs to validate?
-
-        .. todo :: We can add setters if we need to.
-
         Parameters
         ----------
         atomic_number : int
-            Atomic number of the atom
+            Atomic number of the atom. Must be non-negative and non-zero.
         formal_charge : int or openff.units.unit.Quantity-wrapped int with dimension "charge"
             Formal charge of the atom
         is_aromatic : bool
@@ -241,7 +234,13 @@ class Atom(Particle):
         >>> atom = Atom(6, 0, False, stereochemistry='R', name='CT')
 
         """
+        if not isinstance(atomic_number, int):
+            raise ValueError(f"atomic number must be int, found {type(atomic_number)}")
+        if atomic_number <= 0:
+            raise ValueError(f"atomic number must be positive, given {atomic_number}.")
+
         self._atomic_number = atomic_number
+
         # Use the setter here, since it will handle either ints or Quantities
         if hasattr(formal_charge, "units"):
             # Faster check than ` == unit.dimensionless`
@@ -268,6 +267,7 @@ class Atom(Particle):
     # TODO: Should stereochemistry be reset/cleared/recomputed upon addition of a bond?
     def add_bond(self, bond):
         """Adds a bond that this atom is involved in
+
         .. todo :: Is this how we want to keep records?
 
         Parameters
@@ -280,13 +280,11 @@ class Atom(Particle):
 
     def to_dict(self):
         """Return a dict representation of the atom."""
-        # TODO
         atom_dict = dict()
         atom_dict["atomic_number"] = self._atomic_number
         atom_dict["formal_charge"] = self._formal_charge.m_as(unit.elementary_charge)
         atom_dict["is_aromatic"] = self._is_aromatic
         atom_dict["stereochemistry"] = self._stereochemistry
-        # TODO: Should we let atoms have names?
         atom_dict["name"] = self._name
         atom_dict["metadata"] = dict(self._metadata)
         # TODO: Should this be implicit in the atom ordering when saved?
@@ -446,8 +444,6 @@ class Atom(Particle):
             )
         self._name = other
 
-    # TODO: How are we keeping track of bonds, angles, etc?
-
     @property
     def bonds(self):
         """
@@ -455,11 +451,8 @@ class Atom(Particle):
 
         """
         return self._bonds
-        # for bond in self._bonds:
-        #    yield bond
 
     @property
-    # def bonded_to(self):
     def bonded_atoms(self):
         """
         The list of ``Atom`` objects this atom is involved in bonds with

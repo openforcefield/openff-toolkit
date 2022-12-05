@@ -286,6 +286,19 @@ class TestAtom:
         atom1 = Atom(6, 1 * unit.elementary_charge, False)
         assert atom1.formal_charge == 1 * unit.elementary_charge
 
+    def test_init_invalid_atoms(self):
+        with pytest.raises(ValueError, match="must be int"):
+            Atom(0.5, 0, False)
+
+        with pytest.raises(ValueError, match="must be int"):
+            Atom(1 / 2, 0, False)
+
+        with pytest.raises(ValueError, match="must be positive"):
+            Atom(0, 0, False)
+
+        with pytest.raises(ValueError, match="must be positive"):
+            Atom(-1, 0, False)
+
     @pytest.mark.parametrize("atomic_number", range(1, 117))
     def test_atom_properties(self, atomic_number):
         """Test that atom properties are correctly populated and gettable"""
