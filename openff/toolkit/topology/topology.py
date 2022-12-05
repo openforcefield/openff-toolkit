@@ -13,7 +13,7 @@ Class definitions to represent a molecular system and its chemical components
 """
 import itertools
 import warnings
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 from collections.abc import MutableMapping
 from contextlib import nullcontext
 from copy import deepcopy
@@ -89,7 +89,7 @@ class _TransformedDict(MutableMapping):
     """
 
     def __init__(self, *args, **kwargs):
-        self.store = OrderedDict()
+        self.store = dict()
         self.update(dict(*args, **kwargs))  # use the free update to set keys
 
     def __getitem__(self, key):
@@ -343,16 +343,14 @@ class ImproperDict(_TransformedDict):
         key = tuple(key)
         assert len(key) == 4
         refkey = cls.key_transform(key)
-        permutations = OrderedDict(
-            {
-                (refkey[0], refkey[1], refkey[2], refkey[3]): 0,
-                (refkey[0], refkey[1], refkey[3], refkey[2]): 1,
-                (refkey[2], refkey[1], refkey[0], refkey[3]): 2,
-                (refkey[2], refkey[1], refkey[3], refkey[0]): 3,
-                (refkey[3], refkey[1], refkey[0], refkey[2]): 4,
-                (refkey[3], refkey[1], refkey[2], refkey[0]): 5,
-            }
-        )
+        permutations = {
+            (refkey[0], refkey[1], refkey[2], refkey[3]): 0,
+            (refkey[0], refkey[1], refkey[3], refkey[2]): 1,
+            (refkey[2], refkey[1], refkey[0], refkey[3]): 2,
+            (refkey[2], refkey[1], refkey[3], refkey[0]): 3,
+            (refkey[3], refkey[1], refkey[0], refkey[2]): 4,
+            (refkey[3], refkey[1], refkey[2], refkey[0]): 5,
+        }
         if possible is not None:
             return cls._return_possible_index_of(
                 key, possible=possible, permutations=permutations
@@ -429,7 +427,7 @@ class Topology(Serializable):
             self.copy_initializer(other)
         elif isinstance(other, FrozenMolecule):
             self.from_molecules([other])
-        elif isinstance(other, OrderedDict):
+        elif isinstance(other, dict):
             self._initialize_from_dict(other)
 
     def _initialize(self):
@@ -1227,13 +1225,13 @@ class Topology(Serializable):
         return return_dict
 
     @classmethod
-    def from_dict(cls, topology_dict):
+    def from_dict(cls, topology_dict: dict):
         """
         Create a new Topology from a dictionary representation
 
         Parameters
         ----------
-        topology_dict : OrderedDict
+        topology_dict : dict
             A dictionary representation of the topology.
 
         Returns

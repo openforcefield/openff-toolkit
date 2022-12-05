@@ -235,33 +235,6 @@ class Serializable(abc.ABC):
         d = toml.loads(serialized)
         return cls.from_dict(d)
 
-    @staticmethod
-    def _represent_odict(dump, tag, mapping, flow_style=None):
-        """Like BaseRepresenter.represent_mapping, but does not issue the sort()."""
-        import yaml
-
-        value = []
-        node = yaml.MappingNode(tag, value, flow_style=flow_style)
-        if dump.alias_key is not None:
-            dump.represented_objects[dump.alias_key] = node
-        best_style = True
-        if hasattr(mapping, "items"):
-            mapping = mapping.items()
-        for item_key, item_value in mapping:
-            node_key = dump.represent_data(item_key)
-            node_value = dump.represent_data(item_value)
-            if not (isinstance(node_key, yaml.ScalarNode) and not node_key.style):
-                best_style = False
-            if not (isinstance(node_value, yaml.ScalarNode) and not node_value.style):
-                best_style = False
-            value.append((node_key, node_value))
-        if flow_style is None:
-            if dump.default_flow_style is not None:
-                node.flow_style = dump.default_flow_style
-            else:
-                node.flow_style = best_style
-        return node
-
     @requires_package("yaml")
     def to_yaml(self):
         """
@@ -275,16 +248,8 @@ class Serializable(abc.ABC):
             A YAML serialized representation of the object
 
         """
-        from collections import OrderedDict
-
         import yaml
 
-        yaml.SafeDumper.add_representer(
-            OrderedDict,
-            lambda dumper, value: self._represent_odict(
-                dumper, "tag:yaml.org,2002:map", value
-            ),
-        )
         d = self.to_dict()
         return yaml.safe_dump(d, width=180)
 
@@ -307,16 +272,8 @@ class Serializable(abc.ABC):
             Instantiated object
 
         """
-        from collections import OrderedDict
-
         import yaml
 
-        yaml.SafeDumper.add_representer(
-            OrderedDict,
-            lambda dumper, value: self._represent_odict(  # noqa
-                dumper, "tag:yaml.org,2002:map", value
-            ),
-        )
         d = yaml.safe_load(serialized)
         return cls.from_dict(d)
 

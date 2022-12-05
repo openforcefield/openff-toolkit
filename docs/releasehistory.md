@@ -8,6 +8,13 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### Behavior changes
+- [PR #1466](https://github.com/openforcefield/openff-toolkit/pull/1466):
+  Replaces the use of `collections.OrderedDict` throughout the toolkit with
+  the built-in `dict`.
+  `attach_units`, `detach_units`, and `extract_serialized_units_from_dict` have been removed from
+  `openff.toolkit.utils.utils`.
+
 ### Bugfixes
 - [PR #1476](https://github.com/openforcefield/openff-toolkit/pull/1476): Fixes
   [#1475](https://github.com/openforcefield/openff-toolkit/issues/1475) by also registering

@@ -56,7 +56,7 @@ import functools
 import inspect
 import logging
 import re
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 from typing import (
     Any,
     Callable,
@@ -97,11 +97,7 @@ from openff.toolkit.utils.exceptions import (
     UnassignedValenceParameterException,
 )
 from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
-from openff.toolkit.utils.utils import (
-    attach_units,
-    extract_serialized_units_from_dict,
-    object_to_quantity,
-)
+from openff.toolkit.utils.utils import object_to_quantity
 
 logger = logging.getLogger(__name__)
 
@@ -1051,7 +1047,7 @@ class _ParameterAttributeHandler:
         indexed_mapped_attribs = set(
             self._get_indexed_mapped_parameter_attributes().keys()
         )
-        smirnoff_dict = OrderedDict()
+        smirnoff_dict = dict()
 
         # If attribs_to_return is ordered here, that will effectively be an informal output ordering
         for attrib_name in attribs_to_return:
@@ -1349,7 +1345,7 @@ class _ParameterAttributeHandler:
         # sorts the attribute alphabetically by name. Here we want the order
         # to be the same as the declaration order, which is guaranteed by PEP 520,
         # starting from the parent class.
-        parameter_attributes = OrderedDict(
+        parameter_attributes = dict(
             (name, descriptor)
             for c in reversed(inspect.getmro(cls))
             for name, descriptor in c.__dict__.items()
@@ -1399,7 +1395,7 @@ class _ParameterAttributeHandler:
         required = self._get_required_parameter_attributes()
         optional = self._get_optional_parameter_attributes()
         # Filter the optional parameters that are set to their default.
-        optional = OrderedDict(
+        optional = dict(
             (name, descriptor)
             for name, descriptor in optional.items()
             if not (
@@ -1896,12 +1892,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             attribute of the parameter. If False, non-spec kwargs will raise an exception.
 
         """
-        unitless_kwargs, attached_units = extract_serialized_units_from_dict(
-            section_dict
-        )
-        smirnoff_data = attach_units(unitless_kwargs, attached_units)
-
-        for key, val in smirnoff_data.items():
+        for key, val in section_dict.items():
             if self._INFOTYPE is not None:
                 element_name = self._INFOTYPE._ELEMENT_NAME
                 # Skip sections that aren't the parameter list
@@ -1913,9 +1904,8 @@ class ParameterHandler(_ParameterAttributeHandler):
 
             # If we're reading the parameter list, iterate through and attach units to
             # each parameter_dict, then use it to initialize a ParameterType
-            for unitless_param_dict in val:
+            for param_dict in val:
 
-                param_dict = attach_units(unitless_param_dict, attached_units)
                 new_parameter = self._INFOTYPE(
                     **param_dict, allow_cosmetic_attributes=allow_cosmetic_attributes
                 )
@@ -2300,7 +2290,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
     def to_dict(self, discard_cosmetic_attributes=False):
         """
-        Convert this ParameterHandler to an OrderedDict, compliant with the SMIRNOFF data spec.
+        Convert this ParameterHandler to a dict, compliant with the SMIRNOFF data spec.
 
         Parameters
         ----------
@@ -2309,11 +2299,11 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Returns
         -------
-        smirnoff_data : OrderedDict
+        smirnoff_data : dict
             SMIRNOFF-spec compliant representation of this ParameterHandler and its internal ParameterList.
 
         """
-        smirnoff_data = OrderedDict()
+        smirnoff_data = dict()
 
         # Populate parameter list
         parameter_list = self._parameters.to_list(

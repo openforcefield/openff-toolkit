@@ -36,7 +36,6 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     _ParameterAttributeHandler,
     vdWHandler,
 )
-from openff.toolkit.utils import detach_units
 from openff.toolkit.utils.collections import ValidatedList
 from openff.toolkit.utils.exceptions import (
     DuplicateParameterError,
@@ -1190,18 +1189,11 @@ class TestBondType:
             k=5 * unit.kilocalorie / unit.mole / unit.angstrom**2,
         )
         param_dict = p1.to_dict()
-        param_dict_unitless, attached_units = detach_units(param_dict)
 
-        assert param_dict_unitless == {
+        assert param_dict == {
             "smirks": "[*:1]-[*:2]",
-            "length": 1.02,
-            "k": 5,
-        }
-        assert attached_units == {
-            "length_unit": unit.angstrom,
-            "k_unit": (unit.angstrom**-2)
-            * (unit.mole**-1)
-            * (unit.kilocalorie**1),
+            "length": unit.Quantity(1.02, unit.angstrom),
+            "k": unit.Quantity(5, unit.kilocalorie_per_mole / unit.angstrom**2),
         }
 
     def test_bondtype_partial_bondorders(self):
@@ -1275,30 +1267,10 @@ class TestBondType:
             length=1.02 * unit.angstrom,
             k=5 * unit.kilocalorie / unit.mole / unit.angstrom**2,
         )
-        param_dict = p1.to_dict()
-        param_dict_unitless, attached_units = detach_units(
-            param_dict, output_units={"length_unit": unit.nanometer}
-        )
-        assert attached_units["length_unit"] == unit.nanometer
-        assert abs(param_dict_unitless["length"] - 0.102) < 1e-10
 
-    def test_bondtype_to_dict_invalid_output_units(self):
-        """
-        Test ParameterType to_dict with invalid output units.
-        """
-        p1 = BondHandler.BondType(
-            smirks="[*:1]-[*:2]",
-            length=1.02 * unit.angstrom,
-            k=5 * unit.kilocalorie / unit.mole / unit.angstrom**2,
-        )
         param_dict = p1.to_dict()
-        with pytest.raises(
-            ValueError,
-            match="Requested output unit cal.* is not compatible with quantity unit angstrom.",
-        ):
-            param_dict_unitless, attached_units = detach_units(
-                param_dict, output_units={"length_unit": unit.calorie}
-            )
+
+        assert abs(param_dict["length"].m_as(unit.nanometer) - 0.102) < 1e-10
 
     def test_read_write_optional_parameter_attribute(self):
         """
@@ -2723,6 +2695,4 @@ class TestParameterTypeReExports:
 # TODO: test_parametertype_unit_setattr
 # TODO: test_optional_attribs
 # TODO: test_optional_indexed_attribs
-# TODO: test_attach_units
-# TODO: test_detach_units
 # TODO: test_(X)handler_compatibility, where X is all handlers

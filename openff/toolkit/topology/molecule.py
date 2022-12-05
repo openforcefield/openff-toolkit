@@ -28,7 +28,7 @@ import json
 import operator
 import pathlib
 import warnings
-from collections import OrderedDict, UserDict
+from collections import UserDict
 from copy import deepcopy
 from typing import (
     TYPE_CHECKING,
@@ -280,7 +280,7 @@ class Atom(Particle):
 
     def to_dict(self):
         """Return a dict representation of the atom."""
-        atom_dict = OrderedDict()
+        atom_dict = dict()
         atom_dict["atomic_number"] = self._atomic_number
         atom_dict["formal_charge"] = self._formal_charge.m_as(unit.elementary_charge)
         atom_dict["is_aromatic"] = self._is_aromatic
@@ -639,12 +639,12 @@ class Bond(Serializable):
         self._is_aromatic = is_aromatic
         self._stereochemistry = stereochemistry
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         """
         Return a dict representation of the bond.
 
         """
-        bond_dict = OrderedDict()
+        bond_dict = dict()
         bond_dict["atom1"] = self.atom1.molecule_atom_index
         bond_dict["atom2"] = self.atom2.molecule_atom_index
         bond_dict["bond_order"] = self._bond_order
@@ -1057,7 +1057,7 @@ class FrozenMolecule(Serializable):
     # Safe serialization
     ####################################################################################################
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         """
         Return a dictionary representation of the molecule.
 
@@ -1068,13 +1068,13 @@ class FrozenMolecule(Serializable):
 
         Returns
         -------
-        molecule_dict : OrderedDict
+        molecule_dict : dict
             A dictionary representation of the molecule.
 
         """
         from openff.toolkit.utils.utils import serialize_numpy
 
-        molecule_dict = OrderedDict()
+        molecule_dict = dict()
         molecule_dict["name"] = self._name
         # From Jeff: If we go the properties-as-dict route, then _properties should, at
         # the top level, be a dict. Should we go through recursively and ensure all values are dicts too?
@@ -1145,13 +1145,13 @@ class FrozenMolecule(Serializable):
         return self._ordered_connection_table_hash
 
     @classmethod
-    def from_dict(cls, molecule_dict):
+    def from_dict(cls, molecule_dict: dict):
         """
         Create a new Molecule from a dictionary representation
 
         Parameters
         ----------
-        molecule_dict : OrderedDict
+        molecule_dict : dict
             A dictionary representation of the molecule.
 
         Returns
@@ -1171,7 +1171,7 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        molecule_dict : OrderedDict
+        molecule_dict : dict
             A dictionary representation of the molecule.
         """
         # TODO: Provide useful exception messages if there are any failures
