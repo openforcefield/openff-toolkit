@@ -4653,6 +4653,65 @@ class FrozenMolecule(Serializable):
                 f"Got {type(toolkit_registry)}."
             )
 
+    def _attempt_remap_from_properties(self):
+        """
+        Return a copy with atoms ordered according to ``properties["atom_map"]``
+
+        The atom map is the value of the ``"atom_map"`` entry in the molecule's
+        ``property`` dictionary. Atoms uniquely mapped to valid indices for the
+        molecule (ie, indices less than the total number of atoms) are placed
+        accordingly. Atoms without mapping indices or with invalid or duplicate
+        atom indices may be placed anywhere. An empty or absent map will not
+        change the atom ordering; neither will a map that includes no index
+        pairs that reside entirely within the molecule. The new molecule's atom
+        map is the original atom map with keys updated to their new positions.
+
+        .. warning :: Garbage in, garbage out
+
+            This method may not do what you expect if the atom map is malformed.
+            If you want to raise an exception in case of a malformed atom map,
+            use :py:meth`Molecule.remap` instead.
+
+        """
+        # Set up the source and destination maps
+        atom_map = self.properties.get("atom_map", {})
+        new_map = {}
+
+        # Place the first valid mapping for each atom into the new mapping
+        for k, v in atom_map.items():
+            if (
+                k < self.n_atoms
+                and v < self.n_atoms
+                and k not in new_map.keys()
+                and v not in new_map.values()
+            ):
+                new_map[k] = v
+
+        # If no valid mappings were found, we can return early
+        if not new_map:
+            return self.__class__(self)
+
+        # Get an iterator over the indices that haven't been mapped to yet
+        # These are the "open spaces" in the mapping
+        available_values = (i for i in range(self.n_atoms) if i not in new_map.values())
+
+        # Iterate over all the atoms in the molecule, and fit the unmapped ones
+        # into the open spaces
+        for k in range(self.n_atoms):
+            if k in new_map:
+                continue
+
+            new_map[k] = next(available_values)
+
+        # Remap the molecule
+        molecule = self.remap(new_map)
+        # Update the atom map - should this go in Molecule.remap()?
+        molecule.properties["atom_map"] = {
+            new_map.get(k, k): v for k, v in atom_map.items()
+        }
+        # remap copies the molecule, so we need to return it.
+        return molecule
+
     def remap(self, mapping_dict, current_to_new=True):
         """
         Remap all of the indexes in the molecule to match the given mapping dict
