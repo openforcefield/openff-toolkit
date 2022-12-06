@@ -3285,21 +3285,6 @@ class TestMolecule:
                 n_conformers=1, toolkit_registry=RDKitToolkitWrapper()
             )
 
-    @requires_openeye
-    @requires_rdkit
-    def test_compute_partial_charges_am1bcc_warning(self):
-        # TODO: Remove in version 0.12.0 alognside the removal of these methods
-        molecule = create_ethanol()
-
-        toolkits = [OpenEyeToolkitWrapper(), AmberToolsToolkitWrapper()]
-
-        with pytest.warns(UserWarning, match="compute_.*_am1bcc.*0.12"):
-            molecule.compute_partial_charges_am1bcc()
-
-        for toolkit in toolkits:
-            with pytest.warns(UserWarning, match="compute_.*_am1bcc.*0.12"):
-                toolkit.compute_partial_charges_am1bcc(molecule)
-
     def test_deepcopy_not_shallow(self):
         """
         Check that deep copies don't re-use any mutable data structures

@@ -2440,59 +2440,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         if normalize_partial_charges:
             molecule._normalize_partial_charges()
 
-    def compute_partial_charges_am1bcc(
-        self, molecule, use_conformers=None, strict_n_conformers=False
-    ):
-        """
-        .. deprecated:: 0.11.0
-
-            This method was deprecated in v0.11.0 and will soon be removed.
-            Use :py:meth:`assign_partial_charges(partial_charge_method='am1bcc')
-            <OpenEyeToolkitWrapper.assign_partial_charges>` instead.
-
-        Compute AM1BCC partial charges with OpenEye quacpac. This function will attempt to use
-        the OEAM1BCCELF10 charge generation method, but may print a warning and fall back to
-        normal OEAM1BCC if an error is encountered. This error is known to occur with some
-        carboxylic acids, and is under investigation by OpenEye.
-
-
-        .. warning :: This API is experimental and subject to change.
-
-        Parameters
-        ----------
-        molecule : Molecule
-            Molecule for which partial charges are to be computed
-        use_conformers : iterable of unit-wrapped numpy arrays, each with
-            shape (n_atoms, 3) and dimension of distance. Optional, default = None
-            Coordinates to use for partial charge calculation. If None, an appropriate number of conformers
-            will be generated.
-        strict_n_conformers : bool, default=False
-            Whether to raise an exception if an invalid number of conformers is provided.
-            If this is False and an invalid number of conformers is found, a warning will be raised
-            instead of an Exception.
-
-        Returns
-        -------
-        charges : numpy.array of shape (natoms) of type float
-            The partial charges
-        """
-        # TODO: Remove in version 0.12.0
-
-        import warnings
-
-        warnings.warn(
-            "compute_partial_charges_am1bcc is deprecated and will be removed in version 0.12.0. "
-            "Use assign_partial_charges(partial_charge_method='am1bcc') instead.",
-            UserWarning,
-        )
-        self.assign_partial_charges(
-            molecule,
-            partial_charge_method="am1bccelf10",
-            use_conformers=use_conformers,
-            strict_n_conformers=strict_n_conformers,
-        )
-        return molecule.partial_charges
-
     def assign_fractional_bond_orders(
         self, molecule, bond_order_model=None, use_conformers=None, _cls=None
     ):

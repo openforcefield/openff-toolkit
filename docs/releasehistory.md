@@ -6,6 +6,13 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+## 0.12.0
+
+### Behavior changes
+- [PR #1481](https://github.com/openforcefield/openff-toolkit/pull/1481):
+  Removes `compute_partial_charges_am1bcc`, which was deprecated in 0.11.0.
+
+
 ## Current development
 
 ### Behavior changes
