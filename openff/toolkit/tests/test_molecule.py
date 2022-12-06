@@ -3576,6 +3576,152 @@ class TestMoleculeResiduePerception:
             assert found == expected
 
 
+class TestMoleculeAttemptRemap:
+    def test_no_map_doesnt_change_order(self):
+        """An empty map should return a molecule in the same order"""
+        molecule = Molecule.from_mapped_smiles("[C@:1]([F:2])([Cl:3])([Br:4])[I:5]")
+
+        assert "atom_map" not in molecule.properties
+
+        remapped = molecule._attempt_remap_from_properties()
+
+        assert remapped.atom(0).symbol == "C"
+        assert remapped.atom(1).symbol == "F"
+        assert remapped.atom(2).symbol == "Cl"
+        assert remapped.atom(3).symbol == "Br"
+        assert remapped.atom(4).symbol == "I"
+
+    @pytest.mark.parametrize(
+        "mapping",
+        [
+            {},
+            {21: 102, 13: 1, 1: 75},
+            {0: 10, 1: 11, 2: 12, 3: 13, 4: 14},
+            {10: 0, 11: 1, 12: 2, 13: 3, 14: 4},
+            {567: 3234},
+        ],
+    )
+    def test_empty_or_invalid_map_doesnt_change_order(self, mapping):
+        """An empty or invalid map should return a molecule in the same order
+
+        Note that this method does not test duplicates; duplicate indices can
+        be placed anywhere.
+
+        This tests the documentation sentence "An empty or absent map will not
+        change the atom ordering; neither will a map that includes no index
+        pairs that reside entirely within the molecule."
+        """
+        molecule = Molecule.from_mapped_smiles("[C@:1]([F:2])([Cl:3])([Br:4])[I:5]")
+
+        molecule.properties["atom_map"] = mapping
+
+        remapped = molecule._attempt_remap_from_properties()
+
+        assert remapped.atom(0).symbol == "C"
+        assert remapped.atom(1).symbol == "F"
+        assert remapped.atom(2).symbol == "Cl"
+        assert remapped.atom(3).symbol == "Br"
+        assert remapped.atom(4).symbol == "I"
+
+        assert remapped.properties == molecule.properties
+        assert remapped.is_isomorphic_with(molecule)
+
+    @pytest.mark.parametrize(
+        ("mapping", "final_order"),
+        [
+            ({}, {0: "C", 1: "F", 2: "Cl", 3: "Br", 4: "I"}),
+            ({0: 1}, {1: "C"}),
+            ({0: 3, 3: 0}, {3: "C", 0: "Br"}),
+            ({0: 3, 3: 1, 1: 2}, {3: "C", 1: "Br", 2: "F"}),
+            ({21: 102, 13: 1, 1: 75, 2: 3}, {3: "Cl"}),
+            (
+                {0: 1, 1: 2, 2: 3, 3: 4, 4: 0},
+                {1: "C", 2: "F", 3: "Cl", 4: "Br", 0: "I"},
+            ),
+            ({0: 1, 1: 1, 2: 1, 3: 4, 4: 3}, {4: "Br", 3: "I"}),
+            ({0: 0, 1: 0, 2: 1}, {1: "Cl"}),
+            ({0: 0, 1: 0}, {}),
+        ],
+    )
+    def test_map_changes_mapped_atoms(self, mapping, final_order):
+        """
+        Remaps should preserve molecular identity and reorder valid, unique mappings
+
+        This tests the docstring sentence "Atoms uniquely mapped to valid
+        indices for the molecule (ie, indices less than the total number of
+        atoms) are placed accordingly."
+        """
+        molecule = Molecule.from_mapped_smiles("[C@:1]([F:2])([Cl:3])([Br:4])[I:5]")
+
+        molecule.properties["atom_map"] = mapping
+
+        remapped = molecule._attempt_remap_from_properties()
+
+        assert remapped.is_isomorphic_with(molecule)
+
+        for i, symbol in final_order.items():
+            assert remapped.atom(i).symbol == symbol
+
+    @pytest.mark.parametrize(
+        "mapping",
+        [
+            {},
+            {0: 1},
+            {0: 3, 3: 0},
+            {0: 3, 3: 1, 1: 2},
+            {21: 102, 13: 1, 1: 75, 2: 3},
+            {0: 1, 1: 2, 2: 3, 3: 4, 4: 0},
+            {0: 1, 1: 1, 2: 1, 3: 4, 4: 3},
+            {0: 0, 1: 0, 2: 1},
+            {0: 0, 1: 0},
+            {0: 0},
+        ],
+    )
+    def test_remapped_atoms_point_to_selves_in_atom_map(self, mapping):
+        """
+        Remapping should remap the valid mappings in the produced atom_map property
+
+        This tests the docstring sentence "The new molecule's atom map is the
+        original atom map with keys updated to their new positions."
+        """
+        molecule = Molecule.from_mapped_smiles("[C@:1]([F:2])([Cl:3])([Br:4])[I:5]")
+
+        molecule.properties["atom_map"] = mapping
+
+        remapped = molecule._attempt_remap_from_properties()
+
+        assert remapped.is_isomorphic_with(molecule)
+
+        def find_element(symbol, molecule):
+            for i, atom in enumerate(molecule.atoms):
+                if atom.symbol == symbol:
+                    return i
+
+            raise ValueError(f"Atom with symbol {symbol} not found in molecule")
+
+        # Get copies of both atom maps so we can remove entries we've already checked
+        original_atom_map = dict(molecule.properties["atom_map"])
+        remapped_atom_map = dict(remapped.properties["atom_map"])
+        # Make sure there are no None values
+        assert None not in original_atom_map.values()
+        assert None not in remapped_atom_map.values()
+
+        # Each atom in our test molecule has a different symbol, so corresponding
+        # atoms can be found by matching elements
+        for symbol in ["C", "F", "Cl", "Br", "I"]:
+            original_idx = find_element(symbol, molecule)
+            remapped_idx = find_element(symbol, remapped)
+
+            # Check that any appearance of this atom in the mappings match, and
+            # remove them because they've been checked
+            assert original_atom_map.pop(original_idx, None) == remapped_atom_map.pop(
+                remapped_idx, None
+            )
+
+        # Check that any remaining mappings are untouched
+        assert original_atom_map == remapped_atom_map
+
+
 class TestMoleculeFromPDB:
     """
     Test creation of cheminformatics-rich openff Molecule from PDB files.
