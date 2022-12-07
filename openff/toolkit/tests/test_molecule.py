@@ -3613,6 +3613,8 @@ class TestMoleculeAttemptRemap:
         """
         molecule = Molecule.from_mapped_smiles("[C@:1]([F:2])([Cl:3])([Br:4])[I:5]")
 
+        mapping = {k: v + 1 for k, v in mapping.items()}
+
         molecule.properties["atom_map"] = mapping
 
         remapped = molecule._attempt_remap_from_properties()
@@ -3653,6 +3655,8 @@ class TestMoleculeAttemptRemap:
         """
         molecule = Molecule.from_mapped_smiles("[C@:1]([F:2])([Cl:3])([Br:4])[I:5]")
 
+        mapping = {k: v + 1 for k, v in mapping.items()}
+
         molecule.properties["atom_map"] = mapping
 
         remapped = molecule._attempt_remap_from_properties()
@@ -3685,6 +3689,8 @@ class TestMoleculeAttemptRemap:
         original atom map with keys updated to their new positions."
         """
         molecule = Molecule.from_mapped_smiles("[C@:1]([F:2])([Cl:3])([Br:4])[I:5]")
+
+        mapping = {k: v + 1 for k, v in mapping.items()}
 
         molecule.properties["atom_map"] = mapping
 
