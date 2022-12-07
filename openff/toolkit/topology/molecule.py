@@ -4415,17 +4415,19 @@ class FrozenMolecule(Serializable):
                 "mapped SMILES using cmiles."
             )
 
-        if len(mapping) != offmol.n_atoms:
+        # If the mapping is anything other than every atom mapped to itself, the
+        # remapping was invalid (because it means from_smiles failed to reorder
+        # the atoms according to the atom map). If the mapping is every atom
+        # mapped to itself, the map was valid (because there are no duplicate
+        # destination indices, no missing indices, and no out-of-range indices).
+        # Therefore, the mapping is every atom mapped to itself if and only if
+        # the mapping was valid.
+        if mapping != {i: i for i in range(offmol.n_atoms)}:
             raise SmilesParsingError(
-                "The mapped smiles does not contain enough indexes to remap the molecule."
+                "The mapped SMILES has missing, duplicate, or out-of-range indices."
             )
 
-        # remap the molecule using the atom map found in the smiles
-        # the order is mapping = Dict[current_index: new_index]
-        # first renumber the mapping dict indexed from 0, currently from 1 as 0 indicates no mapping in toolkits
-        adjusted_mapping = dict((current, new - 1) for current, new in mapping.items())
-
-        return offmol.remap(adjusted_mapping, current_to_new=True)
+        return offmol
 
     @classmethod
     @requires_package("qcelemental")
