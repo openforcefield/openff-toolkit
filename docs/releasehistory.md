@@ -14,6 +14,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   the built-in `dict`.
   `attach_units`, `detach_units`, and `extract_serialized_units_from_dict` have been removed from
   `openff.toolkit.utils.utils`.
+- [PR #1482](https://github.com/openforcefield/openff-toolkit/pull/1482): `Molecule.from_smiles()` now attempts to order atoms according to the provided mapping. If atom order is important, we continue to recommend `from_mapped_smiles`, which will raise an exception if the map is incomplete or invalid.
 
 ### Bugfixes
 - [PR #1476](https://github.com/openforcefield/openff-toolkit/pull/1476): Fixes
