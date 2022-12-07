@@ -62,7 +62,7 @@ from openff.toolkit.utils.toolkits import (
 )
 
 if TYPE_CHECKING:
-    from openmm.app import Topology as OMMTopology
+    import openmm.app
     from openmm.unit import Quantity as OMMQuantity
 
     from openff.toolkit.topology.molecule import Atom
@@ -1298,7 +1298,7 @@ class Topology(Serializable):
     @requires_package("openmm")
     def from_openmm(
         cls,
-        openmm_topology: "OMMTopology",
+        openmm_topology: "openmm.app.Topology",
         unique_molecules: Optional[Iterable[FrozenMolecule]] = None,
     ) -> "Topology":
         """
