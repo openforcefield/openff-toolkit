@@ -34,7 +34,7 @@ from typing import (
 
 import numpy as np
 from numpy.typing import NDArray
-from openff.units import Quantity, unit
+from openff.units import Quantity, ensure_quantity, unit
 from openff.utilities import requires_package
 
 from openff.toolkit.topology import Molecule
@@ -1301,6 +1301,7 @@ class Topology(Serializable):
         cls,
         openmm_topology: "openmm.app.Topology",
         unique_molecules: Optional[Iterable[FrozenMolecule]] = None,
+        positions: Union[None, Quantity, OMMQuantity] = None,
     ) -> "Topology":
         """
         Construct an OpenFF Topology object from an OpenMM Topology object.
@@ -1327,6 +1328,8 @@ class Topology(Serializable):
             these reference molecules to the molecules appearing in the
             topology. If bond orders are specified in the topology, these will
             be used in matching as well.
+        positions
+            Positions for the atoms in the new topology.
 
         Returns
         -------
@@ -1493,6 +1496,9 @@ class Topology(Serializable):
 
         if openmm_topology.getPeriodicBoxVectors() is not None:
             topology.box_vectors = from_openmm(openmm_topology.getPeriodicBoxVectors())
+
+        if positions is not None:
+            topology.set_positions(ensure_quantity(positions, "openff"))
 
         # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?
         return topology
@@ -1848,6 +1854,7 @@ class Topology(Serializable):
         cls,
         mdtraj_topology: "mdtraj.Topology",
         unique_molecules: Optional[Iterable[FrozenMolecule]] = None,
+        positions: Union[None, OMMQuantity, Quantity] = None,
     ):
         """
         Construct an OpenFF ``Topology`` from an MDTraj ``Topology``
@@ -1874,6 +1881,8 @@ class Topology(Serializable):
             these reference molecules to the molecules appearing in the
             topology. If bond orders are specified in the topology, these will
             be used in matching as well.
+        positions
+            Positions for the atoms in the new topology.
 
         Returns
         -------
@@ -1892,7 +1901,9 @@ class Topology(Serializable):
             If a chemically impossible molecule is detected in the topology
         """
         return cls.from_openmm(
-            mdtraj_topology.to_openmm(), unique_molecules=unique_molecules
+            mdtraj_topology.to_openmm(),
+            unique_molecules=unique_molecules,
+            positions=positions,
         )
 
     # Avoid removing this method, even though it is private and would not be difficult for most
