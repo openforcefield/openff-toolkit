@@ -62,6 +62,7 @@ from openff.toolkit.utils.toolkits import (
 )
 
 if TYPE_CHECKING:
+    import mdtraj
     import openmm.app
     from openmm.unit import Quantity as OMMQuantity
 
@@ -1843,24 +1844,52 @@ class Topology(Serializable):
 
     @classmethod
     @requires_package("mdtraj")
-    def from_mdtraj(cls, mdtraj_topology, unique_molecules=None):
+    def from_mdtraj(
+        cls,
+        mdtraj_topology: "mdtraj.Topology",
+        unique_molecules: Optional[Iterable[FrozenMolecule]] = None,
+    ):
         """
-        Construct an OpenFF Topology object from an MDTraj Topology object.
+        Construct an OpenFF ``Topology`` from an MDTraj ``Topology``
+
+        This method guarantees that the order of atoms in the input MDTraj
+        Topology will be the same as the ordering of atoms in the output OpenFF
+        Topology. However it does not guarantee the order of the bonds will be
+        the same.
+
+        Hierarchy schemes are taken from the OpenMM topology, not from
+        ``unique_molecules``.
 
         Parameters
         ----------
-        mdtraj_topology : mdtraj.Topology
-            An MDTraj Topology object
-        unique_molecules : iterable of objects that can be used to construct unique Molecule objects
-            All unique molecules must be provided, in any order, though multiple copies of each molecule are allowed.
-            The atomic elements and bond connectivity will be used to match the reference molecules
-            to molecule graphs appearing in the MDTraj ``Topology``. If bond orders are present in the
-            MDTraj ``Topology``, these will be used in matching as well.
+        openmm_topology
+            The OpenMM Topology object to convert
+        unique_molecules
+            An iterable containing all the unique molecules in the topology.
+            This is used to identify the molecules in the MDTraj topology and
+            provide any missing chemical information. Each chemical species in
+            the topology must be specified exactly once, though the topology
+            may have any number of copies, including zero. The chemical
+            elements of atoms and their bond connectivity will be used to match
+            these reference molecules to the molecules appearing in the
+            topology. If bond orders are specified in the topology, these will
+            be used in matching as well.
 
         Returns
         -------
-        topology : openff.toolkit.topology.Topology
-            An OpenFF Topology object
+        topology
+            An OpenFF Topology object, constructed from the molecules in
+            ``unique_molecules``, with the same atom order as the input topology.
+
+        Raises
+        ------
+        MissingUniqueMoleculesError
+            If ``unique_molecules`` is ``None``
+        DuplicateUniqueMoleculeError
+            If the same connectivity graph is represented by two different
+            molecules in ``unique_molecules``
+        ValueError
+            If a chemically impossible molecule is detected in the topology
         """
         return cls.from_openmm(
             mdtraj_topology.to_openmm(), unique_molecules=unique_molecules
