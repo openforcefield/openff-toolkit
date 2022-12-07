@@ -8,6 +8,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### New features
+- [PR #1484](https://github.com/openforcefield/openff-toolkit/pull/1484): A `positions` argument has been added to `Topology.from_openmm()` and `Topology.from_mdtraj()`, which allows the topology's positions to be set more conveniently.
+
 ### Behavior changes
 - [PR #1466](https://github.com/openforcefield/openff-toolkit/pull/1466):
   Replaces the use of `collections.OrderedDict` throughout the toolkit with
@@ -24,6 +27,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 [`Atom.atomic_number`]: Atom.atomic_number
 
+### Improved documentation and warnings
+- [PR #1484](https://github.com/openforcefield/openff-toolkit/pull/1484): The docstrings for `Topology.from_openmm()` and `Topology.from_mdtraj()` have been improved
 
 ## 0.11.4 Bugfix release
 
