@@ -4421,8 +4421,9 @@ class FrozenMolecule(Serializable):
         # mapped to itself, the map was valid (because there are no duplicate
         # destination indices, no missing indices, and no out-of-range indices).
         # Therefore, the mapping is every atom mapped to itself if and only if
-        # the mapping was valid.
-        if mapping != {i: i for i in range(offmol.n_atoms)}:
+        # the mapping was valid. Source indices are 0-indexed, but destination
+        # indices are 1-indexed.
+        if mapping != {i: i + 1 for i in range(offmol.n_atoms)}:
             raise SmilesParsingError(
                 "The mapped SMILES has missing, duplicate, or out-of-range indices."
             )
@@ -4695,6 +4696,8 @@ class FrozenMolecule(Serializable):
 
         # Place the first valid mapping for each atom into the new mapping
         for k, v in atom_map.items():
+            # SMILES maps are 1-indexed, but remap must be 0-indexed
+            v = v - 1
             if (
                 k < self.n_atoms
                 and v < self.n_atoms
