@@ -22,6 +22,7 @@ from typing import (
     TYPE_CHECKING,
     Dict,
     Generator,
+    Iterable,
     Iterator,
     List,
     Literal,
@@ -61,6 +62,7 @@ from openff.toolkit.utils.toolkits import (
 )
 
 if TYPE_CHECKING:
+    from openmm.app import Topology as OMMTopology
     from openmm.unit import Quantity as OMMQuantity
 
     from openff.toolkit.topology.molecule import Atom
@@ -1294,7 +1296,11 @@ class Topology(Serializable):
 
     @classmethod
     @requires_package("openmm")
-    def from_openmm(cls, openmm_topology, unique_molecules=None):
+    def from_openmm(
+        cls,
+        openmm_topology: "OMMTopology",
+        unique_molecules: Optional[Iterable[FrozenMolecule]] = None,
+    ) -> "Topology":
         """
         Construct an OpenFF Topology object from an OpenMM Topology object.
 
