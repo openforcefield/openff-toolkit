@@ -1731,7 +1731,13 @@ class FrozenMolecule(Serializable):
         allow_undefined_stereo=False,
     ):
         """
-        Construct a Molecule from a SMILES representation
+        Construct a Molecule from a SMILES representation.
+
+        This method will attempt to order the atoms in the created molecule
+        according to the SMILES' atom mapping, but will not raise an exception
+        if it fails. If atom order is important, use
+        the :py:meth:`from_mapped_smiles` method instead, which ensures that the
+        atom mapping assigns every atom exactly one index.
 
         Parameters
         ----------
@@ -1751,10 +1757,19 @@ class FrozenMolecule(Serializable):
         -------
         molecule : openff.toolkit.topology.Molecule
 
+        Raises
+        ------
+        RadicalsNotSupportedError
+            If any atoms in the RDKit molecule contain radical electrons.
+
         Examples
         --------
 
         >>> molecule = Molecule.from_smiles('Cc1ccccc1')
+
+        See also
+        --------
+        Molecule.from_mapped_smiles
 
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
@@ -4666,11 +4681,10 @@ class FrozenMolecule(Serializable):
         pairs that reside entirely within the molecule. The new molecule's atom
         map is the original atom map with keys updated to their new positions.
 
-        .. warning :: Garbage in, garbage out
-
-            This method may not do what you expect if the atom map is malformed.
-            If you want to raise an exception in case of a malformed atom map,
-            use :py:meth`Molecule.remap` instead.
+        .. warning :: This method  may not provide the ordering you expect if
+           the atom map is malformed (garbage in, garbage out). If you want to
+           raise an exception in case of a malformed atom map,
+           use :py:meth:`Molecule.remap` instead.
 
         """
         # Set up the source and destination maps

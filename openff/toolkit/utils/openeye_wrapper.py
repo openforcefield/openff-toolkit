@@ -1916,6 +1916,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         Create a Molecule from a SMILES string using the OpenEye toolkit.
 
+        This method will attempt to order the atoms in the created molecule
+        according to the SMILES' atom mapping, but will not raise an exception
+        if it fails. If atom order is important, use the
+        :py:meth:`Molecule.from_mapped_smiles()
+        <openff.toolkit.topology.Molecule.from_mapped_smiles>` method instead,
+        which ensures that the atom mapping assigns every atom exactly one
+        index.
+
         .. warning :: This API is experimental and subject to change.
 
         Parameters
@@ -1938,7 +1946,12 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Raises
         ------
-        RadicalsNotSupportedError : If any atoms in the OpenEye molecule contain radical electrons.
+        RadicalsNotSupportedError
+            If any atoms in the OpenEye molecule contain radical electrons.
+
+        See also
+        --------
+        Molecule.from_mapped_smiles
         """
         from openeye import oechem
 
