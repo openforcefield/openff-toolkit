@@ -1009,7 +1009,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             _cls=_cls,
             allow_undefined_stereo=allow_undefined_stereo,
             hydrogens_are_explicit=hydrogens_are_explicit,
-        )
+        )._attempt_remap_from_properties()
 
         return molecule
 

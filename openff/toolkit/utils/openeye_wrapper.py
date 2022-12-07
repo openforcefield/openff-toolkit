@@ -1966,7 +1966,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         molecule = self.from_openeye(
             oemol, _cls=_cls, allow_undefined_stereo=allow_undefined_stereo
-        )
+        )._attempt_remap_from_properties()
         return molecule
 
     def from_inchi(self, inchi, allow_undefined_stereo=False, _cls=None):
