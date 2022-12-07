@@ -2494,7 +2494,7 @@ class TestMolecule:
             pytest.skip(f"Required toolkit {toolkit_class} is unavailable")
         with pytest.raises(
             SmilesParsingError,
-            match="The mapped smiles does not contain enough indexes",
+            match="The mapped SMILES has missing, duplicate, or out-of-range indices.",
         ):
             Molecule.from_mapped_smiles("[Cl:1][Cl]", toolkit_registry=toolkit_class())
 
