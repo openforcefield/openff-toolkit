@@ -1301,7 +1301,7 @@ class Topology(Serializable):
         cls,
         openmm_topology: "openmm.app.Topology",
         unique_molecules: Optional[Iterable[FrozenMolecule]] = None,
-        positions: Union[None, Quantity, OMMQuantity] = None,
+        positions: Union[None, Quantity, "OMMQuantity"] = None,
     ) -> "Topology":
         """
         Construct an OpenFF Topology object from an OpenMM Topology object.
@@ -1854,7 +1854,7 @@ class Topology(Serializable):
         cls,
         mdtraj_topology: "mdtraj.Topology",
         unique_molecules: Optional[Iterable[FrozenMolecule]] = None,
-        positions: Union[None, OMMQuantity, Quantity] = None,
+        positions: Union[None, "OMMQuantity", Quantity] = None,
     ):
         """
         Construct an OpenFF ``Topology`` from an MDTraj ``Topology``
