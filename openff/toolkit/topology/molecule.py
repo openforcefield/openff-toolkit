@@ -1760,7 +1760,7 @@ class FrozenMolecule(Serializable):
         Raises
         ------
         RadicalsNotSupportedError
-            If any atoms in the RDKit molecule contain radical electrons.
+            If any atoms in the input molecule contain radical electrons.
 
         Examples
         --------
