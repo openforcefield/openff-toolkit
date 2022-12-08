@@ -28,7 +28,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 [`Atom.atomic_number`]: Atom.atomic_number
 
 ### Improved documentation and warnings
-- [PR #1484](https://github.com/openforcefield/openff-toolkit/pull/1484): The docstrings for `Topology.from_openmm()` and `Topology.from_mdtraj()` have been improved
+- [PR #1484](https://github.com/openforcefield/openff-toolkit/pull/1484): The docstrings for `Topology.from_openmm()` and `Topology.from_mdtraj()` have been improved.
+- [PR #1483](https://github.com/openforcefield/openff-toolkit/pull/1483): Simplified and clarified errors and warnings related to undefined stereochemistry with RDKit.
 
 ## 0.11.4 Bugfix release
 
