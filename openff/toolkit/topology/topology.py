@@ -1865,13 +1865,13 @@ class Topology(Serializable):
         Topology. However it does not guarantee the order of the bonds will be
         the same.
 
-        Hierarchy schemes are taken from the OpenMM topology, not from
+        Hierarchy schemes are taken from the MDTraj topology, not from
         ``unique_molecules``.
 
         Parameters
         ----------
-        openmm_topology
-            The OpenMM Topology object to convert
+        mdtraj_topology
+            The MDTraj Topology object to convert
         unique_molecules
             An iterable containing all the unique molecules in the topology.
             This is used to identify the molecules in the MDTraj topology and
