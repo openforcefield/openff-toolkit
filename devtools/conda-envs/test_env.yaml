@@ -37,6 +37,7 @@ dependencies:
   - qcengine
   - mdtraj
   - ipywidgets =7
+  - mypy
   - pip:
     - types-pkg_resources
     - types-setuptools
