@@ -5,7 +5,7 @@ channels:
 dependencies:
   - python
   - pip
-  - packaging
+  - packaging =21
   - pytest
   - pytest-cov
   - pytest-xdist
@@ -17,7 +17,6 @@ dependencies:
   - networkx
   - ambertools
   - rdkit
-  - packaging
   - openmm >=7.6
   - openff-forcefields
   - openff-units >=0.2
