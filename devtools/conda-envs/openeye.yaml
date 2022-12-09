@@ -7,7 +7,7 @@ dependencies:
     # Base depends
   - python
   - pip
-  - packaging =0.21
+  - packaging =21
   - numpy
   - networkx
   - openmm =>7.6
