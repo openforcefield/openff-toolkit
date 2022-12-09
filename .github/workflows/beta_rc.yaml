@@ -75,6 +75,10 @@ jobs:
         run: |
           pytest -r fE --tb=short openff/toolkit/tests/test_links.py
 
+      - name: Run mypy
+        run: |
+          mypy --namespace-packages -p "openff.toolkit"
+
       - name: Run unit tests
         run: |
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_examples.py"
@@ -85,10 +89,6 @@ jobs:
       - name: Run code snippets in docs
         run: |
           pytest -v --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
-
-      - name: Run mypy
-        run: |
-          mypy --namespace-packages -p "openff.toolkit"
 
       - name: Codecov
         uses: codecov/codecov-action@v3
