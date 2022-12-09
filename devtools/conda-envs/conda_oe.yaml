@@ -12,4 +12,3 @@ dependencies:
   - qcportal >=0.15
   - pytest
   - pytest-rerunfailures
-  - nbval

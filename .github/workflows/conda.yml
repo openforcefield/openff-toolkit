@@ -1,6 +1,12 @@
 name: Conda latest
 
 on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+    branches:
+      - "main"
   release:
     types:
       - released
