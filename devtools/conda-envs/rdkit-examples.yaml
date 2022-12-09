@@ -23,15 +23,16 @@ dependencies:
   - smirnoff99Frosst
   - cachetools
   - cached-property
+  - python-constraint
   - pyyaml
   - toml
   - bson
   - msgpack-python
   - xmltodict
-  - python-constraint
   - qcelemental
   - qcportal >=0.15
   - qcengine
   - mdtraj
   - ipywidgets =7
   - pdbfixer
+  - openmmforcefields

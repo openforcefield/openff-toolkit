@@ -35,3 +35,4 @@ dependencies:
   - mdtraj
   - ipywidgets =7
   - pdbfixer
+  - openmmforcefields

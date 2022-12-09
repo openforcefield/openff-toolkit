@@ -28,7 +28,6 @@ dependencies:
   - pytest-rerunfailures
   - parmed
   - openeye-toolkits
-  - openmmforcefields >=0.11.2
   - pyyaml
   - toml
   - bson

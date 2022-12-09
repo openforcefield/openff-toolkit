@@ -6,13 +6,11 @@ dependencies:
     # Base depends
   - python
   - pip
-
   - packaging =21
   - numpy
   - networkx
   - ambertools
   - rdkit
-  - openmmforcefields >=0.11.2
   - openmm >=7.6
   - openff-forcefields
   - openff-units >=0.2
