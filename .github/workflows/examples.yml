@@ -41,7 +41,7 @@ jobs:
       NB_ARGS: -v --nbval-lax --ignore=examples/deprecated --durations=20
 
     steps:
-      - uses: actions/checkout@v3.1.0
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
 
@@ -73,7 +73,6 @@ jobs:
           ulimit -a
 
       - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
-        shell: bash
         env:
           OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
         run: |

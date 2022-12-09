@@ -2,7 +2,6 @@ name: test
 channels:
   - openeye
   - conda-forge
-
 dependencies:
     # Base depends
   - python
@@ -10,24 +9,23 @@ dependencies:
   - packaging =21
   - numpy
   - networkx
-  - openmm =>7.6
-  - openff-forcefields
-  - openff-units >=0.2
-  - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.2
-  - smirnoff99Frosst
   - cachetools
   - cached-property
   - xmltodict
   - python-constraint
-
-    # Testing
+  - openmm >=7.6
+  - openff-forcefields
+  - smirnoff99Frosst
+  - openff-units >=0.2
+  - openff-utilities >=0.1.5
+  - openff-interchange-base >=0.2
+    # Toolkit-specific
+  - openeye-toolkits
+    # Test-only/optional/dev/typing
   - pytest
   - pytest-cov
   - pytest-xdist
   - pytest-rerunfailures
-  - parmed
-  - openeye-toolkits
   - pyyaml
   - toml
   - bson
@@ -36,4 +34,4 @@ dependencies:
   - qcportal >=0.15
   - qcengine
   - mdtraj
-  - ipywidgets =7
+  - parmed

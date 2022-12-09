@@ -15,6 +15,10 @@ on:
     - cron: "0 0 * * *"
   workflow_dispatch:
 
+defaults:
+  run:
+    shell: bash -l {0}
+
 jobs:
   test:
     name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenEye=${{ matrix.openeye }}
@@ -34,7 +38,7 @@ jobs:
       PACKAGE: openff-toolkit
 
     steps:
-      - uses: actions/checkout@v3.1.0
+      - uses: actions/checkout@v3
 
       - name: Vanilla install from conda
         uses: mamba-org/provision-with-micromamba@main
@@ -52,27 +56,23 @@ jobs:
             python=${{ matrix.python-version }}
 
       - name: Additional info about the build
-        shell: bash -l {0}
         run: |
           uname -a
           df -h
           ulimit -a
 
       - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
-        shell: bash
         env:
           OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
         run: |
           echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
 
       - name: Environment Information
-        shell: bash -l {0}
         run: |
           conda info
           conda list
 
       - name: Check installed toolkits
-        shell: bash -l {0}
         run: |
           # Checkout the state of the repo as of the last release (including RCs)
           export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openff-toolkit.git | cut -f2 | grep -E "([0-9]+)\.([0-9]+)\.([0-9]+)$" | sort --version-sort | tail -1 | sed 's/refs\/tags\///')
@@ -91,7 +91,6 @@ jobs:
           fi
 
       - name: Check that correct OFFTK version was installed
-        shell: bash -l {0}
         run: |
           # Go up one directory to ensure that we don't just load the OFFTK from the checked-out repo
           cd ../
@@ -112,7 +111,6 @@ jobs:
           cd openff-toolkit
 
       - name: Test the package
-        shell: bash -l {0}
         run: |
           # Install test plugins
           cd utilities/test_plugins

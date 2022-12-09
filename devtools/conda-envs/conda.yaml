@@ -1,11 +1,9 @@
 name: latest-deployment
 channels:
   - conda-forge
-
 dependencies:
     # Base depends
   - openff-toolkit-examples
-
-  - qcportal >=0.15
+    # Tests
   - pytest
   - pytest-rerunfailures

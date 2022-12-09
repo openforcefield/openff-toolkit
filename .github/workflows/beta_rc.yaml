@@ -11,6 +11,10 @@ on:
     - cron: "0 0 * * 0"
   workflow_dispatch:
 
+defaults:
+  run:
+    shell: bash -l {0}
+
 jobs:
   test:
     name: Test beta and RC builds on on ${{ matrix.python-version }}
@@ -29,7 +33,7 @@ jobs:
       PYTEST_ARGS: -r fE --tb=short --cov=openff --cov-config=setup.cfg --cov-append --cov-report=xml
 
     steps:
-      - uses: actions/checkout@v3.1.0
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
 
@@ -41,21 +45,18 @@ jobs:
             python=${{ matrix.python-version }}
 
       - name: Additional info about the build
-        shell: bash -l {0}
         run: |
           uname -a
           df -h
           ulimit -a
 
       - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
-        shell: bash
         env:
           OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
         run: |
           echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
 
       - name: Install package
-        shell: bash -l {0}
         run: |
           conda remove --force openff-toolkit openff-toolkit-base
           python setup.py develop --no-deps
@@ -66,18 +67,15 @@ jobs:
           python setup.py develop --no-deps
 
       - name: Environment Information
-        shell: bash -l {0}
         run: |
           conda info
           conda list
 
       - name: Check links
-        shell: bash -l {0}
         run: |
           pytest -r fE --tb=short openff/toolkit/tests/test_links.py
 
       - name: Run unit tests
-        shell: bash -l {0}
         run: |
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_examples.py"
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
@@ -85,17 +83,15 @@ jobs:
           pytest $PYTEST_ARGS openff/toolkit/tests/
 
       - name: Run code snippets in docs
-        shell: bash -l {0}
         run: |
           pytest -v --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
 
       - name: Run mypy
-        shell: bash -l {0}
         run: |
           mypy --namespace-packages -p "openff.toolkit"
 
       - name: Codecov
-        uses: codecov/codecov-action@v3.1.1
+        uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage.xml
