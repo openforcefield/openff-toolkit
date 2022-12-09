@@ -1,12 +1,6 @@
 name: Conda 0.10.X
 
 on:
-  push:
-    branches:
-      - "main"
-  pull_request:
-    branches:
-      - "main"
   release:
     types:
       - released
