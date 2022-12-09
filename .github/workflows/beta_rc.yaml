@@ -60,6 +60,11 @@ jobs:
           conda remove --force openff-toolkit openff-toolkit-base
           python setup.py develop --no-deps
 
+      - name: Install test plugins
+        run: |
+          cd utilities/test_plugins
+          python setup.py develop --no-deps
+
       - name: Environment Information
         shell: bash -l {0}
         run: |

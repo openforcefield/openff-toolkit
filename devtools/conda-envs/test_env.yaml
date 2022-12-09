@@ -26,6 +26,7 @@ dependencies:
   - pytest-cov
   - pytest-xdist
   - pytest-rerunfailures
+  - nbval
   - openeye-toolkits
   - mdtraj
   - pyyaml
