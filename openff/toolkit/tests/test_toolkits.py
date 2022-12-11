@@ -1995,6 +1995,57 @@ class TestOpenEyeToolkitWrapper:
         assert len(tk.find_smarts_matches(mol, smirks, unique=True)) == 1
         assert len(tk.find_smarts_matches(mol, smirks, unique=False)) == 2
 
+    @pytest.mark.parametrize(
+        "given_smiles, expected_smiles",
+        [
+            (  # Nitro to N+(O-)=O
+                "[H:5][C:1]([H:6])([H:7])[N:2](=[O:3])=[O:4]",
+                "[H:5][C:1]([H:6])([H:7])[N+1:2]([O-:3])=[O:4]",
+            ),
+            (  # Sulfone to S(=O)(=O)
+                "[H:8][C:1]#[C:2][S+2:3]([C:6]#[C:7][H:9])([O-:4])[O-:5]",
+                "[H:8][C:1]#[C:2][S:3]([C:6]#[C:7][H:9])(=[O:4])=[O:5]",
+            ),
+            (  # Pyridine oxide to n+O-
+                "[H:11][c:7]1[c:1]([n:2][c:3]([n:4](=[O:5])[c:6]1[H:10])[H:9])[H:8]",
+                "[H:11][c:7]1[c:1]([n:2][c:3]([n+1:4]([O-:5])[c:6]1[H:10])[H:9])[H:8]",
+            ),
+            (  # Azide to N=N+=N-
+                "[C:4](=[O:5])([N:3]=[N:2]#[N:1])[N:6]=[N:7]#[N:8]",
+                "[C:4](=[O:5])([N:3]=[N+1:2]=[N-:1])[N:6]=[N+1:7]=[N-1:8]",
+            ),
+            (  # Diazo/azo to =N+=N-
+                "[C:2](=[N:3]#[N:4])=[O:1]",
+                "[C:2](=[N+1:3]=[N-:4])=[O:1]",
+            ),
+            (  # Sulfoxide to -S+(O-)-
+                "[H:5][N:1]([H:6])[S:2](=[O:3])[N:4]([H:7])[H:8]",
+                "[H:5][N:1]([H:6])[S+1:2]([O-:3])[N:4]([H:7])[H:8]",
+            ),
+            (  # Sulfoxide to -S+(O-)- (but unchanged)
+                "[H:5][O:1][S:2](=[O:3])[O:4][H:6]",
+                "[H:5][O:1][S:2](=[O:3])[O:4][H:6]",
+            ),
+            ("[H:3][C+:2]=[N-:1]", "[H:3][C:2]#[N:1]"),  # Charge recombination
+        ],
+    )
+    def test_normalize_molecule(
+        self, given_smiles, expected_smiles
+    ):
+        molecule = Molecule.from_mapped_smiles(given_smiles)
+        normalized = molecule.normalize(toolkit_registry=OpenEyeToolkitWrapper())
+
+        expected = Molecule.from_mapped_smiles(expected_smiles)
+        for norm_atom, expected_atom in zip(normalized.atoms, expected.atoms):
+            assert norm_atom.atomic_number == expected_atom.atomic_number
+            assert norm_atom.formal_charge == expected_atom.formal_charge
+
+        for expected_bond in expected.bonds:
+            norm_bond = normalized.get_bond_between(
+                expected_bond.atom1_index, expected_bond.atom2_index
+            )
+            assert norm_bond.bond_order == expected_bond.bond_order
+
 
 @requires_rdkit
 class TestRDKitToolkitWrapper:
@@ -3288,6 +3339,57 @@ class TestRDKitToolkitWrapper:
         # TODO: Add read tests for both files and file-like objects
         # TODO: Add read/write tests for gzipped files
         # TODO: Add write tests for all formats
+
+    @pytest.mark.parametrize(
+        "given_smiles, expected_smiles",
+        [
+            (  # Nitro to N+(O-)=O
+                "[H:5][C:1]([H:6])([H:7])[N:2](=[O:3])=[O:4]",
+                "[H:5][C:1]([H:6])([H:7])[N+1:2]([O-:3])=[O:4]",
+            ),
+            (  # Sulfone to S(=O)(=O)
+                "[H:8][C:1]#[C:2][S+2:3]([C:6]#[C:7][H:9])([O-:4])[O-:5]",
+                "[H:8][C:1]#[C:2][S:3]([C:6]#[C:7][H:9])(=[O:4])=[O:5]",
+            ),
+            (  # Pyridine oxide to n+O-
+                "[H:11][c:7]1[c:1]([n:2][c:3]([n:4](=[O:5])[c:6]1[H:10])[H:9])[H:8]",
+                "[H:11][c:7]1[c:1]([n:2][c:3]([n+1:4]([O-:5])[c:6]1[H:10])[H:9])[H:8]",
+            ),
+            (  # Azide to N=N+=N-
+                "[C:4](=[O:5])([N:3]=[N:2]#[N:1])[N:6]=[N:7]#[N:8]",
+                "[C:4](=[O:5])([N:3]=[N+1:2]=[N-:1])[N:6]=[N+1:7]=[N-1:8]",
+            ),
+            (  # Diazo/azo to =N+=N-
+                "[C:2](=[N:3]#[N:4])=[O:1]",
+                "[C:2](=[N+1:3]=[N-:4])=[O:1]",
+            ),
+            (  # Sulfoxide to -S+(O-)-
+                "[H:5][N:1]([H:6])[S:2](=[O:3])[N:4]([H:7])[H:8]",
+                "[H:5][N:1]([H:6])[S+1:2]([O-:3])[N:4]([H:7])[H:8]",
+            ),
+            (  # Sulfoxide to -S+(O-)- (but unchanged)
+                "[H:5][O:1][S:2](=[O:3])[O:4][H:6]",
+                "[H:5][O:1][S:2](=[O:3])[O:4][H:6]",
+            ),
+            ("[H:3][C+:2]=[N-:1]", "[H:3][C:2]#[N:1]"),  # Charge recombination
+        ],
+    )
+    def test_normalize_molecule(
+        self, given_smiles, expected_smiles
+    ):
+        molecule = Molecule.from_mapped_smiles(given_smiles)
+        normalized = molecule.normalize(toolkit_registry=RDKitToolkitWrapper())
+
+        expected = Molecule.from_mapped_smiles(expected_smiles)
+        for norm_atom, expected_atom in zip(normalized.atoms, expected.atoms):
+            assert norm_atom.atomic_number == expected_atom.atomic_number
+            assert norm_atom.formal_charge == expected_atom.formal_charge
+
+        for expected_bond in expected.bonds:
+            norm_bond = normalized.get_bond_between(
+                expected_bond.atom1_index, expected_bond.atom2_index
+            )
+            assert norm_bond.bond_order == expected_bond.bond_order
 
 
 @requires_ambertools

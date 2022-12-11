@@ -813,8 +813,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return molecules[:max_states]
 
-    def normalize(
-        self,
+    @staticmethod
+    def _run_normalization_reactions(
         molecule,
         normalization_reactions: Tuple[str, ...] = tuple(),
         max_iter: int = 200,
@@ -840,7 +840,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         from rdkit import Chem
         from rdkit.Chem import rdChemReactions
 
-        rdmol = self.to_rdkit(molecule)
+        rdmol = molecule.to_rdkit()
         original_smiles = new_smiles = Chem.MolToSmiles(rdmol)
 
         # track atoms

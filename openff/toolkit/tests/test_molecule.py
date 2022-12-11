@@ -2005,10 +2005,10 @@ class TestMolecule:
 
         assert expected == actual
 
-    @pytest.mark.parametrize(
-        "toolkit_wrapper",
-        [RDKitToolkitWrapper(), OpenEyeToolkitWrapper(), GLOBAL_TOOLKIT_REGISTRY],
-    )
+    # @pytest.mark.parametrize(
+    #     "toolkit_wrapper",
+    #     [OpenEyeToolkitWrapper(), RDKitToolkitWrapper(), GLOBAL_TOOLKIT_REGISTRY],
+    # )
     @pytest.mark.parametrize("inplace", [True, False])
     @pytest.mark.parametrize(
         "given_smiles, expected_smiles",
@@ -2022,8 +2022,8 @@ class TestMolecule:
                 "[H:8][C:1]#[C:2][S:3]([C:6]#[C:7][H:9])(=[O:4])=[O:5]",
             ),
             (  # Pyridine oxide to n+O-
-                "[H:8][C:5]1=[C:1]([N:2](=[C:4]1[H:7])=[O:3])[H:6]",
-                "[H:8][C:5]1=[C:1]([N+1:2](=[C:4]1[H:7])-[O-:3])[H:6]",
+                "[H:11][c:7]1[c:1]([n:2][c:3]([n:4](=[O:5])[c:6]1[H:10])[H:9])[H:8]",
+                "[H:11][c:7]1[c:1]([n:2][c:3]([n+1:4]([O-:5])[c:6]1[H:10])[H:9])[H:8]",
             ),
             (  # Azide to N=N+=N-
                 "[C:4](=[O:5])([N:3]=[N:2]#[N:1])[N:6]=[N:7]#[N:8]",
@@ -2045,11 +2045,11 @@ class TestMolecule:
         ],
     )
     def test_normalize_molecule(
-        self, toolkit_wrapper, inplace, given_smiles, expected_smiles
+        self, inplace, given_smiles, expected_smiles
     ):
         molecule = Molecule.from_mapped_smiles(given_smiles)
         normalized = molecule.normalize(
-            inplace=inplace, toolkit_registry=toolkit_wrapper
+            inplace=inplace,  # toolkit_registry=toolkit_wrapper
         )
 
         expected = Molecule.from_mapped_smiles(expected_smiles)

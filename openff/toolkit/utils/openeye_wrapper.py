@@ -924,8 +924,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return tautomers
 
-    def normalize(
-        self, molecule, normalization_reactions: Tuple[str, ...] = tuple(), **kwargs
+    @staticmethod
+    def _run_normalization_reactions(
+        molecule, normalization_reactions: Tuple[str, ...] = tuple(), **kwargs
     ):
         """
         Normalize the bond orders and charges of a molecule by applying a series of transformations to it.
@@ -951,9 +952,11 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             reaction = oechem.OEUniMolecularRxn(reaction_smarts)
             reaction(oemol)
 
-        return self.from_openeye(
-            oemol, _cls=molecule.__class__, allow_undefined_stereo=True
+        molecule = type(molecule).from_openeye(
+            oemol, allow_undefined_stereo=True
         )
+
+        return molecule
 
     @staticmethod
     def _check_mol2_gaff_atom_type(molecule, file_path=None):

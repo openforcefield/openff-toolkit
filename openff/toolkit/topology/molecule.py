@@ -4149,9 +4149,9 @@ class FrozenMolecule(Serializable):
         """
         # normalizations from RDKit's Code/GraphMol/MolStandardize/TransformCatalog/normalizations.in
         normalizations = (
-            "[N,P,As,Sb;X3:1](=[O,S,Se,Te:2])=[O,S,Se,Te:3]>>[*+1:1]([*-1:2])=[*:3]",  # Nitro to N+(O-)=O
+            "[N,P,As,Sb;X3:1](=[O,S,Se,Te:2])=[O,S,Se,Te:3]>>[*+1:1](-[*-1:2])=[*:3]",  # Nitro to N+(O-)=O
             "[S+2:1]([O-:2])([O-:3])>>[S+0:1](=[O-0:2])(=[O-0:3])",  # Sulfone to S(=O)(=O)
-            "[nH0+0:1]=[OH0+0:2]>>[n+:1][O-:2]",  # Pyridine oxide to n+O-
+            "[nH0+0:1]=[OH0+0:2]>>[n+:1]-[O-:2]",  # Pyridine oxide to n+O-
             "[*:1][N:2]=[N:3]#[N:4]>>[*:1][N:2]=[N+:3]=[N-:4]",  # Azide to N=N+=N-
             "[*:1]=[N:2]#[N:3]>>[*:1]=[N+:2]=[N-:3]",  # Diazo/azo to =N+=N-
             "[!O:1][S+0;X3:2](=[O:3])[!O:4]>>[*:1][S+1:2]([O-:3])[*:4]",  # Sulfoxide to -S+(O-)-
@@ -4176,21 +4176,21 @@ class FrozenMolecule(Serializable):
             "[N,O;+0!H0:1]-[A:2]=[A:3]-[A:4]=[N!$(*[O-]),O;+1H0:5]>>[*+1:1]=[*:2]-[*:3]=[*:4]-[*+0:5]",
             # Normalize 1,5 conjugated cation
             "[n;+0!H0:1]:[a:2]:[a:3]:[c:4]=[N!$(*[O-]),O;+1H0:5]>>[n+1:1]:[*:2]:[*:3]:[*:4]-[*+0:5]",
-            "[F,Cl,Br,I,At;-1:1]=[O:2]>>[*-0:1][O-:2]",  # Charge normalization
+            "[F,Cl,Br,I,At;-1:1]=[O:2]>>[*-0:1]-[O-:2]",  # Charge normalization
             "[N,P,As,Sb;-1:1]=[C+;v3:2]>>[*+0:1]#[C+0:2]",  # Charge recombination
         )
 
         if isinstance(toolkit_registry, ToolkitRegistry):
             normalized = toolkit_registry.call(
-                "normalize",
+                "_run_normalization_reactions",
                 molecule=self,
                 normalization_reactions=normalizations,
                 max_iter=max_iter,
             )
 
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            normalized = toolkit_registry.normalize(  # type: ignore
-                self, normalization_reactions=normalizations, max_iter=max_iter
+            normalized = toolkit_registry._run_normalization_reactions(  # type: ignore
+                molecule=self, normalization_reactions=normalizations, max_iter=max_iter
             )
 
         else:
@@ -4200,7 +4200,7 @@ class FrozenMolecule(Serializable):
 
         molecule = self
         if not inplace:
-            molecule = type(self)(self)
+            molecule = deepcopy(self)
 
         for self_atom, norm_atom in zip(molecule.atoms, normalized.atoms):
             self_atom.formal_charge = norm_atom.formal_charge
@@ -4209,10 +4209,6 @@ class FrozenMolecule(Serializable):
                 norm_bond.atom1_index, norm_bond.atom2_index
             )
             self_bond._bond_order = norm_bond.bond_order
-
-        # For some reason, running .to_smiles() is side-effecting
-        # and necessary for OpenEye-normalized molecules?
-        molecule.to_smiles()
         return molecule
 
     @OpenEyeToolkitWrapper.requires_toolkit()
