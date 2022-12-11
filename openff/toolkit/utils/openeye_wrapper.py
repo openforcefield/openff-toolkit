@@ -930,6 +930,22 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         normalization_reactions: Tuple[str] = tuple(),
         **kwargs
     ):
+        """
+        Normalize the bond orders and charges of a molecule by applying a series of transformations to it.
+
+        Parameters
+        ----------
+        molecule: openff.toolkit.topology.Molecule
+            The molecule to normalize
+        normalization_reactions: Tuple[str], default=tuple()
+            A tuple of SMARTS reaction strings representing the reactions to apply to the molecule.
+
+        Returns
+        -------
+        normalized_molecule: openff.toolkit.topology.Molecule
+            The normalized molecule. This is a new molecule object, not the same as the input molecule.
+        """
+
         from openeye import oechem
 
         oemol = molecule.to_openeye()

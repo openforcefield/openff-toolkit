@@ -819,6 +819,24 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         normalization_reactions: Tuple[str] = tuple(),
         max_iter: int = 200
     ):
+        """
+        Normalize the bond orders and charges of a molecule by applying a series of transformations to it.
+
+        Parameters
+        ----------
+        molecule: openff.toolkit.topology.Molecule
+            The molecule to normalize
+        normalization_reactions: Tuple[str], default=tuple()
+            A tuple of SMARTS reaction strings representing the reactions to apply to the molecule.
+        max_iter: int, default=200
+            The maximum number of iterations to perform for each transformation.
+
+        Returns
+        -------
+        normalized_molecule: openff.toolkit.topology.Molecule
+            The normalized molecule. This is a new molecule object, not the same as the input molecule.
+        """
+
         from rdkit import Chem
         from rdkit.Chem import rdChemReactions
 
@@ -864,9 +882,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         new_mol = type(molecule).from_rdkit(rdmol, allow_undefined_stereo=True)
         mapping = new_mol.properties.pop("atom_map")
-        # remap the molecule using the atom map found in the smiles
-        # the order is mapping = Dict[current_index: new_index]
-        # first renumber the mapping dict indexed from 0, currently from 1 as 0 indicates no mapping in toolkits
         adjusted_mapping = dict((current, new - 1) for current, new in mapping.items())
 
         return new_mol.remap(adjusted_mapping, current_to_new=True)
