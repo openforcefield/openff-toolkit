@@ -4125,7 +4125,7 @@ class FrozenMolecule(Serializable):
         self,
         max_iter: int = 200,
         inplace: bool = False,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
         Normalize the bond orders and charges of a molecule by applying a series of transformations to it.
@@ -4190,9 +4190,7 @@ class FrozenMolecule(Serializable):
 
         elif isinstance(toolkit_registry, ToolkitWrapper):
             normalized = toolkit_registry.normalize(
-                self,
-                normalization_reactions=normalizations,
-                max_iter=max_iter
+                self, normalization_reactions=normalizations, max_iter=max_iter
             )
 
         else:
@@ -4207,7 +4205,9 @@ class FrozenMolecule(Serializable):
         for self_atom, norm_atom in zip(molecule.atoms, normalized.atoms):
             self_atom.formal_charge = norm_atom.formal_charge
         for norm_bond in normalized.bonds:
-            self_bond = molecule.get_bond_between(norm_bond.atom1_index, norm_bond.atom2_index)
+            self_bond = molecule.get_bond_between(
+                norm_bond.atom1_index, norm_bond.atom2_index
+            )
             self_bond._bond_order = norm_bond.bond_order
 
         # For some reason, running .to_smiles() is side-effecting

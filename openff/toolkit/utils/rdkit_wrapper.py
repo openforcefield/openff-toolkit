@@ -817,7 +817,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         self,
         molecule,
         normalization_reactions: Tuple[str] = tuple(),
-        max_iter: int = 200
+        max_iter: int = 200,
     ):
         """
         Normalize the bond orders and charges of a molecule by applying a series of transformations to it.
