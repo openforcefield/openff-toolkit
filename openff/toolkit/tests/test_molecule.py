@@ -65,6 +65,7 @@ from openff.toolkit.utils.toolkits import (
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
     ToolkitRegistry,
+    GLOBAL_TOOLKIT_REGISTRY,
 )
 
 
@@ -2006,7 +2007,7 @@ class TestMolecule:
 
     @pytest.mark.parametrize(
         "toolkit_wrapper",
-        [RDKitToolkitWrapper(), OpenEyeToolkitWrapper()]
+        [RDKitToolkitWrapper(), OpenEyeToolkitWrapper(), GLOBAL_TOOLKIT_REGISTRY],
     )
     @pytest.mark.parametrize("inplace", [True, False])
     @pytest.mark.parametrize(
