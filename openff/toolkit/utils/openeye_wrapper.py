@@ -952,9 +952,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             reaction = oechem.OEUniMolecularRxn(reaction_smarts)
             reaction(oemol)
 
-        molecule = type(molecule).from_openeye(
-            oemol, allow_undefined_stereo=True
-        )
+        molecule = type(molecule).from_openeye(oemol, allow_undefined_stereo=True)
 
         return molecule
 

@@ -2045,9 +2045,7 @@ class TestMolecule:
             ("[H:3][C+:2]=[N-:1]", "[H:3][C:2]#[N:1]"),  # Charge recombination
         ],
     )
-    def test_normalize_molecule(
-        self, inplace, given_smiles, expected_smiles
-    ):
+    def test_normalize_molecule(self, inplace, given_smiles, expected_smiles):
         molecule = Molecule.from_mapped_smiles(given_smiles)
         normalized = molecule.normalize(
             inplace=inplace,  # toolkit_registry=toolkit_wrapper

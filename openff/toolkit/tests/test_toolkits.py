@@ -2030,9 +2030,7 @@ class TestOpenEyeToolkitWrapper:
             ("[H:3][C+:2]=[N-:1]", "[H:3][C:2]#[N:1]"),  # Charge recombination
         ],
     )
-    def test_normalize_molecule(
-        self, given_smiles, expected_smiles
-    ):
+    def test_normalize_molecule(self, given_smiles, expected_smiles):
         molecule = Molecule.from_mapped_smiles(given_smiles)
         normalized = molecule.normalize(toolkit_registry=OpenEyeToolkitWrapper())
 
@@ -3376,9 +3374,7 @@ class TestRDKitToolkitWrapper:
             ("[H:3][C+:2]=[N-:1]", "[H:3][C:2]#[N:1]"),  # Charge recombination
         ],
     )
-    def test_normalize_molecule(
-        self, given_smiles, expected_smiles
-    ):
+    def test_normalize_molecule(self, given_smiles, expected_smiles):
         molecule = Molecule.from_mapped_smiles(given_smiles)
         normalized = molecule.normalize(toolkit_registry=RDKitToolkitWrapper())
 
