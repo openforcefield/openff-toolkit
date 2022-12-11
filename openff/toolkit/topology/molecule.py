@@ -4121,6 +4121,100 @@ class FrozenMolecule(Serializable):
 
         return molecules
 
+    def normalize(
+        self,
+        max_iter: int = 200,
+        inplace: bool = False,
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
+    ):
+        """
+        Normalize the bond orders and charges of a molecule by applying a series of transformations to it.
+
+        Parameters
+        ----------
+        max_iter: int, default=200
+            The maximum number of iterations to perform for each transformation.
+            This parameter is only used with the RDKit ToolkitWrapper,
+            as the OpenEyeToolkitWrapper applies each normalization reaction exhaustively.
+        inplace: bool, default=False
+            If the molecule should be normalized in place or a new molecule should be returned.
+            If a new molecule is returned, atoms remain ordered like the original molecule.
+        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry or
+            lopenff.toolkit.utils.toolkits.ToolkitWrapper, default=GLOBAL_TOOLKIT_REGISTRY
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use to perform normalization reactions.
+
+        Returns
+        -------
+        normalized_molecule: openff.toolkit.topology.Molecule
+        """
+        # normalizations from RDKit's Code/GraphMol/MolStandardize/TransformCatalog/normalizations.in
+        normalizations = [
+            "[N,P,As,Sb;X3:1](=[O,S,Se,Te:2])=[O,S,Se,Te:3]>>[*+1:1]([*-1:2])=[*:3]",  # Nitro to N+(O-)=O
+            "[S+2:1]([O-:2])([O-:3])>>[S+0:1](=[O-0:2])(=[O-0:3])",  # Sulfone to S(=O)(=O)
+            "[nH0+0:1]=[OH0+0:2]>>[n+:1][O-:2]",  # Pyridine oxide to n+O-
+            "[*:1][N:2]=[N:3]#[N:4]>>[*:1][N:2]=[N+:3]=[N-:4]",  # Azide to N=N+=N-
+            "[*:1]=[N:2]#[N:3]>>[*:1]=[N+:2]=[N-:3]",  # Diazo/azo to =N+=N-
+            "[!O:1][S+0;X3:2](=[O:3])[!O:4]>>[*:1][S+1:2]([O-:3])[*:4]",  # Sulfoxide to -S+(O-)-
+            "[O,S,Se,Te;-1:1][P+;D4:2][O,S,Se,Te;-1:3]>>[*+0:1]=[P+0;D5:2][*-1:3]",  # Phosphate to P(O-)=O
+            "[C,S&!$([S+]-[O-]);X3+1:1]([NX3:2])[NX3!H0:3]>>[*+0:1]([N:2])=[N+:3]",  # C/S+N to C/S=N+
+            "[P;X4+1:1]([NX3:2])[NX3!H0:3]>>[*+0:1]([N:2])=[N+:3]",  # P+N to P=N+
+            # Normalize hydrazine-diazonium
+            "[CX4:1][NX3H:2]-[NX3H:3][CX4:4][NX2+:5]#[NX1:6]>>[CX4:1][NH0:2]=[NH+:3][C:4][N+0:5]=[NH:6]",
+            # Recombine 1,3-separated charges
+            "[N,P,As,Sb,O,S,Se,Te;-1:1]-[A+0:2]=[N,P,As,Sb,O,S,Se,Te;+1:3]>>[*-0:1]=[*:2]-[*+0:3]",
+            "[n,o,p,s;-1:1]:[a:2]=[N,O,P,S;+1:3]>>[*-0:1]:[*:2]-[*+0:3]",  # Recombine 1,3-separated charges
+            "[N,O,P,S;-1:1]-[a:2]:[n,o,p,s;+1:3]>>[*-0:1]=[*:2]:[*+0:3]",  # Recombine 1,3-separated charges
+            # Recombine 1,5-separated charges
+            "[N,P,As,Sb,O,S,Se,Te;-1:1]-[A+0:2]=[A:3]-[A:4]=[N,P,As,Sb,O,S,Se,Te;+1:5]>>[*-0:1]=[*:2]-[*:3]=[*:4]-[*+0:5]",
+            # Recombine 1,5-separated charges
+            "[n,o,p,s;-1:1]:[a:2]:[a:3]:[c:4]=[N,O,P,S;+1:5]>>[*-0:1]:[*:2]:[*:3]:[c:4]-[*+0:5]",
+            # Recombine 1,5-separated charges
+            "[N,O,P,S;-1:1]-[c:2]:[a:3]:[a:4]:[n,o,p,s;+1:5]>>[*-0:1]=[c:2]:[*:3]:[*:4]:[*+0:5]",
+            "[N,O;+0!H0:1]-[A:2]=[N!$(*[O-]),O;+1H0:3]>>[*+1:1]=[*:2]-[*+0:3]",  # Normalize 1,3 conjugated cation
+            "[n;+0!H0:1]:[c:2]=[N!$(*[O-]),O;+1H0:3]>>[*+1:1]:[*:2]-[*+0:3]",  # Normalize 1,3 conjugated cation
+            # Normalize 1,5 conjugated cation
+            "[N,O;+0!H0:1]-[A:2]=[A:3]-[A:4]=[N!$(*[O-]),O;+1H0:5]>>[*+1:1]=[*:2]-[*:3]=[*:4]-[*+0:5]",
+            # Normalize 1,5 conjugated cation
+            "[n;+0!H0:1]:[a:2]:[a:3]:[c:4]=[N!$(*[O-]),O;+1H0:5]>>[n+1:1]:[*:2]:[*:3]:[*:4]-[*+0:5]",
+            "[F,Cl,Br,I,At;-1:1]=[O:2]>>[*-0:1][O-:2]",  # Charge normalization
+            "[N,P,As,Sb;-1:1]=[C+;v3:2]>>[*+0:1]#[C+0:2]",  # Charge recombination
+        ]
+
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            normalized = toolkit_registry.call(
+                "normalize",
+                molecule=self,
+                normalization_reactions=normalizations,
+                max_iter=max_iter,
+            )
+
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            normalized = toolkit_registry.normalize(
+                self,
+                normalization_reactions=normalizations,
+                max_iter=max_iter
+            )
+
+        else:
+            raise InvalidToolkitRegistryError(
+                "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
+            )
+
+        molecule = self
+        if not inplace:
+            molecule = type(self)(self)
+
+        for self_atom, norm_atom in zip(molecule.atoms, normalized.atoms):
+            self_atom.formal_charge = norm_atom.formal_charge
+        for norm_bond in normalized.bonds:
+            self_bond = molecule.get_bond_between(norm_bond.atom1_index, norm_bond.atom2_index)
+            self_bond._bond_order = norm_bond.bond_order
+
+        # For some reason, running .to_smiles() is side-effecting
+        # and necessary for OpenEye-normalized molecules?
+        molecule.to_smiles()
+        return molecule
+
     @OpenEyeToolkitWrapper.requires_toolkit()
     def enumerate_protomers(self, max_states=10):
         """

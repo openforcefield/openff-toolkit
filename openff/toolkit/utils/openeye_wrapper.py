@@ -13,7 +13,7 @@ import re
 import tempfile
 from collections import defaultdict
 from functools import wraps
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Tuple
 
 import numpy as np
 from cachetools import LRUCache, cached
@@ -923,6 +923,26 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 )
 
         return tautomers
+
+    def normalize(
+        self,
+        molecule,
+        normalization_reactions: Tuple[str] = tuple(),
+        **kwargs
+    ):
+        from openeye import oechem
+
+        oemol = molecule.to_openeye()
+
+        for reaction_smarts in normalization_reactions:
+            reaction = oechem.OEUniMolecularRxn(reaction_smarts)
+            reaction(oemol)
+        
+        return self.from_openeye(
+            oemol,
+            _cls=molecule.__class__,
+            allow_undefined_stereo=True
+        )
 
     @staticmethod
     def _check_mol2_gaff_atom_type(molecule, file_path=None):

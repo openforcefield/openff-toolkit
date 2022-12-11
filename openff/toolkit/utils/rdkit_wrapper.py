@@ -813,6 +813,64 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return molecules[:max_states]
 
+    def normalize(
+        self,
+        molecule,
+        normalization_reactions: Tuple[str] = tuple(),
+        max_iter: int = 200
+    ):
+        from rdkit import Chem
+        from rdkit.Chem import rdChemReactions
+
+        rdmol = self.to_rdkit(molecule)
+        original_smiles = new_smiles = Chem.MolToSmiles(rdmol)
+
+        # track atoms
+        for i, atom in enumerate(rdmol.GetAtoms(), 1):
+            atom.SetAtomMapNum(i)
+
+        for reaction_smarts in normalization_reactions:
+            reaction = rdChemReactions.ReactionFromSmarts(reaction_smarts)
+            n_iter = 0
+            keep_changing = True
+
+            while n_iter < max_iter and keep_changing:
+                n_iter += 1
+                old_smiles = new_smiles
+
+                products = reaction.RunReactants((rdmol,), maxProducts=1)
+                if not products:
+                    break
+
+                try:
+                    ((rdmol,),) = products
+                except ValueError:
+                    raise ValueError(
+                        f"Reaction produced multiple products: {reaction_smarts}"
+                    )
+
+                for atom in rdmol.GetAtoms():
+                    atom.SetAtomMapNum(atom.GetIntProp("react_atom_idx") + 1)
+
+                new_smiles = Chem.MolToSmiles(Chem.AddHs(rdmol))
+                # stop changing when smiles converges to same product
+                keep_changing = new_smiles != old_smiles
+
+            if n_iter >= max_iter and keep_changing:
+                raise ValueError(
+                    f"Reaction {reaction_smarts} did not converge after "
+                    f"{max_iter} iterations for molecule {original_smiles}"
+                )
+
+        new_mol = type(molecule).from_rdkit(rdmol, allow_undefined_stereo=True)
+        mapping = new_mol.properties.pop("atom_map")
+        # remap the molecule using the atom map found in the smiles
+        # the order is mapping = Dict[current_index: new_index]
+        # first renumber the mapping dict indexed from 0, currently from 1 as 0 indicates no mapping in toolkits
+        adjusted_mapping = dict((current, new - 1) for current, new in mapping.items())
+
+        return new_mol.remap(adjusted_mapping, current_to_new=True)
+
     def canonical_order_atoms(self, molecule):
         """
         Canonical order the atoms in the molecule using the RDKit.
