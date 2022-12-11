@@ -61,11 +61,11 @@ from openff.toolkit.utils.exceptions import (
     UnsupportedFileTypeError,
 )
 from openff.toolkit.utils.toolkits import (
+    GLOBAL_TOOLKIT_REGISTRY,
     AmberToolsToolkitWrapper,
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
     ToolkitRegistry,
-    GLOBAL_TOOLKIT_REGISTRY,
 )
 
 
