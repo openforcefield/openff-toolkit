@@ -816,7 +816,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     def normalize(
         self,
         molecule,
-        normalization_reactions: Tuple[str] = tuple(),
+        normalization_reactions: Tuple[str, ...] = tuple(),
         max_iter: int = 200,
     ):
         """
@@ -826,7 +826,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         ----------
         molecule: openff.toolkit.topology.Molecule
             The molecule to normalize
-        normalization_reactions: Tuple[str], default=tuple()
+        normalization_reactions: Tuple[str, ...], default=tuple()
             A tuple of SMARTS reaction strings representing the reactions to apply to the molecule.
         max_iter: int, default=200
             The maximum number of iterations to perform for each transformation.

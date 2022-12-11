@@ -925,7 +925,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         return tautomers
 
     def normalize(
-        self, molecule, normalization_reactions: Tuple[str] = tuple(), **kwargs
+        self, molecule, normalization_reactions: Tuple[str, ...] = tuple(), **kwargs
     ):
         """
         Normalize the bond orders and charges of a molecule by applying a series of transformations to it.
@@ -934,7 +934,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         ----------
         molecule: openff.toolkit.topology.Molecule
             The molecule to normalize
-        normalization_reactions: Tuple[str], default=tuple()
+        normalization_reactions: Tuple[str, ...], default=tuple()
             A tuple of SMARTS reaction strings representing the reactions to apply to the molecule.
 
         Returns
