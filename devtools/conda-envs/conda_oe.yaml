@@ -2,14 +2,10 @@ name: latest-deployment
 channels:
   - conda-forge
   - openeye
-
 dependencies:
     # Base depends
   - openff-toolkit-examples
-
-  - openmmforcefields >=0.11.2
+    # Tests
   - openeye-toolkits
-  - qcportal >=0.15
   - pytest
   - pytest-rerunfailures
-  - nbval

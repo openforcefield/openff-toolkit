@@ -49,7 +49,7 @@ jobs:
       PYTEST_ARGS: -r fE --tb=short -nauto --cov=openff --cov-config=setup.cfg --cov-append --cov-report=xml
 
     steps:
-      - uses: actions/checkout@v3.1.0
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
 
@@ -90,7 +90,6 @@ jobs:
           ulimit -a
 
       - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
-        shell: bash
         env:
           OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
         run: |
@@ -172,7 +171,7 @@ jobs:
           pytest -v --no-cov --doctest-modules --ignore=openff/toolkit/tests/ --ignore=openff/toolkit/data/ --ignore=openff/toolkit/utils/utils.py openff/
 
       - name: Codecov
-        uses: codecov/codecov-action@v3.1.1
+        uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage.xml

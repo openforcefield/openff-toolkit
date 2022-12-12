@@ -7,9 +7,7 @@ dependencies:
     # Base depends
   - openff-toolkit-examples =0.10
 
-  - openmmforcefields
   - openeye-toolkits
   - qcportal >=0.15
   - pytest
   - pytest-rerunfailures
-  - nbval
