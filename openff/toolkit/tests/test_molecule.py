@@ -61,7 +61,6 @@ from openff.toolkit.utils.exceptions import (
     UnsupportedFileTypeError,
 )
 from openff.toolkit.utils.toolkits import (
-    GLOBAL_TOOLKIT_REGISTRY,
     AmberToolsToolkitWrapper,
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
@@ -2005,10 +2004,6 @@ class TestMolecule:
 
         assert expected == actual
 
-    # @pytest.mark.parametrize(
-    #     "toolkit_wrapper",
-    #     [OpenEyeToolkitWrapper(), RDKitToolkitWrapper(), GLOBAL_TOOLKIT_REGISTRY],
-    # )
     @pytest.mark.parametrize("inplace", [True, False])
     @pytest.mark.parametrize(
         "given_smiles, expected_smiles",
@@ -2047,9 +2042,7 @@ class TestMolecule:
     )
     def test_normalize_molecule(self, inplace, given_smiles, expected_smiles):
         molecule = Molecule.from_mapped_smiles(given_smiles)
-        normalized = molecule.normalize(
-            inplace=inplace,  # toolkit_registry=toolkit_wrapper
-        )
+        normalized = molecule.normalize(inplace=inplace)
 
         expected = Molecule.from_mapped_smiles(expected_smiles)
         for norm_atom, expected_atom in zip(normalized.atoms, expected.atoms):
