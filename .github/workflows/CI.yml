@@ -139,7 +139,7 @@ jobs:
         run: |
           wget -O nagl_env.yaml https://raw.githubusercontent.com/openforcefield/openff-nagl/v0.1.0/devtools/conda-envs/test_env.yaml
           mamba env update --file nagl_env.yaml
-          pip install git+https://github.com/openforcefield/openff-nagl.git@v0.1.0
+          pip install --no-deps git+https://github.com/openforcefield/openff-nagl.git@v0.1.0
 
       - name: Environment Information
         run: |
