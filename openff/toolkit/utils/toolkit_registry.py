@@ -7,7 +7,6 @@ import logging
 from contextlib import contextmanager
 from typing import Union
 
-from openff.toolkit.utils._nagl_wrapper import _NAGLToolkitWrapper
 from openff.toolkit.utils.ambertools_wrapper import AmberToolsToolkitWrapper
 from openff.toolkit.utils.base_wrapper import ToolkitWrapper
 from openff.toolkit.utils.builtin_wrapper import BuiltInToolkitWrapper
@@ -90,7 +89,6 @@ class ToolkitRegistry:
         if _register_imported_toolkit_wrappers:
             if toolkit_precedence is None:
                 toolkit_precedence = [
-                    _NAGLToolkitWrapper,
                     OpenEyeToolkitWrapper,
                     RDKitToolkitWrapper,
                     AmberToolsToolkitWrapper,
