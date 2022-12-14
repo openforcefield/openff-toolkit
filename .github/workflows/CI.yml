@@ -82,6 +82,7 @@ jobs:
           environment-file: devtools/conda-envs/${{ env.ENVFILE }}.yaml
           extra-specs: |
             python=${{ matrix.python-version }}
+            mamba
 
       - name: Additional info about the build
         run: |
@@ -132,6 +133,13 @@ jobs:
               python -c "from openff.toolkit.utils.toolkits import ${TK}_AVAILABLE; assert not ${TK}_AVAILABLE, '${TK} available'"
             done
           fi
+
+      - name: Install NAGL and its dependencies
+        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
+        run: |
+          wget -O nagl_env.yaml https://raw.githubusercontent.com/openforcefield/openff-nagl/v0.1.0/devtools/conda-envs/test_env.yaml
+          mamba env update --file nagl_env.yaml
+          pip install git+https://github.com/openforcefield/openff-nagl.git@v0.1.0
 
       - name: Environment Information
         run: |
