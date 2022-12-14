@@ -24,6 +24,7 @@ from openff.toolkit.tests.create_molecules import (
     topology_with_metadata,
 )
 from openff.toolkit.tests.utils import (
+    has_pkg,
     requires_ambertools,
     requires_openeye,
     requires_rdkit,
@@ -4032,6 +4033,10 @@ class TestToolkitRegistry:
 
     @requires_openeye
     @requires_rdkit
+    @pytest.mark.skipif(
+        has_pkg("openff.nagl"),
+        reason="Test assumes that OpenFF NAGL is not installed",
+    )
     def test_register_imported_toolkit_wrappers(self):
         """Test that imported toolkits are registered, and in the expected order"""
         no_precedence = ToolkitRegistry(_register_imported_toolkit_wrappers=True)
