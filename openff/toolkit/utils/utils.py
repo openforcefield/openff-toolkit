@@ -26,7 +26,7 @@ __all__ = [
 import contextlib
 import functools
 import logging
-from typing import List, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import pint
@@ -207,7 +207,10 @@ def string_to_quantity(quantity_string) -> Union[str, int, float, unit.Quantity]
         return quantity
 
 
-def convert_all_strings_to_quantity(smirnoff_data):
+def convert_all_strings_to_quantity(
+    smirnoff_data: Dict,
+    ignore_keys: List[str] = list(),
+):
     """
     Traverses a SMIRNOFF data structure, attempting to convert all
     quantity-defining strings into openff.units.unit.Quantity objects.
@@ -230,12 +233,21 @@ def convert_all_strings_to_quantity(smirnoff_data):
 
     if isinstance(smirnoff_data, dict):
         for key, value in smirnoff_data.items():
-            smirnoff_data[key] = convert_all_strings_to_quantity(value)
+            if key in ignore_keys:
+                smirnoff_data[key] = value
+            else:
+                smirnoff_data[key] = convert_all_strings_to_quantity(
+                    value,
+                    ignore_keys=ignore_keys,
+                )
         obj_to_return = smirnoff_data
 
     elif isinstance(smirnoff_data, list):
         for index, item in enumerate(smirnoff_data):
-            smirnoff_data[index] = convert_all_strings_to_quantity(item)
+            smirnoff_data[index] = convert_all_strings_to_quantity(
+                item,
+                ignore_keys=ignore_keys,
+            )
         obj_to_return = smirnoff_data
 
     elif isinstance(smirnoff_data, int) or isinstance(smirnoff_data, float):

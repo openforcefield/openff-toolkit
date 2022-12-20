@@ -15,6 +15,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### New features
+- [PR #1484](https://github.com/openforcefield/openff-toolkit/pull/1484): A `positions` argument has been added to `Topology.from_openmm()` and `Topology.from_mdtraj()`, which allows the topology's positions to be set more conveniently.
+
 ### Behavior changes
 - [PR #1466](https://github.com/openforcefield/openff-toolkit/pull/1466):
   Replaces the use of `collections.OrderedDict` throughout the toolkit with
@@ -28,9 +31,15 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   a `ParameterHandler`'s class when calling `ForceField.register_parameter_handler`.
 - [PR #1480](https://github.com/openforcefield/openff-toolkit/pull/1480): Fixes
   [#1479](https://github.com/openforcefield/openff-toolkit/issues/1479) by requiring that `Atom.atomic_number` is a positive integer.
+- [PR #1494](https://github.com/openforcefield/openff-toolkit/pull/1494): Fixes
+  [#1493](https://github.com/openforcefield/openff-toolkit/issues/1493) in which some OFFXML file
+  contents were parsed to `unit.Quantity` objects despite not representing physical quantities.
 
 [`Atom.atomic_number`]: Atom.atomic_number
 
+### Improved documentation and warnings
+- [PR #1484](https://github.com/openforcefield/openff-toolkit/pull/1484): The docstrings for `Topology.from_openmm()` and `Topology.from_mdtraj()` have been improved.
+- [PR #1483](https://github.com/openforcefield/openff-toolkit/pull/1483): Simplified and clarified errors and warnings related to undefined stereochemistry with RDKit.
 
 ## 0.11.4 Bugfix release
 

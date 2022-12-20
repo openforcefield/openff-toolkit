@@ -998,6 +998,26 @@ class TestForceField:
         assert len(forcefield._parameter_handlers["ImproperTorsions"]._parameters) == 2
         assert len(forcefield._parameter_handlers["vdW"]._parameters) == 2
 
+    def test_load_do_not_convert_non_quantity_strings(self):
+        """Reproduce part of #1493"""
+        sage = ForceField("openff-2.0.0.offxml")
+
+        for parameter_handler_name in sage.registered_parameter_handlers:
+
+            parameter_handler = sage.get_parameter_handler(parameter_handler_name)
+
+            for parameter in parameter_handler.parameters:
+                assert isinstance(parameter.smirks, str)
+                assert not isinstance(parameter.smirks, unit.Quantity)
+
+                # Ensure that, for example, F isn't converted to Farad
+                if (
+                    parameter_handler_name == "LibraryCharges"
+                    and getattr(parameter, "name") is not None
+                ):
+                    assert isinstance(parameter.name, str)
+                    assert not isinstance(parameter.name, unit.Quantity)
+
     def test_pickle(self):
         """
         Test pickling and unpickling a force field

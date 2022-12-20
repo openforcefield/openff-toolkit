@@ -3,38 +3,39 @@ channels:
   - openeye
   - conda-forge
 dependencies:
+    # Base depends
   - python
   - pip
-  - packaging
+  - packaging =21
+  - numpy
+  - networkx
+  - cachetools
+  - cached-property
+  - xmltodict
+  - python-constraint
+  - openmm >=7.6
+  - openff-forcefields
+  - smirnoff99Frosst
+  - openff-units >=0.2
+  - openff-utilities >=0.1.5
+  - openff-interchange-base >=0.2
+    # Toolkit-specific
+  - openeye-toolkits
+    # Test-only/optional/dev/typing
   - pytest
   - pytest-cov
   - pytest-xdist
   - pytest-rerunfailures
-  - nbval
-  - codecov
-  - coverage
-  - numpy
-  - networkx
-  - parmed
-  - openeye-toolkits
-  - packaging
-  - openmm =>7.6
-  - openff-forcefields
-  - openff-units >=0.2
-  - openff-utilities >=0.1.5
-  - openff-interchange-base >0.2.0rc6
-  - smirnoff99Frosst
-  - cachetools
-  - cached-property
   - pyyaml
   - toml
   - bson
   - msgpack-python
-  - xmltodict
-  - python-constraint
   - qcelemental
   - qcportal >=0.15
   - qcengine
   - mdtraj
-  - ipywidgets >=7,<8
+  - parmed
+  - nbval
+  - ipywidgets =7
   - pdbfixer
+  - openmmforcefields >=0.11.2

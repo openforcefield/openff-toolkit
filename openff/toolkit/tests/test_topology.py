@@ -10,6 +10,7 @@ from copy import deepcopy
 import numpy as np
 import pytest
 from openff.units import unit
+from openff.units.openmm import from_openmm
 from openff.units.units import Quantity
 from openmm import app
 
@@ -511,9 +512,14 @@ class TestTopology:
 
         molecules = [create_ethanol(), create_cyclohexane()]
 
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
+        topology = Topology.from_openmm(
+            pdbfile.topology,
+            unique_molecules=molecules,
+            positions=pdbfile.positions,
+        )
         assert topology.n_molecules == 239
         assert topology.n_unique_molecules == 2
+        assert np.all(topology.get_positions() == from_openmm(pdbfile.positions))
         # Ensure that hierarchy iterators are initialized
         assert all(
             all([molecule.residues, molecule.chains]) for molecule in topology.molecules

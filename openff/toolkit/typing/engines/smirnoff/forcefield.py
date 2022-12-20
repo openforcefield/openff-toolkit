@@ -589,7 +589,7 @@ class ForceField:
         self._parameter_io_handlers[io_format] = parameter_io_handler
 
     @property
-    def registered_parameter_handlers(self):
+    def registered_parameter_handlers(self) -> List[str]:
         """
         Return the list of registered parameter handlers by name
 
@@ -875,7 +875,10 @@ class ForceField:
             self._add_date(smirnoff_data["SMIRNOFF"]["Date"])
 
         # Go through the whole SMIRNOFF data structure, trying to convert all strings to Quantity
-        smirnoff_data = convert_all_strings_to_quantity(smirnoff_data)
+        smirnoff_data = convert_all_strings_to_quantity(
+            smirnoff_data,
+            ignore_keys=["smirks", "name"],
+        )
 
         # Go through the subsections, delegating each to the proper ParameterHandler
 

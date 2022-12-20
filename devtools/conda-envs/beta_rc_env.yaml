@@ -8,25 +8,28 @@ dependencies:
     # Base depends
   - python
   - pip
-  - packaging
+  - packaging =21
+  - numpy
+  - networkx
+  - cachetools
+  - cached-property
+  - xmltodict
+  - python-constraint
   - openmm >=7.6
   - openff-forcefields
   - smirnoff99Frosst
-  - numpy
-  - networkx
+  - openff-units >=0.2
+  - openff-utilities >=0.1.5
+  - openff-interchange-base >=0.2
+    # Toolkit-specific
   - ambertools
   - rdkit
-  - xmltodict
+  - openeye-toolkits
     # Test-only/optional/dev
-  - mdtraj
   - pytest
   - pytest-cov
-  - nbval
-  - codecov
-  - coverage
-  - openeye-toolkits
-  - cachetools
-  - cached-property
+  - pytest-xdist
+  - pytest-rerunfailures
   - pyyaml
   - toml
   - bson
@@ -34,10 +37,10 @@ dependencies:
   - qcelemental
   - qcportal >=0.15
   - qcengine
-  - openff-interchange
-  # Typing
+  - mdtraj
+  - parmed
+  - nbval
   - mypy
-  - typing-extensions
   - pip:
     - types-pkg_resources
     - types-setuptools

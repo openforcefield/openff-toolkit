@@ -2571,7 +2571,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return undefined_bond_indices
 
     @classmethod
-    def _detect_undefined_stereo(cls, rdmol, err_msg_prefix="", raise_warning=False):
+    def _detect_undefined_stereo(
+        cls,
+        rdmol,
+        err_msg_prefix="",
+        raise_warning=False,
+    ):
         """Raise UndefinedStereochemistryError if the RDMol has undefined stereochemistry.
 
         Parameters
@@ -2579,7 +2584,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         rdmol : rdkit.Chem.Mol
             The RDKit molecule.
         err_msg_prefix : str, optional
-            A string to prepend to the error/warning message.
+            A string to prepend to the error message (but not the warning).
         raise_warning : bool, optional, default=False
             If True, a warning is issued instead of an exception.
 
@@ -2597,7 +2602,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         if len(undefined_atom_indices) == 0 and len(undefined_bond_indices) == 0:
             msg = None
         else:
-            msg = err_msg_prefix + "RDMol has unspecified stereochemistry. "
+            msg = "RDMol has unspecified stereochemistry. "
             # The "_Name" property is not always assigned.
             if rdmol.HasProp("_Name"):
                 msg += "RDMol name: " + rdmol.GetProp("_Name")
@@ -2630,7 +2635,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 msg = "Warning (not error because allow_undefined_stereo=True): " + msg
                 logger.warning(msg)
             else:
-                msg = "Unable to make OFFMol from RDMol: " + msg
+                msg = err_msg_prefix + msg
                 raise UndefinedStereochemistryError(msg)
 
     @staticmethod

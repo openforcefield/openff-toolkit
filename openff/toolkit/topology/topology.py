@@ -22,6 +22,7 @@ from typing import (
     TYPE_CHECKING,
     Dict,
     Generator,
+    Iterable,
     Iterator,
     List,
     Literal,
@@ -32,8 +33,9 @@ from typing import (
 )
 
 import numpy as np
+from networkx import Graph
 from numpy.typing import NDArray
-from openff.units import Quantity, unit
+from openff.units import Quantity, ensure_quantity, unit
 from openff.utilities import requires_package
 
 from openff.toolkit.topology import Molecule
@@ -61,6 +63,8 @@ from openff.toolkit.utils.toolkits import (
 )
 
 if TYPE_CHECKING:
+    import mdtraj
+    import openmm.app
     from openmm.unit import Quantity as OMMQuantity
 
     from openff.toolkit.topology.molecule import Atom
@@ -1294,29 +1298,55 @@ class Topology(Serializable):
 
     @classmethod
     @requires_package("openmm")
-    def from_openmm(cls, openmm_topology, unique_molecules=None):
+    def from_openmm(
+        cls,
+        openmm_topology: "openmm.app.Topology",
+        unique_molecules: Optional[Iterable[FrozenMolecule]] = None,
+        positions: Union[None, Quantity, "OMMQuantity"] = None,
+    ) -> "Topology":
         """
         Construct an OpenFF Topology object from an OpenMM Topology object.
 
-        This method guarantees that the order of atoms in the input OpenMM Topology will be the same as the ordering
-        of atoms in the output OpenFF Topology. However it does not guarantee the order of the bonds will be the same.
+        This method guarantees that the order of atoms in the input OpenMM
+        Topology will be the same as the ordering of atoms in the output OpenFF
+        Topology. However it does not guarantee the order of the bonds will be
+        the same.
 
-        Hierarchy schemes are taken from the OpenMM topology, not from `unique_molecules`.
+        Hierarchy schemes are taken from the OpenMM topology, not from
+        ``unique_molecules``.
 
         Parameters
         ----------
-        openmm_topology : openmm.app.Topology
-            An OpenMM Topology object
-        unique_molecules : iterable of objects that can be used to construct unique Molecule objects
-            All unique molecules must be provided, in any order, though multiple copies of each molecule are allowed.
-            The atomic elements and bond connectivity will be used to match the reference molecules
-            to molecule graphs appearing in the OpenMM ``Topology``. If bond orders are present in the
-            OpenMM ``Topology``, these will be used in matching as well.
+        openmm_topology
+            The OpenMM Topology object to convert
+        unique_molecules
+            An iterable containing all the unique molecules in the topology.
+            This is used to identify the molecules in the OpenMM topology and
+            provide any missing chemical information. Each chemical species in
+            the topology must be specified exactly once, though the topology
+            may have any number of copies, including zero. The chemical
+            elements of atoms and their bond connectivity will be used to match
+            these reference molecules to the molecules appearing in the
+            topology. If bond orders are specified in the topology, these will
+            be used in matching as well.
+        positions
+            Positions for the atoms in the new topology.
 
         Returns
         -------
-        topology : openff.toolkit.topology.Topology
-            An OpenFF Topology object
+        topology
+            An OpenFF Topology object, constructed from the molecules in
+            ``unique_molecules``, with the same atom order as the input topology.
+
+        Raises
+        ------
+        MissingUniqueMoleculesError
+            If ``unique_molecules`` is ``None``
+        DuplicateUniqueMoleculeError
+            If the same connectivity graph is represented by two different
+            molecules in ``unique_molecules``
+        ValueError
+            If a chemically impossible molecule is detected in the topology
         """
         import networkx as nx
         from openff.units.openmm import from_openmm
@@ -1337,7 +1367,7 @@ class Topology(Serializable):
 
         # Convert all unique mols to graphs
         topology = cls()
-        graph_to_unq_mol = {}
+        graph_to_unq_mol: Dict[Graph, FrozenMolecule] = {}
         for unq_mol in unique_molecules:
             unq_mol_graph = unq_mol.to_networkx()
             for existing_graph in graph_to_unq_mol.keys():
@@ -1467,6 +1497,9 @@ class Topology(Serializable):
 
         if openmm_topology.getPeriodicBoxVectors() is not None:
             topology.box_vectors = from_openmm(openmm_topology.getPeriodicBoxVectors())
+
+        if positions is not None:
+            topology.set_positions(ensure_quantity(positions, "openff"))
 
         # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?
         return topology
@@ -1818,27 +1851,60 @@ class Topology(Serializable):
 
     @classmethod
     @requires_package("mdtraj")
-    def from_mdtraj(cls, mdtraj_topology, unique_molecules=None):
+    def from_mdtraj(
+        cls,
+        mdtraj_topology: "mdtraj.Topology",
+        unique_molecules: Optional[Iterable[FrozenMolecule]] = None,
+        positions: Union[None, "OMMQuantity", Quantity] = None,
+    ):
         """
-        Construct an OpenFF Topology object from an MDTraj Topology object.
+        Construct an OpenFF ``Topology`` from an MDTraj ``Topology``
+
+        This method guarantees that the order of atoms in the input MDTraj
+        Topology will be the same as the ordering of atoms in the output OpenFF
+        Topology. However it does not guarantee the order of the bonds will be
+        the same.
+
+        Hierarchy schemes are taken from the MDTraj topology, not from
+        ``unique_molecules``.
 
         Parameters
         ----------
-        mdtraj_topology : mdtraj.Topology
-            An MDTraj Topology object
-        unique_molecules : iterable of objects that can be used to construct unique Molecule objects
-            All unique molecules must be provided, in any order, though multiple copies of each molecule are allowed.
-            The atomic elements and bond connectivity will be used to match the reference molecules
-            to molecule graphs appearing in the MDTraj ``Topology``. If bond orders are present in the
-            MDTraj ``Topology``, these will be used in matching as well.
+        mdtraj_topology
+            The MDTraj Topology object to convert
+        unique_molecules
+            An iterable containing all the unique molecules in the topology.
+            This is used to identify the molecules in the MDTraj topology and
+            provide any missing chemical information. Each chemical species in
+            the topology must be specified exactly once, though the topology
+            may have any number of copies, including zero. The chemical
+            elements of atoms and their bond connectivity will be used to match
+            these reference molecules to the molecules appearing in the
+            topology. If bond orders are specified in the topology, these will
+            be used in matching as well.
+        positions
+            Positions for the atoms in the new topology.
 
         Returns
         -------
-        topology : openff.toolkit.topology.Topology
-            An OpenFF Topology object
+        topology
+            An OpenFF Topology object, constructed from the molecules in
+            ``unique_molecules``, with the same atom order as the input topology.
+
+        Raises
+        ------
+        MissingUniqueMoleculesError
+            If ``unique_molecules`` is ``None``
+        DuplicateUniqueMoleculeError
+            If the same connectivity graph is represented by two different
+            molecules in ``unique_molecules``
+        ValueError
+            If a chemically impossible molecule is detected in the topology
         """
         return cls.from_openmm(
-            mdtraj_topology.to_openmm(), unique_molecules=unique_molecules
+            mdtraj_topology.to_openmm(),
+            unique_molecules=unique_molecules,
+            positions=positions,
         )
 
     # Avoid removing this method, even though it is private and would not be difficult for most
