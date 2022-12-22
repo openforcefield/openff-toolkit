@@ -4740,6 +4740,10 @@ class FrozenMolecule(Serializable):
             new_to_cur = mapping_dict
             cur_to_new = dict(zip(mapping_dict.values(), mapping_dict.keys()))
 
+        # Make sure that there were no duplicate indices
+        if len(new_to_cur) != len(cur_to_new):
+            raise ValueError("There must be no duplicate source or destination indices")
+
         new_molecule = self.__class__()
         new_molecule.name = self.name
 
