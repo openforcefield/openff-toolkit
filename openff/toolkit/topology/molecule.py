@@ -1725,36 +1725,57 @@ class FrozenMolecule(Serializable):
     @classmethod
     def from_smiles(
         cls,
-        smiles,
-        hydrogens_are_explicit=False,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-        allow_undefined_stereo=False,
+        smiles: str,
+        hydrogens_are_explicit: bool = False,
+        toolkit_registry: Union[
+            ToolkitRegistry,
+            ToolkitWrapper,
+        ] = GLOBAL_TOOLKIT_REGISTRY,
+        allow_undefined_stereo: bool = False,
     ):
         """
-        Construct a Molecule from a SMILES representation
+        Construct a ``Molecule`` from a SMILES representation
+
+        The order of atoms in the ``Molecule`` is unspecified and may change
+        from version to version or with different toolkits. SMILES atom
+        indices (also known as atom maps) are not used to order atoms; instead,
+        they are stored in the produced molecule's properties attribute,
+        accessible via ``molecule.properties["atom_map"]``. The atom map is
+        stored as a dictionary mapping molecule atom indices to SMILES atom
+        maps. To order atoms according to SMILES atom indices, see
+        :py:meth:`Molecule.from_mapped_smiles`, which helpfully raises an
+        exception if any atom map is missing, duplicated, or out-of-range,
+        or else :py:meth:`Molecule.remap` for arbitrary remaps.
 
         Parameters
         ----------
-        smiles : str
+        smiles
             The SMILES representation of the molecule.
-        hydrogens_are_explicit : bool, default = False
-            If False, the cheminformatics toolkit will perform hydrogen addition
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
-            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
-        allow_undefined_stereo : bool, default=False
-            Whether to accept SMILES with undefined stereochemistry. If False,
-            an exception will be raised if a SMILES with undefined stereochemistry
-            is passed into this function.
+        hydrogens_are_explicit
+            If ``True``, forbid the cheminformatics toolkit from inferring
+            hydrogen atoms not explicitly specified in the SMILES.
+        toolkit_registry
+            The cheminformatics toolkit to use to interpret the SMILES.
+        allow_undefined_stereo
+            Whether to accept SMILES with undefined stereochemistry. If
+            ``False``, an exception will be raised if a SMILES with undefined
+            stereochemistry is passed into this function.
 
-        Returns
-        -------
-        molecule : openff.toolkit.topology.Molecule
+        Raises
+        ------
+        RadicalsNotSupportedError
+            If any atoms in the input molecule contain radical electrons.
 
         Examples
         --------
 
+        Create a ``Molecule`` representing toluene from SMILES:
+
         >>> molecule = Molecule.from_smiles('Cc1ccccc1')
+
+        See Also
+        --------
+        from_mapped_smiles, remap
 
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
