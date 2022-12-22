@@ -4794,6 +4794,17 @@ class FrozenMolecule(Serializable):
         # move any properties across
         new_molecule._properties = deepcopy(self._properties)
 
+        # remap the atom map
+        try:
+            new_molecule.properties["atom_map"] = {
+                cur_to_new.get(k, k): v
+                for k, v in new_molecule.properties["atom_map"].items()
+            }
+        except (KeyError, AttributeError):
+            # If the atom map is missing or is not a dictionary, don't worry
+            # about it
+            pass
+
         return new_molecule
 
     def to_openeye(
