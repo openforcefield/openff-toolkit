@@ -1773,6 +1773,16 @@ class FrozenMolecule(Serializable):
 
         >>> molecule = Molecule.from_smiles('Cc1ccccc1')
 
+        Create a ``Molecule`` representing phenol from SMILES with the oxygen
+        at atom index 0 (SMILES indices begin at 1):
+
+        >>> molecule = Molecule.from_smiles('c1ccccc1[OH:1]')
+        >>> molecule = molecule.remap(
+        ...     {k: v - 1 for k, v in molecule.properties["atom_map"].items()},
+        ...     partial=True,
+        ... )
+        >>> assert molecule.atom(0).symbol == "O"
+
         See Also
         --------
         from_mapped_smiles, remap
@@ -4716,7 +4726,8 @@ class FrozenMolecule(Serializable):
         The mapping dict must be a dictionary mapping atom indices to atom
         indices. Each atom index must be in the half-open interval
         ``[0, n_atoms)``. All positions in the molecule must be mapped from and
-        to exactly once.
+        to exactly once unless ``partial=True`` is given, in which case they
+        must be mapped no more than once.
 
         The keys of the ``self.properties["atom_map"]`` property are updated for
         the new ordering. Other values of the properties dictionary are
@@ -4734,6 +4745,11 @@ class FrozenMolecule(Serializable):
             If this is ``True``, then ``mapping_dict`` is of the form
             ``{current_index: new_index}``; otherwise, it is of the form
             ``{new_index: current_index}``.
+        partial
+            If ``False`` (the default), an exception will be raised if any atom
+            is lacking a destination in the atom map. Note that if this is
+            ``True``, atoms without entries in the mapping dict may be moved in
+            addition to those in the dictionary.
 
         Returns
         -------
@@ -4746,7 +4762,9 @@ class FrozenMolecule(Serializable):
         """
 
         # make sure the size of the mapping matches the current molecule
-        if len(mapping_dict) != self.n_atoms:
+        if len(mapping_dict) > self.n_atoms or (
+            len(mapping_dict) < self.n_atoms and not partial
+        ):
             raise ValueError(
                 f"The number of mapping indices({len(mapping_dict)}) does not "
                 + f"match the number of atoms in this molecule({self.n_atoms})"
@@ -4764,6 +4782,24 @@ class FrozenMolecule(Serializable):
         # Make sure that there were no duplicate indices
         if len(new_to_cur) != len(cur_to_new):
             raise ValueError("There must be no duplicate source or destination indices")
+
+        # If a partial map is allowed, complete it
+        if partial and len(mapping_dict) < self.n_atoms:
+            # Get a set of all the unspecified destination indices
+            available_indices = {i for i in range(self.n_atoms) if i not in new_to_cur}
+            # Find the atoms that can be left unmoved and don't move them
+            for i in range(self.n_atoms):
+                if i not in cur_to_new and i not in new_to_cur:
+                    available_indices.remove(i)
+                    cur_to_new[i] = i
+                    new_to_cur[i] = i
+            # Fill in the remaining indices
+            available_indices = iter(available_indices)
+            for i in range(self.n_atoms):
+                if i not in cur_to_new:
+                    j = next(available_indices)
+                    cur_to_new[i] = j
+                    new_to_cur[j] = i
 
         new_molecule = self.__class__()
         new_molecule.name = self.name
