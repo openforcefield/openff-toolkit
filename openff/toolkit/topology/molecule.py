@@ -4370,37 +4370,67 @@ class FrozenMolecule(Serializable):
     @classmethod
     def from_mapped_smiles(
         cls,
-        mapped_smiles,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        mapped_smiles: str,
+        toolkit_registry: Union[
+            ToolkitRegistry, ToolkitWrapper
+        ] = GLOBAL_TOOLKIT_REGISTRY,
         allow_undefined_stereo=False,
     ):
         """
-        Create an :class:`Molecule` from a mapped SMILES made with cmiles.
-        The molecule will be in the order of the indexing in the mapped smiles string.
+        Create a ``Molecule`` from a SMILES string, ordering atoms from mappings
+
+        SMILES strings support mapping integer indices to each atom by ending a
+        bracketed atom declaration with a colon followed by a 1-indexed
+        integer:
+
+        .. code:
+            "[H:3][C:1](=[O:2])[H:4]"
+
+        This method creates a ``Molecule`` from such a SMILES string whose
+        atoms are ordered according to the mapping. Each atom must be mapped
+        exactly once; any duplicate, missing, or out-of-range mappings will
+        cause the method to fail.
 
         .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
         mapped_smiles: str
-            A CMILES-style mapped smiles string with explicit hydrogens.
-
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
-            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
-
-        allow_undefined_stereo : bool, default=False
-            If false, raises an exception if oemol contains undefined stereochemistry.
+            A mapped SMILES string with explicit hydrogens.
+        toolkit_registry
+            Cheminformatics toolkit to use for SMILES-to-molecule conversion
+        allow_undefined_stereo
+            If false, raise an exception if the SMILES contains undefined
+            stereochemistry.
 
         Returns
         ----------
-        offmol : openff.toolkit.topology.molecule.Molecule
+        offmol
             An OpenFF molecule instance.
 
         Raises
         --------
         SmilesParsingError
             If the given SMILES had no indexing picked up by the toolkits.
+
+        Examples
+        --------
+
+        Create a mapped chlorofluoroiodomethane molecule and check the atoms
+        are placed accordingly:
+
+        >>> molecule = Molecule.from_mapped_smiles(
+        ...     "[Cl:2][C@:1]([F:3])([I:4])[H:5]"
+        ... )
+        >>> assert molecule.atom(0).symbol == "C"
+        >>> assert molecule.atom(1).symbol == "Cl"
+        >>> assert molecule.atom(2).symbol == "F"
+        >>> assert molecule.atom(3).symbol == "I"
+        >>> assert molecule.atom(4).symbol == "H"
+
+        See Also
+        --------
+        from_smiles, remap
         """
 
         # create the molecule from the smiles and check we have the right number of indexes
