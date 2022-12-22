@@ -4704,31 +4704,52 @@ class FrozenMolecule(Serializable):
                 f"Got {type(toolkit_registry)}."
             )
 
-    def remap(self, mapping_dict, current_to_new=True):
+    def remap(
+        self,
+        mapping_dict: Dict[int, int],
+        current_to_new: bool = True,
+        partial: bool = False,
+    ):
         """
-        Remap all of the indexes in the molecule to match the given mapping dict
+        Reorder the atoms in the molecule according to the given mapping dict.
+
+        The mapping dict must be a dictionary mapping atom indices to atom
+        indices. Each atom index must be in the half-open interval
+        ``[0, n_atoms)``. All positions in the molecule must be mapped from and
+        to exactly once.
+
+        The keys of the ``self.properties["atom_map"]`` property are updated for
+        the new ordering. Other values of the properties dictionary are
+        transferred unchanged.
 
         .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
-        mapping_dict : dict,
-            A dictionary of the mapping between indexes, this should start from 0.
-        current_to_new : bool, default=True
-            If this is ``True``, then ``mapping_dict`` is of the form ``{current_index: new_index}``;
-            otherwise, it is of the form ``{new_index: current_index}``
+        mapping_dict
+            A dictionary of the mapping between indices. The mapping should be
+            indexed starting from 0 for both the source and destination; note
+            that SMILES atom mapping is typically 1-based.
+        current_to_new
+            If this is ``True``, then ``mapping_dict`` is of the form
+            ``{current_index: new_index}``; otherwise, it is of the form
+            ``{new_index: current_index}``.
 
         Returns
         -------
         new_molecule :  openff.toolkit.topology.molecule.Molecule
-            An openff.toolkit.Molecule instance with all attributes transferred, in the PDB order.
+            A copy of the molecule in the new order.
+
+        See Also
+        --------
+        from_mapped_smiles
         """
 
         # make sure the size of the mapping matches the current molecule
         if len(mapping_dict) != self.n_atoms:
             raise ValueError(
-                f"The number of mapping indices({len(mapping_dict)}) does not match the number of"
-                f"atoms in this molecule({self.n_atoms})"
+                f"The number of mapping indices({len(mapping_dict)}) does not "
+                + f"match the number of atoms in this molecule({self.n_atoms})"
             )
 
         # make two mapping dicts we need new to old for atoms
@@ -4753,8 +4774,8 @@ class FrozenMolecule(Serializable):
                 # get the old atom info
                 old_atom = self._atoms[new_to_cur[i]]
                 new_molecule._add_atom(**old_atom.to_dict())
-        # this is the first time we access the mapping; catch an index error here corresponding to mapping that starts
-        # from 0 or higher
+        # this is the first time we access the mapping; catch an index error
+        # here corresponding to mapping that starts from 0 or higher
         except (KeyError, IndexError):
             raise IndexError(
                 f"The mapping supplied is missing a relation corresponding to atom({i})"
@@ -4783,7 +4804,7 @@ class FrozenMolecule(Serializable):
                 )
             new_molecule.partial_charges = new_charges * unit.elementary_charge
 
-        # remap the conformers there can be more than one
+        # remap the conformers, there can be more than one
         if self.conformers is not None:
             for conformer in self.conformers:
                 new_conformer = np.zeros((self.n_atoms, 3))
