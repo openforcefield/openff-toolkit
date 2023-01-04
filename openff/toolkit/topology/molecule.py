@@ -4767,8 +4767,8 @@ class FrozenMolecule(Serializable):
             len(mapping_dict) < self.n_atoms and not partial
         ):
             raise RemapIndexError(
-                f"The number of mapping indices({len(mapping_dict)}) does not "
-                + f"match the number of atoms in this molecule({self.n_atoms})"
+                f"The number of mapping indices ({len(mapping_dict)}) does not "
+                + f"match the number of atoms in this molecule ({self.n_atoms})"
             )
 
         # make two mapping dicts we need new to old for atoms

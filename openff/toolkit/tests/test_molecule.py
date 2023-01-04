@@ -16,6 +16,7 @@ import copy
 import os
 import pathlib
 import pickle
+import re
 from tempfile import NamedTemporaryFile
 
 import numpy as np
@@ -1669,6 +1670,22 @@ class TestMolecule:
         with pytest.raises(
             RemapIndexError,
             match="There must be no duplicate source or destination indices",
+        ):
+            ethanol.remap(mapping, current_to_new=True)
+
+    def test_remap_fails_with_missing_indices(self):
+        ethanol = create_ethanol()
+        # get a mapping with duplicate atoms
+        mapping = {i: i for i in range(ethanol.n_atoms)}
+        # Remove one of the mappings
+        del mapping[0]
+
+        with pytest.raises(
+            RemapIndexError,
+            match=re.escape(
+                f"The number of mapping indices ({len(mapping)}) does not "
+                + f"match the number of atoms in this molecule ({ethanol.n_atoms})"
+            ),
         ):
             ethanol.remap(mapping, current_to_new=True)
 
