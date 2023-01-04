@@ -1798,7 +1798,7 @@ class FrozenMolecule(Serializable):
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            molecule = toolkit.from_smiles(
+            molecule = toolkit.from_smiles(  # type: ignore
                 smiles,
                 hydrogens_are_explicit=hydrogens_are_explicit,
                 allow_undefined_stereo=allow_undefined_stereo,
@@ -4794,10 +4794,9 @@ class FrozenMolecule(Serializable):
                     cur_to_new[i] = i
                     new_to_cur[i] = i
             # Fill in the remaining indices
-            available_indices = iter(available_indices)
             for i in range(self.n_atoms):
                 if i not in cur_to_new:
-                    j = next(available_indices)
+                    j = available_indices.pop()
                     cur_to_new[i] = j
                     new_to_cur[j] = i
 
