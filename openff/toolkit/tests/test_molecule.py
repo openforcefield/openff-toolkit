@@ -57,6 +57,7 @@ from openff.toolkit.utils.exceptions import (
     InvalidConformerError,
     MultipleMoleculesInPDBError,
     NotBondedError,
+    RemapIndexError,
     UnassignedChemistryInPDBError,
     UnsupportedFileTypeError,
 )
@@ -1666,7 +1667,8 @@ class TestMolecule:
         mapping[1] = mapping[0]
 
         with pytest.raises(
-            IndexError, match="There must be no duplicate source or destination indices"
+            RemapIndexError,
+            match="There must be no duplicate source or destination indices",
         ):
             ethanol.remap(mapping, current_to_new=True)
 

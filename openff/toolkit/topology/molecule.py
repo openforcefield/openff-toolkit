@@ -59,6 +59,7 @@ from openff.toolkit.utils.exceptions import (
     InvalidBondOrderError,
     InvalidConformerError,
     MultipleMoleculesInPDBError,
+    RemapIndexError,
     SmilesParsingError,
     UnsupportedFileTypeError,
 )
@@ -4765,7 +4766,7 @@ class FrozenMolecule(Serializable):
         if len(mapping_dict) > self.n_atoms or (
             len(mapping_dict) < self.n_atoms and not partial
         ):
-            raise ValueError(
+            raise RemapIndexError(
                 f"The number of mapping indices({len(mapping_dict)}) does not "
                 + f"match the number of atoms in this molecule({self.n_atoms})"
             )
@@ -4781,7 +4782,9 @@ class FrozenMolecule(Serializable):
 
         # Make sure that there were no duplicate indices
         if len(new_to_cur) != len(cur_to_new):
-            raise IndexError("There must be no duplicate source or destination indices")
+            raise RemapIndexError(
+                "There must be no duplicate source or destination indices"
+            )
 
         # If a partial map is allowed, complete it
         if partial and len(mapping_dict) < self.n_atoms:
@@ -4812,7 +4815,7 @@ class FrozenMolecule(Serializable):
         # this is the first time we access the mapping; catch an index error
         # here corresponding to mapping that starts from 0 or higher
         except (KeyError, IndexError):
-            raise IndexError(
+            raise RemapIndexError(
                 f"The mapping supplied is missing a relation corresponding to atom({i})"
             )
 

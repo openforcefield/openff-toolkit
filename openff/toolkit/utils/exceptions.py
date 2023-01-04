@@ -112,6 +112,10 @@ class NotInTopologyError(OpenFFToolkitException):
     """An object was not found in a topology."""
 
 
+class RemapIndexError(OpenFFToolkitException):
+    """An error with indices used to remap a molecule"""
+
+
 class AtomNotInTopologyError(NotInTopologyError):
     """An atom was not found in a topology."""
 
