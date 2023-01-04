@@ -4781,7 +4781,7 @@ class FrozenMolecule(Serializable):
 
         # Make sure that there were no duplicate indices
         if len(new_to_cur) != len(cur_to_new):
-            raise ValueError("There must be no duplicate source or destination indices")
+            raise IndexError("There must be no duplicate source or destination indices")
 
         # If a partial map is allowed, complete it
         if partial and len(mapping_dict) < self.n_atoms:

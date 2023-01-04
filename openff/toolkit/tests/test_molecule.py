@@ -1658,6 +1658,18 @@ class TestMolecule:
         round_trip_ethanol = new_ethanol.remap(round_trip_mapping, current_to_new=True)
         assert_molecules_match_after_remap(round_trip_ethanol, ethanol)
 
+    def test_remap_fails_with_duplicate_values(self):
+        ethanol = create_ethanol()
+        # get a mapping with duplicate atoms
+        mapping = {i: i for i in range(ethanol.n_atoms)}
+        # Make the first and second maps duplicates
+        mapping[1] = mapping[0]
+
+        with pytest.raises(
+            IndexError, match="There must be no duplicate source or destination indices"
+        ):
+            ethanol.remap(mapping, current_to_new=True)
+
     @requires_openeye
     def test_canonical_ordering_openeye(self):
         """Make sure molecules are returned in canonical ordering of openeye"""
