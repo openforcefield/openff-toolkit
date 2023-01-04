@@ -6,6 +6,13 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+## 0.12.0
+
+### Behavior changes
+- [PR #1481](https://github.com/openforcefield/openff-toolkit/pull/1481):
+  Removes `compute_partial_charges_am1bcc`, which was deprecated in 0.11.0.
+
+
 ## Current development
 
 ### New features
@@ -32,6 +39,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   a `ParameterHandler`'s class when calling `ForceField.register_parameter_handler`.
 - [PR #1480](https://github.com/openforcefield/openff-toolkit/pull/1480): Fixes
   [#1479](https://github.com/openforcefield/openff-toolkit/issues/1479) by requiring that `Atom.atomic_number` is a positive integer.
+- [PR #1494](https://github.com/openforcefield/openff-toolkit/pull/1494): Fixes
+  [#1493](https://github.com/openforcefield/openff-toolkit/issues/1493) in which some OFFXML file
+  contents were parsed to `unit.Quantity` objects despite not representing physical quantities.
 
 [`Atom.atomic_number`]: Atom.atomic_number
 

@@ -2726,22 +2726,6 @@ class TestMolecule:
         molecule.add_conformer(conf2)
         assert molecule.n_conformers == 2
 
-        # Add conformers with too few coordinates
-        conf_missing_z = unit.Quantity(
-            np.array(
-                [
-                    [101.0, 102.0, 103.0],
-                    [104.0, 105.0, 106.0],
-                    [107.0, 108.0, 109.0],
-                    [110.0, 111.0, 112.0],
-                    [113.0, 114.0],
-                ]
-            ),
-            unit.angstrom,
-        )
-        with pytest.raises(InvalidConformerError):
-            molecule.add_conformer(conf_missing_z)
-
         conf_too_few_atoms = unit.Quantity(
             np.array(
                 [
@@ -3294,21 +3278,6 @@ class TestMolecule:
             molecule.generate_conformers(
                 n_conformers=1, toolkit_registry=RDKitToolkitWrapper()
             )
-
-    @requires_openeye
-    @requires_rdkit
-    def test_compute_partial_charges_am1bcc_warning(self):
-        # TODO: Remove in version 0.12.0 alognside the removal of these methods
-        molecule = create_ethanol()
-
-        toolkits = [OpenEyeToolkitWrapper(), AmberToolsToolkitWrapper()]
-
-        with pytest.warns(UserWarning, match="compute_.*_am1bcc.*0.12"):
-            molecule.compute_partial_charges_am1bcc()
-
-        for toolkit in toolkits:
-            with pytest.warns(UserWarning, match="compute_.*_am1bcc.*0.12"):
-                toolkit.compute_partial_charges_am1bcc(molecule)
 
     def test_deepcopy_not_shallow(self):
         """

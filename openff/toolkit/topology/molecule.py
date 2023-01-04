@@ -2351,60 +2351,6 @@ class FrozenMolecule(Serializable):
                 f"{type(toolkit_registry)}"
             )
 
-    def compute_partial_charges_am1bcc(
-        self,
-        use_conformers=None,
-        strict_n_conformers=False,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-    ):
-        """
-        .. deprecated:: 0.11.0
-
-            This method was deprecated in v0.11.0 and will soon be removed.
-            Use :py:meth:`assign_partial_charges(partial_charge_method='am1bcc')
-            <Molecule.assign_partial_charges>` instead.
-
-        Calculate partial atomic charges for this molecule using AM1-BCC run by an underlying toolkit
-        and assign them to this molecule's ``partial_charges`` attribute.
-
-        Parameters
-        ----------
-        strict_n_conformers : bool, default=False
-            Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
-            If this is False and an invalid number of conformers is found, a warning will be raised.
-        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3)
-            and dimension of distance. Optional, default=None Coordinates to use for partial charge calculation.
-            If None, an appropriate number of conformers for the given charge method will be generated.
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
-        or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the calculation
-
-        Examples
-        --------
-
-        >>> molecule = Molecule.from_smiles('CCCCCC')
-        >>> molecule.generate_conformers()
-        >>> molecule.compute_partial_charges_am1bcc()
-
-        Raises
-        ------
-        InvalidToolkitRegistryError
-            If an invalid object is passed as the toolkit_registry parameter
-
-        """
-        # TODO: Remove in version 0.12.0
-        warnings.warn(
-            "compute_partial_charges_am1bcc is deprecated and will be removed in version 0.12.0. "
-            "Use assign_partial_charges(partial_charge_method='am1bcc') instead.",
-            UserWarning,
-        )
-        self.assign_partial_charges(
-            partial_charge_method="am1bcc",
-            use_conformers=use_conformers,
-            strict_n_conformers=strict_n_conformers,
-            toolkit_registry=toolkit_registry,
-        )
-
     def assign_partial_charges(
         self,
         partial_charge_method: str,
