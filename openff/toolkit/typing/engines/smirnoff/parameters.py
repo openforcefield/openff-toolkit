@@ -76,7 +76,6 @@ from packaging.version import Version
 
 from openff.toolkit.topology import ImproperDict, TagSortedDict, Topology, ValenceDict
 from openff.toolkit.topology.molecule import Molecule
-from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils.collections import ValidatedDict, ValidatedList
 from openff.toolkit.utils.exceptions import (
     DuplicateParameterError,
@@ -1626,12 +1625,11 @@ class ParameterType(_ParameterAttributeHandler):
     --------
 
     This class allows to define new parameter types by just listing its
-    attributes. In the example below, ``_VALENCE_TYPE`` AND ``_ELEMENT_NAME``
-    are used for the validation of the SMIRKS pattern associated to the
-    parameter and the automatic serialization/deserialization into a ``dict``.
+    attributes. In the example below, ``_ELEMENT_NAME`` is used to
+    describe the SMIRNOFF parameter being defined, and is used during
+    automatic serialization/deserialization into a ``dict``.
 
     >>> class MyBondParameter(ParameterType):
-    ...     _VALENCE_TYPE = 'Bond'
     ...     _ELEMENT_NAME = 'Bond'
     ...     length = ParameterAttribute(unit=unit.angstrom)
     ...     k = ParameterAttribute(unit=unit.kilocalorie / unit.mole / unit.angstrom**2)
@@ -1660,7 +1658,6 @@ class ParameterType(_ParameterAttributeHandler):
     argument or through the decorator syntax.
 
     >>> class MyParameterType(ParameterType):
-    ...     _VALENCE_TYPE = 'Atom'
     ...     _ELEMENT_NAME = 'Atom'
     ...
     ...     attr_optional = ParameterAttribute(default=2)
@@ -1700,7 +1697,6 @@ class ParameterType(_ParameterAttributeHandler):
     is performed for each indexed attribute.
 
     >>> class MyTorsionType(ParameterType):
-    ...     _VALENCE_TYPE = 'ProperTorsion'
     ...     _ELEMENT_NAME = 'Proper'
     ...     periodicity = IndexedParameterAttribute(converter=int)
     ...     k = IndexedParameterAttribute(unit=unit.kilocalorie / unit.mole)
@@ -1725,8 +1721,6 @@ class ParameterType(_ParameterAttributeHandler):
 
     """
 
-    # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
-    _VALENCE_TYPE: Optional[str] = None
     # The string mapping to this ParameterType in a SMIRNOFF data source
     _ELEMENT_NAME: Optional[str] = None
 
@@ -1734,17 +1728,6 @@ class ParameterType(_ParameterAttributeHandler):
     smirks = ParameterAttribute()
     id = ParameterAttribute(default=None)
     parent_id = ParameterAttribute(default=None)
-
-    @smirks.converter
-    def smirks(self, attr, smirks):
-        # Validate the SMIRKS string to ensure it matches the expected
-        # parameter type, raising an exception if it is invalid or doesn't
-        # tag a valid set of atoms.
-
-        # TODO: Add check to make sure we can't make tree non-hierarchical
-        #       This would require parameter type knows which ParameterList it belongs to
-        ChemicalEnvironment.validate_smirks(smirks, validate_valence_type=True)
-        return smirks
 
     def __init__(self, smirks, allow_cosmetic_attributes=False, **kwargs):
         """
@@ -2407,7 +2390,6 @@ class ConstraintHandler(ParameterHandler):
         .. warning :: This API is experimental and subject to change.
         """
 
-        _VALENCE_TYPE = "Bond"
         _ELEMENT_NAME = "Constraint"
 
         distance = ParameterAttribute(default=None, unit=unit.angstrom)
@@ -2429,8 +2411,6 @@ class BondHandler(ParameterHandler):
         .. warning :: This API is experimental and subject to change.
         """
 
-        # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
-        _VALENCE_TYPE = "Bond"
         _ELEMENT_NAME = "Bond"
 
         length = ParameterAttribute(default=None, unit=unit.angstrom)
@@ -2569,7 +2549,6 @@ class AngleHandler(ParameterHandler):
         .. warning :: This API is experimental and subject to change.
         """
 
-        _VALENCE_TYPE = "Angle"  # ChemicalEnvironment valence type string expected by SMARTS string for this Handler
         _ELEMENT_NAME = "Angle"
 
         angle = ParameterAttribute(unit=unit.degree)
@@ -2615,7 +2594,6 @@ class ProperTorsionHandler(ParameterHandler):
         .. warning :: This API is experimental and subject to change.
         """
 
-        _VALENCE_TYPE = "ProperTorsion"
         _ELEMENT_NAME = "Proper"
 
         periodicity = IndexedParameterAttribute(converter=int)
@@ -2690,7 +2668,6 @@ class ImproperTorsionHandler(ParameterHandler):
         .. warning :: This API is experimental and subject to change.
         """
 
-        _VALENCE_TYPE = "ImproperTorsion"
         _ELEMENT_NAME = "Improper"
 
         periodicity = IndexedParameterAttribute(converter=int)
@@ -2774,7 +2751,6 @@ class vdWHandler(_NonbondedHandler):
         .. warning :: This API is experimental and subject to change.
         """
 
-        _VALENCE_TYPE = "Atom"  # ChemicalEnvironment valence type expected for SMARTS
         _ELEMENT_NAME = "Atom"
 
         epsilon = ParameterAttribute(unit=unit.kilocalorie / unit.mole)
@@ -3105,7 +3081,6 @@ class LibraryChargeHandler(_NonbondedHandler):
         .. warning :: This API is experimental and subject to change.
         """
 
-        _VALENCE_TYPE = None  # This disables the connectivity check when parsing LibraryChargeType objects
         _ELEMENT_NAME = "LibraryCharge"
 
         name = ParameterAttribute(default=None)
@@ -3221,7 +3196,6 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         .. warning :: This API is experimental and subject to change.
         """
 
-        _VALENCE_TYPE = None  # This disables the connectivity check when parsing LibraryChargeType objects
         _ELEMENT_NAME = "ChargeIncrement"
 
         charge_increment = IndexedParameterAttribute(unit=unit.elementary_charge)
@@ -3315,7 +3289,6 @@ class GBSAHandler(ParameterHandler):
         .. warning :: This API is experimental and subject to change.
         """
 
-        _VALENCE_TYPE = "Atom"
         _ELEMENT_NAME = "Atom"
 
         radius = ParameterAttribute(unit=unit.angstrom)
@@ -3391,7 +3364,6 @@ class VirtualSiteHandler(_NonbondedHandler):
 
     class VirtualSiteType(vdWHandler.vdWType):
 
-        _VALENCE_TYPE = None  # type: ignore[assignment]
         _ELEMENT_NAME = "VirtualSite"
 
         name = ParameterAttribute(default="EP", converter=str)

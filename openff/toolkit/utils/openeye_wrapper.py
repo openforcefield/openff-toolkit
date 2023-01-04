@@ -13,7 +13,7 @@ import re
 import tempfile
 from collections import defaultdict
 from functools import wraps
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import numpy as np
 from cachetools import LRUCache, cached
@@ -388,7 +388,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         from openeye import oechem
 
-        from openff.toolkit.typing.chemistry import SMIRKSParsingError
+        from openff.toolkit.utils.exceptions import SMIRKSParsingError
 
         #  Jeff wasn't able to get this working with OEQMol and OEParseSmarts,
         #  the QMol/SS matching didn't behave correctly when set to AtomicNumber
@@ -2593,7 +2593,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         from openeye import oechem
 
-        from openff.toolkit.typing.chemistry import SMIRKSParsingError
+        from openff.toolkit.utils.exceptions import SMIRKSParsingError
 
         qmol = oechem.OEQMol()
         status = oechem.OEParseSmarts(qmol, smarts)
@@ -2620,10 +2620,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
     @staticmethod
     def _find_smarts_matches(
         oemol,
-        smarts,
+        smarts: str,
         aromaticity_model=DEFAULT_AROMATICITY_MODEL,
-        unique=False,
-    ):
+        unique: bool = False,
+    ) -> List[Tuple[int, ...]]:
         """Find all sets of atoms in the provided OpenEye molecule that match the provided SMARTS string.
 
         Parameters
@@ -2637,6 +2637,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         aromaticity_model : str, optional, default=None
             OpenEye aromaticity model designation as a string, such as ``OEAroModel_MDL``.
             Molecule is prepared with this aromaticity model prior to querying.
+        unique : bool, default=False
+            If True, only return unique matches. If False, return all matches. This is passed to
+            OpenEye's ``OESubSearch`` as ``uniquematch``.
 
         Returns
         -------
@@ -2699,25 +2702,27 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         matches = list()
         for match in substructure_search.Match(mol, unique):
             # Compile list of atom indices that match the pattern tags
-            atom_indices = dict()
+            atom_indices: Dict[int, int] = dict()
             for matched_atom in match.GetAtoms():
                 if matched_atom.pattern.GetMapIdx() != 0:
                     atom_indices[
                         matched_atom.pattern.GetMapIdx() - 1
                     ] = matched_atom.target.GetIdx()
-            # Compress into list
-            atom_indices = [atom_indices[index] for index in range(len(atom_indices))]
-            # Convert to tuple
-            matches.append(tuple(atom_indices))
+
+            # Compress into tuple
+            matches.append(
+                tuple(atom_indices[index] for index in range(len(atom_indices)))
+            )
+
         return matches
 
     def find_smarts_matches(
         self,
-        molecule,
-        smarts,
+        molecule: "Molecule",
+        smarts: str,
         aromaticity_model="OEAroModel_MDL",
         unique=False,
-    ):
+    ) -> List[Tuple[int, ...]]:
         """
         Find all SMARTS matches for the specified molecule, using the specified aromaticity model.
 
@@ -2731,6 +2736,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             SMARTS string with optional SMIRKS-style atom tagging
         aromaticity_model : str, optional, default='OEAroModel_MDL'
             Molecule is prepared with this aromaticity model prior to querying.
+        unique : bool, default=False
+            If True, only return unique matches. If False, return all matches.
 
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 

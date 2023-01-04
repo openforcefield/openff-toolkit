@@ -41,7 +41,6 @@ from openff.utilities import requires_package
 from openff.toolkit.topology import Molecule
 from openff.toolkit.topology._mm_molecule import _SimpleBond, _SimpleMolecule
 from openff.toolkit.topology.molecule import FrozenMolecule, HierarchyElement
-from openff.toolkit.typing.chemistry import ChemicalEnvironment
 from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.exceptions import (
     AtomNotInTopologyError,
@@ -991,9 +990,9 @@ class Topology(Serializable):
 
     def chemical_environment_matches(
         self,
-        query,
-        aromaticity_model="MDL",
-        unique=False,
+        query: str,
+        aromaticity_model: str = "MDL",
+        unique: bool = False,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
@@ -1006,9 +1005,8 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        query : str or ChemicalEnvironment
-            SMARTS string (with one or more tagged atoms) or ``ChemicalEnvironment`` query
-            Query will internally be resolved to SMARTS using ``query.as_smarts()`` if it has an ``.as_smarts`` method.
+        query : str
+            SMARTS string (with one or more tagged atoms)
         aromaticity_model : str
             Override the default aromaticity model for this topology and use the specified aromaticity model instead.
             Allowed values: ['MDL']
@@ -1021,10 +1019,8 @@ class Topology(Serializable):
         """
 
         # Render the query to a SMARTS string
-        if type(query) is str:
+        if isinstance(query, str):
             smarts = query
-        elif type(query) is ChemicalEnvironment:
-            smarts = query.as_smarts()
         else:
             raise ValueError(
                 f"Don't know how to convert query '{query}' into SMARTS string"

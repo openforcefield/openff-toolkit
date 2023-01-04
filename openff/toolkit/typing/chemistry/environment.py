@@ -23,10 +23,15 @@ __all__ = [
     "ImproperChemicalEnvironment",
 ]
 
+import warnings
 from typing import Optional
 
 from openff.toolkit.utils.exceptions import SMIRKSMismatchError, SMIRKSParsingError
 from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY, ToolkitWrapper
+
+
+class ChemicalEnvironmentDeprecationWarning(UserWarning):
+    """Warning for deprecated portions of the Molecule API."""
 
 
 class ChemicalEnvironment:
@@ -68,6 +73,13 @@ class ChemicalEnvironment:
             if smirks did not have expected connectivity between tagged atoms
             and validate_valence_type=True
         """
+        warnings.warn(
+            "ChemicalEnvironment is deprecated and will be removed in a future "
+            "release. If you rely on the functionality in this class, please "
+            "open an issue on the openff-toolkit GitHub.",
+            ChemicalEnvironmentDeprecationWarning,
+        )
+
         # Support string input for toolkit names for legacy reasons
         if toolkit_registry == "openeye":
             from openff.toolkit.utils.toolkits import OpenEyeToolkitWrapper

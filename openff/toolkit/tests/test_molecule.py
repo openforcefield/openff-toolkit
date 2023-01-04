@@ -890,7 +890,6 @@ class TestMolecule:
 
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @requires_openeye
-    @pytest.mark.slow
     def test_create_from_file(self):
         """Test standard constructor taking a filename or file-like object."""
         # TODO: Expand test to both openeye and rdkit toolkits
@@ -914,7 +913,11 @@ class TestMolecule:
         # Ensure that attempting to initialize a single Molecule from a file
         # containing multiple molecules raises a ValueError
         filename = get_data_file_path("molecules/butane_multi.sdf")
-        with pytest.raises(ValueError):
+
+        with pytest.raises(
+            ValueError,
+            match="Specified file or file-like.*exactly one molecule",
+        ):
             Molecule(filename, allow_undefined_stereo=True)
 
     def test_from_pathlib_path(self):
@@ -2853,6 +2856,13 @@ class TestMolecule:
             )
 
         assert molecule == molecule_copy
+
+    def test_chemical_environment_old_arg(self):
+        from openff.toolkit.typing.chemistry import ChemicalEnvironment
+
+        molecule = create_ethanol()
+        with pytest.raises(ValueError, match="'query' must be a SMARTS"):
+            molecule.chemical_environment_matches(ChemicalEnvironment("[*:1]"))
 
     @requires_openeye
     def test_chemical_environment_matches_OE(self):

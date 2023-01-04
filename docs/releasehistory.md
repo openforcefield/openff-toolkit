@@ -24,6 +24,14 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   the built-in `dict`.
   `attach_units`, `detach_units`, and `extract_serialized_units_from_dict` have been removed from
   `openff.toolkit.utils.utils`.
+- [PR #1472](https://github.com/openforcefield/openff-toolkit/pull/1472):
+  Removes [`ParameterHandler._VALENCE_TYPE`] and the same attribute of its subclasses, which were
+  previously not used. Also deprecates `ChemicalEnvironment` and, by extension, the
+  `openff.toolkit.typing.chemistry` submodule.
+
+[`ChemicalEnvironment`]: ChemicalEnvironment
+[`ParameterHandler._VALENCE_TYPE`]: ParameterHandler._VALENCE_TYPE
+
 
 ### Bugfixes
 - [PR #1476](https://github.com/openforcefield/openff-toolkit/pull/1476): Fixes
