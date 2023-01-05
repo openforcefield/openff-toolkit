@@ -6,19 +6,16 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+
 ## 0.12.0
+
+### New features
+- [PR #1484](https://github.com/openforcefield/openff-toolkit/pull/1484): A `positions` argument has been added to `Topology.from_openmm()` and `Topology.from_mdtraj()`, which allows the topology's positions to be set more conveniently.
+- [PR #1468](https://github.com/openforcefield/openff-toolkit/pull/1468): Track which `ParameterHandler`s are loaded as plugins.
 
 ### Behavior changes
 - [PR #1481](https://github.com/openforcefield/openff-toolkit/pull/1481):
   Removes `compute_partial_charges_am1bcc`, which was deprecated in 0.11.0.
-
-
-## Current development
-
-### New features
-- [PR #1484](https://github.com/openforcefield/openff-toolkit/pull/1484): A `positions` argument has been added to `Topology.from_openmm()` and `Topology.from_mdtraj()`, which allows the topology's positions to be set more conveniently.
-
-### Behavior changes
 - [PR #1466](https://github.com/openforcefield/openff-toolkit/pull/1466):
   Replaces the use of `collections.OrderedDict` throughout the toolkit with
   the built-in `dict`.
