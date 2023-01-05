@@ -1165,7 +1165,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         molecule : openff.toolkit.topology.Molecule
             Molecule for which partial charges are to be computed
         partial_charge_method : str, optional, default=None
-            The charge model to use. One of ['mmff94']. If None, 'mmff94' will be used.
+            The charge model to use. One of ['mmff94', 'gasteiger']. If None, 'mmff94' will be used.
 
             * 'mmff94': Applies partial charges using the Merck Molecular Force Field
                         (MMFF). This method does not make use of conformers, and hence
