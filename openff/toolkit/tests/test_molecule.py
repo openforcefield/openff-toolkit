@@ -3008,6 +3008,7 @@ class TestMolecule:
             ("ambertools", "am1bcc"),
             ("ambertools", "gasteiger"),
             ("ambertools", "am1-mulliken"),
+            ("rdkit", "gasteiger")
         ],
     )
     def test_assign_partial_charges(self, toolkit, method):

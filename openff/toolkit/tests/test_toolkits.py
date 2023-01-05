@@ -2810,7 +2810,7 @@ class TestRDKitToolkitWrapper:
             toolkit_registry=RDKitToolkitWrapper(),
         )
 
-    @pytest.mark.parametrize("partial_charge_method", ["mmff94"])
+    @pytest.mark.parametrize("partial_charge_method", ["mmff94", "gasteiger"])
     def test_assign_partial_charges_neutral(self, partial_charge_method):
         """Test RDKitToolkitWrapper assign_partial_charges()"""
 
@@ -2827,7 +2827,7 @@ class TestRDKitToolkitWrapper:
         charge_sum = np.sum(molecule.partial_charges)
         assert 1.0e-10 > abs(charge_sum.m_as(unit.elementary_charge))
 
-    @pytest.mark.parametrize("partial_charge_method", ["mmff94"])
+    @pytest.mark.parametrize("partial_charge_method", ["mmff94", "gasteiger"])
     def test_assign_partial_charges_net_charge(self, partial_charge_method):
         """
         Test RDKitToolkitWrapper assign_partial_charges() on a molecule with net charge.
