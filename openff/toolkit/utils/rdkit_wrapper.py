@@ -1217,8 +1217,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 rdkit_molecule, "MMFF94"
             )
             charges = [
-                mmff_properties.GetMMFFPartialCharge(i)
-                for i in range(molecule.n_atoms)
+                mmff_properties.GetMMFFPartialCharge(i) for i in range(molecule.n_atoms)
             ]
         elif partial_charge_method == "gasteiger":
             AllChem.ComputeGasteigerCharges(rdkit_molecule)
