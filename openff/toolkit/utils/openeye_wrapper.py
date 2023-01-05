@@ -2250,7 +2250,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             Molecule for which partial charges are to be computed
         partial_charge_method : str, optional, default=None
             The charge model to use. One of ['amberff94', 'mmff', 'mmff94', 'am1-mulliken', 'am1bcc',
-            'am1bccnosymspt', 'am1bccelf10']
+            'am1bccnosymspt', 'am1bccelf10', 'gasteiger']
             If None, 'am1-mulliken' will be used.
         use_conformers : iterable of unit-wrapped numpy arrays, each with
             shape (n_atoms, 3) and dimension of distance. Optional, default = None
