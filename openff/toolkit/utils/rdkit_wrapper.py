@@ -1196,7 +1196,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         import numpy as np
         from rdkit.Chem import AllChem
 
-        SUPPORTED_CHARGE_METHODS = {"mmff94"}
+        SUPPORTED_CHARGE_METHODS = {"mmff94", "gasteiger"}
 
         if partial_charge_method is None:
             partial_charge_method = "mmff94"
@@ -1213,17 +1213,21 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         charges = None
 
         if partial_charge_method == "mmff94":
-
             mmff_properties = AllChem.MMFFGetMoleculeProperties(
                 rdkit_molecule, "MMFF94"
             )
-            charges = np.array(
-                [
-                    mmff_properties.GetMMFFPartialCharge(i)
-                    for i in range(molecule.n_atoms)
-                ]
-            )
+            charges = [
+                mmff_properties.GetMMFFPartialCharge(i)
+                for i in range(molecule.n_atoms)
+            ]
+        elif partial_charge_method == "gasteiger":
+            AllChem.ComputeGasteigerCharges(rdkit_molecule)
+            charges = [
+                float(rdatom.GetProp("_GasteigerCharge"))
+                for rdatom in rdkit_molecule.GetAtoms()
+            ]
 
+        charges = np.asarray(charges)
         molecule.partial_charges = unit.Quantity(charges, unit.elementary_charge)
 
         if normalize_partial_charges:
