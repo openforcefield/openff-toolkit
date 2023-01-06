@@ -9,6 +9,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 # Current development
 
+### New features
+- [PR #1502](https://github.com/openforcefield/openff-toolkit/pull/1502): Adds Gasteiger charge computation using the RDKit backend.
 
 ## 0.12.0
 
