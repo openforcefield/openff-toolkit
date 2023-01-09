@@ -3141,10 +3141,12 @@ class TestMolecule:
 
         offmol._make_carboxylic_acids_cis()
 
-        diffs = np.asarray(offmol.conformers.m_as(unit.angstrom)) - np.asarray(
-            expected_conformers.m_as(unit.angstrom)
-        )
-        assert np.all(np.abs(diffs)) < 1e-5
+        for index in [0, 1]:
+            np.testing.assert_allclose(
+                offmol.conformers[index].m_as(unit.angstrom),
+                expected_conformers[index].m_as(unit.angstrom),
+                atol=1e-5,
+            )
 
     @requires_openeye
     def test_assign_fractional_bond_orders(self):
