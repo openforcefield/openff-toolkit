@@ -1180,12 +1180,12 @@ class FrozenMolecule(Serializable):
         self._initialize()
         self.name = molecule_dict["name"]
         for atom_dict in molecule_dict["atoms"]:
-            self._add_atom(**atom_dict)
+            self._add_atom(**atom_dict, invalidate_cache=False)
 
         for bond_dict in molecule_dict["bonds"]:
             bond_dict["atom1"] = int(bond_dict["atom1"])
             bond_dict["atom2"] = int(bond_dict["atom2"])
-            self._add_bond(**bond_dict)
+            self._add_bond(**bond_dict, invalidate_cache=False)
 
         if molecule_dict["partial_charges"] is None:
             self._partial_charges = None
@@ -1229,6 +1229,8 @@ class FrozenMolecule(Serializable):
                 new_hier_scheme.add_hierarchy_element(
                     tuple(element_dict["identifier"]), element_dict["atom_indices"]
                 )
+
+        self._invalidate_cached_properties()
 
     def __repr__(self):
         """Return a summary of this molecule; SMILES if valid, Hill formula if not."""
