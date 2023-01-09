@@ -2911,13 +2911,13 @@ class TestForceFieldChargeAssignment:
         nonbondedForce = [
             f for f in omm_system.getForces() if type(f) == NonbondedForce
         ][0]
-        ref_mol_from_ret_top = [i for i in ret_top.reference_molecules][0]
+        unique_molecule = [*ret_top.unique_molecules][0]
 
         # Make sure the charges on the molecule are all nonzero, and that the molecule's
         # partial_charges array matches the charges in the openmm system
         all_charges_zero = True
         for particle_index, ref_mol_charge in enumerate(
-            ref_mol_from_ret_top.partial_charges
+            unique_molecule.partial_charges
         ):
             q, _, _ = nonbondedForce.getParticleParameters(particle_index)
             assert from_openmm(q) == ref_mol_charge
@@ -3929,12 +3929,8 @@ class TestForceFieldParameterAssignment:
             bond.fractional_bond_order = 3 - bond.fractional_bond_order
         mod_top = Topology.from_molecules(mod_mol)
 
-        default_bo = [
-            b.fractional_bond_order for b in [*top.reference_molecules][0].bonds
-        ]
-        mod_bo = [
-            b.fractional_bond_order for b in [*mod_top.reference_molecules][0].bonds
-        ]
+        default_bo = [b.fractional_bond_order for b in [*top.unique_molecules][0].bonds]
+        mod_bo = [b.fractional_bond_order for b in [*mod_top.unique_molecules][0].bonds]
         assert not default_bo == mod_bo
 
         forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
@@ -4260,8 +4256,8 @@ class TestForceFieldParameterAssignment:
             if isinstance(force, openmm.HarmonicBondForce)
         ][0]
 
-        ret_mol = list(ret_top.reference_molecules)[0]
-        bond = ret_mol.get_bond_between(*central_atoms)
+        returned_molecule = [*ret_top.unique_molecules][0]
+        bond = returned_molecule.get_bond_between(*central_atoms)
 
         # ambertools appears to yield 1.00093033 for this bond
         assert abs(bond.fractional_bond_order - 1.0) > 1.0e-6
@@ -4365,8 +4361,8 @@ class TestForceFieldParameterAssignment:
             if isinstance(force, openmm.HarmonicBondForce)
         ][0]
 
-        ret_mol = list(ret_top.reference_molecules)[0]
-        bond = ret_mol.get_bond_between(*central_atoms)
+        returned_molecule = [*ret_top.unique_molecules][0]
+        bond = returned_molecule.get_bond_between(*central_atoms)
 
         # openeye toolkit appears to yield around .9945 for this bond
         assert abs(bond.fractional_bond_order - 1.0) > 1.0e-6

@@ -835,7 +835,9 @@ class BaseFromFileIO:
         assert conformer.units == unit.angstrom
 
         # Beyond this are the hydrogens, which are added by algorithm.
-        assert_allclose(conformer[: CAFFEINE_2D_COORDS.shape[0]], CAFFEINE_2D_COORDS)
+        assert_allclose(
+            conformer[: CAFFEINE_2D_COORDS.shape[0]].m, CAFFEINE_2D_COORDS.m
+        )
 
     def test_from_file_3D_sdf_keeps_hydrogens(self):
         mol = self.toolkit_wrapper.from_file(file_manager.caffeine_3d_sdf, "sdf")[0]
@@ -856,7 +858,7 @@ class BaseFromFileIO:
         assert conformer.units == unit.angstrom
 
         # All hydrogens are explicit in the file
-        assert_allclose(conformer, CAFFEINE_3D_COORDS)
+        assert_allclose(conformer.m, CAFFEINE_3D_COORDS.m)
 
     def test_from_file_with_undefined_stereo(self):
         with pytest.raises(
