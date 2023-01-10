@@ -1318,6 +1318,7 @@ class ForceField:
         """
         import numpy
         from openff.interchange import Interchange
+        from openff.units import unit
 
         from openff.toolkit.topology.molecule import Molecule
 
