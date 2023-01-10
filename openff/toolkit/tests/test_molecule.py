@@ -1772,6 +1772,37 @@ class TestMolecule:
                 remapped_ethanol_total,
             )
 
+        def test_remap_partial_fails_with_duplicate_values(self):
+            ethanol = create_ethanol()
+            # get a mapping with duplicate atoms
+            mapping = {i: i for i in range(ethanol.n_atoms - 2)}
+            # Make the first and second maps duplicates
+            mapping[1] = mapping[0]
+
+            with pytest.raises(
+                RemapIndexError,
+                match="There must be no duplicate source or destination indices",
+            ):
+                ethanol.remap(
+                    mapping,
+                    current_to_new=True,
+                    partial=True,
+                )
+
+        def test_remap_partial_fails_with_out_of_range_indices(self):
+            """Make sure the remap fails when the indexing starts from the wrong value"""
+            ethanol = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
+            mapping = {0: 2, 1: 1, 2: 0, 3: 6, 4: 7, 5: 8, 6: 4}
+            wrong_index_mapping = dict(
+                (i + 10, new_id) for i, new_id in enumerate(mapping.values())
+            )
+            with pytest.raises(RemapIndexError):
+                ethanol.remap(
+                    wrong_index_mapping,
+                    current_to_new=True,
+                    partial=True,
+                )
+
     @requires_openeye
     def test_canonical_ordering_openeye(self):
         """Make sure molecules are returned in canonical ordering of openeye"""
