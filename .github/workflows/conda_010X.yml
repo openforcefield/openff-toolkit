@@ -109,10 +109,7 @@ jobs:
         shell: bash -l {0}
         run: |
 
-          # Install test plugins
-          cd utilities/test_plugins
-          python setup.py develop --no-deps
-          cd -
+          python -m pip install utilities/test_plugins
 
           pwd
           ls

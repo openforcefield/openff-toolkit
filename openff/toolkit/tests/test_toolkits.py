@@ -2810,7 +2810,7 @@ class TestRDKitToolkitWrapper:
             toolkit_registry=RDKitToolkitWrapper(),
         )
 
-    @pytest.mark.parametrize("partial_charge_method", ["mmff94"])
+    @pytest.mark.parametrize("partial_charge_method", ["mmff94", "gasteiger"])
     def test_assign_partial_charges_neutral(self, partial_charge_method):
         """Test RDKitToolkitWrapper assign_partial_charges()"""
 
@@ -2827,7 +2827,7 @@ class TestRDKitToolkitWrapper:
         charge_sum = np.sum(molecule.partial_charges)
         assert 1.0e-10 > abs(charge_sum.m_as(unit.elementary_charge))
 
-    @pytest.mark.parametrize("partial_charge_method", ["mmff94"])
+    @pytest.mark.parametrize("partial_charge_method", ["mmff94", "gasteiger"])
     def test_assign_partial_charges_net_charge(self, partial_charge_method):
         """
         Test RDKitToolkitWrapper assign_partial_charges() on a molecule with net charge.
@@ -3519,20 +3519,22 @@ class TestAmberToolsToolkitWrapper:
             )
 
     @pytest.mark.parametrize(
-        "partial_charge_method,expected_n_confs",
-        [("am1bcc", 1), ("am1-mulliken", 1), ("gasteiger", 0)],
+        "partial_charge_method, expected_n_confs, toolkit_wrappers",
+        [
+            ("am1bcc", 1, [AmberToolsToolkitWrapper, RDKitToolkitWrapper]),
+            ("am1-mulliken", 1, [AmberToolsToolkitWrapper, RDKitToolkitWrapper]),
+            ("gasteiger", 0, [AmberToolsToolkitWrapper]),
+        ],
     )
     def test_assign_partial_charges_wrong_n_confs(
-        self, partial_charge_method, expected_n_confs
+        self, partial_charge_method, expected_n_confs, toolkit_wrappers
     ):
         """
         Test AmberToolsToolkitWrapper assign_partial_charges() when requesting to use an incorrect number of
         conformers
         """
 
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
-        )
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=toolkit_wrappers)
         molecule = create_ethanol()
         molecule.generate_conformers(n_conformers=2, rms_cutoff=0.01 * unit.angstrom)
 
