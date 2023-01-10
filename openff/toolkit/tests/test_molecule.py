@@ -3266,8 +3266,6 @@ class TestMolecule:
                 continue
             assert bond.is_in_ring()
 
-    @requires_rdkit
-    @requires_openeye
     @pytest.mark.parametrize(
         "toolkit, exception_type, exception_text",
         [
