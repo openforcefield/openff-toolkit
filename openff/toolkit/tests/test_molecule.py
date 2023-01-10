@@ -1689,7 +1689,7 @@ class TestMolecule:
         ):
             ethanol.remap(mapping, current_to_new=True)
 
-    def test_wrong_index_mapping(self):
+    def test_remap_fails_with_out_of_range_indices(self):
         """Make sure the remap fails when the indexing starts from the wrong value"""
         ethanol = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
         mapping = {0: 2, 1: 1, 2: 0, 3: 6, 4: 7, 5: 8, 6: 4, 7: 5, 8: 3}
