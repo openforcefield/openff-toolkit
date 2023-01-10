@@ -1116,7 +1116,7 @@ class ForceField:
             charge_from_molecules=charge_from_molecules,
             partial_bond_orders_from_molecules=partial_bond_orders_from_molecules,
             allow_nonintegral_charges=allow_nonintegral_charges,
-        ).to_openmm(combine_nonbonded_force=True)
+        ).to_openmm(combine_nonbonded_forces=True)
 
     @requires_package("openff.interchange")
     def create_interchange(
