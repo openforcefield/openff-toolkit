@@ -24,10 +24,19 @@ __all__ = [
 ]
 
 import warnings
-from typing import Optional
+from typing import Optional, Union
+
+from typing_extensions import TypeAlias
 
 from openff.toolkit.utils.exceptions import SMIRKSMismatchError, SMIRKSParsingError
-from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY, ToolkitWrapper
+from openff.toolkit.utils.toolkit_registry import _ensure_toolkit_registry
+from openff.toolkit.utils.toolkits import (
+    GLOBAL_TOOLKIT_REGISTRY,
+    ToolkitRegistry,
+    ToolkitWrapper,
+)
+
+TKR: TypeAlias = Union[ToolkitRegistry, ToolkitWrapper]
 
 
 class ChemicalEnvironmentDeprecationWarning(UserWarning):
@@ -41,11 +50,11 @@ class ChemicalEnvironment:
 
     def __init__(
         self,
-        smirks=None,
+        smirks: Optional[str] = None,
         label=None,
-        validate_parsable=True,
-        validate_valence_type=True,
-        toolkit_registry=None,
+        validate_parsable: bool = True,
+        validate_valence_type: bool = True,
+        toolkit_registry: Optional[Union[TKR, str]] = None,
     ):
         """Initialize a chemical environment abstract base class.
 
@@ -131,9 +140,9 @@ class ChemicalEnvironment:
     def validate_smirks(
         cls,
         smirks,
-        validate_parsable=True,
-        validate_valence_type=True,
-        toolkit_registry=None,
+        validate_parsable: bool = True,
+        validate_valence_type: bool = True,
+        toolkit_registry: Optional[Union[TKR, str]] = None,
     ):
         """
         Check the provided SMIRKS string is valid, and if requested, tags atoms appropriate to the
@@ -192,15 +201,13 @@ class ChemicalEnvironment:
         # Query a toolkit wrapper for substructure type
         if toolkit_registry is None:
             toolkit_registry = GLOBAL_TOOLKIT_REGISTRY
-
-        if isinstance(toolkit_registry, ToolkitWrapper):
-            unique_tags, conn = toolkit_registry.get_tagged_smarts_connectivity(
-                self.smirks
-            )
         else:
-            unique_tags, conn = toolkit_registry.call(
-                "get_tagged_smarts_connectivity", self.smirks
-            )
+            toolkit_registry = _ensure_toolkit_registry(toolkit_registry)
+
+        unique_tags, conn = toolkit_registry.call(
+            "get_tagged_smarts_connectivity",
+            self.smirks,
+        )
 
         if unique_tags == (1,):
             if len(conn) == 0:

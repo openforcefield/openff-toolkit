@@ -46,7 +46,8 @@ jobs:
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openff
-      PYTEST_ARGS: -r fE --tb=short -nauto --cov=openff --cov-config=setup.cfg --cov-append --cov-report=xml
+      PYTEST_ARGS: -r fE --tb=short -nauto
+      COV: --cov=openff/toolkit --cov-config=setup.cfg --cov-append --cov-report=xml
 
     steps:
       - uses: actions/checkout@v3
@@ -103,12 +104,11 @@ jobs:
           # against a conda build of Interchange. (It may also be pulled down
           # by `openmmforcefields` and should be removed in that case a well.)
           conda remove --force openff-toolkit openff-toolkit-base
-          python setup.py develop --no-deps
+          python -m pip install .
 
       - name: Install test plugins
         run: |
-          cd utilities/test_plugins
-          python setup.py develop --no-deps
+          python -m pip install utilities/test_plugins
 
       - name: Remove undesired toolkits
         run: |
@@ -153,7 +153,7 @@ jobs:
           if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
             PYTEST_ARGS+=" --runslow"
           fi
-          pytest $PYTEST_ARGS openff/toolkit/tests/
+          python -m pytest $PYTEST_ARGS $COV openff/toolkit/
 
       - name: Run code snippets in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}

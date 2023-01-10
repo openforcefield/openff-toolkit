@@ -9,6 +9,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 # Current development
 
+### New features
+- [PR #1502](https://github.com/openforcefield/openff-toolkit/pull/1502): Adds Gasteiger charge computation using the RDKit backend.
+- [PR #1495](https://github.com/openforcefield/openff-toolkit/pull/1495):
+  More of the `Molecule` API, if passed a `ToolkitWrapper` object to the `toolkit_registry` arguments, converts it to a `ToolkitRegistry` containing that wrapper. The same wrapper and underlying toolkits are still called, but some exceptions may appear or be slightly different. In general a `ValueError` is raised with verbose feedback about which wrapped toolkits attempted to resolve the method call.
 
 ## 0.12.0
 
@@ -31,7 +35,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 [`ChemicalEnvironment`]: ChemicalEnvironment
 [`ParameterHandler._VALENCE_TYPE`]: ParameterHandler._VALENCE_TYPE
-
 
 ### Bugfixes
 - [PR #1476](https://github.com/openforcefield/openff-toolkit/pull/1476): Fixes

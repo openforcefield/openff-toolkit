@@ -52,7 +52,6 @@ from openff.toolkit.utils import (
     get_data_file_path,
 )
 from openff.toolkit.utils.exceptions import (
-    ChargeMethodUnavailableError,
     IncompatibleParameterError,
     ParameterLookupError,
     SMIRNOFFAromaticityError,
@@ -805,7 +804,7 @@ partial_charge_method_resolution_matrix = [
     {
         "toolkit": AmberToolsToolkitWrapper,
         "partial_charge_method": "Madeup-ChargeMethod",
-        "exception": ChargeMethodUnavailableError,
+        "exception": ValueError,
         "exception_match": "",
     },
     {
@@ -847,7 +846,7 @@ partial_charge_method_resolution_matrix = [
     {
         "toolkit": OpenEyeToolkitWrapper,
         "partial_charge_method": "Madeup-ChargeMethod",
-        "exception": ChargeMethodUnavailableError,
+        "exception": ValueError,
         "exception_match": "",
     },
 ]

@@ -2250,7 +2250,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             Molecule for which partial charges are to be computed
         partial_charge_method : str, optional, default=None
             The charge model to use. One of ['amberff94', 'mmff', 'mmff94', 'am1-mulliken', 'am1bcc',
-            'am1bccnosymspt', 'am1bccelf10']
+            'am1bccnosymspt', 'am1bccelf10', 'gasteiger']
             If None, 'am1-mulliken' will be used.
         use_conformers : iterable of unit-wrapped numpy arrays, each with
             shape (n_atoms, 3) and dimension of distance. Optional, default = None
@@ -2566,7 +2566,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             mol_bond = molecule._bonds[bond_idx]
             mol_bond.fractional_bond_order = order
 
-    def get_tagged_smarts_connectivity(self, smarts):
+    def get_tagged_smarts_connectivity(
+        self, smarts: str
+    ) -> Tuple[Tuple[int, ...], Tuple[Tuple[int, ...], ...]]:
         """
         Returns a tuple of tuples indicating connectivity between tagged atoms in a SMARTS string. Does not
         return bond order.
@@ -2613,9 +2615,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     continue
                 cxn_to_add = sorted([at1.GetMapIdx(), at2.GetMapIdx()])
                 connections.add(tuple(cxn_to_add))
-        connections = tuple(sorted(list(connections)))
-        unique_tags = tuple(sorted(list(unique_tags)))
-        return tuple(unique_tags), tuple(connections)
+
+        return tuple(sorted(list(unique_tags))), tuple(sorted(list(connections)))
 
     @staticmethod
     def _find_smarts_matches(

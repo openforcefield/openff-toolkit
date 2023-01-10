@@ -42,6 +42,7 @@ from openff.toolkit.utils.exceptions import (
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
+from openff.toolkit.utils.toolkit_registry import _ensure_toolkit_registry
 from openff.toolkit.utils.toolkits import (
     GLOBAL_TOOLKIT_REGISTRY,
     AmberToolsToolkitWrapper,
@@ -2810,7 +2811,7 @@ class TestRDKitToolkitWrapper:
             toolkit_registry=RDKitToolkitWrapper(),
         )
 
-    @pytest.mark.parametrize("partial_charge_method", ["mmff94"])
+    @pytest.mark.parametrize("partial_charge_method", ["mmff94", "gasteiger"])
     def test_assign_partial_charges_neutral(self, partial_charge_method):
         """Test RDKitToolkitWrapper assign_partial_charges()"""
 
@@ -2827,7 +2828,7 @@ class TestRDKitToolkitWrapper:
         charge_sum = np.sum(molecule.partial_charges)
         assert 1.0e-10 > abs(charge_sum.m_as(unit.elementary_charge))
 
-    @pytest.mark.parametrize("partial_charge_method", ["mmff94"])
+    @pytest.mark.parametrize("partial_charge_method", ["mmff94", "gasteiger"])
     def test_assign_partial_charges_net_charge(self, partial_charge_method):
         """
         Test RDKitToolkitWrapper assign_partial_charges() on a molecule with net charge.
@@ -3519,20 +3520,22 @@ class TestAmberToolsToolkitWrapper:
             )
 
     @pytest.mark.parametrize(
-        "partial_charge_method,expected_n_confs",
-        [("am1bcc", 1), ("am1-mulliken", 1), ("gasteiger", 0)],
+        "partial_charge_method, expected_n_confs, toolkit_wrappers",
+        [
+            ("am1bcc", 1, [AmberToolsToolkitWrapper, RDKitToolkitWrapper]),
+            ("am1-mulliken", 1, [AmberToolsToolkitWrapper, RDKitToolkitWrapper]),
+            ("gasteiger", 0, [AmberToolsToolkitWrapper]),
+        ],
     )
     def test_assign_partial_charges_wrong_n_confs(
-        self, partial_charge_method, expected_n_confs
+        self, partial_charge_method, expected_n_confs, toolkit_wrappers
     ):
         """
         Test AmberToolsToolkitWrapper assign_partial_charges() when requesting to use an incorrect number of
         conformers
         """
 
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
-        )
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=toolkit_wrappers)
         molecule = create_ethanol()
         molecule.generate_conformers(n_conformers=2, rms_cutoff=0.01 * unit.angstrom)
 
@@ -4421,6 +4424,28 @@ class TestToolkitRegistry:
                 partial_charge_method="NotARealChargeMethod",
                 raise_exception_types=[],
             )
+
+    @pytest.mark.parametrize(
+        "toolkit_registry",
+        [
+            ToolkitRegistry(),
+            ToolkitWrapper(),
+            GLOBAL_TOOLKIT_REGISTRY,
+            BuiltInToolkitWrapper(),
+            BuiltInToolkitWrapper,
+        ],
+    )
+    def test_ensure_toolkit_registry(self, toolkit_registry):
+        # pytest collects the inputs to mark.parametrize before the test can be skipped,
+        # so do not use any optional toolkits that might not be installed
+        assert isinstance(_ensure_toolkit_registry(toolkit_registry), ToolkitRegistry)
+
+    def test_ensure_toolkit_registry_bad_argument(self):
+        with pytest.raises(
+            InvalidToolkitError,
+            match="not a valid toolkit. Found type <class 'str'>",
+        ):
+            isinstance(_ensure_toolkit_registry("ambertools"), ToolkitRegistry)
 
 
 @requires_openeye

@@ -5,7 +5,7 @@ __all__ = ("ToolkitRegistry",)
 import inspect
 import logging
 from contextlib import contextmanager
-from typing import Union
+from typing import Type, Union
 
 from openff.toolkit.utils.ambertools_wrapper import AmberToolsToolkitWrapper
 from openff.toolkit.utils.base_wrapper import ToolkitWrapper
@@ -371,6 +371,36 @@ class ToolkitRegistry:
 
     def __repr__(self):
         return f"<ToolkitRegistry containing {', '.join([tk.toolkit_name for tk in self._toolkits])}>"
+
+
+def _ensure_toolkit_registry(
+    toolkit_registry: Union[ToolkitRegistry, Type[ToolkitRegistry], ToolkitWrapper],
+) -> ToolkitRegistry:
+    """Ensure that a toolkit registry is provided.
+
+    If a toolkit registry is not provided, the global registry is used.
+
+    Parameters
+    ----------
+    toolkit_registry : Union[ToolkitRegistry, ToolkitWrapper]
+        The registry or wrapper to be coaxed into a registry.
+
+    Returns
+    -------
+    ToolkitRegistry
+        The toolkit registry to use.
+    """
+    if isinstance(toolkit_registry, ToolkitRegistry):
+        return toolkit_registry
+    elif isinstance(toolkit_registry, ToolkitWrapper):
+        return ToolkitRegistry(toolkit_precedence=[toolkit_registry])
+    elif isinstance(toolkit_registry, type):  # effectively isclass()
+        if issubclass(toolkit_registry, ToolkitWrapper):
+            return ToolkitRegistry(toolkit_precedence=[toolkit_registry()])
+    raise InvalidToolkitError(
+        f"Argument {toolkit_registry} is not a valid toolkit. "
+        f"Found type {type(toolkit_registry)}."
+    )
 
 
 # Coped from https://github.com/openforcefield/openff-fragmenter/blob/4a290b866a8ed43eabcbd3231c62b01f0c6d7df6

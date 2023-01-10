@@ -83,7 +83,7 @@ jobs:
           # Maybe remove the packaged openff-toolkit, installed as a dependency of openmmforcefields
           # and/or Interchange
           conda remove --force openff-toolkit-base
-          python setup.py develop --no-deps
+          python -m pip install .
 
       - name: Remove undesired toolkits
         run: |

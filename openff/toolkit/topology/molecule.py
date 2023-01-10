@@ -33,6 +33,7 @@ from copy import deepcopy
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     DefaultDict,
     Dict,
     Generator,
@@ -50,6 +51,7 @@ from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
 from openff.utilities.exceptions import MissingOptionalDependencyError
 from packaging import version
+from typing_extensions import TypeAlias
 
 from openff.toolkit.utils.exceptions import (
     HierarchySchemeNotFoundException,
@@ -58,20 +60,21 @@ from openff.toolkit.utils.exceptions import (
     InvalidAtomMetadataError,
     InvalidBondOrderError,
     InvalidConformerError,
+    InvalidToolkitRegistryError,
     MultipleMoleculesInPDBError,
     SmilesParsingError,
+    UndefinedStereochemistryError,
     UnsupportedFileTypeError,
 )
 from openff.toolkit.utils.serialization import Serializable
+from openff.toolkit.utils.toolkit_registry import _ensure_toolkit_registry
 from openff.toolkit.utils.toolkits import (
     DEFAULT_AROMATICITY_MODEL,
     GLOBAL_TOOLKIT_REGISTRY,
-    InvalidToolkitRegistryError,
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
     ToolkitRegistry,
     ToolkitWrapper,
-    UndefinedStereochemistryError,
 )
 from openff.toolkit.utils.utils import get_data_file_path, requires_package
 
@@ -86,6 +89,9 @@ if TYPE_CHECKING:
 
 # TODO: Allow all OpenEye aromaticity models to be used with OpenEye names?
 #       Only support OEAroModel_MDL in RDKit version?
+
+
+TKR: TypeAlias = Union[ToolkitRegistry, ToolkitWrapper]
 
 
 def _molecule_deprecation(old_method, new_method):
@@ -486,7 +492,7 @@ class Atom(Particle):
                     return True
         return False
 
-    def is_in_ring(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY) -> bool:
+    def is_in_ring(self, toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY) -> bool:
         """
         Return whether or not this atom is in a ring(s) (of any size)
 
@@ -498,9 +504,9 @@ class Atom(Particle):
             :class:`ToolkitRegistry` to use to enumerate the tautomers.
 
         """
-        _is_in_ring = toolkit_registry.call("atom_is_in_ring", self)
+        toolkit_registry = _ensure_toolkit_registry(toolkit_registry)
 
-        return _is_in_ring
+        return toolkit_registry.call("atom_is_in_ring", self)
 
     @property
     def molecule_atom_index(self):
@@ -737,7 +743,7 @@ class Bond(Serializable):
             raise ValueError("This Atom does not belong to a Molecule object")
         return self._molecule.bonds.index(self)
 
-    def is_in_ring(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY) -> bool:
+    def is_in_ring(self, toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY) -> bool:
         """
         Return whether or not this bond is in a ring(s) (of any size)
 
@@ -757,9 +763,9 @@ class Bond(Serializable):
             Whether or not this bond is in a ring.
 
         """
-        _is_in_ring = toolkit_registry.call("bond_is_in_ring", self)
+        toolkit_registry = _ensure_toolkit_registry(toolkit_registry)
 
-        return _is_in_ring
+        return toolkit_registry.call("bond_is_in_ring", self)
 
     def __repr__(self):
         return f"Bond(atom1 index={self.atom1_index}, atom2 index={self.atom2_index})"
@@ -823,7 +829,7 @@ class FrozenMolecule(Serializable):
         self,
         other=None,
         file_format=None,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         allow_undefined_stereo=False,
     ):
         r"""
@@ -910,19 +916,9 @@ class FrozenMolecule(Serializable):
 
         """
 
-        self._cached_smiles = None
+        self._cached_smiles: Optional[Dict] = None
 
-        # Figure out if toolkit_registry is a whole registry, or just a single wrapper
-        if isinstance(toolkit_registry, ToolkitRegistry):
-            pass
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            toolkit_registry = ToolkitRegistry(toolkit_precedence=[])
-            toolkit_registry.add_toolkit(toolkit)
-        else:
-            raise InvalidToolkitRegistryError(
-                "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
-            )
+        toolkit_registry = _ensure_toolkit_registry(toolkit_registry)
 
         if other is None:
             self._initialize()
@@ -1505,7 +1501,7 @@ class FrozenMolecule(Serializable):
         isomeric=True,
         explicit_hydrogens=True,
         mapped=False,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
         Return a canonical isomeric SMILES representation of the current molecule.
@@ -1547,16 +1543,8 @@ class FrozenMolecule(Serializable):
         if self._cached_smiles is None:
             self._cached_smiles = {}
 
-        # Figure out which toolkit should be used to create the SMILES
-        if isinstance(toolkit_registry, ToolkitRegistry):
-            to_smiles_method = toolkit_registry.resolve("to_smiles")
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            to_smiles_method = toolkit_registry.to_smiles
-        else:
-            raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to to_smiles. Expected ToolkitRegistry or ToolkitWrapper. "
-                f"Got {type(toolkit_registry)}"
-            )
+        toolkit_registry = _ensure_toolkit_registry(toolkit_registry)
+        to_smiles_method = toolkit_registry.resolve("to_smiles")
 
         # Get a string representation of the function containing the toolkit name so we can check
         # if a SMILES was already cached for this molecule. This will return, for example
@@ -1569,7 +1557,7 @@ class FrozenMolecule(Serializable):
         )
         smiles_hash += str(self._properties.get("atom_map", None))
         # Check to see if a SMILES for this molecule was already cached using this method
-        if smiles_hash in self._cached_smiles:
+        if smiles_hash in self._cached_smiles:  # type: ignore[assignment]
             return self._cached_smiles[smiles_hash]
         else:
             smiles = to_smiles_method(self, isomeric, explicit_hydrogens, mapped)
@@ -1581,7 +1569,7 @@ class FrozenMolecule(Serializable):
         cls,
         inchi,
         allow_undefined_stereo=False,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
         Construct a Molecule from a InChI representation
@@ -1612,27 +1600,18 @@ class FrozenMolecule(Serializable):
         >>> molecule = Molecule.from_inchi('InChI=1S/C2H2Cl2/c3-1-2-4/h1-2H/b2-1-')
         """
 
-        if isinstance(toolkit_registry, ToolkitRegistry):
-            molecule = toolkit_registry.call(
-                "from_inchi",
-                inchi,
-                _cls=cls,
-                allow_undefined_stereo=allow_undefined_stereo,
-            )
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            molecule = toolkit.from_inchi(
-                inchi, _cls=cls, allow_undefined_stereo=allow_undefined_stereo
-            )
-        else:
-            raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to from_inchi. Expected ToolkitRegistry or ToolkitWrapper. "
-                f"Got {type(toolkit_registry)}"
-            )
+        toolkit_registry = _ensure_toolkit_registry(toolkit_registry)
 
-        return molecule
+        return toolkit_registry.call(
+            "from_inchi",
+            inchi,
+            _cls=cls,
+            allow_undefined_stereo=allow_undefined_stereo,
+        )
 
-    def to_inchi(self, fixed_hydrogens=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def to_inchi(
+        self, fixed_hydrogens=False, toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY
+    ) -> str:
         """
         Create an InChI string for the molecule using the requested toolkit backend.
         InChI is a standardised representation that does not capture tautomers unless specified using the fixed
@@ -1661,23 +1640,12 @@ class FrozenMolecule(Serializable):
              If an invalid object is passed as the toolkit_registry parameter
         """
 
-        if isinstance(toolkit_registry, ToolkitRegistry):
-            inchi = toolkit_registry.call(
-                "to_inchi", self, fixed_hydrogens=fixed_hydrogens
-            )
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            inchi = toolkit.to_inchi(self, fixed_hydrogens=fixed_hydrogens)
-        else:
-            raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to to_inchi. Expected ToolkitRegistry or ToolkitWrapper. "
-                f"Got {type(toolkit_registry)}"
-            )
+        toolkit_registry = _ensure_toolkit_registry(toolkit_registry)
 
-        return inchi
+        return toolkit_registry.call("to_inchi", self, fixed_hydrogens=fixed_hydrogens)
 
     def to_inchikey(
-        self, fixed_hydrogens=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
+        self, fixed_hydrogens=False, toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY
     ):
         """
         Create an InChIKey for the molecule using the requested toolkit backend.
@@ -1707,27 +1675,18 @@ class FrozenMolecule(Serializable):
              If an invalid object is passed as the toolkit_registry parameter
         """
 
-        if isinstance(toolkit_registry, ToolkitRegistry):
-            inchi_key = toolkit_registry.call(
-                "to_inchikey", self, fixed_hydrogens=fixed_hydrogens
-            )
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            inchi_key = toolkit.to_inchikey(self, fixed_hydrogens=fixed_hydrogens)
-        else:
-            raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to to_inchikey. Expected ToolkitRegistry or ToolkitWrapper. "
-                f"Got {type(toolkit_registry)}"
-            )
+        toolkit_registry = _ensure_toolkit_registry(toolkit_registry)
 
-        return inchi_key
+        return toolkit_registry.call(
+            "to_inchikey", self, fixed_hydrogens=fixed_hydrogens
+        )
 
     @classmethod
     def from_smiles(
         cls,
         smiles,
         hydrogens_are_explicit=False,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         allow_undefined_stereo=False,
     ):
         """
@@ -1757,29 +1716,15 @@ class FrozenMolecule(Serializable):
         >>> molecule = Molecule.from_smiles('Cc1ccccc1')
 
         """
-        if isinstance(toolkit_registry, ToolkitRegistry):
-            molecule = toolkit_registry.call(
-                "from_smiles",
-                smiles,
-                hydrogens_are_explicit=hydrogens_are_explicit,
-                allow_undefined_stereo=allow_undefined_stereo,
-                _cls=cls,
-            )
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            molecule = toolkit.from_smiles(
-                smiles,
-                hydrogens_are_explicit=hydrogens_are_explicit,
-                allow_undefined_stereo=allow_undefined_stereo,
-                _cls=cls,
-            )
-        else:
-            raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. "
-                f"Got {type(toolkit_registry)}"
-            )
+        toolkit_registry = _ensure_toolkit_registry(toolkit_registry)
 
-        return molecule
+        return toolkit_registry.call(
+            "from_smiles",
+            smiles,
+            hydrogens_are_explicit=hydrogens_are_explicit,
+            allow_undefined_stereo=allow_undefined_stereo,
+            _cls=cls,
+        )
 
     def _is_exactly_the_same_as(self, other):
         for atom1, atom2 in zip(self.atoms, other.atoms):
@@ -1958,7 +1903,7 @@ class FrozenMolecule(Serializable):
                 return is_equal
 
         else:
-            edge_match_func = None  # type: ignore
+            edge_match_func: Optional[Callable] = None
 
         # Here we should work out what data type we have, also deal with lists?
         def to_networkx(data):
@@ -2074,7 +2019,7 @@ class FrozenMolecule(Serializable):
 
     def generate_conformers(
         self,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         n_conformers=10,
         rms_cutoff=None,
         clear_existing=True,
@@ -2134,8 +2079,8 @@ class FrozenMolecule(Serializable):
                 make_carboxylic_acids_cis=make_carboxylic_acids_cis,
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            return toolkit.generate_conformers(
+            toolkit_wrapper: ToolkitWrapper = toolkit_registry
+            return toolkit_wrapper.generate_conformers(  # type: ignore[attr-defined]
                 self,
                 n_conformers=n_conformers,
                 rms_cutoff=rms_cutoff,
@@ -2148,7 +2093,9 @@ class FrozenMolecule(Serializable):
                 f"Got {type(toolkit_registry)}"
             )
 
-    def _make_carboxylic_acids_cis(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def _make_carboxylic_acids_cis(
+        self, toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY
+    ):
         """
         Rotate dihedral angle of any conformers with trans COOH groups so they are cis
 
@@ -2296,8 +2243,8 @@ class FrozenMolecule(Serializable):
         self,
         percentage: float = 2.0,
         limit: int = 10,
-        toolkit_registry: Optional[
-            Union[ToolkitRegistry, ToolkitWrapper]
+        toolkit_registry: Union[
+            ToolkitRegistry, ToolkitWrapper
         ] = GLOBAL_TOOLKIT_REGISTRY,
         **kwargs,
     ):
@@ -2331,32 +2278,22 @@ class FrozenMolecule(Serializable):
         openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.apply_elf_conformer_selection
         openff.toolkit.utils.toolkits.RDKitToolkitWrapper.apply_elf_conformer_selection
         """
-        if isinstance(toolkit_registry, ToolkitRegistry):
-            toolkit_registry.call(
-                "apply_elf_conformer_selection",
-                molecule=self,
-                percentage=percentage,
-                limit=limit,
-                **kwargs,
-            )
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            toolkit.apply_elf_conformer_selection(  # type: ignore[attr-defined]
-                molecule=self, percentage=percentage, limit=limit, **kwargs
-            )
-        else:
-            raise InvalidToolkitRegistryError(
-                f"Invalid toolkit_registry passed to apply_elf_conformer_selection."
-                f"Expected ToolkitRegistry or ToolkitWrapper. Got "
-                f"{type(toolkit_registry)}"
-            )
+        toolkit_registry = _ensure_toolkit_registry(toolkit_registry)
+
+        toolkit_registry.call(
+            "apply_elf_conformer_selection",
+            molecule=self,
+            percentage=percentage,
+            limit=limit,
+            **kwargs,
+        )
 
     def assign_partial_charges(
         self,
         partial_charge_method: str,
         strict_n_conformers=False,
         use_conformers=None,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         normalize_partial_charges=True,
     ):
         """
@@ -2496,7 +2433,7 @@ class FrozenMolecule(Serializable):
     def assign_fractional_bond_orders(
         self,
         bond_order_model=None,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         use_conformers=None,
     ):
         """
@@ -2533,23 +2470,14 @@ class FrozenMolecule(Serializable):
 
         """
 
-        if isinstance(toolkit_registry, ToolkitRegistry):
-            return toolkit_registry.call(
-                "assign_fractional_bond_orders",
-                self,
-                bond_order_model=bond_order_model,
-                use_conformers=use_conformers,
-            )
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            return toolkit.assign_fractional_bond_orders(
-                self, bond_order_model=bond_order_model, use_conformers=use_conformers
-            )
-        else:
-            raise InvalidToolkitRegistryError(
-                f"Invalid toolkit_registry passed to assign_fractional_bond_orders. "
-                f"Expected ToolkitRegistry or ToolkitWrapper. Got {type(toolkit_registry)}."
-            )
+        toolkit_registry = _ensure_toolkit_registry(toolkit_registry)
+
+        return toolkit_registry.call(
+            "assign_fractional_bond_orders",
+            self,
+            bond_order_model=bond_order_model,
+            use_conformers=use_conformers,
+        )
 
     def _invalidate_cached_properties(self):
         """
@@ -2624,7 +2552,9 @@ class FrozenMolecule(Serializable):
         return G
 
     def find_rotatable_bonds(
-        self, ignore_functional_groups=None, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
+        self,
+        ignore_functional_groups=None,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
         Find all bonds classed as rotatable ignoring any matched to the ``ignore_functional_groups`` list.
@@ -3373,7 +3303,7 @@ class FrozenMolecule(Serializable):
         self,
         query: str,
         unique: bool = False,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
     ):
         """Find matches in the molecule for a SMARTS string
 
@@ -3414,31 +3344,20 @@ class FrozenMolecule(Serializable):
         # Use specified cheminformatics toolkit to determine matches with specified aromaticity model
         # TODO: Simplify this by requiring a toolkit registry for the molecule?
         # TODO: Do we have to pass along an aromaticity model?
-        if isinstance(toolkit_registry, ToolkitRegistry):
-            matches = toolkit_registry.call(
-                "find_smarts_matches",
-                self,
-                smirks,
-                unique=unique,
-            )
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            matches = toolkit_registry.find_smarts_matches(  # type: ignore[attr-defined]
-                self,
-                smirks,
-                unique=unique,
-            )
-        else:
-            raise InvalidToolkitRegistryError(
-                "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
-            )
+        toolkit_registry = _ensure_toolkit_registry(toolkit_registry)
 
-        return matches
+        return toolkit_registry.call(
+            "find_smarts_matches",
+            self,
+            smirks,
+            unique=unique,
+        )
 
     @classmethod
     def from_iupac(
         cls,
         iupac_name,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         allow_undefined_stereo=False,
         **kwargs,
     ):
@@ -3473,31 +3392,17 @@ class FrozenMolecule(Serializable):
         >>> molecule = Molecule.from_iupac('imatinib')
 
         """
-        if isinstance(toolkit_registry, ToolkitRegistry):
-            molecule = toolkit_registry.call(
-                "from_iupac",
-                iupac_name,
-                allow_undefined_stereo=allow_undefined_stereo,
-                _cls=cls,
-                **kwargs,
-            )
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            molecule = toolkit.from_iupac(
-                iupac_name,
-                allow_undefined_stereo=allow_undefined_stereo,
-                _cls=cls,
-                **kwargs,
-            )
-        else:
-            raise Exception(
-                "Invalid toolkit_registry passed to from_iupac. Expected ToolkitRegistry or ToolkitWrapper. "
-                f"Got {type(toolkit_registry)}."
-            )
+        toolkit_registry = _ensure_toolkit_registry(toolkit_registry)
 
-        return molecule
+        return toolkit_registry.call(
+            "from_iupac",
+            iupac_name,
+            allow_undefined_stereo=allow_undefined_stereo,
+            _cls=cls,
+            **kwargs,
+        )
 
-    def to_iupac(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def to_iupac(self, toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY) -> str:
         """Generate IUPAC name from Molecule
 
         Returns
@@ -3516,19 +3421,9 @@ class FrozenMolecule(Serializable):
         >>> iupac_name = molecule.to_iupac()
 
         """
-        if isinstance(toolkit_registry, ToolkitRegistry):
-            to_iupac_method = toolkit_registry.resolve("to_iupac")
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            to_iupac_method = toolkit_registry.to_iupac
-        else:
-            raise Exception(
-                "Invalid toolkit_registry passed to to_iupac. Expected ToolkitRegistry or ToolkitWrapper. "
-                f"Got {type(toolkit_registry)}"
-            )
+        toolkit_registry = _ensure_toolkit_registry(toolkit_registry)
 
-        # TODO: Can `to_iupac` fail if given a well-behaved OFFMol/OEMol?
-        result = to_iupac_method(self)
-        return result
+        return toolkit_registry.call("to_iupac", self)
 
     @classmethod
     def from_topology(cls, topology):
@@ -3592,7 +3487,7 @@ class FrozenMolecule(Serializable):
         cls,
         file_path,
         file_format=None,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         allow_undefined_stereo=False,
     ):
         """
@@ -3740,7 +3635,7 @@ class FrozenMolecule(Serializable):
     def from_polymer_pdb(
         cls,
         file_path: Union[str, TextIO],
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
         Loads a polymer from a PDB file.
@@ -3790,8 +3685,7 @@ class FrozenMolecule(Serializable):
         import openmm.unit as openmm_unit
         from openmm.app import PDBFile
 
-        if isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit_registry = ToolkitRegistry([toolkit_registry])
+        toolkit_registry = _ensure_toolkit_registry(toolkit_registry)
 
         pdb = PDBFile(file_path)
 
@@ -3897,7 +3791,9 @@ class FrozenMolecule(Serializable):
         # now close the file
         xyz_data.close()
 
-    def to_file(self, file_path, file_format, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def to_file(
+        self, file_path, file_format, toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY
+    ):
         """Write the current molecule to a file or file-like object
 
         Parameters
@@ -3926,17 +3822,7 @@ class FrozenMolecule(Serializable):
         >>> molecule.to_file('imatinib.pdb', file_format='pdb')  # doctest: +SKIP
 
         """
-
-        if isinstance(toolkit_registry, ToolkitRegistry):
-            pass
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            toolkit_registry = ToolkitRegistry(toolkit_precedence=[])
-            toolkit_registry.add_toolkit(toolkit)
-        else:
-            raise InvalidToolkitRegistryError(
-                "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
-            )
+        toolkit_registry = _ensure_toolkit_registry(toolkit_registry)
 
         file_format = file_format.upper()
         # check if xyz, use the toolkit independent method.
@@ -3970,7 +3856,7 @@ class FrozenMolecule(Serializable):
             toolkit.to_file_obj(self, file_path, file_format)
 
     def enumerate_tautomers(
-        self, max_states=20, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
+        self, max_states=20, toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY
     ):
         """
         Enumerate the possible tautomers of the current molecule
@@ -3989,30 +3875,18 @@ class FrozenMolecule(Serializable):
         molecules: List[openff.toolkit.topology.Molecule]
             A list of openff.toolkit.topology.Molecule instances not including the input molecule.
         """
+        toolkit_registry = _ensure_toolkit_registry(toolkit_registry)
 
-        if isinstance(toolkit_registry, ToolkitRegistry):
-            molecules = toolkit_registry.call(
-                "enumerate_tautomers", molecule=self, max_states=max_states
-            )
-
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            molecules = toolkit_registry.enumerate_tautomers(
-                self, max_states=max_states
-            )
-
-        else:
-            raise InvalidToolkitRegistryError(
-                "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
-            )
-
-        return molecules
+        return toolkit_registry.call(
+            "enumerate_tautomers", molecule=self, max_states=max_states
+        )
 
     def enumerate_stereoisomers(
         self,
         undefined_only=False,
         max_isomers=20,
         rationalise=True,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
         Enumerate the stereocenters and bonds of the current molecule.
@@ -4038,33 +3912,18 @@ class FrozenMolecule(Serializable):
             A list of :class:`Molecule` instances not including the input molecule.
 
         """
+        toolkit_registry = _ensure_toolkit_registry(toolkit_registry)
 
-        if isinstance(toolkit_registry, ToolkitRegistry):
-            molecules = toolkit_registry.call(
-                "enumerate_stereoisomers",
-                molecule=self,
-                undefined_only=undefined_only,
-                max_isomers=max_isomers,
-                rationalise=rationalise,
-            )
-
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            molecules = toolkit_registry.enumerate_stereoisomers(
-                self,
-                undefined_only=undefined_only,
-                max_isomers=max_isomers,
-                rationalise=rationalise,
-            )
-
-        else:
-            raise InvalidToolkitRegistryError(
-                "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
-            )
-
-        return molecules
+        return toolkit_registry.call(
+            "enumerate_stereoisomers",
+            molecule=self,
+            undefined_only=undefined_only,
+            max_isomers=max_isomers,
+            rationalise=rationalise,
+        )
 
     @OpenEyeToolkitWrapper.requires_toolkit()
-    def enumerate_protomers(self, max_states=10):
+    def enumerate_protomers(self, max_states: int = 10) -> List:
         """
         Enumerate the formal charges of a molecule to generate different protomoers.
 
@@ -4079,10 +3938,8 @@ class FrozenMolecule(Serializable):
             A list of the protomers of the input molecules not including the input.
         """
 
-        toolkit = OpenEyeToolkitWrapper()
-        molecules = toolkit.enumerate_protomers(molecule=self, max_states=max_states)
-
-        return molecules
+        openeye_toolkit = OpenEyeToolkitWrapper()
+        return openeye_toolkit.enumerate_protomers(molecule=self, max_states=max_states)
 
     @classmethod
     @RDKitToolkitWrapper.requires_toolkit()
@@ -4131,7 +3988,7 @@ class FrozenMolecule(Serializable):
     def to_rdkit(
         self,
         aromaticity_model=DEFAULT_AROMATICITY_MODEL,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
         Create an RDKit molecule
@@ -4159,13 +4016,11 @@ class FrozenMolecule(Serializable):
         >>> rdmol = molecule.to_rdkit()
 
         """
-        # toolkit = RDKitToolkitWrapper()
-        if isinstance(toolkit_registry, ToolkitWrapper):
-            return toolkit_registry.to_rdkit(self, aromaticity_model=aromaticity_model)
-        else:
-            return toolkit_registry.call(
-                "to_rdkit", self, aromaticity_model=aromaticity_model
-            )
+        toolkit_registry = _ensure_toolkit_registry(toolkit_registry)
+
+        return toolkit_registry.call(
+            "to_rdkit", self, aromaticity_model=aromaticity_model
+        )
 
     @classmethod
     @OpenEyeToolkitWrapper.requires_toolkit()
@@ -4292,7 +4147,7 @@ class FrozenMolecule(Serializable):
     def from_mapped_smiles(
         cls,
         mapped_smiles,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         allow_undefined_stereo=False,
     ):
         """
@@ -4360,7 +4215,7 @@ class FrozenMolecule(Serializable):
         cls,
         qca_record,
         client=None,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         allow_undefined_stereo=False,
     ):
         """
@@ -4561,7 +4416,7 @@ class FrozenMolecule(Serializable):
             file_path, smiles, allow_undefined_stereo, _cls=cls
         )
 
-    def canonical_order_atoms(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def canonical_order_atoms(self, toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY):
         """
         Produce a copy of the molecule with the atoms reordered canonically.
 
@@ -4583,17 +4438,9 @@ class FrozenMolecule(Serializable):
         molecule : openff.toolkit.topology.Molecule
             An new OpenFF style molecule with atoms in the canonical order.
         """
+        toolkit_registry = _ensure_toolkit_registry(toolkit_registry)
 
-        if isinstance(toolkit_registry, ToolkitRegistry):
-            return toolkit_registry.call("canonical_order_atoms", self)
-        elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            return toolkit.canonical_order_atoms(self)
-        else:
-            raise InvalidToolkitRegistryError(
-                "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. "
-                f"Got {type(toolkit_registry)}."
-            )
+        return toolkit_registry.call("canonical_order_atoms", self)
 
     def remap(self, mapping_dict, current_to_new=True):
         """
@@ -4685,8 +4532,8 @@ class FrozenMolecule(Serializable):
 
     def to_openeye(
         self,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-        aromaticity_model=DEFAULT_AROMATICITY_MODEL,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
+        aromaticity_model: str = DEFAULT_AROMATICITY_MODEL,
     ):
         """
         Create an OpenEye molecule
@@ -4717,15 +4564,13 @@ class FrozenMolecule(Serializable):
         >>> oemol = molecule.to_openeye()
 
         """
-        # toolkit = OpenEyeToolkitWrapper()
-        if isinstance(toolkit_registry, ToolkitWrapper):
-            return toolkit_registry.to_openeye(
-                self, aromaticity_model=aromaticity_model
-            )
-        else:
-            return toolkit_registry.call(
-                "to_openeye", self, aromaticity_model=aromaticity_model
-            )
+        toolkit_registry = _ensure_toolkit_registry(toolkit_registry)
+
+        return toolkit_registry.call(
+            "to_openeye",
+            self,
+            aromaticity_model=aromaticity_model,
+        )
 
     def _construct_angles(self):
         """
