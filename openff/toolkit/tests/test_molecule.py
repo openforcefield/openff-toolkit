@@ -66,7 +66,14 @@ from openff.toolkit.utils.toolkits import (
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
     ToolkitRegistry,
+    ToolkitUnavailableException,
 )
+
+_TOOLKITS = {
+    "openeye": OpenEyeToolkitWrapper,
+    "ambertools": AmberToolsToolkitWrapper,
+    "rdkit": RDKitToolkitWrapper,
+}
 
 
 def assert_molecule_is_equal(molecule1, molecule2, msg):
@@ -2993,8 +3000,6 @@ class TestMolecule:
             len(matches) == 0
         )  # this is the wrong stereochemistry, so there shouldn't be any matches
 
-    @requires_rdkit
-    @requires_openeye
     @pytest.mark.slow
     @pytest.mark.parametrize(
         ("toolkit", "method"),
@@ -3021,15 +3026,12 @@ class TestMolecule:
         # In principle, testing for charge assignment over a wide set of molecules is important, but
         # I think that's covered in test_toolkits.py. Here, we should only be concerned with testing the
         # Molecule API, and therefore a single molecule should be sufficient
+        try:
+            toolkit_registry = ToolkitRegistry(toolkit_precedence=[_TOOLKITS[toolkit]])
+        except ToolkitUnavailableException:
+            pytest.skip(f"ToolkitWrapper {_TOOLKITS[toolkit]} could not be loaded")
+
         molecule = Molecule.from_smiles("CN1C=NC2=C1C(=O)N(C(=O)N2C)C")
-
-        _TOOLKITS = {
-            "openeye": OpenEyeToolkitWrapper,
-            "ambertools": AmberToolsToolkitWrapper,
-            "rdkit": RDKitToolkitWrapper,
-        }
-
-        toolkit_registry = ToolkitRegistry(toolkit_precedence=[_TOOLKITS[toolkit]])
 
         molecule.assign_partial_charges(
             partial_charge_method=method,
@@ -3264,88 +3266,96 @@ class TestMolecule:
                 continue
             assert bond.is_in_ring()
 
+    @requires_rdkit
+    @requires_openeye
     @pytest.mark.parametrize(
         "toolkit, exception_type, exception_text",
         [
-            [
-                ToolkitRegistry([OpenEyeToolkitWrapper()]),
-                ValueError,
-                "Omega conf.*fail",
-            ],
-            [ToolkitRegistry([RDKitToolkitWrapper()]), ValueError, "RDKit conf.*fail"],
-            [OpenEyeToolkitWrapper(), ConformerGenerationError, "Omega conf.*fail"],
-            [RDKitToolkitWrapper(), ConformerGenerationError, "RDKit conf.*fail"],
+            ["openeye", ValueError, "Omega conf.*fail"],
+            ["rdkit", ValueError, "RDKit conf.*fail"],
+            [OpenEyeToolkitWrapper, ConformerGenerationError, "Omega conf.*fail"],
+            [RDKitToolkitWrapper, ConformerGenerationError, "RDKit conf.*fail"],
         ],
     )
     def test_conformer_generation_failure(
         self, toolkit, exception_type, exception_text
     ):
-        if type(toolkit) is ToolkitRegistry:
-            for wrapper in toolkit.registered_toolkits:
-                if not wrapper.is_available():
-                    pytest.skip("Required toolkit is unavailable")
+        if isinstance(toolkit, str):
+            try:
+                toolkit_registry = ToolkitRegistry(
+                    toolkit_precedence=[_TOOLKITS[toolkit]]
+                )
+            except ToolkitUnavailableException:
+                pytest.skip(f"ToolkitWrapper {_TOOLKITS[toolkit]} could not be loaded")
         else:
-            if not toolkit.is_available():
-                pytest.skip("Required toolkit is unavailable")
+            if toolkit.is_available():
+                toolkit_registry = toolkit()
+            else:
+                pytest.skip(f"ToolkitWrapper {toolkit} could not be loaded")
 
         molecule = Molecule.from_smiles("F[U](F)(F)(F)(F)F")
 
         with pytest.raises(exception_type, match=exception_text):
             molecule.generate_conformers(
                 n_conformers=1,
-                toolkit_registry=toolkit,
+                toolkit_registry=toolkit_registry,
             )
 
     @pytest.mark.parametrize(
         "toolkit, exception_type, exception_text",
         [
             [
-                ToolkitRegistry([OpenEyeToolkitWrapper()]),
+                "openeye",
                 ValueError,
                 "not available from OpenEye",
             ],
             [
-                ToolkitRegistry([RDKitToolkitWrapper()]),
+                "rdkit",
                 ValueError,
                 "not available from RDKit",
             ],
             [
-                ToolkitRegistry([AmberToolsToolkitWrapper()]),
+                "ambertools",
                 ValueError,
                 "not available from Amber",
             ],
             [
-                OpenEyeToolkitWrapper(),
+                OpenEyeToolkitWrapper,
                 ChargeMethodUnavailableError,
                 "not available from OpenEye",
             ],
             [
-                RDKitToolkitWrapper(),
+                RDKitToolkitWrapper,
                 ChargeMethodUnavailableError,
                 "not available from RDKit",
             ],
             [
-                AmberToolsToolkitWrapper(),
+                AmberToolsToolkitWrapper,
                 ChargeMethodUnavailableError,
                 "not available from Amber",
             ],
         ],
     )
     def test_partial_charges_failure(self, toolkit, exception_type, exception_text):
-        if type(toolkit) is ToolkitRegistry:
-            for wrapper in toolkit.registered_toolkits:
-                if not wrapper.is_available():
-                    pytest.skip("Required toolkit is unavailable")
+        if isinstance(toolkit, str):
+            try:
+                toolkit_registry = ToolkitRegistry(
+                    toolkit_precedence=[_TOOLKITS[toolkit]]
+                )
+            except ToolkitUnavailableException:
+                pytest.skip(f"ToolkitWrapper {_TOOLKITS[toolkit]} could not be loaded")
         else:
-            if not toolkit.is_available():
-                pytest.skip("Required toolkit is unavailable")
+            if toolkit.is_available():
+                toolkit_registry = toolkit()
+            else:
+                pytest.skip(f"ToolkitWrapper {toolkit} could not be loaded")
 
         molecule = Molecule.from_smiles("C")
 
         with pytest.raises(exception_type, match=exception_text):
             molecule.assign_partial_charges(
                 partial_charge_method="NotARealChargeMethod",
-                toolkit_registry=toolkit,
+                toolkit_registry=toolkit_registry,
             )
 
     def test_deepcopy_not_shallow(self):

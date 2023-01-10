@@ -52,6 +52,7 @@ from openff.toolkit.utils import (
     get_data_file_path,
 )
 from openff.toolkit.utils.exceptions import (
+    ChargeMethodUnavailableError,
     IncompatibleParameterError,
     ParameterLookupError,
     SMIRNOFFAromaticityError,
@@ -804,7 +805,7 @@ partial_charge_method_resolution_matrix = [
     {
         "toolkit": AmberToolsToolkitWrapper,
         "partial_charge_method": "Madeup-ChargeMethod",
-        "exception": ValueError,
+        "exception": ChargeMethodUnavailableError,
         "exception_match": "",
     },
     {
@@ -846,7 +847,7 @@ partial_charge_method_resolution_matrix = [
     {
         "toolkit": OpenEyeToolkitWrapper,
         "partial_charge_method": "Madeup-ChargeMethod",
-        "exception": ValueError,
+        "exception": ChargeMethodUnavailableError,
         "exception_match": "",
     },
 ]
@@ -1932,6 +1933,8 @@ class TestForceFieldSerializaiton:
         json.dumps(force_field._to_smirnoff_data())
 
 
+# TODO: Many of these tests actually test behvior within Interchange and should be and/or
+#       have been ported there
 class TestForceFieldChargeAssignment:
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
     def test_charges_from_molecule(self, toolkit_registry):
@@ -2424,6 +2427,8 @@ class TestForceFieldChargeAssignment:
                 abs(charge - expected_charge) < 1.0e-6 * openmm_unit.elementary_charge
             )
 
+    # Should this test be here? It's directly testing a `Molecule` method
+    # and indirectly testing the behavior of toolkit wrappers
     @pytest.mark.parametrize("inputs", partial_charge_method_resolution_matrix)
     def test_partial_charge_resolution(self, inputs):
         """Check that the proper partial charge methods are available, and that unavailable partial charge methods
