@@ -1689,6 +1689,45 @@ class TestMolecule:
         ):
             ethanol.remap(mapping, current_to_new=True)
 
+    def test_remap_updates_atom_map(self):
+        # get ethanol and a reverse mapping
+        ethanol = create_ethanol()
+        ethanol_reverse = create_reversed_ethanol()
+        mapping = Molecule.are_isomorphic(ethanol, ethanol_reverse, True)[1]
+        # Set up an atom_map to update
+        ethanol.properties["atom_map"] = {
+            0: 1,  # Check uncomplicated entries are remapped
+            1: "foo",  # Check non-integer values are remapped
+            2: 2,  # Check duplicate values are remapped
+            3: 2,
+            "hello": 3,  # Check non-integer keys are preserved
+            1000: 1000,  # Check out-of-range keys are preserved
+        }
+        # Name all atoms so we can tell them apart later
+        for atom, name in zip(ethanol.atoms, range(ethanol.n_atoms)):
+            atom.name = "atom_" + str(name)
+        # Run the remap
+        new_ethanol = ethanol.remap(mapping, current_to_new=True)
+
+        def atom_name_or(default, molecule, index):
+            """Get the atom name at the given index, or the default"""
+            try:
+                return molecule.atom(index).name
+            except (TypeError, IndexError):
+                return default
+            assert False, "Unreachable"
+
+        # Check the updated atom map
+        expected_atom_map = {
+            atom_name_or(k, ethanol, k): v
+            for k, v in ethanol.properties["atom_map"].items()
+        }
+        actual_atom_map = {
+            atom_name_or(k, new_ethanol, k): v
+            for k, v in new_ethanol.properties["atom_map"].items()
+        }
+        assert expected_atom_map == actual_atom_map
+
     def test_remap_fails_with_out_of_range_indices(self):
         """Make sure the remap fails when the indexing starts from the wrong value"""
         ethanol = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
