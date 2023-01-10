@@ -1685,7 +1685,12 @@ class TestMolecule:
             wrong_index_mapping = dict(
                 (i + 10, new_id) for i, new_id in enumerate(mapping.values())
             )
-            with pytest.raises(RemapIndexError):
+            with pytest.raises(
+                RemapIndexError,
+                match=re.escape(
+                    "The mapping supplied is missing a relation corresponding to atom(0)"
+                ),
+            ):
                 ethanol.remap(wrong_index_mapping, current_to_new=True)
 
         def test_remap_fails_with_missing_indices(self):
