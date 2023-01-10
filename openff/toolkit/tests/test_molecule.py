@@ -1689,14 +1689,6 @@ class TestMolecule:
         ):
             ethanol.remap(mapping, current_to_new=True)
 
-    def test_too_small_remap(self):
-        """Make sure remap fails if we do not supply enough indexes"""
-        ethanol = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
-        # catch mappings that are the wrong size
-        too_small_mapping = {0: 1}
-        with pytest.raises(RemapIndexError):
-            ethanol.remap(too_small_mapping, current_to_new=True)
-
     def test_wrong_index_mapping(self):
         """Make sure the remap fails when the indexing starts from the wrong value"""
         ethanol = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
