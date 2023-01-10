@@ -1230,8 +1230,6 @@ class FrozenMolecule(Serializable):
                     tuple(element_dict["identifier"]), element_dict["atom_indices"]
                 )
 
-        self._invalidate_cached_properties()
-
     def __repr__(self):
         """Return a summary of this molecule; SMILES if valid, Hill formula if not."""
         description = f"Molecule with name '{self.name}'"
