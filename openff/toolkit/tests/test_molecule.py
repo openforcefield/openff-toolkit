@@ -1608,18 +1608,10 @@ class TestMolecule:
             "CCC[N@@](C)CC"
         )
 
-    def test_remap(self):
-        """Test the remap function which should return a new molecule in the requested ordering"""
-        # the order here is CCO
-        ethanol = create_ethanol()
-        # get ethanol in reverse order OCC
-        ethanol_reverse = create_reversed_ethanol()
-        # get the mapping between the molecules
-        mapping = Molecule.are_isomorphic(ethanol, ethanol_reverse, True)[1]
+    class TestRemap:
+        """Tests for the ``Molecule.remap()`` method"""
 
-        new_ethanol = ethanol.remap(mapping, current_to_new=True)
-
-        def assert_molecules_match_after_remap(mol1, mol2):
+        def assert_molecules_match_after_remap(self, mol1, mol2):
             """Check all of the attributes in a molecule match after being remapped"""
             for atoms in zip(mol1.atoms, mol2.atoms):
                 assert atoms[0].to_dict() == atoms[1].to_dict()
@@ -1647,96 +1639,138 @@ class TestMolecule:
             assert mol1.total_charge == mol2.total_charge
             assert mol1.partial_charges.all() == mol2.partial_charges.all()
 
-        # check all of the properties match as well, torsions and impropers will be in a different order
-        # due to the bonds being out of order
-        assert_molecules_match_after_remap(new_ethanol, ethanol_reverse)
+        def test_remap(self):
+            """Test the remap function which should return a new molecule in the requested ordering"""
+            # the order here is CCO
+            ethanol = create_ethanol()
+            # get ethanol in reverse order OCC
+            ethanol_reverse = create_reversed_ethanol()
+            # get the mapping between the molecules
+            mapping = Molecule.are_isomorphic(ethanol, ethanol_reverse, True)[1]
 
-        # test round trip (double remapping a molecule)
-        new_ethanol = ethanol.remap(mapping, current_to_new=True)
-        isomorphic, round_trip_mapping = Molecule.are_isomorphic(
-            new_ethanol, ethanol, return_atom_map=True
-        )
-        assert isomorphic is True
-        round_trip_ethanol = new_ethanol.remap(round_trip_mapping, current_to_new=True)
-        assert_molecules_match_after_remap(round_trip_ethanol, ethanol)
+            new_ethanol = ethanol.remap(mapping, current_to_new=True)
 
-    def test_remap_fails_with_duplicate_values(self):
-        ethanol = create_ethanol()
-        # get a mapping with duplicate atoms
-        mapping = {i: i for i in range(ethanol.n_atoms)}
-        # Make the first and second maps duplicates
-        mapping[1] = mapping[0]
+            # check all of the properties match as well, torsions and impropers will be in a different order
+            # due to the bonds being out of order
+            self.assert_molecules_match_after_remap(new_ethanol, ethanol_reverse)
 
-        with pytest.raises(
-            RemapIndexError,
-            match="There must be no duplicate source or destination indices",
-        ):
-            ethanol.remap(mapping, current_to_new=True)
+            # test round trip (double remapping a molecule)
+            new_ethanol = ethanol.remap(mapping, current_to_new=True)
+            isomorphic, round_trip_mapping = Molecule.are_isomorphic(
+                new_ethanol, ethanol, return_atom_map=True
+            )
+            assert isomorphic is True
+            round_trip_ethanol = new_ethanol.remap(
+                round_trip_mapping, current_to_new=True
+            )
+            self.assert_molecules_match_after_remap(round_trip_ethanol, ethanol)
 
-    def test_remap_fails_with_missing_indices(self):
-        ethanol = create_ethanol()
-        # get a mapping with duplicate atoms
-        mapping = {i: i for i in range(ethanol.n_atoms)}
-        # Remove one of the mappings
-        del mapping[0]
+        def test_remap_fails_with_duplicate_values(self):
+            ethanol = create_ethanol()
+            # get a mapping with duplicate atoms
+            mapping = {i: i for i in range(ethanol.n_atoms)}
+            # Make the first and second maps duplicates
+            mapping[1] = mapping[0]
 
-        with pytest.raises(
-            RemapIndexError,
-            match=re.escape(
-                f"The number of mapping indices ({len(mapping)}) does not "
-                + f"match the number of atoms in this molecule ({ethanol.n_atoms})"
-            ),
-        ):
-            ethanol.remap(mapping, current_to_new=True)
+            with pytest.raises(
+                RemapIndexError,
+                match="There must be no duplicate source or destination indices",
+            ):
+                ethanol.remap(mapping, current_to_new=True)
 
-    def test_remap_updates_atom_map(self):
-        # get ethanol and a reverse mapping
-        ethanol = create_ethanol()
-        ethanol_reverse = create_reversed_ethanol()
-        mapping = Molecule.are_isomorphic(ethanol, ethanol_reverse, True)[1]
-        # Set up an atom_map to update
-        ethanol.properties["atom_map"] = {
-            0: 1,  # Check uncomplicated entries are remapped
-            1: "foo",  # Check non-integer values are remapped
-            2: 2,  # Check duplicate values are remapped
-            3: 2,
-            "hello": 3,  # Check non-integer keys are preserved
-            1000: 1000,  # Check out-of-range keys are preserved
-        }
-        # Name all atoms so we can tell them apart later
-        for atom, name in zip(ethanol.atoms, range(ethanol.n_atoms)):
-            atom.name = "atom_" + str(name)
-        # Run the remap
-        new_ethanol = ethanol.remap(mapping, current_to_new=True)
+        def test_remap_fails_with_out_of_range_indices(self):
+            """Make sure the remap fails when the indexing starts from the wrong value"""
+            ethanol = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
+            mapping = {0: 2, 1: 1, 2: 0, 3: 6, 4: 7, 5: 8, 6: 4, 7: 5, 8: 3}
+            wrong_index_mapping = dict(
+                (i + 10, new_id) for i, new_id in enumerate(mapping.values())
+            )
+            with pytest.raises(RemapIndexError):
+                ethanol.remap(wrong_index_mapping, current_to_new=True)
 
-        def atom_name_or(default, molecule, index):
-            """Get the atom name at the given index, or the default"""
-            try:
-                return molecule.atom(index).name
-            except (TypeError, IndexError):
-                return default
-            assert False, "Unreachable"
+        def test_remap_fails_with_missing_indices(self):
+            ethanol = create_ethanol()
+            # get a mapping with duplicate atoms
+            mapping = {i: i for i in range(ethanol.n_atoms)}
+            # Remove one of the mappings
+            del mapping[0]
 
-        # Check the updated atom map
-        expected_atom_map = {
-            atom_name_or(k, ethanol, k): v
-            for k, v in ethanol.properties["atom_map"].items()
-        }
-        actual_atom_map = {
-            atom_name_or(k, new_ethanol, k): v
-            for k, v in new_ethanol.properties["atom_map"].items()
-        }
-        assert expected_atom_map == actual_atom_map
+            with pytest.raises(
+                RemapIndexError,
+                match=re.escape(
+                    f"The number of mapping indices ({len(mapping)}) does not "
+                    + f"match the number of atoms in this molecule ({ethanol.n_atoms})"
+                ),
+            ):
+                ethanol.remap(mapping, current_to_new=True)
 
-    def test_remap_fails_with_out_of_range_indices(self):
-        """Make sure the remap fails when the indexing starts from the wrong value"""
-        ethanol = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
-        mapping = {0: 2, 1: 1, 2: 0, 3: 6, 4: 7, 5: 8, 6: 4, 7: 5, 8: 3}
-        wrong_index_mapping = dict(
-            (i + 10, new_id) for i, new_id in enumerate(mapping.values())
-        )
-        with pytest.raises(RemapIndexError):
-            ethanol.remap(wrong_index_mapping, current_to_new=True)
+        def test_remap_updates_atom_map(self):
+            # get ethanol and a reverse mapping
+            ethanol = create_ethanol()
+            ethanol_reverse = create_reversed_ethanol()
+            mapping = Molecule.are_isomorphic(ethanol, ethanol_reverse, True)[1]
+            # Set up an atom_map to update
+            ethanol.properties["atom_map"] = {
+                0: 1,  # Check uncomplicated entries are remapped
+                1: "foo",  # Check non-integer values are remapped
+                2: 2,  # Check duplicate values are remapped
+                3: 2,
+                "hello": 3,  # Check non-integer keys are preserved
+                1000: 1000,  # Check out-of-range keys are preserved
+            }
+            # Name all atoms so we can tell them apart later
+            for atom, name in zip(ethanol.atoms, range(ethanol.n_atoms)):
+                atom.name = "atom_" + str(name)
+            # Run the remap
+            new_ethanol = ethanol.remap(mapping, current_to_new=True)
+
+            def atom_name_or(default, molecule, index):
+                """Get the atom name at the given index, or the default"""
+                try:
+                    return molecule.atom(index).name
+                except (TypeError, IndexError):
+                    return default
+                assert False, "Unreachable"
+
+            # Check the updated atom map
+            expected_atom_map = {
+                atom_name_or(k, ethanol, k): v
+                for k, v in ethanol.properties["atom_map"].items()
+            }
+            actual_atom_map = {
+                atom_name_or(k, new_ethanol, k): v
+                for k, v in new_ethanol.properties["atom_map"].items()
+            }
+            assert expected_atom_map == actual_atom_map
+
+        def test_remap_partial(self):
+            """Test the remap function which should return a new molecule in the requested ordering"""
+            # the order here is CCO
+            ethanol = create_ethanol()
+            # Create partial map to swap first two atoms
+            partial_map = {0: 1, 1: 0}
+            # Create equivalent total map
+            total_map = {i: i for i in range(ethanol.n_atoms)}
+            total_map[0] = 1
+            total_map[1] = 0
+
+            remapped_ethanol_partial = ethanol.remap(
+                partial_map,
+                current_to_new=True,
+                partial=True,
+            )
+            remapped_ethanol_total = ethanol.remap(
+                total_map,
+                current_to_new=True,
+                partial=False,
+            )
+
+            # check all of the properties match as well, torsions and impropers will be in a different order
+            # due to the bonds being out of order
+            self.assert_molecules_match_after_remap(
+                remapped_ethanol_partial,
+                remapped_ethanol_total,
+            )
 
     @requires_openeye
     def test_canonical_ordering_openeye(self):
