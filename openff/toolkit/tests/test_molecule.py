@@ -1689,6 +1689,24 @@ class TestMolecule:
         ):
             ethanol.remap(mapping, current_to_new=True)
 
+    def test_too_small_remap(self):
+        """Make sure remap fails if we do not supply enough indexes"""
+        ethanol = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
+        # catch mappings that are the wrong size
+        too_small_mapping = {0: 1}
+        with pytest.raises(RemapIndexError):
+            ethanol.remap(too_small_mapping, current_to_new=True)
+
+    def test_wrong_index_mapping(self):
+        """Make sure the remap fails when the indexing starts from the wrong value"""
+        ethanol = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
+        mapping = {0: 2, 1: 1, 2: 0, 3: 6, 4: 7, 5: 8, 6: 4, 7: 5, 8: 3}
+        wrong_index_mapping = dict(
+            (i + 10, new_id) for i, new_id in enumerate(mapping.values())
+        )
+        with pytest.raises(RemapIndexError):
+            ethanol.remap(wrong_index_mapping, current_to_new=True)
+
     @requires_openeye
     def test_canonical_ordering_openeye(self):
         """Make sure molecules are returned in canonical ordering of openeye"""
@@ -1724,24 +1742,6 @@ class TestMolecule:
             True,
             {0: 2, 1: 0, 2: 1, 3: 8, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7},
         ) == Molecule.are_isomorphic(canonical_ethanol, ethanol, True)
-
-    def test_too_small_remap(self):
-        """Make sure remap fails if we do not supply enough indexes"""
-        ethanol = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
-        # catch mappings that are the wrong size
-        too_small_mapping = {0: 1}
-        with pytest.raises(ValueError):
-            ethanol.remap(too_small_mapping, current_to_new=True)
-
-    def test_wrong_index_mapping(self):
-        """Make sure the remap fails when the indexing starts from the wrong value"""
-        ethanol = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
-        mapping = {0: 2, 1: 1, 2: 0, 3: 6, 4: 7, 5: 8, 6: 4, 7: 5, 8: 3}
-        wrong_index_mapping = dict(
-            (i + 10, new_id) for i, new_id in enumerate(mapping.values())
-        )
-        with pytest.raises(IndexError):
-            ethanol.remap(wrong_index_mapping, current_to_new=True)
 
     tautomer_data = [
         {"molecule": "Oc1c(cccc3)c3nc2ccncc12", "tautomers": 2},
