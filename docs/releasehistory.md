@@ -7,6 +7,14 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `micro` increments represent bugfix releases or improvements in documentation
 
 
+
+## 0.13.0 (or possibly a 0.12.x release)
+
+### Behavior changes
+- [PR #1508](https://github.com/openforcefield/openff-toolkit/pull/1508):
+  Removes the `return_topology` kwawrg from `ForceField.create_openmm_system` which was [deprecated in version 0.11.0](https://docs.openforcefield.org/projects/toolkit/en/stable/releasehistory.html#breaking-change-interchange-now-responsible-for-system-parametrization). To access the `Topology` that results from parametrization, call `ForceField.create_interchange` and access the `.topology` attribute of the resulting `Interchange` object.
+
+
 ## 0.12.0
 
 ### New features

@@ -26,8 +26,7 @@ import copy
 import logging
 import os
 import pathlib
-import warnings
-from typing import TYPE_CHECKING, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 from packaging.version import Version
 
@@ -1083,12 +1082,11 @@ class ForceField:
         self,
         topology: "Topology",
         *,
-        return_topology: bool = False,
         toolkit_registry: Optional[Union["ToolkitRegistry", "ToolkitWrapper"]] = None,
         charge_from_molecules: Optional[List["Molecule"]] = None,
         partial_bond_orders_from_molecules: Optional[List["Molecule"]] = None,
         allow_nonintegral_charges: bool = False,
-    ) -> Union["openmm.System", Tuple["openmm.System", "Topology"]]:
+    ) -> "openmm.System":
         """Create an OpenMM System from this ForceField and a Topology.
 
         Parameters
@@ -1111,37 +1109,14 @@ class ForceField:
             force field.
         allow_nonintegral_charges
             Allow charges that do not sum to an integer.
-        return_topology
-            .. deprecated:: 0.11.0
-                The ``return_topology`` argument has been deprecated and will be
-                removed in v0.12.0. Call :meth:`ForceField.create_interchange`
-                and take the topology from `interchange.topology` instead.
-
-            Return the Topology with any modifications needed to parametrize it
-            in a tuple along with the OpenMM system.
         """
-        interchange = self.create_interchange(
+        return self.create_interchange(
             topology,
             toolkit_registry,
             charge_from_molecules=charge_from_molecules,
             partial_bond_orders_from_molecules=partial_bond_orders_from_molecules,
             allow_nonintegral_charges=allow_nonintegral_charges,
-        )
-
-        openmm_system = interchange.to_openmm(combine_nonbonded_forces=True)
-
-        if not return_topology:
-            return openmm_system
-        else:
-            warning_msg = (
-                "The `create_openmm_system` kwarg `return_topology` is DEPRECATED and will be "
-                "removed in version 0.12.0 of the OpenFF Toolkit. "
-                "Use `ForceField.create_interchange` followed by `Interchange.topology`, "
-                "`Interchange.to_openmm_topology`, and `Interchange.to_openmm` "
-                "for long-term replacements for `return_topology` functionality."
-            )
-            warnings.warn(warning_msg, DeprecationWarning)
-            return openmm_system, copy.deepcopy(interchange.topology)
+        ).to_openmm(combine_nonbonded_force=True)
 
     @requires_package("openff.interchange")
     def create_interchange(
@@ -1287,6 +1262,7 @@ class ForceField:
             raise KeyError(msg)
         return ph_class
 
+    @requires_package("openff.interchange")
     def get_partial_charges(self, molecule: "Molecule", **kwargs) -> "unit.Quantity":
         """Generate the partial charges for the given molecule in this force field.
 
@@ -1340,6 +1316,9 @@ class ForceField:
         charge calculation to be cached.
 
         """
+        import numpy
+        from openff.interchange import Interchange
+
         from openff.toolkit.topology.molecule import Molecule
 
         if not isinstance(molecule, Molecule):
@@ -1348,17 +1327,17 @@ class ForceField:
                 f"{type(molecule)}"
             )
 
-        _, top_with_charges = self.create_openmm_system(
-            molecule.to_topology(), return_topology=True, **kwargs
+        return unit.Quantity(
+            numpy.asarray(
+                [
+                    c.m
+                    for c in Interchange.from_smirnoff(
+                        force_field=self, topology=[molecule], **kwargs
+                    )["Electrostatics"].charges.values()
+                ]
+            ),
+            unit.elementary_charge,
         )
-
-        assert top_with_charges.n_molecules == 1, (
-            "Expected a single molecule in the topology produced by Interchange. "
-            f"Found {len(top_with_charges.n_molecules)} molecules."
-        )
-
-        for molecule in top_with_charges.molecules:
-            return molecule.partial_charges
 
     def __getitem__(self, val):
         """
