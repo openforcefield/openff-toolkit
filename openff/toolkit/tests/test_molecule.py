@@ -3191,6 +3191,7 @@ class TestMolecule:
             ("ambertools", "am1bcc"),
             ("ambertools", "gasteiger"),
             ("ambertools", "am1-mulliken"),
+            ("rdkit", "gasteiger"),
         ],
     )
     def test_assign_partial_charges(self, toolkit, method):
@@ -3204,14 +3205,13 @@ class TestMolecule:
         # Molecule API, and therefore a single molecule should be sufficient
         molecule = Molecule.from_smiles("CN1C=NC2=C1C(=O)N(C(=O)N2C)C")
 
-        if toolkit == "openeye":
-            toolkit_registry = ToolkitRegistry(
-                toolkit_precedence=[OpenEyeToolkitWrapper]
-            )
-        elif toolkit == "ambertools":
-            toolkit_registry = ToolkitRegistry(
-                toolkit_precedence=[AmberToolsToolkitWrapper]
-            )
+        _TOOLKITS = {
+            "openeye": OpenEyeToolkitWrapper,
+            "ambertools": AmberToolsToolkitWrapper,
+            "rdkit": RDKitToolkitWrapper,
+        }
+
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[_TOOLKITS[toolkit]])
 
         molecule.assign_partial_charges(
             partial_charge_method=method,

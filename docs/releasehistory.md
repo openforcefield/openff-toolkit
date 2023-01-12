@@ -9,6 +9,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ## Current development
 
 ### New features
+- [PR #1502](https://github.com/openforcefield/openff-toolkit/pull/1502): Adds Gasteiger charge computation using the RDKit backend.
 - [PR #1498](https://github.com/openforcefield/openff-toolkit/pull/1498): `Molecule.remap()` now supports partial mappings with the `partial` argument.
 
 ### Behavior changes
@@ -21,6 +22,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### New features
 - [PR #1484](https://github.com/openforcefield/openff-toolkit/pull/1484): A `positions` argument has been added to `Topology.from_openmm()` and `Topology.from_mdtraj()`, which allows the topology's positions to be set more conveniently.
+- [PR #1468](https://github.com/openforcefield/openff-toolkit/pull/1468): Track which `ParameterHandler`s are loaded as plugins.
 
 ### Behavior changes
 - [PR #1481](https://github.com/openforcefield/openff-toolkit/pull/1481):
