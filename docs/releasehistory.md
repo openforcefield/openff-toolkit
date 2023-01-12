@@ -6,19 +6,25 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-## 0.12.0
+## Current development
+
+### New features
+- [PR #1498](https://github.com/openforcefield/openff-toolkit/pull/1498): `Molecule.remap()` now supports partial mappings with the `partial` argument.
 
 ### Behavior changes
-- [PR #1481](https://github.com/openforcefield/openff-toolkit/pull/1481):
-  Removes `compute_partial_charges_am1bcc`, which was deprecated in 0.11.0.
+- [PR #1498](https://github.com/openforcefield/openff-toolkit/pull/1498): New, more complete, and more descriptive errors for `Molecule.remap()`.
 
+### Improved documentation and warnings
+- [PR #1498](https://github.com/openforcefield/openff-toolkit/pull/1498): Improved documentation for `Molecule.remap()`, `Molecule.from_smiles()`, and `Molecule.from_mapped_smiles()`, emphasizing the relationships between these methods. In particular, the documentation now clearly states that `from_smiles()` will not reorder atoms based on SMILES atom mapping.
 
-## Current development
+## 0.12.0
 
 ### New features
 - [PR #1484](https://github.com/openforcefield/openff-toolkit/pull/1484): A `positions` argument has been added to `Topology.from_openmm()` and `Topology.from_mdtraj()`, which allows the topology's positions to be set more conveniently.
 
 ### Behavior changes
+- [PR #1481](https://github.com/openforcefield/openff-toolkit/pull/1481):
+  Removes `compute_partial_charges_am1bcc`, which was deprecated in 0.11.0.
 - [PR #1466](https://github.com/openforcefield/openff-toolkit/pull/1466):
   Replaces the use of `collections.OrderedDict` throughout the toolkit with
   the built-in `dict`.
