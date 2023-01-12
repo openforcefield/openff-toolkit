@@ -4327,7 +4327,7 @@ class FrozenMolecule(Serializable):
         toolkit_registry: Union[
             ToolkitRegistry, ToolkitWrapper
         ] = GLOBAL_TOOLKIT_REGISTRY,
-        allow_undefined_stereo=False,
+        allow_undefined_stereo: bool = False,
     ):
         """
         Create a ``Molecule`` from a SMILES string, ordering atoms from mappings
@@ -4339,10 +4339,10 @@ class FrozenMolecule(Serializable):
         .. code:
             "[H:3][C:1](=[O:2])[H:4]"
 
-        This method creates a ``Molecule`` from such a SMILES string whose
-        atoms are ordered according to the mapping. Each atom must be mapped
-        exactly once; any duplicate, missing, or out-of-range mappings will
-        cause the method to fail.
+        This method creates a ``Molecule`` from such a SMILES string whose atoms
+        are ordered according to the mapping. Each atom must be mapped exactly
+        once; any duplicate, missing, or out-of-range mappings will cause the
+        method to fail.
 
         .. warning :: This API is experimental and subject to change.
 
@@ -4364,7 +4364,10 @@ class FrozenMolecule(Serializable):
         Raises
         --------
         SmilesParsingError
-            If the given SMILES had no indexing picked up by the toolkits.
+            If the given SMILES had no indexing picked up by the toolkits, or if
+            the indexing is missing indices.
+        RemapIndexError
+            If the mapping has duplicate or out-of-range indices.
 
         Examples
         --------
