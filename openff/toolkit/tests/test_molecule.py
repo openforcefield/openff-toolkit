@@ -1665,7 +1665,13 @@ class TestMolecule:
             )
             self.assert_molecules_match_after_remap(round_trip_ethanol, ethanol)
 
-        def test_remap_fails_with_duplicate_values(self):
+        @pytest.mark.parametrize("current_to_new", [True, False])
+        @pytest.mark.parametrize("partial", [True, False])
+        def test_remap_fails_with_duplicate_indices(
+            self,
+            current_to_new,
+            partial,
+        ):
             ethanol = create_ethanol()
             # get a mapping with duplicate atoms
             mapping = {i: i for i in range(ethanol.n_atoms)}
@@ -1676,10 +1682,31 @@ class TestMolecule:
                 RemapIndexError,
                 match="There must be no duplicate source or destination indices",
             ):
-                ethanol.remap(mapping, current_to_new=True)
+                ethanol.remap(
+                    mapping,
+                    current_to_new=current_to_new,
+                    partial=partial,
+                )
 
-        def test_remap_fails_with_out_of_range_indices(self):
-            """Make sure the remap fails when the indexing starts from the wrong value"""
+        @pytest.mark.parametrize(
+            "mapping",
+            [
+                {10: 2, 11: 1, 12: 0, 13: 6, 14: 7, 15: 8, 16: 4, 17: 5, 18: 3},
+                {0: 2, 1: 1, 2: 0, 3: 6, 4: 7, 5: 8, 6: 4, 7: 5, 8: 999999},
+                {0: 2, 1: 1, 2: 0, 3: 6, 4: "not an integer", 5: 8, 6: 4, 7: 5, 8: 3},
+            ],
+        )
+        @pytest.mark.parametrize("current_to_new", [True, False])
+        @pytest.mark.parametrize("partial", [True, False])
+        def test_remap_fails_with_out_of_range_indices(
+            self, mapping, current_to_new, partial
+        ):
+            """Make sure the remap fails when indices are out of range
+
+            This tests current_to_new in both directions and ensures the
+            same behavior with partial maps (as all total maps should work in
+            partial mode).
+            """
             ethanol = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
             mapping = {0: 2, 1: 1, 2: 0, 3: 6, 4: 7, 5: 8, 6: 4, 7: 5, 8: 3}
             wrong_index_mapping = dict(
@@ -1688,10 +1715,13 @@ class TestMolecule:
             with pytest.raises(
                 RemapIndexError,
                 match=re.escape(
-                    "The mapping supplied is missing a relation corresponding to atom(0)"
+                    "All indices in a mapping_dict for a molecule with 9 atoms"
+                    + " must be integers between 0 and 8"
                 ),
             ):
-                ethanol.remap(wrong_index_mapping, current_to_new=True)
+                ethanol.remap(
+                    wrong_index_mapping, current_to_new=current_to_new, partial=partial
+                )
 
         def test_remap_fails_with_missing_indices(self):
             ethanol = create_ethanol()
@@ -1755,9 +1785,7 @@ class TestMolecule:
             # Create partial map to swap first two atoms
             partial_map = {0: 1, 1: 0}
             # Create equivalent total map
-            total_map = {i: i for i in range(ethanol.n_atoms)}
-            total_map[0] = 1
-            total_map[1] = 0
+            total_map = {0: 1, 1: 0, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8}
 
             remapped_ethanol_partial = ethanol.remap(
                 partial_map,
@@ -1777,12 +1805,20 @@ class TestMolecule:
                 remapped_ethanol_total,
             )
 
-        def test_remap_partial_fails_with_duplicate_values(self):
+        @pytest.mark.parametrize(
+            "mapping",
+            [
+                {0: 0, 1: 0, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6},
+                {0: 0, 1: 0},
+            ],
+        )
+        @pytest.mark.parametrize("current_to_new", [True, False])
+        def test_remap_partial_fails_with_duplicate_indices(
+            self,
+            mapping,
+            current_to_new,
+        ):
             ethanol = create_ethanol()
-            # get a mapping with duplicate atoms
-            mapping = {i: i for i in range(ethanol.n_atoms - 2)}
-            # Make the first and second maps duplicates
-            mapping[1] = mapping[0]
 
             with pytest.raises(
                 RemapIndexError,
@@ -1790,21 +1826,36 @@ class TestMolecule:
             ):
                 ethanol.remap(
                     mapping,
-                    current_to_new=True,
+                    current_to_new=current_to_new,
                     partial=True,
                 )
 
-        def test_remap_partial_fails_with_out_of_range_indices(self):
+        @pytest.mark.parametrize(
+            "mapping",
+            [
+                {10: 0, 11: 1, 12: 2, 13: 3, 14: 4, 15: 5, 16: 6},
+                {10: 2, 11: 1, 12: 0, 13: 6, 14: 7, 15: 8, 16: 4},
+                {0: 9999999},
+                {"not_an_integer": 0},
+            ],
+        )
+        @pytest.mark.parametrize("current_to_new", [True, False])
+        def test_remap_partial_fails_with_out_of_range_indices(
+            self, mapping, current_to_new
+        ):
             """Make sure the remap fails when the indexing starts from the wrong value"""
             ethanol = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
-            mapping = {0: 2, 1: 1, 2: 0, 3: 6, 4: 7, 5: 8, 6: 4}
-            wrong_index_mapping = dict(
-                (i + 10, new_id) for i, new_id in enumerate(mapping.values())
-            )
-            with pytest.raises(RemapIndexError):
+
+            with pytest.raises(
+                RemapIndexError,
+                match=re.escape(
+                    "All indices in a mapping_dict for a molecule with 9 atoms"
+                    + " must be integers between 0 and 8"
+                ),
+            ):
                 ethanol.remap(
-                    wrong_index_mapping,
-                    current_to_new=True,
+                    mapping,
+                    current_to_new=current_to_new,
                     partial=True,
                 )
 
