@@ -1768,15 +1768,15 @@ class TestMolecule:
                 assert False, "Unreachable"
 
             # Check the updated atom map
-            expected_atom_map = {
+            expected_atom_map_with_names = {
                 atom_name_or(k, ethanol, k): v
                 for k, v in ethanol.properties["atom_map"].items()
             }
-            actual_atom_map = {
+            actual_atom_map_with_names = {
                 atom_name_or(k, new_ethanol, k): v
                 for k, v in new_ethanol.properties["atom_map"].items()
             }
-            assert expected_atom_map == actual_atom_map
+            assert expected_atom_map_with_names == actual_atom_map_with_names
 
         def test_remap_partial(self):
             """Test the remap function which should return a new molecule in the requested ordering"""
