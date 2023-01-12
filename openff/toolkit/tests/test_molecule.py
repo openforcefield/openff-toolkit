@@ -892,7 +892,6 @@ class TestMolecule:
 
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @requires_openeye
-    @pytest.mark.slow
     def test_create_from_file(self):
         """Test standard constructor taking a filename or file-like object."""
         # TODO: Expand test to both openeye and rdkit toolkits
@@ -916,7 +915,11 @@ class TestMolecule:
         # Ensure that attempting to initialize a single Molecule from a file
         # containing multiple molecules raises a ValueError
         filename = get_data_file_path("molecules/butane_multi.sdf")
-        with pytest.raises(ValueError):
+
+        with pytest.raises(
+            ValueError,
+            match="Specified file or file-like.*exactly one molecule",
+        ):
             Molecule(filename, allow_undefined_stereo=True)
 
     def test_from_pathlib_path(self):
@@ -3037,6 +3040,13 @@ class TestMolecule:
 
         assert molecule == molecule_copy
 
+    def test_chemical_environment_old_arg(self):
+        from openff.toolkit.typing.chemistry import ChemicalEnvironment
+
+        molecule = create_ethanol()
+        with pytest.raises(ValueError, match="'query' must be a SMARTS"):
+            molecule.chemical_environment_matches(ChemicalEnvironment("[*:1]"))
+
     @requires_openeye
     def test_chemical_environment_matches_OE(self):
         """Test chemical environment matches"""
@@ -3451,21 +3461,6 @@ class TestMolecule:
             molecule.generate_conformers(
                 n_conformers=1, toolkit_registry=RDKitToolkitWrapper()
             )
-
-    @requires_openeye
-    @requires_rdkit
-    def test_compute_partial_charges_am1bcc_warning(self):
-        # TODO: Remove in version 0.12.0 alognside the removal of these methods
-        molecule = create_ethanol()
-
-        toolkits = [OpenEyeToolkitWrapper(), AmberToolsToolkitWrapper()]
-
-        with pytest.warns(UserWarning, match="compute_.*_am1bcc.*0.12"):
-            molecule.compute_partial_charges_am1bcc()
-
-        for toolkit in toolkits:
-            with pytest.warns(UserWarning, match="compute_.*_am1bcc.*0.12"):
-                toolkit.compute_partial_charges_am1bcc(molecule)
 
     def test_deepcopy_not_shallow(self):
         """

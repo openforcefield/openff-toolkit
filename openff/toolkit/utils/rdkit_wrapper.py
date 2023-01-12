@@ -2235,12 +2235,15 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         from rdkit import Chem
 
-        from openff.toolkit.typing.chemistry import SMIRKSParsingError
+        from openff.toolkit.utils.exceptions import SMIRKSParsingError
 
         ss = Chem.MolFromSmarts(smarts)
 
         if ss is None:
-            raise SMIRKSParsingError(f"RDKit was unable to parse SMIRKS {smarts}")
+            # This is a SMIRKS or SMARTS parsing error? The argument and exception disagree
+            raise SMIRKSParsingError(
+                f"RDKit was unable to parse SMIRKS/SMARTS {smarts}"
+            )
 
         unique_tags = set()
         connections = set()
@@ -2260,10 +2263,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     @staticmethod
     def _find_smarts_matches(
         rdmol,
-        smirks,
-        aromaticity_model="OEAroModel_MDL",
-        unique=False,
-    ):
+        smarts: str,
+        aromaticity_model: str = "OEAroModel_MDL",
+        unique: bool = False,
+    ) -> List[Tuple[int, ...]]:
         """Find all sets of atoms in the provided RDKit molecule that match the provided SMARTS string.
 
         Parameters
@@ -2277,6 +2280,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         aromaticity_model : str, optional, default='OEAroModel_MDL'
             OpenEye aromaticity model designation as a string, such as ``OEAroModel_MDL``.
             Molecule is prepared with this aromaticity model prior to querying.
+        unique : bool, default=False
+            If True, only return unique matches. If False, return all matches. This is passed to
+            RDKit's ``GetSubstructMatches`` as ``uniquify``.
 
         Returns
         -------
@@ -2337,10 +2343,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         #    raise ValueError("Unknown aromaticity model: {}".aromaticity_models)
 
         # Set up query.
-        qmol = Chem.MolFromSmarts(smirks)  # cannot catch the error
+        qmol = Chem.MolFromSmarts(smarts)  # cannot catch the error
         if qmol is None:
             raise ValueError(
-                'RDKit could not parse the SMIRKS string "{}"'.format(smirks)
+                'RDKit could not parse the SMIRKS string "{}"'.format(smarts)
             )
 
         # Create atom mapping for query molecule
@@ -2368,11 +2374,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def find_smarts_matches(
         self,
-        molecule,
-        smarts,
-        aromaticity_model="OEAroModel_MDL",
-        unique=False,
-    ):
+        molecule: "Molecule",
+        smarts: str,
+        aromaticity_model: str = "OEAroModel_MDL",
+        unique: bool = False,
+    ) -> List[Tuple[int, ...]]:
         """
         Find all SMARTS matches for the specified molecule, using the specified aromaticity model.
 
@@ -2386,6 +2392,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             SMARTS string with optional SMIRKS-style atom tagging
         aromaticity_model : str, optional, default='OEAroModel_MDL'
             Molecule is prepared with this aromaticity model prior to querying.
+        unique : bool, default=False
+            If True, only return unique matches. If False, return all matches.
 
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 

@@ -28,6 +28,14 @@ else:
 
 
 class TestChemicalEnvironments:
+    def test_deprecation_warning(self):
+        from openff.toolkit.typing.chemistry.environment import (
+            ChemicalEnvironmentDeprecationWarning,
+        )
+
+        with pytest.warns(ChemicalEnvironmentDeprecationWarning):
+            ChemicalEnvironment("[*:1]")
+
     def test_createEnvironments(self):
         """
         Test all types of ChemicalEnvironment objects with defined atoms and bonds

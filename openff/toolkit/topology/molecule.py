@@ -1027,7 +1027,9 @@ class FrozenMolecule(Serializable):
             self.generate_unique_atom_names()
 
     def strip_atom_stereochemistry(
-        self, smarts, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
+        self,
+        smarts: str,
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """Delete stereochemistry information for certain atoms, if it is present.
         This method can be used to "normalize" molecules imported from different cheminformatics
@@ -1035,7 +1037,7 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        smarts: str or ChemicalEnvironment
+        smarts: str
             Tagged SMARTS with a single atom with index 1. Any matches for this atom will have any assigned
             stereocheistry information removed.
         toolkit_registry : a :class:`ToolkitRegistry` or :class:`ToolkitWrapper` object, optional,
@@ -1043,11 +1045,9 @@ class FrozenMolecule(Serializable):
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for I/O operations
 
         """
-        from openff.toolkit.typing.chemistry.environment import AtomChemicalEnvironment
-
-        chem_env = AtomChemicalEnvironment(smarts)
         matches = self.chemical_environment_matches(
-            chem_env, toolkit_registry=toolkit_registry
+            smarts,
+            toolkit_registry=toolkit_registry,
         )
 
         for match in set(matches):
@@ -1834,15 +1834,15 @@ class FrozenMolecule(Serializable):
 
     @staticmethod
     def are_isomorphic(
-        mol1,
-        mol2,
-        return_atom_map=False,
-        aromatic_matching=True,
-        formal_charge_matching=True,
-        bond_order_matching=True,
-        atom_stereochemistry_matching=True,
-        bond_stereochemistry_matching=True,
-        strip_pyrimidal_n_atom_stereo=True,
+        mol1: Union["FrozenMolecule", nx.Graph],
+        mol2: Union["FrozenMolecule", nx.Graph],
+        return_atom_map: bool = False,
+        aromatic_matching: bool = True,
+        formal_charge_matching: bool = True,
+        bond_order_matching: bool = True,
+        atom_stereochemistry_matching: bool = True,
+        bond_stereochemistry_matching: bool = True,
+        strip_pyrimidal_n_atom_stereo: bool = True,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
@@ -1990,7 +1990,7 @@ class FrozenMolecule(Serializable):
                 return is_equal
 
         else:
-            edge_match_func = None
+            edge_match_func = None  # type: ignore
 
         # Here we should work out what data type we have, also deal with lists?
         def to_networkx(data):
@@ -2004,7 +2004,7 @@ class FrozenMolecule(Serializable):
                 # Molecule class instance
                 if strip_pyrimidal_n_atom_stereo:
                     # Make a copy of the molecule so we don't modify the original
-                    data = deepcopy(data)
+                    data: FrozenMolecule = deepcopy(data)
                     data.strip_atom_stereochemistry(
                         SMARTS, toolkit_registry=toolkit_registry
                     )
@@ -2042,7 +2042,7 @@ class FrozenMolecule(Serializable):
         else:
             return isomorphic, None
 
-    def is_isomorphic_with(self, other, **kwargs):
+    def is_isomorphic_with(self, other: Union["FrozenMolecule", nx.Graph], **kwargs):
         """
         Check if the molecule is isomorphic with the other molecule which can be an openff.toolkit.topology.Molecule
         or nx.Graph(). Full matching is done using the options described bellow.
@@ -2382,60 +2382,6 @@ class FrozenMolecule(Serializable):
                 f"Expected ToolkitRegistry or ToolkitWrapper. Got "
                 f"{type(toolkit_registry)}"
             )
-
-    def compute_partial_charges_am1bcc(
-        self,
-        use_conformers=None,
-        strict_n_conformers=False,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-    ):
-        """
-        .. deprecated:: 0.11.0
-
-            This method was deprecated in v0.11.0 and will soon be removed.
-            Use :py:meth:`assign_partial_charges(partial_charge_method='am1bcc')
-            <Molecule.assign_partial_charges>` instead.
-
-        Calculate partial atomic charges for this molecule using AM1-BCC run by an underlying toolkit
-        and assign them to this molecule's ``partial_charges`` attribute.
-
-        Parameters
-        ----------
-        strict_n_conformers : bool, default=False
-            Whether to raise an exception if an invalid number of conformers is provided for the given charge method.
-            If this is False and an invalid number of conformers is found, a warning will be raised.
-        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3)
-            and dimension of distance. Optional, default=None Coordinates to use for partial charge calculation.
-            If None, an appropriate number of conformers for the given charge method will be generated.
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
-        or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the calculation
-
-        Examples
-        --------
-
-        >>> molecule = Molecule.from_smiles('CCCCCC')
-        >>> molecule.generate_conformers()
-        >>> molecule.compute_partial_charges_am1bcc()
-
-        Raises
-        ------
-        InvalidToolkitRegistryError
-            If an invalid object is passed as the toolkit_registry parameter
-
-        """
-        # TODO: Remove in version 0.12.0
-        warnings.warn(
-            "compute_partial_charges_am1bcc is deprecated and will be removed in version 0.12.0. "
-            "Use assign_partial_charges(partial_charge_method='am1bcc') instead.",
-            UserWarning,
-        )
-        self.assign_partial_charges(
-            partial_charge_method="am1bcc",
-            use_conformers=use_conformers,
-            strict_n_conformers=strict_n_conformers,
-            toolkit_registry=toolkit_registry,
-        )
 
     def assign_partial_charges(
         self,
@@ -3457,17 +3403,17 @@ class FrozenMolecule(Serializable):
 
     def chemical_environment_matches(
         self,
-        query,
-        unique=False,
+        query: str,
+        unique: bool = False,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
-        """Find matches in the molecule for a SMARTS string or ``ChemicalEnvironment`` query
+        """Find matches in the molecule for a SMARTS string
 
         Parameters
         ----------
-        query : str or ChemicalEnvironment
-            SMARTS string (with one or more tagged atoms) or ``ChemicalEnvironment`` query.
-            Query will internally be resolved to SMIRKS using ``query.asSMIRKS()`` if it has an ``.asSMIRKS`` method.
+        query : str
+            SMARTS string (with one or more tagged atoms).
+        unique : bool, default=False
         toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
             or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for chemical environment matches
@@ -3492,14 +3438,10 @@ class FrozenMolecule(Serializable):
              ``chemical_environment_matches``
 
         """
-        # Resolve to SMIRKS if needed
-        # TODO: Update this to use updated ChemicalEnvironment API
-        if hasattr(query, "smirks"):
-            smirks = query.smirks
-        elif type(query) == str:
+        if isinstance(query, str):
             smirks = query
         else:
-            raise ValueError("'query' must be either a string or a ChemicalEnvironment")
+            raise ValueError("'query' must be a SMARTS/SMIRKS string")
 
         # Use specified cheminformatics toolkit to determine matches with specified aromaticity model
         # TODO: Simplify this by requiring a toolkit registry for the molecule?
@@ -3512,7 +3454,7 @@ class FrozenMolecule(Serializable):
                 unique=unique,
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            matches = toolkit_registry.find_smarts_matches(
+            matches = toolkit_registry.find_smarts_matches(  # type: ignore[attr-defined]
                 self,
                 smirks,
                 unique=unique,
