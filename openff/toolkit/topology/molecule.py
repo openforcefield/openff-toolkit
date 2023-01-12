@@ -4725,10 +4725,16 @@ class FrozenMolecule(Serializable):
         Reorder the atoms in the molecule according to the given mapping dict.
 
         The mapping dict must be a dictionary mapping atom indices to atom
-        indices. Each atom index must be in the half-open interval
+        indices. Each atom index must be an integer in the half-open interval
         ``[0, n_atoms)``. All positions in the molecule must be mapped from and
         to exactly once unless ``partial=True`` is given, in which case they
-        must be mapped no more than once.
+        must be mapped no more than once. Missing (unless ``partial=True``),
+        out-range (including non-integer), or duplicate indices are not allowed
+        in the ``mapping_dict`` and will lead to an exception.
+
+        By default, the mapping dict's keys are the source indices and its
+        values are destination indices, but this can be changed with the
+        ``current_to_new`` argument.
 
         The keys of the ``self.properties["atom_map"]`` property are updated for
         the new ordering. Other values of the properties dictionary are
@@ -4750,12 +4756,19 @@ class FrozenMolecule(Serializable):
             If ``False`` (the default), an exception will be raised if any atom
             is lacking a destination in the atom map. Note that if this is
             ``True``, atoms without entries in the mapping dict may be moved in
-            addition to those in the dictionary.
+            addition to those in the dictionary. Note that partial maps must
+            still be in-range and not include duplicates.
 
         Returns
         -------
         new_molecule :  openff.toolkit.topology.molecule.Molecule
             A copy of the molecule in the new order.
+
+        Raises
+        ------
+        RemapIndexError
+            When an out-of-range, duplicate, or missing index is found in the
+            ``mapping_dict``.
 
         See Also
         --------
@@ -4783,7 +4796,17 @@ class FrozenMolecule(Serializable):
         # Make sure that there were no duplicate indices
         if len(new_to_cur) != len(cur_to_new):
             raise RemapIndexError(
-                "There must be no duplicate source or destination indices"
+                "There must be no duplicate source or destination indices in"
+                + " mapping_dict"
+            )
+
+        if any(
+            not (isinstance(i, int) and 0 <= i < self.n_atoms)
+            for i in [*new_to_cur] + [*cur_to_new]
+        ):
+            raise RemapIndexError(
+                f"All indices in a mapping_dict for a molecule with {self.n_atoms}"
+                + f" atoms must be integers between 0 and {self.n_atoms-1}"
             )
 
         # If a partial map is allowed, complete it
@@ -4816,7 +4839,7 @@ class FrozenMolecule(Serializable):
         # here corresponding to mapping that starts from 0 or higher
         except (KeyError, IndexError):
             raise RemapIndexError(
-                f"The mapping supplied is missing a relation corresponding to atom({i})"
+                f"The mapping supplied is missing a destination index for atom {i}"
             )
 
         # add the bonds but with atom indexes in a sorted ascending order
