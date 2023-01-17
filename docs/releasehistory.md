@@ -6,6 +6,12 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+# 0.14.0 (or other breaking change some months after 0.12.0)
+
+### Behavior changes
+- [PR #15XX](https://github.com/openforcefield/openff-toolkit/pull/15XX):
+  Removes `ChemicalEnvironment` and the entire `openff.toolkit.typing.chemistry` submodule, which was deprecated in 0.12.0.
+
 
 # Current development
 

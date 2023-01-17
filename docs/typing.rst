@@ -3,19 +3,6 @@
 Force field typing tools
 ========================
 
-Chemical environments
----------------------
-
-Tools for representing and operating on chemical environments
-
-.. currentmodule:: openff.toolkit.typing.chemistry
-.. autosummary::
-    :nosignatures:
-    :toctree: api/generated/
-
-    ChemicalEnvironment
-
-
 Force field typing engines
 --------------------------
 
