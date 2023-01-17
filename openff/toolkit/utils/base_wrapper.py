@@ -5,7 +5,7 @@ Base class for toolkit wrappers. Defines the public API and some shared methods
 __all__ = ("ToolkitWrapper",)
 
 from functools import wraps
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
@@ -14,10 +14,13 @@ from openff.toolkit.utils.exceptions import (
     ToolkitUnavailableException,
 )
 
+if TYPE_CHECKING:
+    from openff.toolkit.topology.molecule import Molecule
+
 
 def _mol_to_ctab_and_aro_key(
-    self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL
-):
+    self, molecule: "Molecule", aromaticity_model=DEFAULT_AROMATICITY_MODEL
+) -> str:
     return f"{molecule.ordered_connection_table_hash()}-{aromaticity_model}"
 
 
@@ -179,11 +182,11 @@ class ToolkitWrapper:
 
     def _check_n_conformers(
         self,
-        molecule,
-        partial_charge_method,
-        min_confs=None,
-        max_confs=None,
-        strict_n_conformers=False,
+        molecule: "Molecule",
+        partial_charge_method: Optional[str] = None,
+        min_confs: Optional[int] = None,
+        max_confs: Optional[int] = None,
+        strict_n_conformers: bool = False,
     ):
         """
         Private method for validating the number of conformers on a molecule prior to partial

@@ -37,6 +37,7 @@ dependencies:
   - qcengine
   - mdtraj
   - parmed
+  - ipywidgets =7
   - nbval
   - mypy
   - pip:

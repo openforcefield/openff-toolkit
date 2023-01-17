@@ -8,9 +8,10 @@ import subprocess
 import tempfile
 from collections import defaultdict
 from shutil import which
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 import numpy as np
-from openff.units import unit
+from openff.units import Quantity, unit
 
 from openff.toolkit.utils import base_wrapper, rdkit_wrapper
 from openff.toolkit.utils.exceptions import (
@@ -20,6 +21,9 @@ from openff.toolkit.utils.exceptions import (
     ToolkitUnavailableException,
 )
 from openff.toolkit.utils.utils import temporary_cd
+
+if TYPE_CHECKING:
+    from openff.toolkit.topology.molecule import Molecule
 
 
 class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
@@ -57,7 +61,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         self._rdkit_toolkit_wrapper = rdkit_wrapper.RDKitToolkitWrapper()
 
     @staticmethod
-    def is_available():
+    def is_available() -> bool:
         """
         Check whether the AmberTools toolkit is installed
 
@@ -78,11 +82,11 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def assign_partial_charges(
         self,
-        molecule,
-        partial_charge_method=None,
-        use_conformers=None,
-        strict_n_conformers=False,
-        normalize_partial_charges=True,
+        molecule: "Molecule",
+        partial_charge_method: Optional[str] = None,
+        use_conformers: Optional[List[Quantity]] = None,
+        strict_n_conformers: bool = False,
+        normalize_partial_charges: bool = True,
         _cls=None,
     ):
         """
@@ -135,7 +139,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
             # Standardize method name for string comparisons
             partial_charge_method = partial_charge_method.lower()
 
-        SUPPORTED_CHARGE_METHODS = {
+        SUPPORTED_CHARGE_METHODS: Dict[str, Dict[str, Union[int, str]]] = {
             "am1bcc": {
                 "antechamber_keyword": "bcc",
                 "min_confs": 1,
@@ -187,8 +191,8 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
             self._check_n_conformers(
                 mol_copy,
                 partial_charge_method=partial_charge_method,
-                min_confs=charge_method["min_confs"],
-                max_confs=charge_method["max_confs"],
+                min_confs=charge_method["min_confs"],  # type: ignore[arg-type]
+                max_confs=charge_method["max_confs"],  # type: ignore[arg-type]
                 strict_n_conformers=strict_n_conformers,
             )
 
@@ -226,7 +230,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
                         "-dr",
                         "n",
                         "-c",
-                        short_charge_method,
+                        str(short_charge_method),
                         "-nc",
                         str(net_charge),
                     ]
@@ -388,7 +392,11 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         return bond_orders
 
     def assign_fractional_bond_orders(
-        self, molecule, bond_order_model=None, use_conformers=None, _cls=None
+        self,
+        molecule: "Molecule",
+        bond_order_model: Optional[str] = None,
+        use_conformers: Optional[List[str]] = None,
+        _cls=None,
     ):
         """
         Update and store list of bond orders this molecule. Bond orders are stored on each

@@ -46,10 +46,11 @@ from typing import (
 
 import networkx as nx
 import numpy as np
-from openff.units import unit
+from openff.units import Quantity, unit
 from openff.units.elements import MASSES, SYMBOLS
 from openff.utilities.exceptions import MissingOptionalDependencyError
 from packaging import version
+from typing_extensions import TypeAlias
 
 from openff.toolkit.utils.exceptions import (
     HierarchySchemeNotFoundException,
@@ -76,8 +77,6 @@ from openff.toolkit.utils.toolkits import (
 from openff.toolkit.utils.utils import get_data_file_path, requires_package
 
 if TYPE_CHECKING:
-    from openff.units.unit import Quantity
-
     from openff.toolkit.topology._mm_molecule import _SimpleAtom, _SimpleMolecule
 
 # TODO: Can we have the `ALLOWED_*_MODELS` list automatically appear in the docstrings below?
@@ -86,6 +85,8 @@ if TYPE_CHECKING:
 
 # TODO: Allow all OpenEye aromaticity models to be used with OpenEye names?
 #       Only support OEAroModel_MDL in RDKit version?
+
+TKR: TypeAlias = Union[ToolkitRegistry, ToolkitWrapper]
 
 
 def _molecule_deprecation(old_method, new_method):
@@ -109,7 +110,7 @@ class Particle(Serializable):
     """
 
     @property
-    def molecule(self):
+    def molecule(self) -> "FrozenMolecule":
         r"""
         The ``Molecule`` this particle is part of.
 
@@ -133,7 +134,7 @@ class Particle(Serializable):
         self._molecule = molecule
 
     @property
-    def molecule_particle_index(self):
+    def molecule_particle_index(self) -> int:
         """
         Returns the index of this particle in its molecule
         """
@@ -278,18 +279,18 @@ class Atom(Particle):
 
         self._bonds.append(bond)
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Union[str, int, bool, Dict[Any, Any]]]:
         """Return a dict representation of the atom."""
-        atom_dict = dict()
-        atom_dict["atomic_number"] = self._atomic_number
-        atom_dict["formal_charge"] = self._formal_charge.m_as(unit.elementary_charge)
-        atom_dict["is_aromatic"] = self._is_aromatic
-        atom_dict["stereochemistry"] = self._stereochemistry
-        atom_dict["name"] = self._name
-        atom_dict["metadata"] = dict(self._metadata)
         # TODO: Should this be implicit in the atom ordering when saved?
         # atom_dict['molecule_atom_index'] = self._molecule_atom_index
-        return atom_dict
+        return {
+            "atomic_number": self._atomic_number,
+            "formal_charge": self._formal_charge.m_as(unit.elementary_charge),
+            "is_aromatic": self._is_aromatic,
+            "stereochemistry": self._stereochemistry,
+            "name": self._name,
+            "metadata": dict(self._metadata),
+        }
 
     @classmethod
     def from_dict(cls, atom_dict):
@@ -410,7 +411,7 @@ class Atom(Particle):
         return SYMBOLS[self.atomic_number]
 
     @property
-    def mass(self) -> "Quantity":
+    def mass(self) -> Quantity:
         """
         The standard atomic weight (abundance-weighted isotopic mass) of the atomic site.
 
@@ -453,7 +454,7 @@ class Atom(Particle):
         return self._bonds
 
     @property
-    def bonded_atoms(self):
+    def bonded_atoms(self) -> Generator["Atom", None, None]:
         """
         The list of ``Atom`` objects this atom is involved in bonds with
 
@@ -503,14 +504,14 @@ class Atom(Particle):
         return _is_in_ring
 
     @property
-    def molecule_atom_index(self):
+    def molecule_atom_index(self) -> int:
         """
         The index of this Atom within the the list of atoms in the parent ``Molecule``.
         """
         if self._molecule is None:
             raise ValueError("This Atom does not belong to a Molecule object")
         if "_molecule_atom_index" in self.__dict__:
-            return self._molecule_atom_index
+            return self._molecule_atom_index  # type: ignore[has-type]
         self._molecule_atom_index = self._molecule.atoms.index(self)
         return self._molecule_atom_index
 
@@ -639,19 +640,19 @@ class Bond(Serializable):
         self._is_aromatic = is_aromatic
         self._stereochemistry = stereochemistry
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Union[int, bool, str, float]]:
         """
         Return a dict representation of the bond.
 
         """
-        bond_dict = dict()
-        bond_dict["atom1"] = self.atom1.molecule_atom_index
-        bond_dict["atom2"] = self.atom2.molecule_atom_index
-        bond_dict["bond_order"] = self._bond_order
-        bond_dict["is_aromatic"] = self._is_aromatic
-        bond_dict["stereochemistry"] = self._stereochemistry
-        bond_dict["fractional_bond_order"] = self._fractional_bond_order
-        return bond_dict
+        return {
+            "atom1": self.atom1.molecule_atom_index,
+            "atom2": self.atom2.molecule_atom_index,
+            "bond_order": self._bond_order,
+            "is_aromatic": self._is_aromatic,
+            "stereochemistry": self._stereochemistry,
+            "fractional_bond_order": self._fractional_bond_order,
+        }
 
     @classmethod
     def from_dict(cls, molecule, d):
@@ -671,11 +672,11 @@ class Bond(Serializable):
         return self._atom2
 
     @property
-    def atom1_index(self):
+    def atom1_index(self) -> int:
         return self.molecule.atoms.index(self._atom1)
 
     @property
-    def atom2_index(self):
+    def atom2_index(self) -> int:
         return self.molecule.atoms.index(self._atom2)
 
     @property
@@ -728,7 +729,7 @@ class Bond(Serializable):
         self._molecule = value
 
     @property
-    def molecule_bond_index(self):
+    def molecule_bond_index(self) -> int:
         """
         The index of this Bond within the the list of bonds in ``Molecules``.
 
@@ -822,9 +823,9 @@ class FrozenMolecule(Serializable):
     def __init__(
         self,
         other=None,
-        file_format=None,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-        allow_undefined_stereo=False,
+        file_format: Optional[str] = None,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
+        allow_undefined_stereo: bool = False,
     ):
         r"""
         Create a new FrozenMolecule object
@@ -910,7 +911,7 @@ class FrozenMolecule(Serializable):
 
         """
 
-        self._cached_smiles = None
+        self._cached_smiles: Dict[str, str] = dict()
 
         # Figure out if toolkit_registry is a whole registry, or just a single wrapper
         if isinstance(toolkit_registry, ToolkitRegistry):
@@ -1028,7 +1029,7 @@ class FrozenMolecule(Serializable):
     def strip_atom_stereochemistry(
         self,
         smarts: str,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
     ):
         """Delete stereochemistry information for certain atoms, if it is present.
         This method can be used to "normalize" molecules imported from different cheminformatics
@@ -1487,7 +1488,7 @@ class FrozenMolecule(Serializable):
             hierarchy_scheme = self._hierarchy_schemes[iter_name]
             hierarchy_scheme.perceive_hierarchy()
 
-    def __getattr__(self, name: str):
+    def __getattr__(self, name: str) -> List["HierarchyElement"]:
         """If a requested attribute is not found, check the hierarchy schemes"""
         try:
             return self.__dict__["_hierarchy_schemes"][name].hierarchy_elements
@@ -1502,10 +1503,10 @@ class FrozenMolecule(Serializable):
 
     def to_smiles(
         self,
-        isomeric=True,
-        explicit_hydrogens=True,
-        mapped=False,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        isomeric: bool = True,
+        explicit_hydrogens: bool = True,
+        mapped: bool = False,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
         Return a canonical isomeric SMILES representation of the current molecule.
@@ -1543,15 +1544,11 @@ class FrozenMolecule(Serializable):
         >>> smiles = molecule.to_smiles()
 
         """
-        # Initialize cached_smiles dict for this molecule if none exists
-        if self._cached_smiles is None:
-            self._cached_smiles = {}
-
         # Figure out which toolkit should be used to create the SMILES
         if isinstance(toolkit_registry, ToolkitRegistry):
             to_smiles_method = toolkit_registry.resolve("to_smiles")
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            to_smiles_method = toolkit_registry.to_smiles
+            to_smiles_method = toolkit_registry.to_smiles  # type: ignore[attr-defined]
         else:
             raise InvalidToolkitRegistryError(
                 "Invalid toolkit_registry passed to to_smiles. Expected ToolkitRegistry or ToolkitWrapper. "
@@ -1579,9 +1576,9 @@ class FrozenMolecule(Serializable):
     @classmethod
     def from_inchi(
         cls,
-        inchi,
-        allow_undefined_stereo=False,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        inchi: str,
+        allow_undefined_stereo: bool = False,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
         Construct a Molecule from a InChI representation
@@ -1621,7 +1618,7 @@ class FrozenMolecule(Serializable):
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            molecule = toolkit.from_inchi(
+            molecule = toolkit.from_inchi(  # type: ignore[attr-defined]
                 inchi, _cls=cls, allow_undefined_stereo=allow_undefined_stereo
             )
         else:
@@ -1632,7 +1629,11 @@ class FrozenMolecule(Serializable):
 
         return molecule
 
-    def to_inchi(self, fixed_hydrogens=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def to_inchi(
+        self,
+        fixed_hydrogens: bool = False,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
+    ) -> str:
         """
         Create an InChI string for the molecule using the requested toolkit backend.
         InChI is a standardised representation that does not capture tautomers unless specified using the fixed
@@ -1667,7 +1668,7 @@ class FrozenMolecule(Serializable):
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            inchi = toolkit.to_inchi(self, fixed_hydrogens=fixed_hydrogens)
+            inchi = toolkit.to_inchi(self, fixed_hydrogens=fixed_hydrogens)  # type: ignore[attr-defined]
         else:
             raise InvalidToolkitRegistryError(
                 "Invalid toolkit_registry passed to to_inchi. Expected ToolkitRegistry or ToolkitWrapper. "
@@ -1677,7 +1678,9 @@ class FrozenMolecule(Serializable):
         return inchi
 
     def to_inchikey(
-        self, fixed_hydrogens=False, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
+        self,
+        fixed_hydrogens: bool = False,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
         Create an InChIKey for the molecule using the requested toolkit backend.
@@ -1713,7 +1716,7 @@ class FrozenMolecule(Serializable):
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            inchi_key = toolkit.to_inchikey(self, fixed_hydrogens=fixed_hydrogens)
+            inchi_key = toolkit.to_inchikey(self, fixed_hydrogens=fixed_hydrogens)  # type: ignore[attr-defined]
         else:
             raise InvalidToolkitRegistryError(
                 "Invalid toolkit_registry passed to to_inchikey. Expected ToolkitRegistry or ToolkitWrapper. "
@@ -1725,11 +1728,11 @@ class FrozenMolecule(Serializable):
     @classmethod
     def from_smiles(
         cls,
-        smiles,
-        hydrogens_are_explicit=False,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-        allow_undefined_stereo=False,
-    ):
+        smiles: str,
+        hydrogens_are_explicit: bool = False,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
+        allow_undefined_stereo: bool = False,
+    ) -> "Molecule":
         """
         Construct a Molecule from a SMILES representation
 
@@ -1767,7 +1770,7 @@ class FrozenMolecule(Serializable):
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            molecule = toolkit.from_smiles(
+            molecule = toolkit.from_smiles(  # type: ignore[attr-defined]
                 smiles,
                 hydrogens_are_explicit=hydrogens_are_explicit,
                 allow_undefined_stereo=allow_undefined_stereo,
@@ -1811,7 +1814,7 @@ class FrozenMolecule(Serializable):
         atom_stereochemistry_matching: bool = True,
         bond_stereochemistry_matching: bool = True,
         strip_pyrimidal_n_atom_stereo: bool = True,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
         Determine if ``mol1`` is isomorphic to ``mol2``.
@@ -2074,11 +2077,11 @@ class FrozenMolecule(Serializable):
 
     def generate_conformers(
         self,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-        n_conformers=10,
-        rms_cutoff=None,
-        clear_existing=True,
-        make_carboxylic_acids_cis=True,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
+        n_conformers: int = 10,
+        rms_cutoff: Optional[Quantity] = None,
+        clear_existing: bool = True,
+        make_carboxylic_acids_cis: bool = True,
     ):
         """
         Generate conformers for this molecule using an underlying toolkit.
@@ -2093,7 +2096,7 @@ class FrozenMolecule(Serializable):
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         n_conformers : int, default=1
             The maximum number of conformers to produce
-        rms_cutoff : openmm.unit.Quantity-wrapped float, in units of distance, optional, default=None
+        rms_cutoff : openff.unit.Quantity-wrapped float, in units of distance, optional, default=None
             The minimum RMS value at which two conformers are considered redundant and one is deleted. Precise
             implementation of this cutoff may be toolkit-dependent. If ``None``, the cutoff is set to be the
             default value for each ``ToolkitWrapper`` (generally 1 Angstrom).
@@ -2135,7 +2138,7 @@ class FrozenMolecule(Serializable):
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.generate_conformers(
+            return toolkit.generate_conformers(  # type: ignore[attr-defined]
                 self,
                 n_conformers=n_conformers,
                 rms_cutoff=rms_cutoff,
@@ -2148,7 +2151,9 @@ class FrozenMolecule(Serializable):
                 f"Got {type(toolkit_registry)}"
             )
 
-    def _make_carboxylic_acids_cis(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def _make_carboxylic_acids_cis(
+        self, toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY
+    ):
         """
         Rotate dihedral angle of any conformers with trans COOH groups so they are cis
 
@@ -2354,10 +2359,10 @@ class FrozenMolecule(Serializable):
     def assign_partial_charges(
         self,
         partial_charge_method: str,
-        strict_n_conformers=False,
-        use_conformers=None,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-        normalize_partial_charges=True,
+        strict_n_conformers: bool = False,
+        use_conformers: Optional[List[Quantity]] = None,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
+        normalize_partial_charges: bool = True,
     ):
         """
         Calculate partial atomic charges and store them in the molecule.
@@ -2394,7 +2399,7 @@ class FrozenMolecule(Serializable):
             Whether to raise an exception if an invalid number of conformers is
             provided for the given charge method. If this is False and an
             invalid number of conformers is found, a warning will be raised.
-        use_conformers : iterable of openmm.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and
+        use_conformers : iterable of openff.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and
             dimension of distance. Optional, default=None
             Coordinates to use for partial charge calculation. If None, an
             appropriate number of conformers will be generated.
@@ -2514,7 +2519,7 @@ class FrozenMolecule(Serializable):
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         bond_order_model : string, optional. Default=None
             The bond order model to use for fractional bond order calculation. If ``None``, ``"am1-wiberg"`` is used.
-        use_conformers : iterable of openmm.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance,
+        use_conformers : iterable of openff.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance,
             optional, default=None
             The conformers to use for fractional bond order calculation. If ``None``, an appropriate number
             of conformers will be generated by an available ``ToolkitWrapper``.
@@ -2563,7 +2568,7 @@ class FrozenMolecule(Serializable):
         self._impropers = None
 
         self._hill_formula = None
-        self._cached_smiles = None
+        self._cached_smiles = dict()
         # TODO: Clear fractional bond orders
         self._ordered_connection_table_hash = None
         for atom in self.atoms:
@@ -2844,7 +2849,7 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        coordinates: openmm.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance
+        coordinates: openff.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance
             Coordinates of the new conformer, with the first dimension of the array corresponding to the atom index in
             the molecule's indexing system.
 
@@ -2912,7 +2917,7 @@ class FrozenMolecule(Serializable):
 
         Returns
         -------
-        partial_charges : a openmm.unit.Quantity - wrapped numpy array [1 x n_atoms] or None
+        partial_charges : a openff.unit.Quantity - wrapped numpy array [1 x n_atoms] or None
             The partial charges on the molecule's atoms. Returns None if no charges have been specified.
         """
         return self._partial_charges
@@ -2924,9 +2929,9 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        charges : None or a openmm.unit.Quantity - wrapped numpy array [1 x n_atoms]
+        charges : None or a openff.unit.Quantity - wrapped numpy array [1 x n_atoms]
             The partial charges to assign to the molecule. If not None, must be in units compatible with
-            openmm.unit.elementary_charge
+            openff.unit.elementary_charge
 
         """
         if charges is None:
@@ -2970,7 +2975,7 @@ class FrozenMolecule(Serializable):
         return len(self._atoms)
 
     @property
-    def n_bonds(self):
+    def n_bonds(self) -> int:
         """
         The number of Bond objects in the molecule.
         """
@@ -4824,7 +4829,7 @@ class FrozenMolecule(Serializable):
         atom2 = self._atoms[atom_index_2]
         return atom2 in self._bondedAtoms[atom1]
 
-    def get_bond_between(self, i, j):
+    def get_bond_between(self, i: Union[int, "Atom"], j: Union[int, "Atom"]) -> "Bond":
         """Returns the bond between two atoms
 
         Parameters
@@ -4985,13 +4990,13 @@ class Molecule(FrozenMolecule):
     # TODO: Change this to add_atom(Atom) to improve encapsulation and extensibility?
     def add_atom(
         self,
-        atomic_number,
-        formal_charge,
-        is_aromatic,
-        stereochemistry=None,
-        name=None,
-        metadata=None,
-    ):
+        atomic_number: int,
+        formal_charge: int,
+        is_aromatic: bool,
+        stereochemistry: Optional[str] = None,
+        name: Optional[str] = None,
+        metadata: Optional[Dict[str, Union[int, str]]] = None,
+    ) -> int:
         """
         Add an atom to the molecule.
 
@@ -5049,12 +5054,12 @@ class Molecule(FrozenMolecule):
 
     def add_bond(
         self,
-        atom1,
-        atom2,
-        bond_order,
-        is_aromatic,
-        stereochemistry=None,
-        fractional_bond_order=None,
+        atom1: Union[int, "Atom"],
+        atom2: Union[int, "Atom"],
+        bond_order: int,
+        is_aromatic: bool,
+        stereochemistry: Optional[str] = None,
+        fractional_bond_order: Optional[float] = None,
     ):
         """
         Add a bond between two specified atom indices
@@ -5636,7 +5641,12 @@ class HierarchyScheme:
 class HierarchyElement:
     """An element in a metadata hierarchy scheme, such as a residue or chain."""
 
-    def __init__(self, scheme, identifier, atom_indices):
+    def __init__(
+        self,
+        scheme: HierarchyScheme,
+        identifier: Tuple[str, int],
+        atom_indices: List[int],
+    ):
         """
         Create a new hierarchy element.
 
@@ -5645,10 +5655,10 @@ class HierarchyElement:
 
         scheme : HierarchyScheme
             The scheme to which this ``HierarchyElement`` belongs
-        id : tuple of str and int
+        identifier : tuple of str and int
             Tuple of metadata values (not keys) that define the uniqueness
             criteria for this element
-        atom_indices : iterable int
+        atom_indices : list of int
             The indices of particles in ``scheme.parent`` that are in this
             element
         """
@@ -5660,24 +5670,24 @@ class HierarchyElement:
         ):
             setattr(self, uniqueness_component, id_component)
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Union[Tuple[str, int], List[int]]]:
         """
-        Serialize this object to a basic dict of strings, ints, and floats.
+        Serialize this object to a basic dict of strings and lists of ints.
         """
-        return_dict = dict()
-        return_dict["identifier"] = self.identifier
-        return_dict["atom_indices"] = self.atom_indices
-        return return_dict
+        return {
+            "identifier": self.identifier,
+            "atom_indices": self.atom_indices,
+        }
 
     @property
-    def n_atoms(self):
+    def n_atoms(self) -> int:
         """
         The number of atoms in this hierarchy element.
         """
         return len(self.atom_indices)
 
     @property
-    def atoms(self):
+    def atoms(self) -> Generator["Atom", None, None]:
         """
         Iterator over the atoms in this hierarchy element.
         """
