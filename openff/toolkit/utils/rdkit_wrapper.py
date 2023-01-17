@@ -2353,12 +2353,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             )
 
         # Create atom mapping for query molecule
-        idx_map = dict()
-        for atom in qmol.GetAtoms():
-            smirks_index = atom.GetAtomMapNum()
-            if smirks_index != 0:
-                idx_map[smirks_index - 1] = atom.GetIdx()
-        map_list = [idx_map[x] for x in sorted(idx_map)]
+        idx_map = {
+            atom.GetAtomMapNum() - 1: atom.GetIdx()
+            for atom in qmol.GetAtoms()
+            if atom.GetAtomMapNum() != 0
+        }
+
+        map_tuple = (idx_map[x] for x in sorted(idx_map))
 
         # choose the largest unsigned int without overflow
         # since the C++ signature is a uint
@@ -2371,7 +2372,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # TODO: if match_heavy_first: full_matches = _match_smarts_with_heavy_atoms_first(...)
         full_matches = rdmol.GetSubstructMatches(qmol, **match_kwargs)
 
-        matches = [tuple(match[x] for x in map_list) for match in full_matches]
+        matches = [tuple(match[x] for x in map_tuple) for match in full_matches]
 
         return matches
 

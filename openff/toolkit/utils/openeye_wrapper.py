@@ -13,7 +13,7 @@ import re
 import tempfile
 from collections import defaultdict
 from functools import wraps
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import numpy as np
 from cachetools import LRUCache, cached
@@ -2699,22 +2699,17 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         max_matches = 0
         substructure_search.SetMaxMatches(max_matches)
         oechem.OEPrepareSearch(mol, substructure_search)
-        matches = list()
-        for match in substructure_search.Match(mol, unique):
-            # Compile list of atom indices that match the pattern tags
-            atom_indices: Dict[int, int] = dict()
-            for matched_atom in match.GetAtoms():
-                if matched_atom.pattern.GetMapIdx() != 0:
-                    atom_indices[
-                        matched_atom.pattern.GetMapIdx() - 1
-                    ] = matched_atom.target.GetIdx()
 
-            # Compress into tuple
-            matches.append(
-                tuple(atom_indices[index] for index in range(len(atom_indices)))
+        # This would be faster if below conditional could be commented out
+        #       if matched_atom.pattern.GetMapIdx() != 0
+        return [
+            tuple(
+                matched_atom.target.GetIdx()
+                for matched_atom in match.GetAtoms()
+                if matched_atom.pattern.GetMapIdx() != 0
             )
-
-        return matches
+            for match in substructure_search.Match(mol, unique)
+        ]
 
     def find_smarts_matches(
         self,
