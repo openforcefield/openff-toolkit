@@ -2700,21 +2700,25 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         substructure_search.SetMaxMatches(max_matches)
         oechem.OEPrepareSearch(mol, substructure_search)
 
-        # This would be faster if below conditional could be commented out
-        #       if matched_atom.pattern.GetMapIdx() != 0
-        return [
-            tuple(
-                val
-                for _, val in sorted(
-                    {
-                        atom.pattern.GetMapIdx() - 1: atom.target.GetIdx()
-                        for atom in match.GetAtoms()
-                        if atom.pattern.GetMapIdx() != 0
-                    }.items()
-                )
-            )
-            for match in substructure_search.Match(mol, unique)
-        ]
+        def process(match):
+            # atom_indices = {
+            #     atom.pattern.GetMapIdx() - 1: atom.target.GetIdx()
+            #     for atom in match.GetAtoms()
+            #     if atom.pattern.GetMapIdx() != 0
+            # }
+            # return tuple(val for _, val in sorted(atom_indices))
+            atom_indices = dict()
+            for atom in match.GetAtoms():
+                if atom.pattern.GetMapIdx() != 0:
+                    atom_indices[atom.pattern.GetMapIdx() - 1] = atom.target.GetIdx()
+            return tuple(atom_indices[index] for index in range(len(atom_indices)))
+
+        matches = list()
+        for match in substructure_search.Match(mol, unique):
+            matches.append(process(match))
+
+        return matches
+        # return [process(match) for match in substructure_search.Match(mol, unique)]
 
     def find_smarts_matches(
         self,
