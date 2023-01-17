@@ -31,10 +31,13 @@ from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 from packaging.version import Version
 
-from openff.toolkit.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
+from openff.toolkit.utils.constants import (
+    ALLOWED_AROMATICITY_MODELS,
+    DEFAULT_AROMATICITY_MODEL,
+)
 from openff.toolkit.utils.exceptions import (
     ParameterHandlerRegistrationError,
     PartialChargeVirtualSitesError,
@@ -235,8 +238,8 @@ class ForceField:
             specified, any top-level tags that are repeated will be merged if they are compatible, with files appearing
             later in the sequence resulting in parameters that have higher precedence.  Support for multiple files is
             primarily intended to allow solvent parameters to be specified by listing them last in the sequence.
-        aromaticity_model : string, default='OEAroModel_MDL'
-            The aromaticity model used by the force field. Currently, only 'OEAroModel_MDL' is supported
+        aromaticity_model : str, optional, default="OEAroModel_MDL"
+            The aromaticity model to use. Only OEAroModel_MDL is supported.
         parameter_handler_classes : iterable of ParameterHandler classes, optional, default=None
             If not None, the specified set of ParameterHandler classes will be instantiated to create the parameter
             object model.  By default, all imported subclasses of ParameterHandler are automatically registered.
@@ -313,7 +316,7 @@ class ForceField:
         self._disable_version_check = (
             False  # if True, will disable checking compatibility version
         )
-        self._aromaticity_model = None
+        self._aromaticity_model = DEFAULT_AROMATICITY_MODEL
         # Parameter handler classes that _can_ be initialized if needed
         self._parameter_handler_classes = dict()
         # ParameterHandler classes to be instantiated for each parameter type
@@ -395,9 +398,10 @@ class ForceField:
 
         """
         # Implement better logic here if we ever support another aromaticity model
-        if aromaticity_model != "OEAroModel_MDL":
+        if aromaticity_model not in ALLOWED_AROMATICITY_MODELS:
             raise SMIRNOFFAromaticityError(
-                f"Read aromaticity model {aromaticity_model}. Currently only OEAroModel_MDL is supported."
+                f"Read aromaticity model {aromaticity_model} which is not in the set of allowed aromaticity models:  "
+                f"{ALLOWED_AROMATICITY_MODELS}."
             )
 
         self._aromaticity_model = aromaticity_model

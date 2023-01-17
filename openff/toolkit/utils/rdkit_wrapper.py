@@ -20,10 +20,14 @@ from openff.units import unit
 from openff.units.elements import SYMBOLS
 
 from openff.toolkit.utils import base_wrapper
-from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
+from openff.toolkit.utils.constants import (
+    ALLOWED_AROMATICITY_MODELS,
+    DEFAULT_AROMATICITY_MODEL,
+)
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ConformerGenerationError,
+    InvalidAromaticityModelError,
     NotAttachedToMoleculeError,
     RadicalsNotSupportedError,
     SMILESParseError,
@@ -1899,6 +1903,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     ):
         from rdkit import Chem
 
+        if aromaticity_model not in ALLOWED_AROMATICITY_MODELS:
+            raise InvalidAromaticityModelError(
+                f"Given aromaticity model {aromaticity_model} which is not in the set of allowed aromaticity models:  "
+                f"{ALLOWED_AROMATICITY_MODELS}."
+            )
+
         # Create an editable RDKit molecule
         rdmol = Chem.RWMol()
 
@@ -1954,11 +1964,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS ^ Chem.SANITIZE_SETAROMATICITY,
         )
 
-        # Fix for aromaticity being lost
         if aromaticity_model == "OEAroModel_MDL":
             Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
         else:
-            raise ValueError(f"Aromaticity model {aromaticity_model} not recognized")
+            raise NotImplementedError(
+                "The aromaticity model is assumed to be OEAroModel_MDL"
+            )
 
         # Assign atom stereochemsitry and collect atoms for which RDKit
         # can't figure out chirality. The _CIPCode property of these atoms
@@ -2035,8 +2046,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         Parameters
         ----------
 
-        aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
-            The aromaticity model to use
+        aromaticity_model : str, optional, default="OEAroModel_MDL"
+            The aromaticity model to use. Only OEAroModel_MDL is supported.
 
         Returns
         -------
@@ -2053,6 +2064,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         >>> rdmol = ethanol.to_rdkit()
         """
         from rdkit import Chem, Geometry
+
+        if aromaticity_model not in ALLOWED_AROMATICITY_MODELS:
+            raise InvalidAromaticityModelError(
+                f"Given aromaticity model {aromaticity_model} which is not in the set of allowed aromaticity models:  "
+                f"{ALLOWED_AROMATICITY_MODELS}."
+            )
 
         # Convert the OFF molecule's connectivity table to RDKit, returning a cached rdmol if possible
         rdmol = self._connection_table_to_rdkit(
@@ -2334,16 +2351,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 full_matches |= set(h_matches)
 
             return full_matches
-
-        # Make a copy of the molecule
-        # rdmol = Chem.Mol(rdmol)
-        # Use designated aromaticity model
-        # if aromaticity_model == "OEAroModel_MDL":
-        #    Chem.SanitizeMol(rdmol, Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY)
-        #    Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
-        # else:
-        #    # Only the OEAroModel_MDL is supported for now
-        #    raise ValueError("Unknown aromaticity model: {}".aromaticity_models)
 
         # Set up query.
         qmol = Chem.MolFromSmarts(smarts)  # cannot catch the error
