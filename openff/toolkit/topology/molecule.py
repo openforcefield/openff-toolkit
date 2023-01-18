@@ -5019,7 +5019,7 @@ class Molecule(FrozenMolecule):
         'C'
 
         """
-        return self._add_atom(
+        atom_index = self._add_atom(
             atomic_number,
             formal_charge,
             is_aromatic,
@@ -5027,6 +5027,8 @@ class Molecule(FrozenMolecule):
             name=name,
             metadata=metadata,
         )
+
+        return atom_index
 
     def add_bond(
         self,
@@ -5065,7 +5067,7 @@ class Molecule(FrozenMolecule):
         --------
         For an example of use, see :py:meth:`add_atom`.
         """
-        return self._add_bond(
+        bond_index = self._add_bond(
             atom1,
             atom2,
             bond_order,
@@ -5073,6 +5075,8 @@ class Molecule(FrozenMolecule):
             stereochemistry=stereochemistry,
             fractional_bond_order=fractional_bond_order,
         )
+
+        return bond_index
 
     def add_conformer(self, coordinates):
         """
