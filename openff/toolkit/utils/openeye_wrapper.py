@@ -1326,8 +1326,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         if aromaticity_model not in ALLOWED_AROMATICITY_MODELS:
             raise InvalidAromaticityModelError(
-                f"Given aromaticity model {aromaticity_model} which is not in the set of allowed aromaticity models:  "
-                f"{ALLOWED_AROMATICITY_MODELS}."
+                f"Given aromaticity model {aromaticity_model} which is not in the set of allowed aromaticity models: "
+                f"{ALLOWED_AROMATICITY_MODELS}"
             )
 
         oemol = oechem.OEMol()
@@ -1356,8 +1356,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         if aromaticity_model == "OEAroModel_MDL":
             oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModelMDL)
         else:
-            raise NotImplementedError(
-                "The aromaticity model is assumed to be OEAroModel_MDL"
+            raise InvalidAromaticityModelError(
+                "Aromaticity model {aromaticity_model} is not in the set of allowed aromaticity models:  "
+                f"{ALLOWED_AROMATICITY_MODELS}"
             )
 
         # Set atom stereochemistry now that all connectivity is in place
@@ -2683,8 +2684,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         if aromaticity_model == "OEAroModel_MDL":
             oechem.OEAssignAromaticFlags(qmol, oechem.OEAroModel_MDL)
         else:
-            raise NotImplementedError(
-                "The aromaticity model is assumed to be OEAroModel_MDL"
+            raise InvalidAromaticityModelError(
+                f"Given aromaticity model {aromaticity_model} which is not in the set of allowed aromaticity models:  "
+                f"{ALLOWED_AROMATICITY_MODELS}"
             )
 
         # oechem.OEAssignHybridization(mol)

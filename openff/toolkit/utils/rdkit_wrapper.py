@@ -1905,8 +1905,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         if aromaticity_model not in ALLOWED_AROMATICITY_MODELS:
             raise InvalidAromaticityModelError(
-                f"Given aromaticity model {aromaticity_model} which is not in the set of allowed aromaticity models:  "
-                f"{ALLOWED_AROMATICITY_MODELS}."
+                f"Given aromaticity model {aromaticity_model} which is not in the set of allowed aromaticity models: "
+                f"{ALLOWED_AROMATICITY_MODELS}"
             )
 
         # Create an editable RDKit molecule
@@ -1967,8 +1967,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         if aromaticity_model == "OEAroModel_MDL":
             Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
         else:
-            raise NotImplementedError(
-                "The aromaticity model is assumed to be OEAroModel_MDL"
+            raise InvalidAromaticityModelError(
+                f"Given aromaticity model {aromaticity_model} which is not in the set of allowed aromaticity models:"
+                f"{ALLOWED_AROMATICITY_MODELS}"
             )
 
         # Assign atom stereochemsitry and collect atoms for which RDKit
@@ -2067,7 +2068,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         if aromaticity_model not in ALLOWED_AROMATICITY_MODELS:
             raise InvalidAromaticityModelError(
-                f"Given aromaticity model {aromaticity_model} which is not in the set of allowed aromaticity models:  "
+                f"Given aromaticity model {aromaticity_model} which is not in the set of allowed aromaticity models: "
                 f"{ALLOWED_AROMATICITY_MODELS}."
             )
 

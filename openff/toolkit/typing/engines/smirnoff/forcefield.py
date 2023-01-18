@@ -400,8 +400,8 @@ class ForceField:
         # Implement better logic here if we ever support another aromaticity model
         if aromaticity_model not in ALLOWED_AROMATICITY_MODELS:
             raise SMIRNOFFAromaticityError(
-                f"Read aromaticity model {aromaticity_model} which is not in the set of allowed aromaticity models:  "
-                f"{ALLOWED_AROMATICITY_MODELS}."
+                f"Read aromaticity model {aromaticity_model} which is not in the set of allowed aromaticity models: "
+                f"{ALLOWED_AROMATICITY_MODELS}"
             )
 
         self._aromaticity_model = aromaticity_model
