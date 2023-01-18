@@ -52,6 +52,7 @@ from openff.utilities.exceptions import MissingOptionalDependencyError
 from packaging import version
 from typing_extensions import TypeAlias
 
+from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
     HierarchySchemeNotFoundException,
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
@@ -65,7 +66,6 @@ from openff.toolkit.utils.exceptions import (
 )
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import (
-    DEFAULT_AROMATICITY_MODEL,
     GLOBAL_TOOLKIT_REGISTRY,
     InvalidToolkitRegistryError,
     OpenEyeToolkitWrapper,
@@ -243,10 +243,7 @@ class Atom(Particle):
         self._atomic_number = atomic_number
 
         # Use the setter here, since it will handle either ints or Quantities
-        if hasattr(formal_charge, "units"):
-            # Faster check than ` == unit.dimensionless`
-            if str(formal_charge.units) == "":
-                raise Exception
+        # and it is designed to quickly process ints
         self.formal_charge = formal_charge
         self._is_aromatic = is_aromatic
         self._stereochemistry = stereochemistry
@@ -285,7 +282,7 @@ class Atom(Particle):
         # atom_dict['molecule_atom_index'] = self._molecule_atom_index
         return {
             "atomic_number": self._atomic_number,
-            "formal_charge": self._formal_charge.m_as(unit.elementary_charge),
+            "formal_charge": self._formal_charge.m,  # Trust that the unit is e
             "is_aromatic": self._is_aromatic,
             "stereochemistry": self._stereochemistry,
             "name": self._name,
@@ -1077,42 +1074,33 @@ class FrozenMolecule(Serializable):
 
         molecule_dict = dict()
         molecule_dict["name"] = self._name
-        # From Jeff: If we go the properties-as-dict route, then _properties should, at
-        # the top level, be a dict. Should we go through recursively and ensure all values are dicts too?
+
         molecule_dict["atoms"] = [atom.to_dict() for atom in self._atoms]
         molecule_dict["bonds"] = [bond.to_dict() for bond in self._bonds]
-        # TODO: Charges
-        # TODO: Properties
-        # From Jeff: We could have the onerous requirement that all "properties" have to_dict() functions.
-        # Or we could restrict properties to simple stuff (ints, strings, floats, and the like)
-        # Or pickle anything unusual
-        # Or not allow user-defined properties at all (just use our internal _cached_properties)
-        # molecule_dict['properties'] = dict([(key, value._to_dict()) for key.value in self._properties])
-        # TODO: Assuming "simple stuff" properties right now, figure out a better standard
+
+        # TODO: This assumes everything in _properties can safely be deepcopied
         molecule_dict["properties"] = deepcopy(self._properties)
         if hasattr(self, "_cached_properties"):
             molecule_dict["cached_properties"] = deepcopy(self._cached_properties)
-        # TODO: Conformers
+
         if self._conformers is None:
             molecule_dict["conformers"] = None
         else:
-            molecule_dict["conformers"] = []
-            molecule_dict[
-                "conformers_unit"
-            ] = "angstrom"  # Have this defined as a class variable?
-            for conf in self._conformers:
-                conf_unitless = conf.m_as(unit.angstrom)
-                conf_serialized, conf_shape = serialize_numpy((conf_unitless))
-                molecule_dict["conformers"].append(conf_serialized)
+            molecule_dict["conformers_unit"] = "angstrom"
+            molecule_dict["conformers"] = [
+                serialize_numpy(conf.m_as(unit.angstrom))[0]
+                for conf in self._conformers
+            ]
+
         if self._partial_charges is None:
             molecule_dict["partial_charges"] = None
-            molecule_dict["partial_charges_unit"] = None
+            molecule_dict["partial_charge_unit"] = None
 
         else:
-            charges_unitless = self._partial_charges.m_as(unit.elementary_charge)
-            charges_serialized, charges_shape = serialize_numpy(charges_unitless)
-            molecule_dict["partial_charges"] = charges_serialized
-            molecule_dict["partial_charges_unit"] = "elementary_charge"
+            molecule_dict["partial_charges"], _ = serialize_numpy(
+                self._partial_charges.m_as(unit.elementary_charge)
+            )
+            molecule_dict["partial_charge_unit"] = "elementary_charge"
 
         molecule_dict["hierarchy_schemes"] = dict()
         for iter_name, hier_scheme in self._hierarchy_schemes.items():
@@ -1176,40 +1164,39 @@ class FrozenMolecule(Serializable):
             A dictionary representation of the molecule.
         """
         # TODO: Provide useful exception messages if there are any failures
-        from openff.toolkit.utils.utils import deserialize_numpy
 
         self._initialize()
         self.name = molecule_dict["name"]
         for atom_dict in molecule_dict["atoms"]:
-            self._add_atom(**atom_dict)
+            self._add_atom(**atom_dict, invalidate_cache=False)
 
         for bond_dict in molecule_dict["bonds"]:
             bond_dict["atom1"] = int(bond_dict["atom1"])
             bond_dict["atom2"] = int(bond_dict["atom2"])
-            self._add_bond(**bond_dict)
+            self._add_bond(**bond_dict, invalidate_cache=False)
 
         if molecule_dict["partial_charges"] is None:
             self._partial_charges = None
         else:
-            charges_shape = (self.n_atoms,)
-            partial_charges_unitless = deserialize_numpy(
-                molecule_dict["partial_charges"], charges_shape
+            from openff.toolkit.utils.utils import deserialize_numpy
+
+            self._partial_charges = unit.Quantity(
+                deserialize_numpy(molecule_dict["partial_charges"], (self.n_atoms,)),
+                unit.Unit(molecule_dict["partial_charge_unit"]),
             )
-            pc_unit = getattr(unit, molecule_dict["partial_charges_unit"])
-            partial_charges = unit.Quantity(partial_charges_unitless, pc_unit)
-            self._partial_charges = partial_charges
 
         if molecule_dict["conformers"] is None:
             self._conformers = None
         else:
-            self._conformers = list()
-            for ser_conf in molecule_dict["conformers"]:
-                # TODO: Update to use string_to_quantity
-                conformers_shape = (self.n_atoms, 3)
-                conformer_unitless = deserialize_numpy(ser_conf, conformers_shape)
-                c_unit = getattr(unit, molecule_dict["conformers_unit"])
-                conformer = unit.Quantity(conformer_unitless, c_unit)
-                self._conformers.append(conformer)
+            from openff.toolkit.utils.utils import deserialize_numpy
+
+            self._conformers = [
+                unit.Quantity(
+                    deserialize_numpy(ser_conf, (self.n_atoms, 3)),
+                    unit.Unit(molecule_dict["conformers_unit"]),
+                )
+                for ser_conf in molecule_dict["conformers"]
+            ]
 
         self._properties = deepcopy(molecule_dict["properties"])
 
@@ -1269,12 +1256,7 @@ class FrozenMolecule(Serializable):
             A deep copy is made.
 
         """
-        # assert isinstance(other, type(self)), "can only copy instances of {}".format(type(self))
-
-        # Run a deepcopy here so that items that were _always_ dict (like other.properties) will
-        # not have any references to the old molecule
-        other_dict = deepcopy(other.to_dict())
-        self._initialize_from_dict(other_dict)
+        self._initialize_from_dict(other.to_dict())
 
     def __eq__(self, other):
         """
@@ -2704,14 +2686,14 @@ class FrozenMolecule(Serializable):
 
     def _add_atom(
         self,
-        atomic_number,
-        formal_charge,
-        is_aromatic,
-        stereochemistry=None,
-        name=None,
+        atomic_number: int,
+        formal_charge: int,
+        is_aromatic: bool,
+        stereochemistry: Optional[str] = None,
+        name: Optional[str] = None,
         metadata=None,
         invalidate_cache: bool = True,
-    ):
+    ) -> int:
         """
         Add an atom
 
@@ -4145,8 +4127,8 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
-            The aromaticity model to use
+        aromaticity_model : str, optional, default="OEAroModel_MDL"
+            The aromaticity model to use. Only OEAroModel_MDL is supported.
 
         Returns
         -------
@@ -4705,8 +4687,8 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
-            The aromaticity model to use
+        aromaticity_model : str, optional, default="OEAroModel_MDL"
+            The aromaticity model to use. Only OEAroModel_MDL is supported.
 
         Returns
         -------
@@ -5050,6 +5032,7 @@ class Molecule(FrozenMolecule):
             name=name,
             metadata=metadata,
         )
+
         return atom_index
 
     def add_bond(
@@ -5097,6 +5080,7 @@ class Molecule(FrozenMolecule):
             stereochemistry=stereochemistry,
             fractional_bond_order=fractional_bond_order,
         )
+
         return bond_index
 
     def add_conformer(self, coordinates):
