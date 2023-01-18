@@ -989,7 +989,6 @@ class Topology(Serializable):
     def chemical_environment_matches(
         self,
         query: str,
-        aromaticity_model: str = "MDL",
         unique: bool = False,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
@@ -1005,9 +1004,6 @@ class Topology(Serializable):
         ----------
         query : str
             SMARTS string (with one or more tagged atoms)
-        aromaticity_model : str
-            Override the default aromaticity model for this topology and use the specified aromaticity model instead.
-            Allowed values: ['MDL']
 
         Returns
         -------
