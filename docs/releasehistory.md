@@ -12,6 +12,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### New features
 - [PR #1502](https://github.com/openforcefield/openff-toolkit/pull/1502): Adds Gasteiger charge computation using the RDKit backend.
 
+### Bug fixes
+- [PR #1515](https://github.com/openforcefield/openff-toolkit/pull/1515): Removes unused `aromaticity_model` argument from `Topology.chemical_environment_matches`
+
 ### Improved documentation and warnings
 - [PR #1513](https://github.com/openforcefield/openff-toolkit/pull/1513): Improves error messages and documentation around supported aromaticity models (currently only "OEAroModel_MDL").
 
