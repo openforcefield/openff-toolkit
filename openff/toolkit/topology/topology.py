@@ -42,6 +42,10 @@ from openff.toolkit.topology import Molecule
 from openff.toolkit.topology._mm_molecule import _SimpleBond, _SimpleMolecule
 from openff.toolkit.topology.molecule import FrozenMolecule, HierarchyElement
 from openff.toolkit.utils import quantity_to_string, string_to_quantity
+from openff.toolkit.utils.constants import (
+    ALLOWED_AROMATICITY_MODELS,
+    DEFAULT_AROMATICITY_MODEL,
+)
 from openff.toolkit.utils.exceptions import (
     AtomNotInTopologyError,
     DuplicateUniqueMoleculeError,
@@ -55,11 +59,7 @@ from openff.toolkit.utils.exceptions import (
     WrongShapeError,
 )
 from openff.toolkit.utils.serialization import Serializable
-from openff.toolkit.utils.toolkits import (
-    ALLOWED_AROMATICITY_MODELS,
-    DEFAULT_AROMATICITY_MODEL,
-    GLOBAL_TOOLKIT_REGISTRY,
-)
+from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
 if TYPE_CHECKING:
     import mdtraj
@@ -419,8 +419,7 @@ class Topology(Serializable):
         from openff.toolkit.topology.molecule import FrozenMolecule
 
         # Assign cheminformatics models
-        model = DEFAULT_AROMATICITY_MODEL
-        self._aromaticity_model = model
+        self._aromaticity_model = DEFAULT_AROMATICITY_MODEL
 
         # Initialize storage
         self._initialize()
@@ -437,7 +436,6 @@ class Topology(Serializable):
         """
         Initializes a blank Topology.
         """
-        self._aromaticity_model = DEFAULT_AROMATICITY_MODEL
         self._constrained_atom_pairs = dict()
         self._box_vectors = None
         self._molecules = list()
@@ -568,12 +566,12 @@ class Topology(Serializable):
         aromaticity_model : str
             Aromaticity model to use. One of: ['OEAroModel_MDL']
         """
-
         if aromaticity_model not in ALLOWED_AROMATICITY_MODELS:
-            msg = "Aromaticity model must be one of {}; specified '{}'".format(
-                ALLOWED_AROMATICITY_MODELS, aromaticity_model
+            raise InvalidAromaticityModelError(
+                f"Read aromaticity model {aromaticity_model} which is not in the set of allowed aromaticity models:  "
+                f"{ALLOWED_AROMATICITY_MODELS}."
             )
-            raise InvalidAromaticityModelError(msg)
+
         self._aromaticity_model = aromaticity_model
 
     @property
@@ -2132,6 +2130,8 @@ class Topology(Serializable):
             An OpenEye molecule
         positions : unit-wrapped array with shape [nparticles,3], optional, default=None
             Positions to use in constructing OEMol.
+        aromaticity_model : str, optional, default="OEAroModel_MDL"
+            The aromaticity model to use. Only OEAroModel_MDL is supported.
 
         NOTE: This comes from https://github.com/oess/oeommtools/blob/master/oeommtools/utils.py
 

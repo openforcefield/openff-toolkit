@@ -25,13 +25,17 @@ if TYPE_CHECKING:
 from openff.units.elements import SYMBOLS
 
 from openff.toolkit.utils import base_wrapper
-from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
+from openff.toolkit.utils.constants import (
+    ALLOWED_AROMATICITY_MODELS,
+    DEFAULT_AROMATICITY_MODEL,
+)
 from openff.toolkit.utils.exceptions import (
     ChargeCalculationError,
     ChargeMethodUnavailableError,
     ConformerGenerationError,
     GAFFAtomTypeWarning,
     InconsistentStereochemistryError,
+    InvalidAromaticityModelError,
     InvalidIUPACNameError,
     LicenseError,
     NotAttachedToMoleculeError,
@@ -1320,11 +1324,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
     ):
         from openeye import oechem
 
-        if hasattr(oechem, aromaticity_model):
-            oe_aro_model = getattr(oechem, aromaticity_model)
-        else:
-            raise ValueError(
-                "Error: provided aromaticity model not recognized by oechem."
+        if aromaticity_model not in ALLOWED_AROMATICITY_MODELS:
+            raise InvalidAromaticityModelError(
+                f"Given aromaticity model {aromaticity_model} which is not in the set of allowed aromaticity models: "
+                f"{ALLOWED_AROMATICITY_MODELS}"
             )
 
         oemol = oechem.OEMol()
@@ -1350,7 +1353,13 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             # oebond.SetAromatic(bond.is_aromatic)
             oemol_bonds.append(oebond)
 
-        oechem.OEAssignAromaticFlags(oemol, oe_aro_model)
+        if aromaticity_model == "OEAroModel_MDL":
+            oechem.OEAssignAromaticFlags(oemol, oechem.OEAroModelMDL)
+        else:
+            raise InvalidAromaticityModelError(
+                "Aromaticity model {aromaticity_model} is not in the set of allowed aromaticity models:  "
+                f"{ALLOWED_AROMATICITY_MODELS}"
+            )
 
         # Set atom stereochemistry now that all connectivity is in place
         for atom, oeatom in zip(molecule.atoms, oemol_atoms):
@@ -2634,8 +2643,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             SMARTS string with any number of sequentially tagged atoms.
             If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of
             atoms that match the corresponding tagged atoms.
-        aromaticity_model : str, optional, default=None
-            OpenEye aromaticity model designation as a string, such as ``OEAroModel_MDL``.
+        aromaticity_model : str, optional, default="OEAroModel_MDL"
+            The aromaticity model to use. Only OEAroModel_MDL is supported.
             Molecule is prepared with this aromaticity model prior to querying.
         unique : bool, default=False
             If True, only return unique matches. If False, return all matches. This is passed to
@@ -2667,27 +2676,19 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         if not oechem.OEParseSmarts(qmol, smarts):
             raise ValueError(f"Error parsing SMARTS '{smarts}'")
 
-        # Apply aromaticity model
-        if type(aromaticity_model) == str:
-            # Check if the user has provided a manually-specified aromaticity_model
-            if hasattr(oechem, aromaticity_model):
-                oearomodel = getattr(oechem, aromaticity_model)
-            else:
-                raise ValueError(
-                    "Error: provided aromaticity model not recognized by oechem."
-                )
-        else:
-            raise ValueError("Error: provided aromaticity model must be a string.")
-
         # OEPrepareSearch will clobber our desired aromaticity model if we don't sync up mol
         # and qmol ahead of time.
-        # Prepare molecule
-        # oechem.OEClearAromaticFlags(mol)
-        # oechem.OEAssignAromaticFlags(mol, oearomodel)
 
-        # If aromaticity model was provided, prepare query molecule
         oechem.OEClearAromaticFlags(qmol)
-        oechem.OEAssignAromaticFlags(qmol, oearomodel)
+
+        if aromaticity_model == "OEAroModel_MDL":
+            oechem.OEAssignAromaticFlags(qmol, oechem.OEAroModel_MDL)
+        else:
+            raise InvalidAromaticityModelError(
+                f"Given aromaticity model {aromaticity_model} which is not in the set of allowed aromaticity models:  "
+                f"{ALLOWED_AROMATICITY_MODELS}"
+            )
+
         # oechem.OEAssignHybridization(mol)
         oechem.OEAssignHybridization(qmol)
 
@@ -2720,7 +2721,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         self,
         molecule: "Molecule",
         smarts: str,
-        aromaticity_model="OEAroModel_MDL",
+        aromaticity_model=DEFAULT_AROMATICITY_MODEL,
         unique=False,
     ) -> List[Tuple[int, ...]]:
         """
@@ -2734,8 +2735,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             The molecule for which all specified SMARTS matches are to be located
         smarts : str
             SMARTS string with optional SMIRKS-style atom tagging
-        aromaticity_model : str, optional, default='OEAroModel_MDL'
-            Molecule is prepared with this aromaticity model prior to querying.
+        aromaticity_model : str, optional, default="OEAroModel_MDL"
+            The aromaticity model to use. Only OEAroModel_MDL is supported.
         unique : bool, default=False
             If True, only return unique matches. If False, return all matches.
 
