@@ -61,6 +61,7 @@ from openff.toolkit.utils.exceptions import (
     InvalidBondOrderError,
     InvalidConformerError,
     MultipleMoleculesInPDBError,
+    RemapIndexError,
     SmilesParsingError,
     UnsupportedFileTypeError,
 )
@@ -1716,30 +1717,58 @@ class FrozenMolecule(Serializable):
         allow_undefined_stereo: bool = False,
     ) -> "Molecule":
         """
-        Construct a Molecule from a SMILES representation
+        Construct a ``Molecule`` from a SMILES representation
+
+        The order of atoms in the ``Molecule`` is unspecified and may change
+        from version to version or with different toolkits. SMILES atom
+        indices (also known as atom maps) are not used to order atoms; instead,
+        they are stored in the produced molecule's properties attribute,
+        accessible via ``molecule.properties["atom_map"]``. The atom map is
+        stored as a dictionary mapping molecule atom indices to SMILES atom
+        maps. To order atoms according to SMILES atom indices, see
+        :py:meth:`Molecule.from_mapped_smiles`, which helpfully raises an
+        exception if any atom map is missing, duplicated, or out-of-range,
+        or else :py:meth:`Molecule.remap` for arbitrary remaps.
 
         Parameters
         ----------
-        smiles : str
+        smiles
             The SMILES representation of the molecule.
-        hydrogens_are_explicit : bool, default = False
-            If False, the cheminformatics toolkit will perform hydrogen addition
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
-            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
-        allow_undefined_stereo : bool, default=False
-            Whether to accept SMILES with undefined stereochemistry. If False,
-            an exception will be raised if a SMILES with undefined stereochemistry
-            is passed into this function.
+        hydrogens_are_explicit
+            If ``True``, forbid the cheminformatics toolkit from inferring
+            hydrogen atoms not explicitly specified in the SMILES.
+        toolkit_registry
+            The cheminformatics toolkit to use to interpret the SMILES.
+        allow_undefined_stereo
+            Whether to accept SMILES with undefined stereochemistry. If
+            ``False``, an exception will be raised if a SMILES with undefined
+            stereochemistry is passed into this function.
 
-        Returns
-        -------
-        molecule : openff.toolkit.topology.Molecule
+        Raises
+        ------
+        RadicalsNotSupportedError
+            If any atoms in the input molecule contain radical electrons.
 
         Examples
         --------
 
+        Create a ``Molecule`` representing toluene from SMILES:
+
         >>> molecule = Molecule.from_smiles('Cc1ccccc1')
+
+        Create a ``Molecule`` representing phenol from SMILES with the oxygen
+        at atom index 0 (SMILES indices begin at 1):
+
+        >>> molecule = Molecule.from_smiles('c1ccccc1[OH:1]')
+        >>> molecule = molecule.remap(
+        ...     {k: v - 1 for k, v in molecule.properties["atom_map"].items()},
+        ...     partial=True,
+        ... )
+        >>> assert molecule.atom(0).symbol == "O"
+
+        See Also
+        --------
+        from_mapped_smiles, remap
 
         """
         if isinstance(toolkit_registry, ToolkitRegistry):
@@ -4278,37 +4307,70 @@ class FrozenMolecule(Serializable):
     @classmethod
     def from_mapped_smiles(
         cls,
-        mapped_smiles,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-        allow_undefined_stereo=False,
+        mapped_smiles: str,
+        toolkit_registry: Union[
+            ToolkitRegistry, ToolkitWrapper
+        ] = GLOBAL_TOOLKIT_REGISTRY,
+        allow_undefined_stereo: bool = False,
     ):
         """
-        Create an :class:`Molecule` from a mapped SMILES made with cmiles.
-        The molecule will be in the order of the indexing in the mapped smiles string.
+        Create a ``Molecule`` from a SMILES string, ordering atoms from mappings
+
+        SMILES strings support mapping integer indices to each atom by ending a
+        bracketed atom declaration with a colon followed by a 1-indexed
+        integer:
+
+        .. code:
+            "[H:3][C:1](=[O:2])[H:4]"
+
+        This method creates a ``Molecule`` from such a SMILES string whose atoms
+        are ordered according to the mapping. Each atom must be mapped exactly
+        once; any duplicate, missing, or out-of-range mappings will cause the
+        method to fail.
 
         .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
         mapped_smiles: str
-            A CMILES-style mapped smiles string with explicit hydrogens.
-
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry
-            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional
-            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
-
-        allow_undefined_stereo : bool, default=False
-            If false, raises an exception if oemol contains undefined stereochemistry.
+            A mapped SMILES string with explicit hydrogens.
+        toolkit_registry
+            Cheminformatics toolkit to use for SMILES-to-molecule conversion
+        allow_undefined_stereo
+            If false, raise an exception if the SMILES contains undefined
+            stereochemistry.
 
         Returns
         ----------
-        offmol : openff.toolkit.topology.molecule.Molecule
+        offmol
             An OpenFF molecule instance.
 
         Raises
         --------
         SmilesParsingError
-            If the given SMILES had no indexing picked up by the toolkits.
+            If the given SMILES had no indexing picked up by the toolkits, or if
+            the indexing is missing indices.
+        RemapIndexError
+            If the mapping has duplicate or out-of-range indices.
+
+        Examples
+        --------
+
+        Create a mapped chlorofluoroiodomethane molecule and check the atoms
+        are placed accordingly:
+
+        >>> molecule = Molecule.from_mapped_smiles(
+        ...     "[Cl:2][C@:1]([F:3])([I:4])[H:5]"
+        ... )
+        >>> assert molecule.atom(0).symbol == "C"
+        >>> assert molecule.atom(1).symbol == "Cl"
+        >>> assert molecule.atom(2).symbol == "F"
+        >>> assert molecule.atom(3).symbol == "I"
+        >>> assert molecule.atom(4).symbol == "H"
+
+        See Also
+        --------
+        from_smiles, remap
         """
 
         # create the molecule from the smiles and check we have the right number of indexes
@@ -4582,31 +4644,74 @@ class FrozenMolecule(Serializable):
                 f"Got {type(toolkit_registry)}."
             )
 
-    def remap(self, mapping_dict, current_to_new=True):
+    def remap(
+        self,
+        mapping_dict: Dict[int, int],
+        current_to_new: bool = True,
+        partial: bool = False,
+    ):
         """
-        Remap all of the indexes in the molecule to match the given mapping dict
+        Reorder the atoms in the molecule according to the given mapping dict.
+
+        The mapping dict must be a dictionary mapping atom indices to atom
+        indices. Each atom index must be an integer in the half-open interval
+        ``[0, n_atoms)``; ie, it must be a valid index into the ``self.atoms``
+        list. All atom indices in the molecule must be mapped from and to
+        exactly once unless ``partial=True`` is given, in which case they must
+        be mapped no more than once. Missing (unless ``partial=True``),
+        out-of-range (including non-integer), or duplicate indices are not
+        allowed in the ``mapping_dict`` and will lead to an exception.
+
+        By default, the mapping dict's keys are the source indices and its
+        values are destination indices, but this can be changed with the
+        ``current_to_new`` argument.
+
+        The keys of the ``self.properties["atom_map"]`` property are updated for
+        the new ordering. Other values of the properties dictionary are
+        transferred unchanged.
 
         .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
-        mapping_dict : dict,
-            A dictionary of the mapping between indexes, this should start from 0.
-        current_to_new : bool, default=True
-            If this is ``True``, then ``mapping_dict`` is of the form ``{current_index: new_index}``;
-            otherwise, it is of the form ``{new_index: current_index}``
+        mapping_dict
+            A dictionary of the mapping between indices. The mapping should be
+            indexed starting from 0 for both the source and destination; note
+            that SMILES atom mapping is typically 1-based.
+        current_to_new
+            If this is ``True``, then ``mapping_dict`` is of the form
+            ``{current_index: new_index}``; otherwise, it is of the form
+            ``{new_index: current_index}``.
+        partial
+            If ``False`` (the default), an exception will be raised if any atom
+            is lacking a destination in the atom map. Note that if this is
+            ``True``, atoms without entries in the mapping dict may be moved in
+            addition to those in the dictionary. Note that partial maps must
+            still be in-range and not include duplicates.
 
         Returns
         -------
         new_molecule :  openff.toolkit.topology.molecule.Molecule
-            An openff.toolkit.Molecule instance with all attributes transferred, in the PDB order.
+            A copy of the molecule in the new order.
+
+        Raises
+        ------
+        RemapIndexError
+            When an out-of-range, duplicate, or missing index is found in the
+            ``mapping_dict``.
+
+        See Also
+        --------
+        from_mapped_smiles
         """
 
         # make sure the size of the mapping matches the current molecule
-        if len(mapping_dict) != self.n_atoms:
-            raise ValueError(
-                f"The number of mapping indices({len(mapping_dict)}) does not match the number of"
-                f"atoms in this molecule({self.n_atoms})"
+        if len(mapping_dict) > self.n_atoms or (
+            len(mapping_dict) < self.n_atoms and not partial
+        ):
+            raise RemapIndexError(
+                f"The number of mapping indices ({len(mapping_dict)}) does not "
+                + f"match the number of atoms in this molecule ({self.n_atoms})"
             )
 
         # make two mapping dicts we need new to old for atoms
@@ -4618,6 +4723,39 @@ class FrozenMolecule(Serializable):
             new_to_cur = mapping_dict
             cur_to_new = dict(zip(mapping_dict.values(), mapping_dict.keys()))
 
+        # Make sure that there were no duplicate indices
+        if len(new_to_cur) != len(cur_to_new):
+            raise RemapIndexError(
+                "There must be no duplicate source or destination indices in"
+                + " mapping_dict"
+            )
+
+        if any(
+            not (isinstance(i, int) and 0 <= i < self.n_atoms)
+            for i in [*new_to_cur] + [*cur_to_new]
+        ):
+            raise RemapIndexError(
+                f"All indices in a mapping_dict for a molecule with {self.n_atoms}"
+                + f" atoms must be integers between 0 and {self.n_atoms-1}"
+            )
+
+        # If a partial map is allowed, complete it
+        if partial and len(mapping_dict) < self.n_atoms:
+            # Get a set of all the unspecified destination indices
+            available_indices = {i for i in range(self.n_atoms) if i not in new_to_cur}
+            # Find the atoms that can be left unmoved and don't move them
+            for i in range(self.n_atoms):
+                if i not in cur_to_new and i not in new_to_cur:
+                    available_indices.remove(i)
+                    cur_to_new[i] = i
+                    new_to_cur[i] = i
+            # Fill in the remaining indices
+            for i in range(self.n_atoms):
+                if i not in cur_to_new:
+                    j = available_indices.pop()
+                    cur_to_new[i] = j
+                    new_to_cur[j] = i
+
         new_molecule = self.__class__()
         new_molecule.name = self.name
 
@@ -4627,11 +4765,11 @@ class FrozenMolecule(Serializable):
                 # get the old atom info
                 old_atom = self._atoms[new_to_cur[i]]
                 new_molecule._add_atom(**old_atom.to_dict())
-        # this is the first time we access the mapping; catch an index error here corresponding to mapping that starts
-        # from 0 or higher
+        # this is the first time we access the mapping; catch an index error
+        # here corresponding to mapping that starts from 0 or higher
         except (KeyError, IndexError):
-            raise IndexError(
-                f"The mapping supplied is missing a relation corresponding to atom({i})"
+            raise RemapIndexError(
+                f"The mapping supplied is missing a destination index for atom {i}"
             )
 
         # add the bonds but with atom indexes in a sorted ascending order
@@ -4657,7 +4795,7 @@ class FrozenMolecule(Serializable):
                 )
             new_molecule.partial_charges = new_charges * unit.elementary_charge
 
-        # remap the conformers there can be more than one
+        # remap the conformers, there can be more than one
         if self.conformers is not None:
             for conformer in self.conformers:
                 new_conformer = np.zeros((self.n_atoms, 3))
@@ -4667,6 +4805,15 @@ class FrozenMolecule(Serializable):
 
         # move any properties across
         new_molecule._properties = deepcopy(self._properties)
+
+        # remap the atom map
+        if "atom_map" in new_molecule.properties and isinstance(
+            new_molecule.properties["atom_map"], dict
+        ):
+            new_molecule.properties["atom_map"] = {
+                cur_to_new.get(k, k): v
+                for k, v in new_molecule.properties["atom_map"].items()
+            }
 
         return new_molecule
 
