@@ -4671,11 +4671,12 @@ class FrozenMolecule(Serializable):
 
         The mapping dict must be a dictionary mapping atom indices to atom
         indices. Each atom index must be an integer in the half-open interval
-        ``[0, n_atoms)``. All positions in the molecule must be mapped from and
-        to exactly once unless ``partial=True`` is given, in which case they
-        must be mapped no more than once. Missing (unless ``partial=True``),
-        out-range (including non-integer), or duplicate indices are not allowed
-        in the ``mapping_dict`` and will lead to an exception.
+        ``[0, n_atoms)``; ie, it must be a valid index into the ``self.atoms``
+        list. All atom indices in the molecule must be mapped from and to
+        exactly once unless ``partial=True`` is given, in which case they must
+        be mapped no more than once. Missing (unless ``partial=True``),
+        out-of-range (including non-integer), or duplicate indices are not
+        allowed in the ``mapping_dict`` and will lead to an exception.
 
         By default, the mapping dict's keys are the source indices and its
         values are destination indices, but this can be changed with the
