@@ -3642,9 +3642,11 @@ class FrozenMolecule(Serializable):
 
         Examples
         --------
-        >>> from openff.toolkit.tests.utils import get_monomer_mol2_file_path
-        >>> mol2_file_path = get_monomer_mol2_file_path('cyclohexane')
-        >>> molecule = Molecule.from_file(mol2_file_path)
+
+        >>> from openff.toolkit import Molecule
+        >>> from openff.toolkit.utils.utils import get_data_file_path
+        >>> sdf_file_path = get_data_file_path("molecules/toluene.sdf")
+        >>> molecule = Molecule.from_file(sdf_file_path)
 
         """
 
@@ -4129,9 +4131,9 @@ class FrozenMolecule(Serializable):
 
         Create a molecule from an RDKit molecule
 
+        >>> from openff.toolkit import Molecule
         >>> from rdkit import Chem
-        >>> from openff.toolkit.tests.utils import get_data_file_path
-        >>> rdmol = Chem.MolFromMolFile(get_data_file_path('systems/monomers/ethanol.sdf'))
+        >>> rdmol = Chem.MolFromSmiles("CCO")
         >>> molecule = Molecule.from_rdkit(rdmol)
 
         """
@@ -4208,11 +4210,11 @@ class FrozenMolecule(Serializable):
 
         Create a ``Molecule`` from an OpenEye OEMol
 
+        >>> from openff.toolkit import Molecule
         >>> from openeye import oechem
-        >>> from openff.toolkit.tests.utils import get_data_file_path
-        >>> ifs = oechem.oemolistream(get_data_file_path('systems/monomers/ethanol.mol2'))
-        >>> oemols = list(ifs.GetOEGraphMols())
-        >>> molecule = Molecule.from_openeye(oemols[0])
+        >>> oemol = oechem.OEMol()
+        >>> oechem.OESmilesToMol(oemol, '[H]C([H])([H])C([H])([H])O[H]')
+        >>> molecule = Molecule.from_openeye(oemol)
 
         """
         toolkit = OpenEyeToolkitWrapper()
