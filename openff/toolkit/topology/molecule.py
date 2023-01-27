@@ -4214,6 +4214,7 @@ class FrozenMolecule(Serializable):
         >>> from openeye import oechem
         >>> oemol = oechem.OEMol()
         >>> oechem.OESmilesToMol(oemol, '[H]C([H])([H])C([H])([H])O[H]')
+        True
         >>> molecule = Molecule.from_openeye(oemol)
 
         """
