@@ -11,6 +11,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### New features
 - [PR #1502](https://github.com/openforcefield/openff-toolkit/pull/1502): Adds Gasteiger charge computation using the RDKit backend.
 - [PR #1498](https://github.com/openforcefield/openff-toolkit/pull/1498): `Molecule.remap()` now supports partial mappings with the `partial` argument.
+- [PR #1528](https://github.com/openforcefield/openff-toolkit/pull/1528): `Topology.box_vectors` are can now be set with `openmm.unit.Quantity`s, which are internally converted.
 
 ### Behavior changes
 - [PR #1498](https://github.com/openforcefield/openff-toolkit/pull/1498): New, more complete, and more descriptive errors for `Molecule.remap()`.
