@@ -8,7 +8,7 @@ repos:
   - id: black
   - id: black-jupyter
 - repo: https://github.com/PyCQA/isort
-  rev: 5.11.4
+  rev: 5.12.0
   hooks:
   - id: isort
 - repo: https://github.com/PyCQA/flake8
@@ -21,7 +21,7 @@ repos:
         'flake8-no-pep420',
     ]
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 1.6.0
+  rev: 1.6.1
   hooks:
     - id: nbqa-pyupgrade
       args:
