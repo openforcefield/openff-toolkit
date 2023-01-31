@@ -96,6 +96,12 @@ jobs:
             done
           fi
 
+      - name: Reinstall ParmEd
+        if: ${{ matrix.rdkit == false }}
+        run: |
+          micromamba remove --force parmed --yes
+          micromamba install "parmed =3" -c conda-forge -yq
+
       - name: Check installed toolkits
         run: |
           for tk in ${{ env.TOOLKIT_CHECKS }}; do
@@ -132,7 +138,4 @@ jobs:
             NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
           fi
 
-          # openmmforcefields incompatible with new toolkit
-          NB_ARGS+=" --ignore=examples/external/swap_amber_parameters/swap_existing_ligand_parameters_with_openmmforcefields.ipynb"
-
-          python -m pytest $PYTEST_ARGS $NB_ARGS examples
+          python -m pytest $PYTEST_ARGS $NB_ARGS
