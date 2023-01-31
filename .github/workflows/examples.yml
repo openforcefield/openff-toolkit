@@ -101,6 +101,7 @@ jobs:
         run: |
           micromamba remove --force parmed --yes
           micromamba install "parmed =3" -c conda-forge -yq
+          micromamba install h5py -c conda-forge -yq
 
       - name: Check installed toolkits
         run: |
