@@ -15,7 +15,7 @@ dependencies:
   - cached-property
   - xmltodict
   - python-constraint
-  - openmm >=7.6
+  - openmm =8
   - openff-forcefields
   - smirnoff99Frosst
   - openff-units >=0.2
