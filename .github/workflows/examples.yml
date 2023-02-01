@@ -100,7 +100,9 @@ jobs:
         if: ${{ matrix.rdkit == false }}
         run: |
           micromamba remove --force parmed --yes
+          # See #1531, #1532, eventually this should work with 4 or 3 and 4
           micromamba install "parmed =3" -c conda-forge -yq
+          # Needed for other examples to run, but were removed incidentally alongside AmberTools
           micromamba install h5py -c conda-forge -yq
 
       - name: Check installed toolkits
