@@ -450,7 +450,6 @@ class TestParameterAttributeHandler:
 
 
 class TestParameterHandler:
-
     length = 1 * unit.angstrom
     k = 10 * unit.kilocalorie / unit.mole / unit.angstrom**2
 
@@ -1888,7 +1887,6 @@ class TestVirtualSiteHandler:
         ],
     )
     def test_parent_index(self, parameter, expected_index):
-
         assert parameter.parent_index == expected_index
         assert (
             VirtualSiteHandler.VirtualSiteType.type_to_parent_index(parameter.type)
@@ -1989,7 +1987,6 @@ class TestVirtualSiteHandler:
         ],
     )
     def test_add_default_init_kwargs_validation(self, kwargs, expected_raises):
-
         with expected_raises:
             VirtualSiteHandler.VirtualSiteType._add_default_init_kwargs(kwargs)
 
@@ -2034,7 +2031,6 @@ class TestVirtualSiteHandler:
         ],
     )
     def test_add_default_init_kwargs_values(self, kwargs, expected_kwargs):
-
         assert kwargs != expected_kwargs
         VirtualSiteHandler.VirtualSiteType._add_default_init_kwargs(kwargs)
         assert kwargs == expected_kwargs
@@ -2068,7 +2064,6 @@ class TestVirtualSiteHandler:
         ],
     )
     def test_in_plane_angle_converter(self, parameter, in_plane_angle, expected_raises):
-
         parameter_dict = parameter.to_dict()
         parameter_dict["inPlaneAngle"] = in_plane_angle
 
@@ -2102,7 +2097,6 @@ class TestVirtualSiteHandler:
     def test_out_of_plane_angle_converter(
         self, parameter, out_of_plane_angle, expected_raises
     ):
-
         parameter_dict = parameter.to_dict()
         parameter_dict["outOfPlaneAngle"] = out_of_plane_angle
 
@@ -2111,7 +2105,6 @@ class TestVirtualSiteHandler:
             assert new_parameter.outOfPlaneAngle == out_of_plane_angle
 
     def test_serialize_roundtrip(self):
-
         force_field = ForceField()
 
         handler = force_field.get_parameter_handler("VirtualSites")
@@ -2151,7 +2144,6 @@ class TestVirtualSiteHandler:
     def test_validate_found_match(
         self, smiles, matched_indices, parameter, expected_raises
     ):
-
         molecule = Molecule.from_smiles(smiles, allow_undefined_stereo=True)
         topology: Topology = molecule.to_topology()
 
@@ -2294,7 +2286,6 @@ class TestVirtualSiteHandler:
         smiles: str,
         expected_matches: Dict[Tuple[int, ...], List[Tuple[str, str]]],
     ):
-
         molecule = Molecule.from_mapped_smiles(smiles, allow_undefined_stereo=True)
 
         handler = VirtualSiteHandler(version="0.3")
@@ -2315,7 +2306,6 @@ class TestVirtualSiteHandler:
         assert {**matched_smirks} == expected_matches
 
     def test_find_matches_multiple_molecules(self):
-
         topology = Topology.from_molecules(
             [
                 Molecule.from_mapped_smiles("[Cl:2][C:1]([H:3])([H:4])[H:5]"),
@@ -2367,7 +2357,6 @@ class TestVirtualSiteHandler:
         ],
     )
     def test_index_of_parameter(self, query_parameter, query_key, expected_index):
-
         handler = VirtualSiteHandler(version="0.3")
 
         for parameter in [
