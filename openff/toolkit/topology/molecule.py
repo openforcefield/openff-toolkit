@@ -371,7 +371,8 @@ class Atom(Particle):
                 "Instead, use the `Molecule.partial_charges` setter. If this behavior is important to you, "
                 "please raise an issue describing your use case."
             )
-        elif not isinstance(charge, (unit.Quantity, int, float)):
+
+        if not isinstance(charge, (unit.Quantity, int, float)):
             raise ValueError(
                 "Cannot set partial charge with an object that is not a openff.unit.Quantity, int, or float. "
                 f"Found object of type {type(charge)}."
@@ -383,7 +384,7 @@ class Atom(Particle):
         if not isinstance(charge.m, (int, float)):
             raise ValueError(
                 "Cannot set partial charge with an object that is not a wrapped int or float. "
-                f"Found object of type {type(charge)}."
+                f"Found unit-wrapped {type(charge.m)}."
             )
 
         molecule_partial_charges = self.molecule.partial_charges

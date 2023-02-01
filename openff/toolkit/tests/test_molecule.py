@@ -408,6 +408,12 @@ class TestAtom:
         with pytest.raises(ValueError, match="Cannot set.*openmm.unit"):
             water.atoms[2].partial_charge = 0.0 * openmm.unit.elementary_charge
 
+    def test_set_partial_charges_array(self, water):
+        with pytest.raises(ValueError, match="unit-wrapped.*numpy.ndarray"):
+            water.atoms[2].partial_charge = unit.Quantity(
+                [0.0, 0.0], unit.elementary_charge
+            )
+
     def test_set_partial_charges_bogus(self, water):
         with pytest.raises(ValueError, match="Cannot set.*class 'str'"):
             water.atoms[2].partial_charge = "the right charge"
