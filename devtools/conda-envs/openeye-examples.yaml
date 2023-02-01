@@ -1,4 +1,4 @@
-name: test
+name: openeye-examples
 channels:
   - openeye
   - conda-forge
