@@ -56,6 +56,7 @@ from openff.toolkit.utils.exceptions import (
     IncompatibleUnitError,
     InvalidBondOrderError,
     InvalidConformerError,
+    MissingPartialChargesError,
     MultipleMoleculesInPDBError,
     NotBondedError,
     RemapIndexError,
@@ -369,6 +370,47 @@ class TestAtom:
         atom.molecule = mol
         with pytest.raises(AssertionError, match="already has an associated molecule"):
             atom.molecule = mol
+
+    @pytest.fixture()
+    def water_without_charges(self):
+        return Molecule.from_smiles("O")
+
+    @pytest.fixture()
+    def water(self, water_without_charges):
+        water_without_charges.assign_partial_charges("formal_charge")
+        water = water_without_charges
+        return water
+
+    def test_set_partial_charge(self, water):
+        water.atoms[0].partial_charge = 12.0 * unit.elementary_charge
+        water.atoms[1].partial_charge = -4
+        water.atoms[2].partial_charge = -8.0
+
+        assert np.allclose(
+            water.partial_charges,
+            unit.Quantity([12, -4, -8], unit.elementary_charge),
+        )
+
+        assert np.allclose(
+            [atom.partial_charge.m for atom in water.atoms],
+            [12, -4, -8],
+        )
+
+    def test_set_partial_charges_no_charges(self, water_without_charges):
+        with pytest.raises(
+            MissingPartialChargesError, match="in a molecule with no partial charges."
+        ):
+            water_without_charges.atoms[2].partial_charge = 0.0 * unit.elementary_charge
+
+    def test_set_partial_charges_openmm_quantity(self, water):
+        import openmm.unit
+
+        with pytest.raises(ValueError, match="Cannot set.*openmm.unit"):
+            water.atoms[2].partial_charge = 0.0 * openmm.unit.elementary_charge
+
+    def test_set_partial_charges_bogus(self, water):
+        with pytest.raises(ValueError, match="Cannot set.*class 'str'"):
+            water.atoms[2].partial_charge = "the right charge"
 
 
 class TestBond:
