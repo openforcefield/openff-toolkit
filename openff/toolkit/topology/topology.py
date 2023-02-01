@@ -251,7 +251,6 @@ class TagSortedDict(_TransformedDict):
     """
 
     def __init__(self, *args, **kwargs):
-
         # Because keytransform is O(n) due to needing to check the sorted keys,
         # we cache the sorted keys separately to make keytransform O(1) at
         # the expense of storage. This is also better in the long run if the
@@ -1050,7 +1049,6 @@ class Topology(Serializable):
                 mol_instance = self.molecule(mol_instance_idx)
                 # Loop over matches
                 for match in mol_matches:
-
                     # Collect indices of matching TopologyAtoms.
                     topology_atom_indices = []
                     for molecule_atom_index in match:
@@ -1969,9 +1967,7 @@ class Topology(Serializable):
             openmm_chain = topology.addChain(chain.GetChainID())
 
             for frag in chain.GetFragments():
-
                 for hres in frag.GetResidues():
-
                     # Get OE residue
                     oe_res = hres.GetOEResidue()
                     # Create OpenMM residue

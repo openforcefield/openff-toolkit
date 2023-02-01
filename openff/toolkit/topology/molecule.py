@@ -5015,9 +5015,7 @@ class FrozenMolecule(Serializable):
             )
 
         for bond in atom_i.bonds:
-
             for atom in bond.atoms:
-
                 if atom == atom_i:
                     continue
 
@@ -5783,6 +5781,7 @@ class HierarchyScheme:
         Semantically sort the HierarchyElements belonging to this object, according to
         their identifiers.
         """
+
         # hard-code the sort_func value here, since it's hard to serialize safely
         def sort_func(x):
             return version.parse(".".join([str(i) for i in x.identifier]))

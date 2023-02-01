@@ -8,7 +8,6 @@ from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
 class VirtualSiteMocking:
     @staticmethod
     def sp1_conformer() -> unit.Quantity:
-
         return unit.Quantity(
             numpy.array(
                 [
@@ -58,7 +57,6 @@ class VirtualSiteMocking:
     def bond_charge_parameter(
         smirks: str, name: str = "EP", param_multiple: float = 1.0
     ) -> VirtualSiteHandler.VirtualSiteType:
-
         return VirtualSiteHandler.VirtualSiteType(
             type="BondCharge",
             smirks=smirks,
@@ -97,7 +95,6 @@ class VirtualSiteMocking:
         name: str = "EP",
         angle: unit.Quantity = 0.0 * unit.degree,
     ) -> VirtualSiteHandler.VirtualSiteType:
-
         return VirtualSiteHandler.VirtualSiteType(
             type="DivalentLonePair",
             smirks=smirks,
@@ -127,7 +124,6 @@ class VirtualSiteMocking:
 
     @staticmethod
     def molecule_from_smiles(smiles: str, reverse: bool) -> Molecule:
-
         molecule = Molecule.from_mapped_smiles(smiles, allow_undefined_stereo=True)
 
         if reverse:
@@ -138,26 +134,22 @@ class VirtualSiteMocking:
 
     @staticmethod
     def chloromethane(reverse: bool = False) -> Molecule:
-
         return VirtualSiteMocking.molecule_from_smiles(
             "[Cl:1][C:2]([H:3])([H:4])[H:5]", reverse
         )
 
     @staticmethod
     def formaldehyde(reverse: bool = False) -> Molecule:
-
         return VirtualSiteMocking.molecule_from_smiles(
             "[O:1]=[C:2]([H:3])[H:4]", reverse
         )
 
     @staticmethod
     def hypochlorous_acid(reverse: bool = False) -> Molecule:
-
         return VirtualSiteMocking.molecule_from_smiles("[H:1][O:2][Cl:3]", reverse)
 
     @staticmethod
     def fake_ammonia(reverse: bool = False) -> Molecule:
-
         return VirtualSiteMocking.molecule_from_smiles(
             "[N:1]([Cl:2])([Br:3])[H:4]", reverse
         )

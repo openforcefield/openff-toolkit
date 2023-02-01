@@ -1003,7 +1003,6 @@ class TestForceField:
         sage = ForceField("openff-2.0.0.offxml")
 
         for parameter_handler_name in sage.registered_parameter_handlers:
-
             parameter_handler = sage.get_parameter_handler(parameter_handler_name)
 
             for parameter in parameter_handler.parameters:
@@ -2769,7 +2768,8 @@ class TestForceFieldChargeAssignment:
 
     def test_assign_charges_to_molecule_in_parts_using_multiple_library_charges(self):
         """Test assigning charges to parts of a molecule using two library charge lines. Note that these LibraryCharge
-        SMIRKS have partial overlap, so this also tests that the hierarchy is correctly obeyed."""
+        SMIRKS have partial overlap, so this also tests that the hierarchy is correctly obeyed.
+        """
         ff = ForceField(
             "test_forcefields/test_forcefield.offxml",
             xml_ethanol_library_charges_in_parts_ff,
@@ -2810,7 +2810,8 @@ class TestForceFieldChargeAssignment:
 
     def test_assign_charges_using_library_charges_by_single_atoms(self):
         """Test assigning charges to parts of a molecule using per-atom library charges. Note that these LibraryCharge
-        SMIRKS will match multiple atoms, so this is also a test of correct usage of the parameter hierarchy.."""
+        SMIRKS will match multiple atoms, so this is also a test of correct usage of the parameter hierarchy..
+        """
         ff = ForceField(
             "test_forcefields/test_forcefield.offxml",
             xml_ethanol_library_charges_by_atom_ff,
@@ -3545,7 +3546,6 @@ class TestForceFieldParameterAssignment:
         )
 
     def test_tip5p_dimer_energy(self):
-
         pytest.skip("fails until migration to openff-interchange")
 
         from openff.toolkit.tests.utils import evaluate_molecules_off
@@ -4441,7 +4441,6 @@ class TestForceFieldWithToolkits:
     #       these tests should be moved/adapted into more unit tests that call it directly
 
     def test_toolkit_registry_bogus_argument(self):
-
         topology = create_ethanol().to_topology()
         force_field = ForceField("test_forcefields/test_forcefield.offxml")
         with pytest.raises(
@@ -4454,7 +4453,6 @@ class TestForceFieldWithToolkits:
             )
 
     def test_toolkit_registry_no_charge_methods(self):
-
         topology = create_ethanol().to_topology()
         force_field = ForceField("test_forcefields/test_forcefield.offxml")
         with pytest.raises(

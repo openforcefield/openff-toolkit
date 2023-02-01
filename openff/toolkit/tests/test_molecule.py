@@ -699,7 +699,6 @@ class TestMolecule:
                     )
 
             else:
-
                 # make the smiles then do some checks on it
                 output_smiles = mol.to_smiles(
                     isomeric=isomeric,
@@ -831,7 +830,6 @@ class TestMolecule:
     )
     @pytest.mark.parametrize("data", mapped_types)
     def test_partial_mapped_smiles(self, toolkit_class, data):
-
         if toolkit_class.is_available():
             toolkit = toolkit_class()
             mol = create_cis_1_2_dichloroethene()
