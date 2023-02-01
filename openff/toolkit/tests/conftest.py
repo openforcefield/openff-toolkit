@@ -92,7 +92,6 @@ def pytest_addoption(parser):
 
 
 def pytest_collection_modifyitems(config, items):
-
     if config.getoption("runslow"):
         # If --runslow is given, we don't have to mark items for skipping,
         # but we need to extract the whole AlkEthOH and FreeSolv sets (see

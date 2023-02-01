@@ -99,7 +99,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
     }
 
     def __init__(self):
-
         self._toolkit_file_read_formats = [
             "CAN",
             "CDX",
@@ -830,7 +829,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         oemol = self.to_openeye(molecule=molecule)
         for protomer in oequacpac.OEEnumerateFormalCharges(oemol, options):
-
             mol = self.from_openeye(
                 protomer, allow_undefined_stereo=True, _cls=molecule.__class__
             )
@@ -880,7 +878,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         molecules = []
         for isomer in oeomega.OEFlipper(oemol, 200, not undefined_only, True, False):
-
             if rationalise:
                 # try and determine if the molecule is reasonable by generating a conformer with
                 # strict stereo, like embedding in rdkit
@@ -1265,7 +1262,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         # If we have a full / partial atom map add it to the molecule. Zeroes 0
         # indicates no mapping
         if {*atom_mapping.values()} != {0}:
-
             molecule._properties["atom_map"] = {
                 idx: map_idx for idx, map_idx in atom_mapping.items() if map_idx != 0
             }
@@ -2258,7 +2254,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         conformers = []
 
         for oe_conformer in oe_molecule.GetConfs():
-
             conformer = np.zeros((oe_molecule.NumAtoms(), 3))
 
             for atom_index, coordinates in oe_conformer.GetCoords().items():
@@ -2445,7 +2440,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         oechem.OEThrow.SetOutputStream(oechem.oeerr)  # restoring to original state
         # This logic handles errors encountered in #34, which can occur when using ELF10 conformer selection
         if not quacpac_status:
-
             oe_charge_engine = (
                 oequacpac.OEAM1Charges
                 if partial_charge_method == "am1elf10"
@@ -2586,21 +2580,18 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         bond_orders = defaultdict(list)
 
         for oe_conformer in oe_conformers:
-
             oemol.DeleteConfs()
             oemol.NewConf(oe_conformer)
 
             status = am1.CalcAM1(am1results, oemol)
 
             if status is False:
-
                 raise Exception(
                     "Unable to assign charges (in the process of calculating "
                     "fractional bond orders)"
                 )
 
             for bond in oemol.GetBonds():
-
                 bond_orders[bond.GetIdx()].append(
                     am1results.GetBondOrder(bond.GetBgnIdx(), bond.GetEndIdx())
                 )
@@ -2608,7 +2599,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         # TODO: Will bonds always map back to the same index? Consider doing a
         #       topology mapping.
         for bond_idx, conformer_bond_orders in bond_orders.items():
-
             # Get bond order
             order = np.mean(conformer_bond_orders)
 
