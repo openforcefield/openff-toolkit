@@ -59,7 +59,6 @@ class TestMMMolecule:
         molecule_with_zero_atom,
         molecule_with_bogus_atom,
     ):
-
         assert water.hill_formula == "H2O"
         assert molecule_with_zero_atom.hill_formula == "CX"
         assert molecule_with_bogus_atom.hill_formula == "INVALID"

@@ -1298,7 +1298,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         )
 
         for match in carboxylic_acid_matches:
-
             dihedral_angle = GetDihedralRad(rdkit_molecule.GetConformer(0), *match)
 
             if dihedral_angle > np.pi / 2.0:
@@ -1335,7 +1334,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         valid_conformers = []
 
         for i, conformer in enumerate(molecule.conformers):
-
             is_problematic, reason = cls._elf_is_problematic_conformer(
                 molecule, conformer
             )
@@ -1457,7 +1455,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         rms_matrix = np.zeros((n_conformers, n_conformers))
 
         for i, j in itertools.combinations(np.arange(n_conformers), 2):
-
             rms_matrix[i, j] = AllChem.GetBestRMS(
                 rdkit_molecule,
                 rdkit_molecule,
@@ -1600,7 +1597,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         conformers = self._elf_prune_problematic_conformers(molecule_copy)
 
         if len(conformers) == 0:
-
             raise ValueError(
                 "There were no conformers to select from after discarding conformers "
                 "which are known to be problematic when computing ELF partial charges. "
@@ -1752,7 +1748,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             *range(89, 113),
         }
         for rda in rdmol.GetAtoms():
-
             # See issues #1075 for some discussion on radicals
             if (
                 rda.GetAtomicNum() not in d_and_f_block_elements
@@ -1828,7 +1823,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # If we have a full / partial atom map add it to the molecule. Zeroes 0
         # indicates no mapping
         if {*atom_mapping.values()} != {0}:
-
             offmol._properties["atom_map"] = {
                 idx: map_idx for idx, map_idx in atom_mapping.items() if map_idx != 0
             }
@@ -2770,7 +2764,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         csp_variables = set()
 
         for bond in stereogenic_bonds:
-
             # Here we use a notation where atoms 'b' and 'c' are the two atoms involved
             # in the double bond, while 'a' corresponds to a neighbour of 'b' and 'd' a
             # neighbour of 'c'.
@@ -2815,7 +2808,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             for index_pair, constraints_list in [
                 ((index_a, index_b), constraints_ab) for index_a in indices_a
             ] + [((index_d, index_c), constraints_cd) for index_d in indices_d]:
-
                 # Each single bond neighboring a double bond needs to be defined as a
                 # "variable" in the CSP problem. Here, each bond is identified by its
                 # bond index in the RDMol (note: this is not guaranteed to be the same
@@ -2876,9 +2868,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         has_solution = False
 
         for solution in csp_problem.getSolutionIter():
-
             for rd_bond_index, direction in solution.items():
-
                 rd_bond = rd_molecule.GetBondWithIdx(rd_bond_index)
                 if direction == 0:
                     rd_bond.SetBondDir(Chem.BondDir.ENDDOWNRIGHT)
