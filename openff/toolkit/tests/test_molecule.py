@@ -951,14 +951,12 @@ class TestMolecule:
         assert graph.number_of_edges() == molecule.n_bonds
 
         for bond in molecule.bonds:
-
             edge = graph.get_edge_data(bond.atom1_index, bond.atom2_index)
 
             for attr in ["stereochemistry", "bond_order", "is_aromatic"]:
                 assert edge[attr] == getattr(bond, attr)
 
         for node_index, node in graph.nodes(data=True):
-
             atom = molecule.atom(node_index)
 
             for attr in [
