@@ -62,9 +62,7 @@ def _load_handler_plugins(handler_name: str, expected_type):
 
     valid_plugins = []
     for discovered_plugin in discovered_plugins:
-
         if not issubclass(discovered_plugin, expected_type):
-
             logger.info(
                 f"The {discovered_plugin.__name__} object has been registered as a "
                 f"{handler_name} plugin, but does not inherit from "

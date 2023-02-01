@@ -1,4 +1,4 @@
-name: test
+name: rdkit-examples
 channels:
   - conda-forge
 dependencies:

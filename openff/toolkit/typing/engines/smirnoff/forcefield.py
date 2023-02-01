@@ -288,7 +288,6 @@ class ForceField:
         if parameter_handler_classes is None:
             parameter_handler_classes = all_subclasses(ParameterHandler)
         if load_plugins:
-
             plugin_classes = load_handler_plugins()
 
             for handler in plugin_classes:

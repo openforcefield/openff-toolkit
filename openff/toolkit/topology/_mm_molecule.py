@@ -187,10 +187,10 @@ class _SimpleMolecule:
         # but we need 0-index indices (like molecule indices) to add bonds
         offset = min(subgraph.nodes())
 
-        for (index, node_data) in subgraph.nodes(data=True):
+        for index, node_data in subgraph.nodes(data=True):
             molecule.add_atom(atomic_number=node_data["atomic_number"])
 
-        for (topology_index1, topology_index2, edge_data) in subgraph.edges(data=True):
+        for topology_index1, topology_index2, edge_data in subgraph.edges(data=True):
             molecule.add_bond(topology_index1 - offset, topology_index2 - offset)
 
         return molecule

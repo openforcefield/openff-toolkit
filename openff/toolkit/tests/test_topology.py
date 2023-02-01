@@ -1606,7 +1606,6 @@ class TestTopologySerialization:
     @pytest.mark.parametrize(("n_molecules"), [1, 2])
     @pytest.mark.parametrize(("format"), ["dict", "json"])
     def test_roundtrip(self, oleic_acid, with_conformers, n_molecules, format):
-
         if with_conformers:
             n_conformers = 2
             oleic_acid.generate_conformers(n_conformers=n_conformers)
@@ -1646,7 +1645,6 @@ def test_nth_degree_neighbors(n_degrees, num_pairs):
 
 
 def _tagsorted_dict_init_ref_key(tsd):
-
     if tsd is None:
         tsd = TagSortedDict()
 
