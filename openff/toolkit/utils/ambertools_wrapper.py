@@ -469,9 +469,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         bond_orders = defaultdict(list)
 
         for conformer in [*temp_mol.conformers]:
-
             with tempfile.TemporaryDirectory() as tmpdir:
-
                 with temporary_cd(tmpdir):
                     net_charge = temp_mol.total_charge
                     # Write out molecule in SDF format

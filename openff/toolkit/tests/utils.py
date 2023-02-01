@@ -1289,7 +1289,7 @@ def _get_improper_torsion_canonical_order(bond_set, i0, i1, i2, i3):
     mapping = {i0: 0, i1: 1, i2: 2, i3: 3}
     inv_mapping = dict([(val, key) for key, val in mapping.items()])
 
-    for (a, b) in itertools.combinations([i0, i1, i2, i3], 2):
+    for a, b in itertools.combinations([i0, i1, i2, i3], 2):
         if (a, b) in bond_set:
             i, j = mapping[a], mapping[b]
             connections[i, j] += 1.0
