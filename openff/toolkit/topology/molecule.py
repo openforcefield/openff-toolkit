@@ -372,16 +372,16 @@ class Atom(Particle):
                 "please raise an issue describing your use case."
             )
 
-        if not isinstance(charge, (unit.Quantity, int, float)):
+        if not isinstance(charge, (unit.Quantity, float)):
             raise ValueError(
-                "Cannot set partial charge with an object that is not a openff.unit.Quantity, int, or float. "
+                "Cannot set partial charge with an object that is not a openff.unit.Quantity or float. "
                 f"Found object of type {type(charge)}."
             )
 
-        if isinstance(charge, (int, float)):
+        if isinstance(charge, float):
             charge = unit.Quantity(charge, unit.elementary_charge)
 
-        if not isinstance(charge.m, (int, float)):
+        if not isinstance(charge.m, float):
             raise ValueError(
                 "Cannot set partial charge with an object that is not a wrapped int or float. "
                 f"Found unit-wrapped {type(charge.m)}."

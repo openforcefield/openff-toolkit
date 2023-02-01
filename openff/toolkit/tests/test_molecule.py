@@ -373,7 +373,7 @@ class TestAtom:
 
     @pytest.fixture()
     def water_without_charges(self):
-        return Molecule.from_smiles("O")
+        return Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
 
     @pytest.fixture()
     def water(self, water_without_charges):
@@ -383,7 +383,7 @@ class TestAtom:
 
     def test_set_partial_charge(self, water):
         water.atoms[0].partial_charge = 12.0 * unit.elementary_charge
-        water.atoms[1].partial_charge = -4
+        water.atoms[1].partial_charge = -4.0
         water.atoms[2].partial_charge = -8.0
 
         assert np.allclose(
@@ -401,6 +401,10 @@ class TestAtom:
             MissingPartialChargesError, match="in a molecule with no partial charges."
         ):
             water_without_charges.atoms[2].partial_charge = 0.0 * unit.elementary_charge
+
+    def test_set_partial_charges_int(self, water):
+        with pytest.raises(ValueError, match="Cannot set.*'int'"):
+            water.atoms[2].partial_charge = 4
 
     def test_set_partial_charges_openmm_quantity(self, water):
         import openmm.unit
