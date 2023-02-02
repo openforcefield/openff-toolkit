@@ -19,6 +19,7 @@ repos:
     additional_dependencies: [
         'flake8-absolute-import',
         'flake8-no-pep420',
+        'flake8-bugbear',
     ]
 - repo: https://github.com/nbQA-dev/nbQA
   rev: 1.6.1

@@ -123,7 +123,7 @@ class _TransformedDict(MutableMapping):
         return key
 
     @classmethod
-    def _return_possible_index_of(cls, key, possible=[], permutations={}):
+    def _return_possible_index_of(cls, key, possible, permutations):
         """
         Returns canonical ordering of ``key``, given a dictionary of ordered
         ``permutations`` and a list of allowed orders ``possible``.
