@@ -157,10 +157,10 @@ class ForceField:
     Examples
     --------
 
-    Create a new ForceField containing the smirnoff99Frosst parameter set:
+    Create a new ForceField object from the distributed OpenFF 2.0 ("Sage") file:
 
     >>> from openff.toolkit import ForceField
-    >>> force_field = ForceField('test_forcefields/test_forcefield.offxml')
+    >>> force_field = ForceField('openff-2.0.0.offxml')
 
     Create an OpenMM system from a :class:`openff.toolkit.topology.Topology` object:
 
@@ -261,11 +261,12 @@ class ForceField:
         Load one SMIRNOFF parameter set in XML format (searching the package data directory by default, which includes
         some standard parameter sets):
 
-        >>> forcefield = ForceField('test_forcefields/test_forcefield.offxml')
+        >>> forcefield = ForceField('openff-2.0.0.offxml')
 
         Load multiple SMIRNOFF parameter sets:
 
-        >>> forcefield = ForceField('test_forcefields/test_forcefield.offxml', 'test_forcefields/tip3p.offxml')
+        >>> from openff.toolkit.tests.utils import get_data_file_path
+        >>> forcefield = ForceField('openff-2.0.0.offxml', get_data_file_path('test_forcefields/tip3p.offxml'))
 
         Load a parameter set from a string:
 
@@ -956,20 +957,13 @@ class ForceField:
             A representation of a SMIRNOFF-format data structure. Begins at top-level 'SMIRNOFF' key.
 
         """
-        from openff.toolkit.utils import get_data_file_path
-
-        # Check whether this could be a file path. It could also be a
-        # file handler or a simple XML string.
+        # First, see if a file exists with a name `source` in the current directory or in directories known to the
+        # plugin system. It could also be a raw XML-like string ...
         if isinstance(source, str):
             # Try first the simple path.
-            searched_dirs_paths: List[str] = [""]
+            searched_dirs_paths: List[str] = [os.getcwd()]
             # Then try a relative file path w.r.t. an installed directory.
             searched_dirs_paths.extend(_get_installed_offxml_dir_paths())
-            # Finally, search in openff/toolkit/data/.
-            # TODO: Remove this when smirnoff99Frosst 1.0.9 will be released.
-            searched_dirs_paths.append(get_data_file_path(""))
-            searched_dirs_paths.append(get_data_file_path("test_forcefields"))
-            searched_dirs_paths.append(get_data_file_path("test_forcefields/old"))
 
             # Determine the actual path of the file.
             # TODO: What is desired toolkit behavior if two files with the desired name are available?
@@ -978,6 +972,11 @@ class ForceField:
                     if str(file_path).lower().endswith(source.lower()):
                         source = str(file_path.absolute())
                         break
+
+        else:
+            # ... or a file-like object, in which case we shouldn't look through the plugin system.
+            # if it's raw bytes, no need to search for paths, either.
+            searched_dirs_paths = list()
 
         # Process all SMIRNOFF definition files or objects
         # QUESTION: Allow users to specify force field URLs so they can pull force field definitions from the web too?
@@ -992,23 +991,41 @@ class ForceField:
                 smirnoff_data = parameter_io_handler.parse_file(source)
                 return smirnoff_data
             except SMIRNOFFParseError as e:
+                exception_type = type(e)
+                exception_context = "while trying to parse source as an object"
                 exception_msg = e.msg
             except (FileNotFoundError, OSError):
                 # If this is not a file path or a file handle, attempt parsing as a string.
+                # TODO: Do we actually support parsing bytes?
                 try:
                     smirnoff_data = parameter_io_handler.parse_string(source)
                     return smirnoff_data
                 except SMIRNOFFParseError as e:
+                    exception_type = type(e)
+                    exception_context = "while trying to parse source as a file"
                     exception_msg = e.args[0]
 
         # If we haven't returned by now, the parsing was unsuccessful
-        valid_formats = [
-            input_format for input_format in self._parameter_io_handlers.keys()
-        ]
-        msg = f"Source {source} could not be read. If this is a file, ensure that the path is correct.\n"
-        msg += "If the file is present, ensure it is in a known SMIRNOFF encoding.\n"
-        msg += f"Valid formats are: {valid_formats}\n"
-        msg += f"Parsing failed with the following error:\n{exception_msg}\n"
+        # There is different parsing behavior for str and file-like objects, so raise errors separately
+        if isinstance(source, str):
+            pretty_searched_paths = "\n    ".join(searched_dirs_paths)
+            msg = (
+                f"Source '{source}' could not be read. If this is a file, ensure that the path is correct.\n"
+                f"Looked in the following paths and found no files named '{source}':"
+                f"\n    {pretty_searched_paths}\n"
+                f"If '{source}' is present as a file, ensure it is in a known SMIRNOFF encoding.\n"
+                f"Valid formats are: {[*self._parameter_io_handler_classes.keys()]}\n"
+                f"Parsing failed {exception_context} with the following exception and "
+                f"message:\n{exception_type}\n{exception_msg}\n"
+            )
+
+        else:
+            msg = (
+                f"Source '{source}' could not be read.\n"
+                f"Parsing failed {exception_context} with the following exception and message:\n"
+                f"{exception_type}\n{exception_msg}\n"
+            )
+
         raise IOError(msg)
 
     def to_string(self, io_format="XML", discard_cosmetic_attributes=False):
@@ -1324,7 +1341,7 @@ class ForceField:
 
         >>> from openff.toolkit import ForceField, Molecule
         >>> ethanol = Molecule.from_smiles('CCO')
-        >>> force_field = ForceField('test_forcefields/test_forcefield.offxml')
+        >>> force_field = ForceField('openff-2.0.0.offxml')
 
         Assign partial charges to the molecule according to the force field:
 
