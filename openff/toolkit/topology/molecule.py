@@ -60,6 +60,7 @@ from openff.toolkit.utils.exceptions import (
     InvalidAtomMetadataError,
     InvalidBondOrderError,
     InvalidConformerError,
+    MissingPartialChargesError,
     MultipleMoleculesInPDBError,
     RemapIndexError,
     SmilesParsingError,
@@ -361,6 +362,35 @@ class Atom(Particle):
         else:
             index = self.molecule_atom_index
             return self._molecule._partial_charges[index]
+
+    @partial_charge.setter
+    def partial_charge(self, charge):
+        if self.molecule.partial_charges is None:
+            raise MissingPartialChargesError(
+                "Cannot set individual atom's partial charge if it is in a molecule with no partial charges. "
+                "Instead, use the `Molecule.partial_charges` setter. If this behavior is important to you, "
+                "please raise an issue describing your use case."
+            )
+
+        if not isinstance(charge, (unit.Quantity, float)):
+            raise ValueError(
+                "Cannot set partial charge with an object that is not a openff.unit.Quantity or float. "
+                f"Found object of type {type(charge)}."
+            )
+
+        if isinstance(charge, float):
+            charge = unit.Quantity(charge, unit.elementary_charge)
+
+        if not isinstance(charge.m, float):
+            raise ValueError(
+                "Cannot set partial charge with an object that is not a wrapped int or float. "
+                f"Found unit-wrapped {type(charge.m)}."
+            )
+
+        molecule_partial_charges = self.molecule.partial_charges
+        molecule_partial_charges[self.molecule_atom_index] = charge
+
+        self.molecule.partial_charges = molecule_partial_charges
 
     @property
     def is_aromatic(self):
