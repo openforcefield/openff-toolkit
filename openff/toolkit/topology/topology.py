@@ -601,7 +601,6 @@ class Topology(Serializable):
             self._box_vectors = None
             return
         if not hasattr(box_vectors, "units"):
-
             if hasattr(box_vectors, "unit"):
                 # this is probably an openmm.unit.Quantity; we should gracefully import OpenMM but
                 # the chances of this being an object with the two previous conditions met is low
