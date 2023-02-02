@@ -204,6 +204,16 @@ class TestTopology:
             topology.box_vectors = good_vectors
             assert (topology.box_vectors == good_vectors * np.eye(3)).all()
 
+    def test_issue_1527(self):
+        """Test the error handling of setting box vectors with an OpenMM quantity."""
+        import numpy
+        import openmm.unit
+
+        topology = Topology()
+        topology.box_vectors = numpy.ones(3) * openmm.unit.nanometer
+
+        assert isinstance(topology.box_vectors, unit.Quantity)
+
     def test_is_periodic(self):
         """Test the getter and setter for is_periodic"""
         vacuum_top = Topology()

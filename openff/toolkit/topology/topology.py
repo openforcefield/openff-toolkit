@@ -601,7 +601,14 @@ class Topology(Serializable):
             self._box_vectors = None
             return
         if not hasattr(box_vectors, "units"):
-            raise InvalidBoxVectorsError("Given unitless box vectors")
+            if hasattr(box_vectors, "unit"):
+                # this is probably an openmm.unit.Quantity; we should gracefully import OpenMM but
+                # the chances of this being an object with the two previous conditions met is low
+                box_vectors = ensure_quantity(box_vectors, "openff")
+
+            else:
+                raise InvalidBoxVectorsError("Given unitless box vectors")
+
         # Unit.compatible_units() returns False with itself, for some reason
         if (box_vectors.units != unit.nm) and (
             box_vectors.units not in unit.nm.compatible_units()
