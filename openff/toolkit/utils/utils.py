@@ -26,7 +26,7 @@ __all__ = [
 import contextlib
 import functools
 import logging
-from typing import Dict, List, Tuple, Union
+from typing import Dict, Iterable, List, Tuple, Union
 
 import numpy as np
 import pint
@@ -209,7 +209,7 @@ def string_to_quantity(quantity_string) -> Union[str, int, float, unit.Quantity]
 
 def convert_all_strings_to_quantity(
     smirnoff_data: Dict,
-    ignore_keys: List[str] = list(),
+    ignore_keys: Iterable[str] = tuple(),
 ):
     """
     Traverses a SMIRNOFF data structure, attempting to convert all
@@ -222,6 +222,8 @@ def convert_all_strings_to_quantity(
     ----------
     smirnoff_data : dict
         A hierarchical dict structured in compliance with the SMIRNOFF spec
+    ignore_keys : iterable of str, optional, default=tuple()
+        A list of keys to skip when converting strings to quantities
 
     Returns
     -------
