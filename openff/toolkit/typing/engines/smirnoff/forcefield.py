@@ -994,7 +994,7 @@ class ForceField:
                 exception_type = type(e)
                 exception_context = "while trying to parse source as an object"
                 exception_msg = e.msg
-            except (FileNotFoundError, OSError):
+            except OSError:
                 # If this is not a file path or a file handle, attempt parsing as a string.
                 # TODO: Do we actually support parsing bytes?
                 try:

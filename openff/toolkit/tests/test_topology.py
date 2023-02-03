@@ -51,6 +51,7 @@ from openff.toolkit.utils import (
 )
 from openff.toolkit.utils.exceptions import (
     AtomNotInTopologyError,
+    BondNotInTopologyError,
     DuplicateUniqueMoleculeError,
     IncompatibleUnitError,
     InvalidBoxVectorsError,
@@ -271,8 +272,6 @@ class TestTopology:
         """Test Topology.atom function (atom lookup from index)"""
         topology = Topology()
         topology.add_molecule(ethane_from_smiles())
-        with pytest.raises(Exception):
-            topology.atom(-1)
 
         # Make sure we get 2 carbons and 8 hydrogens
         n_carbons = 0
@@ -285,7 +284,13 @@ class TestTopology:
         assert n_carbons == 2
         assert n_hydrogens == 6
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError, match="must be an int.*'str'"):
+            topology.atom("one")
+
+        with pytest.raises(AtomNotInTopologyError):
+            topology.atom(-1)
+
+        with pytest.raises(AtomNotInTopologyError):
             topology.atom(8)
 
     def test_atom_index(self):
@@ -336,8 +341,6 @@ class TestTopology:
         topology = Topology()
         topology.add_molecule(ethane_from_smiles())
         topology.add_molecule(ethene_from_smiles())
-        with pytest.raises(Exception):
-            topology.bond(-1)
 
         n_single_bonds = 0
         n_double_bonds = 0
@@ -366,7 +369,13 @@ class TestTopology:
         assert n_cc_bonds == 2
         assert n_ch_bonds == 10
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError, match="must be an int.*'str'"):
+            topology_bond = topology.bond("one")
+
+        with pytest.raises(BondNotInTopologyError, match="No bond with index -1"):
+            topology.bond(-1)
+
+        with pytest.raises(BondNotInTopologyError, match="No bond with index 12"):
             topology_bond = topology.bond(12)
 
     def test_angles(self):

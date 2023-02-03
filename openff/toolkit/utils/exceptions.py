@@ -120,12 +120,20 @@ class AtomNotInTopologyError(NotInTopologyError):
     """An atom was not found in a topology."""
 
 
+class BondNotInTopologyError(NotInTopologyError):
+    """An bond was not found in a topology."""
+
+
 class MoleculeNotInTopologyError(NotInTopologyError):
     """A molecule was not found in a topology."""
 
 
 class InvalidAtomMetadataError(OpenFFToolkitException):
     """The program attempted to set atom metadata to an invalid type"""
+
+
+class BondExistsError(OpenFFToolkitException):
+    """The program attempted to add a bond that already exists"""
 
 
 class DuplicateUniqueMoleculeError(OpenFFToolkitException):

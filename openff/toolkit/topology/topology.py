@@ -49,6 +49,7 @@ from openff.toolkit.utils.constants import (
 )
 from openff.toolkit.utils.exceptions import (
     AtomNotInTopologyError,
+    BondNotInTopologyError,
     DuplicateUniqueMoleculeError,
     IncompatibleUnitError,
     InvalidAromaticityModelError,
@@ -2289,8 +2290,18 @@ class Topology(Serializable):
         -------
         An openff.toolkit.topology.TopologyAtom
         """
-        assert type(atom_topology_index) is int
-        assert 0 <= atom_topology_index < self.n_atoms
+        if not isinstance(atom_topology_index, int):
+            raise ValueError(
+                "Argument passed to `Topology.atom` must be an int. "
+                f"Given argument of type {type(atom_topology_index)}."
+            )
+
+        if not (0 <= atom_topology_index < self.n_atoms):
+            raise AtomNotInTopologyError(
+                f"No atom with index {atom_topology_index} exists in this topology, "
+                f"which contains {self.n_atoms} atoms."
+            )
+
         this_molecule_start_index = 0
         next_molecule_start_index = 0
         for molecule in self.molecules:
@@ -2324,9 +2335,24 @@ class Topology(Serializable):
         Returns
         -------
         An openff.toolkit.topology.TopologyBond
+
+        Raises
+        ------
+        ValueError if bond_topology_index is not an int
+        BondNotInTopologyError if bond_topology_index is not in the range [0, self.n_bonds)
         """
-        assert type(bond_topology_index) is int
-        assert 0 <= bond_topology_index < self.n_bonds
+        if not isinstance(bond_topology_index, int):
+            raise ValueError(
+                "Argument passed to `Topology.bond` must be an int. "
+                f"Given argument of type {type(bond_topology_index)}."
+            )
+
+        if not (0 <= bond_topology_index < self.n_bonds):
+            raise BondNotInTopologyError(
+                f"No bond with index {bond_topology_index} exists in this topology, "
+                f"which contains {self.n_bonds} bonds."
+            )
+
         this_molecule_start_index = 0
         next_molecule_start_index = 0
         for molecule in self._molecules:

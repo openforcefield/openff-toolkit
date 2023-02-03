@@ -54,6 +54,7 @@ from typing_extensions import TypeAlias
 
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
+    BondExistsError,
     HierarchySchemeNotFoundException,
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
     IncompatibleUnitError,
@@ -2866,7 +2867,7 @@ class FrozenMolecule(Serializable):
             )
         # TODO: Check to make sure bond does not already exist
         if atom1_atom.is_bonded_to(atom2_atom):
-            raise Exception(
+            raise BondExistsError(
                 f"Bond already exists between {atom1_atom} and {atom2_atom})"
             )
         bond = Bond(
