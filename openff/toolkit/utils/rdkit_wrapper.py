@@ -1524,7 +1524,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Apply the greedy selection process.
         selected_indices = [0]
         angstrom_tol = rms_tolerance.m_as(unit.angstrom)
-        for i in range(min(limit, molecule.n_conformers) - 1):
+        for _ in range(min(limit, molecule.n_conformers) - 1):
             selected_rms = rms_matrix[selected_indices]
             any_too_close = np.any(selected_rms < angstrom_tol, axis=0)
             if np.all(any_too_close):

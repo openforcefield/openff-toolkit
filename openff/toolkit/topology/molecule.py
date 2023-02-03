@@ -5450,7 +5450,7 @@ class Molecule(FrozenMolecule):
             substructure_dictionary_no_chirality = deepcopy(substructure_dictionary)
             # Update inner key (SMARTS) maintaining its value
             for res_name, inner_dict in substructure_dictionary.items():
-                for smarts, atom_types in inner_dict.items():
+                for smarts in inner_dict:
                     smarts_no_chirality = smarts.replace("@", "")  # remove @ in smarts
                     substructure_dictionary_no_chirality[res_name][
                         smarts_no_chirality

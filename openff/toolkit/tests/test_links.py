@@ -44,7 +44,7 @@ def test_readme_links(readme_link):
     # Try to connect 5 times, keeping track of exceptions so useful feedback can be provided.
     success = False
     exception = None
-    for retry in range(5):
+    for retry in range(5):  # noqa: B007
         try:
             urlopen(request)
             success = True

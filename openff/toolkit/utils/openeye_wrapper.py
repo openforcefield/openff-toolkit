@@ -594,7 +594,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         if (file_format.lower() == "sdf") and oemol.NumConfs() > 1:
             conf1 = [conf for conf in oemol.GetConfs()][0]
             flat_coords = list()
-            for idx, coord in conf1.GetCoords().items():
+            for coord in conf1.GetCoords().values():
                 flat_coords.extend(coord)
             oemol.DeleteConfs()
             oecoords = oechem.OEFloatArray(flat_coords)

@@ -1061,7 +1061,7 @@ class TestForceField(_ForceFieldFixtures):
                 # Ensure that, for example, F isn't converted to Farad
                 if (
                     parameter_handler_name == "LibraryCharges"
-                    and getattr(parameter, "name") is not None
+                    and parameter.name is not None
                 ):
                     assert isinstance(parameter.name, str)
                     assert not isinstance(parameter.name, unit.Quantity)
@@ -3271,9 +3271,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
             # Leave the fourth molecule where it is.
         ]
         current_atom_idx = 0
-        for mol_idx, (translate_vector, mol) in enumerate(
-            zip(translate_vectors, molecules)
-        ):
+        for translate_vector, mol in zip(translate_vectors, molecules):
             n_mol_atoms = len(mol.atoms)
             positions[
                 current_atom_idx : current_atom_idx + n_mol_atoms

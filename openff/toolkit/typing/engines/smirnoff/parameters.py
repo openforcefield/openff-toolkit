@@ -3675,7 +3675,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         assigned_matches_by_parent = defaultdict(list)
 
         for parent_index, matches_by_name in matches_by_parent.items():
-            for name, matches in matches_by_name.items():
+            for matches in matches_by_name.values():
                 assigned_parameter, _ = matches[-1]  # last match wins
 
                 match_orientations = [

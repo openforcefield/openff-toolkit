@@ -739,7 +739,7 @@ def get_molecule_parameterIDs(molecules, forcefield):
         # Organize data for this molecule
         data = labels[idx]
         for force_type in data.keys():
-            for atom_indices, parameter_type in data[force_type].items():
+            for parameter_type in data[force_type].values():
                 pid = parameter_type.id
                 # Store pid to molecule
                 parameters_by_molecule[smi].append(pid)

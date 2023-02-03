@@ -318,11 +318,11 @@ class TestOpenEyeToolkitWrapper:
         unspec_db_smiles = r"CC(F)=C(F)C[C@@](C)(Cl)Br"
         spec_db_smiles = r"C\C(F)=C(/F)C[C@@](C)(Cl)Br"
 
-        for title, smiles, raises_exception in [
-            ("unspec_chiral_smiles", unspec_chiral_smiles, True),
-            ("spec_chiral_smiles", spec_chiral_smiles, False),
-            ("unspec_db_smiles", unspec_db_smiles, True),
-            ("spec_db_smiles", spec_db_smiles, False),
+        for smiles, raises_exception in [
+            (unspec_chiral_smiles, True),
+            (spec_chiral_smiles, False),
+            (unspec_db_smiles, True),
+            (spec_db_smiles, False),
         ]:
             if raises_exception:
                 with pytest.raises(UndefinedStereochemistryError):
