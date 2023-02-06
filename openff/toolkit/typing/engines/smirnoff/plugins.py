@@ -22,7 +22,9 @@ where in this example your package is named ``myapp`` and contains a class which
 inherits from ``ParameterHandler`` named ``CustomHandler``.
 """
 import logging
-from typing import List, Type, TypeAlias
+from typing import List, Type
+
+from typing_extensions import TypeAlias
 
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 
