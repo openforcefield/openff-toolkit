@@ -49,7 +49,10 @@ def _load_handler_plugins(handler_name: str, expected_type):
     discovered_plugins = []
 
     if handler_name not in SUPPORTED_PLUGIN_NAMES:
-        raise NotImplementedError()
+        raise NotImplementedError(
+            f"Plugins named {handler_name} not supported. The list of currently "
+            f"supported plugin names is: {SUPPORTED_PLUGIN_NAMES}."
+        )
 
     for entry_point in entry_points().select(
         group=f"openff.toolkit.plugins.{handler_name}"
