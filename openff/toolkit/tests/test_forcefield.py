@@ -1967,9 +1967,9 @@ class TestForceFieldPluginLoading:
 
         plugins = load_handler_plugins()
 
-        # This might need to be updated if we ship, by default, other plugins
-
-        assert len(plugins) == 1, "that 1 ParameterHandler plugin is available"
+        assert (
+            len(plugins) > 1
+        ), "Test assumes that some ParameterHandler plugins are available"
 
         assert ForceField(load_plugins=False)._plugin_parameter_handler_classes == []
         assert ForceField(load_plugins=True)._plugin_parameter_handler_classes == [

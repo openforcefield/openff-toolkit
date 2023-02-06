@@ -309,11 +309,11 @@ class ForceField:
             parameter_handler_classes = default_handlers
 
         if load_plugins:
-            plugins = load_handler_plugins()
+            plugin_classes = load_handler_plugins()
 
-            for plugin in plugins:
-                parameter_handler_classes.append(plugin)
-                self._plugin_parameter_handler_classes.append(plugin)
+            for plugin_class in plugin_classes:
+                parameter_handler_classes.append(plugin_class)
+                self._plugin_parameter_handler_classes.append(plugin_class)
 
         self._register_parameter_handler_classes(parameter_handler_classes)
 
