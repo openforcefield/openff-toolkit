@@ -288,13 +288,14 @@ class ForceField:
         # since both will try to register themselves for the same XML tag and an Exception will be raised.
         if parameter_handler_classes is None:
             parameter_handler_classes = all_subclasses(ParameterHandler)
+
         if load_plugins:
             plugin_classes = load_handler_plugins()
 
             for handler in plugin_classes:
                 if handler not in parameter_handler_classes:
                     parameter_handler_classes.append(handler)
-                    self._plugin_parameter_handler_classes.append(handler)
+                self._plugin_parameter_handler_classes.append(handler)
 
         self._register_parameter_handler_classes(parameter_handler_classes)
 
