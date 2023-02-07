@@ -38,6 +38,7 @@ from typing import (
     Generator,
     List,
     Optional,
+    Sequence,
     Set,
     TextIO,
     Tuple,
@@ -5760,7 +5761,11 @@ class HierarchyScheme:
 
         self.sort_hierarchy_elements()
 
-    def add_hierarchy_element(self, identifier, atom_indices):
+    def add_hierarchy_element(
+        self,
+        identifier: Tuple[str, int],
+        atom_indices: Sequence[int],
+    ):
         """
         Instantiate a new HierarchyElement belonging to this HierarchyScheme.
 
@@ -5771,7 +5776,7 @@ class HierarchyScheme:
         identifier : tuple of str and int
             Tuple of metadata values (not keys) that define the uniqueness
             criteria for this element
-        atom_indices : iterable int
+        atom_indices : sequence of int
             The indices of atoms in ``scheme.parent`` that are in this
             element
         """
@@ -5789,11 +5794,17 @@ class HierarchyScheme:
             """Sort by int-like tags, using version.Version as a quick hack."""
             tag = ""
             for i in x.identifier:
-                try:
-                    int(i)
-                except ValueError:
-                    continue
-                tag += i + "."
+                if isinstance(i, int):
+                    _str_i = str(i)
+                elif isinstance(i, str):
+                    try:
+                        int(i)
+                    except ValueError:
+                        continue
+                    _str_i = i
+                else:
+                    raise Exception(f"Unexpected type {type(i)} as identifier")
+                tag += _str_i + "."
 
             if tag.endswith("."):
                 tag = tag[:-1]
@@ -5819,7 +5830,7 @@ class HierarchyElement:
         self,
         scheme: HierarchyScheme,
         identifier: Tuple[str, int],
-        atom_indices: List[int],
+        atom_indices: Sequence[int],
     ):
         """
         Create a new hierarchy element.
@@ -5832,7 +5843,7 @@ class HierarchyElement:
         identifier : tuple of str and int
             Tuple of metadata values (not keys) that define the uniqueness
             criteria for this element
-        atom_indices : list of int
+        atom_indices : sequence of int
             The indices of particles in ``scheme.parent`` that are in this
             element
         """
@@ -5844,7 +5855,7 @@ class HierarchyElement:
         ):
             setattr(self, uniqueness_component, id_component)
 
-    def to_dict(self) -> Dict[str, Union[Tuple[str, int], List[int]]]:
+    def to_dict(self) -> Dict[str, Union[Tuple[str, int], Sequence[int]]]:
         """
         Serialize this object to a basic dict of strings and lists of ints.
         """
