@@ -5785,9 +5785,20 @@ class HierarchyScheme:
         their identifiers.
         """
 
-        # hard-code the sort_func value here, since it's hard to serialize safely
         def sort_func(x):
-            return version.parse(".".join([str(i) for i in x.identifier]))
+            """Sort by int-like tags, using version.Version as a quick hack."""
+            tag = ""
+            for i in x.identifier:
+                try:
+                    int(i)
+                except ValueError:
+                    continue
+                tag += i + "."
+
+            if tag.endswith("."):
+                tag = tag[:-1]
+
+            return version.parse(tag)
 
         self.hierarchy_elements.sort(key=sort_func)
 
