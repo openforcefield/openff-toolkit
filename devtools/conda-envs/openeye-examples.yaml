@@ -6,7 +6,7 @@ dependencies:
     # Base depends
   - python
   - pip
-  - packaging =23
+  - packging
   - numpy
   - networkx
   - cachetools
