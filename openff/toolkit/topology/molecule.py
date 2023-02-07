@@ -5790,7 +5790,7 @@ class HierarchyScheme:
         their identifiers.
         """
 
-        def sort_func(x):
+        def sort_func(x: HierarchyElement) -> version.Version:
             """Sort by int-like tags, using version.Version as a quick hack."""
             tag = ""
             for i in x.identifier:
@@ -5807,9 +5807,11 @@ class HierarchyScheme:
                 tag += _str_i + "."
 
             if tag.endswith("."):
-                tag = tag[:-1]
-
-            return version.parse(tag)
+                # If something was smooshed together, return that without the trailing dot,
+                return version.Version(tag[:-1])
+            else:
+                # otherwise just return a zero version placeholder
+                return version.Version("0")
 
         self.hierarchy_elements.sort(key=sort_func)
 
