@@ -4497,3 +4497,21 @@ class TestHierarchies:
         assert ("A", "1", " ", "ACE") == dipeptide_hierarchy_perceived.residues[
             0
         ].identifier
+
+    def test_hierarchy_element_sorting(self):
+        """Ensure that hierarchy elements are sorted correctly"""
+        from openff.toolkit.tests.create_molecules import (
+            dipeptide_hierarchy_added as create_dipeptide,
+        )
+
+        dipeptide_hierarchy_perceived = create_dipeptide()
+
+        # Add one atom to chain "Z", force an update of the hierarchy schemes,
+        # and ensure that the last residue in the iterator is now chain "Z"
+        dipeptide_hierarchy_perceived.atoms[1].metadata["chain_id"] = "Z"
+        dipeptide_hierarchy_perceived.atoms[2].metadata["residue_number"] = 999
+        dipeptide_hierarchy_perceived.atoms[3].metadata["residue_name"] = "ZZZ"
+        dipeptide_hierarchy_perceived.update_hierarchy_schemes()
+        assert dipeptide_hierarchy_perceived.residues[-1].chain_id == "Z"
+        assert dipeptide_hierarchy_perceived.residues[-2].residue_number == 999
+        assert dipeptide_hierarchy_perceived.residues[-4].residue_name == "ZZZ"
