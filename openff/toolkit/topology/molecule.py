@@ -50,7 +50,6 @@ import numpy as np
 from openff.units import Quantity, unit
 from openff.units.elements import MASSES, SYMBOLS
 from openff.utilities.exceptions import MissingOptionalDependencyError
-from packaging import version
 from typing_extensions import TypeAlias
 
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
@@ -5789,31 +5788,7 @@ class HierarchyScheme:
         Semantically sort the HierarchyElements belonging to this object, according to
         their identifiers.
         """
-
-        def sort_func(x: HierarchyElement) -> version.Version:
-            """Sort by int-like tags, using version.Version as a quick hack."""
-            tag = ""
-            for i in x.identifier:
-                if isinstance(i, int):
-                    _str_i = str(i)
-                elif isinstance(i, str):
-                    try:
-                        int(i)
-                    except ValueError:
-                        continue
-                    _str_i = i
-                else:
-                    raise Exception(f"Unexpected type {type(i)} as identifier")
-                tag += _str_i + "."
-
-            if tag.endswith("."):
-                # If something was smooshed together, return that without the trailing dot,
-                return version.Version(tag[:-1])
-            else:
-                # otherwise just return a zero version placeholder
-                return version.Version("0")
-
-        self.hierarchy_elements.sort(key=sort_func)
+        self.hierarchy_elements.sort(key=lambda x: str([*x.identifier]))
 
     def __str__(self):
         return (
