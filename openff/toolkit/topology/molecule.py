@@ -5810,7 +5810,7 @@ class HierarchyScheme:
                 except ValueError:
                     x.append(identifier)
 
-            return tuple()
+            return tuple(x)
 
         if True:
             # Using chain- and residue-specific sorting functions might be safer against some corner
