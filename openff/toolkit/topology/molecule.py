@@ -5812,7 +5812,7 @@ class HierarchyScheme:
 
             return tuple()
 
-        if False:
+        if True:
             # Using chain- and residue-specific sorting functions might be safer against some corner
             # cases, but the logic built into the fallback `_sort_other` works for existing tests
             _sort_functions = {
