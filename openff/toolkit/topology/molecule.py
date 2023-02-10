@@ -5798,7 +5798,10 @@ class HierarchyScheme:
                     keys.append(int(identifier))  # type: ignore[call-overload]
                 except ValueError:
                     assert isinstance(identifier, str)
-                    keys.append(identifier)
+                    if identifier == "None":
+                        keys.append(0)
+                    else:
+                        keys.append(identifier)
 
             return tuple(keys)
 
