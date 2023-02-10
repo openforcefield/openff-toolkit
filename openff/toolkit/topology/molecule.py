@@ -5789,42 +5789,20 @@ class HierarchyScheme:
         their identifiers.
         """
 
-        def _sort_chains(element: HierarchyScheme) -> str:
-            return str(element.identifier[0])
-
-        def _sort_residues(element: HierarchyScheme) -> tuple[str, int]:
-            return (
-                str(element.identifier[0]),
-                int(element.identifier[1]),
-                str(element.identifier[2]),
-                str(element.identifier[3]),
-            )
-
-        def _sort_other(element: HierarchyScheme) -> tuple[str, int]:
-            x = list()
+        def _sort(element: HierarchyElement) -> Tuple[Union[str, int], ...]:
+            keys: List[Union[str, int]] = list()
             for identifier in element.identifier:
                 # If an identifier is int-ish, cast it to int,
                 # otherwise let it remain as a string
                 try:
-                    x.append(int(identifier))
+                    keys.append(int(identifier))  # type: ignore[call-overload]
                 except ValueError:
-                    x.append(identifier)
+                    assert isinstance(identifier, str)
+                    keys.append(identifier)
 
-            return tuple(x)
+            return tuple(keys)
 
-        if True:
-            # Using chain- and residue-specific sorting functions might be safer against some corner
-            # cases, but the logic built into the fallback `_sort_other` works for existing tests
-            _sort_functions = {
-                "chains": _sort_chains,
-                "residues": _sort_residues,
-            }
-
-            self.hierarchy_elements.sort(
-                key=_sort_functions.get(self.iterator_name, _sort_other)
-            )
-        else:
-            self.hierarchy_elements.sort(key=_sort_other)
+        self.hierarchy_elements.sort(key=_sort)
 
     def __str__(self):
         return (
