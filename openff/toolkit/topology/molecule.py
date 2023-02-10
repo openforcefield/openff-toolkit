@@ -5790,6 +5790,10 @@ class HierarchyScheme:
         """
 
         def _force_int(value: Union[str, int]) -> int:
+            """
+            Given an in or a string that looks like an int (`"1"`, `"2"`, etc.), return an int.
+            `"None"` and empty strings are treated as 0.
+            """
             if isinstance(value, int):
                 return value
             elif isinstance(value, str):
@@ -5806,23 +5810,30 @@ class HierarchyScheme:
                 raise TypeError(f"value expected to be str or int, found {type(value)}")
 
         def _sort_chains(element: HierarchyElement) -> str:
+            """Sort chains, who have only one element (the chain ID)"""
             return str(element.identifier[0])
 
         def _sort_residues(element: HierarchyElement) -> Tuple[Union[str, int]]:
-            return tuple(
-                _force_int(identifier)
-                if criteria == "residue_number"
-                else str(identifier)
-                for identifier, criteria in zip(
+            """
+            Sort residues, whose elements are fine as str except for residue_number which must be handled
+            as a special case given the set of possible values."""
+            return tuple(  # type: ignore[return-value]
+                _force_int(id) if criteria == "residue_number" else str(id)  # type: ignore[arg-type]
+                for id, criteria in zip(
                     element.identifier, element.scheme.uniqueness_criteria
                 )
             )
 
-        def _sort_other(element: HierarchyElement) -> Tuple[Union[str, int]]:
-            x = list()
+        def _sort_other(element: HierarchyElement) -> Tuple[Union[str, int], ...]:
+            """
+            A best-effort attempt to sort schemes that aren't chains or residues.
+            If it looks like an int, cast it to an int, otherwise leave it as a string.
+            """
+            x: List[Union[str, int]] = list()
             for identifier in element.identifier:
                 # If an identifier is int-ish, cast it to int,
                 # otherwise let it remain as a string
+                assert isinstance(identifier, (int, str))
                 try:
                     x.append(int(identifier))
                 except ValueError:
@@ -5830,19 +5841,16 @@ class HierarchyScheme:
 
             return tuple(x)
 
-        if True:
-            # Using chain- and residue-specific sorting functions might be safer against some corner
-            # cases, but the logic built into the fallback `_sort_other` works for existing tests
-            _sort_functions = {
-                "chains": _sort_chains,
-                "residues": _sort_residues,
-            }
+        # Using chain- and residue-specific sorting functions might be safer against some corner
+        # cases, but the logic built into the fallback `_sort_other` works for existing tests
+        _sort_functions = {
+            "chains": _sort_chains,
+            "residues": _sort_residues,
+        }
 
-            self.hierarchy_elements.sort(
-                key=_sort_functions.get(self.iterator_name, _sort_other)
-            )
-        else:
-            self.hierarchy_elements.sort(key=_sort_other)
+        self.hierarchy_elements.sort(
+            key=_sort_functions.get(self.iterator_name, _sort_other)
+        )
 
     def __str__(self):
         return (
