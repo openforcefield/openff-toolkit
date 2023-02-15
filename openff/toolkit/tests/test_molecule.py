@@ -1838,7 +1838,6 @@ class TestMolecule:
                     return molecule.atom(index).name
                 except (TypeError, IndexError):
                     return default
-                assert False, "Unreachable"
 
             # Check the updated atom map
             expected_atom_map_with_names = {

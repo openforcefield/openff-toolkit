@@ -1102,7 +1102,7 @@ def _merge_impropers_folds(improper_parameters):
     See _get_torsion_force_parameters.
 
     """
-    for improper_key, improper_comparer in improper_parameters.items():
+    for improper_comparer in improper_parameters.values():
         # Group parameters by periodicity and phase and sum force constants.
         for comparer2_idx in reversed(range(1, len(improper_comparer.parameters))):
             parameter_comparer2 = improper_comparer.parameters[comparer2_idx]

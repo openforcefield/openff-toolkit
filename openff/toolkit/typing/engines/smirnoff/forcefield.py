@@ -823,7 +823,7 @@ class ForceField:
         if not (self._date is None):
             l1_dict["Date"] = self._date
 
-        for handler_format, parameter_handler in self._parameter_handlers.items():
+        for parameter_handler in self._parameter_handlers.values():
             handler_tag = parameter_handler._TAGNAME
             l1_dict[handler_tag] = parameter_handler.to_dict(
                 discard_cosmetic_attributes=discard_cosmetic_attributes
@@ -1278,7 +1278,7 @@ class ForceField:
         # TODO: This was previously ... enumerate(topology.reference_molecules). It's currently
         # unclear if this should be topology.unique_molecules instead, since that might be faster
         # (if also modifying this to label _all_ duplicates of each unique molecule)
-        for molecule_idx, molecule in enumerate(topology.molecules):
+        for molecule in topology.molecules:
             top_mol = Topology.from_molecules([molecule])
             current_molecule_labels = dict()
             for tag, parameter_handler in self._parameter_handlers.items():
