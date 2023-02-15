@@ -5846,7 +5846,7 @@ class HierarchyElement:
     def __init__(
         self,
         scheme: HierarchyScheme,
-        identifier: Tuple[str, int],
+        identifier: Tuple[Union[str, int]],
         atom_indices: Sequence[int],
     ):
         """
