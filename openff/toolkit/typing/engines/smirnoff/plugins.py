@@ -50,7 +50,10 @@ def _load_handler_plugins(handler_name: str, expected_type) -> List[Type]:
     from importlib_metadata import entry_points
 
     if handler_name not in SUPPORTED_PLUGIN_NAMES:
-        raise NotImplementedError()
+        raise NotImplementedError(
+            f"Plugins named {handler_name} not supported. The list of currently "
+            f"supported plugin names is: {SUPPORTED_PLUGIN_NAMES}."
+        )
 
     PluginType: TypeAlias = Type[ParameterHandler]
 
