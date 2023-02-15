@@ -27,7 +27,7 @@ import logging
 import os
 import pathlib
 import warnings
-from typing import TYPE_CHECKING, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, List, Optional, Tuple, Type, Union
 
 from packaging.version import Version
 
@@ -242,7 +242,8 @@ class ForceField:
             The aromaticity model to use. Only OEAroModel_MDL is supported.
         parameter_handler_classes : iterable of ParameterHandler classes, optional, default=None
             If not None, the specified set of ParameterHandler classes will be instantiated to create the parameter
-            object model.  By default, all imported subclasses of ParameterHandler are automatically registered.
+            object model.  By default, all imported subclasses of ParameterHandler not loaded as plugins are
+            automatically registered.
         parameter_io_handler_classes : iterable of ParameterIOHandler classes
             If not None, the specified set of ParameterIOHandler classes will be used to parse/generate serialized
             parameter sets.  By default, all imported subclasses of ParameterIOHandler are automatically registered.
@@ -287,14 +288,32 @@ class ForceField:
         # otherwise, we can't define two different ParameterHandler subclasses to compare for a new type of energy term
         # since both will try to register themselves for the same XML tag and an Exception will be raised.
         if parameter_handler_classes is None:
-            parameter_handler_classes = all_subclasses(ParameterHandler)
+            # TODO: What is the point of this argument? The default behavior includes a lot of logic.
+            #       Unaware of cases in which the argument is used.
+
+            internal_module = "openff.toolkit.typing.engines.smirnoff.parameters"
+
+            # Plugins, if already loaded, are also subclasses of ParameterHandler and therefore
+            # show up in all_subclasses, but we don't want them included here. Checking the
+            # module each come from is the safest way to know which are plugins; another
+            # option is explicitly defining a set of default handlers
+
+            default_handlers: List[Type[ParameterHandler]] = [
+                handler
+                for handler in all_subclasses(ParameterHandler)
+                if handler.__module__ == internal_module
+            ]
+
+            # We could also track a list of the plugins that were already loaded, but that's not necessary here
+            # since we're only cleaning out the handlers that were already registered.
+            parameter_handler_classes = default_handlers
+
         if load_plugins:
             plugin_classes = load_handler_plugins()
 
-            for handler in plugin_classes:
-                if handler not in parameter_handler_classes:
-                    parameter_handler_classes.append(handler)
-                    self._plugin_parameter_handler_classes.append(handler)
+            for plugin_class in plugin_classes:
+                parameter_handler_classes.append(plugin_class)
+                self._plugin_parameter_handler_classes.append(plugin_class)
 
         self._register_parameter_handler_classes(parameter_handler_classes)
 

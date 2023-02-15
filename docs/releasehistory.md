@@ -17,6 +17,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1498](https://github.com/openforcefield/openff-toolkit/pull/1498): New, more complete, and more descriptive errors for `Molecule.remap()`.
 - [PR #1525](https://github.com/openforcefield/openff-toolkit/pull/1525): Some unrelesed force fields previously accesible from `"openff/toolkit/data/test_forcefields/"` are no longer implicitly available to the `ForceField` constructor.
 
+### Bugfixes
+
+- [PR #1543](https://github.com/openforcefield/openff-toolkit/pull/1543): Fixes a bug in which plugins are not loaded if a `ForceField` is constructed prior without plugins.
+
 ### Improved documentation and warnings
 - [PR #1498](https://github.com/openforcefield/openff-toolkit/pull/1498): Improved documentation for `Molecule.remap()`, `Molecule.from_smiles()`, and `Molecule.from_mapped_smiles()`, emphasizing the relationships between these methods. In particular, the documentation now clearly states that `from_smiles()` will not reorder atoms based on SMILES atom mapping.
 - [PR #1525](https://github.com/openforcefield/openff-toolkit/pull/1525): Improves reporting failures when loading force fields.

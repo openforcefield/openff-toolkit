@@ -40,6 +40,7 @@ dependencies:
   - ipywidgets =7
   - nbval
   - mypy
+  - typing_extensions
   - pip:
     - types-pkg_resources
     - types-setuptools
