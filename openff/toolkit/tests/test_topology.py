@@ -622,8 +622,7 @@ class TestTopology:
             assert atom.atomic_number == atom_copy.atomic_number
 
         # Check bonds.
-        for bond_idx, bond in enumerate(off_topology.bonds):
-            # bond_copy = off_topology_copy.bond(bond_idx)
+        for bond in off_topology.bonds:
             bond_copy = off_topology_copy.get_bond_between(
                 off_topology.atom_index(bond.atoms[0]),
                 off_topology.atom_index(bond.atoms[1]),
