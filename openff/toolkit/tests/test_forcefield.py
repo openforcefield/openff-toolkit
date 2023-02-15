@@ -1960,6 +1960,23 @@ class TestForceField(_ForceFieldFixtures):
         assert force_field["bogus"] is not None
 
 
+class TestForceFieldPluginLoading:
+    def test_handlers_tracked_if_already_loaded(self):
+        """Reproduce issue #1542."""
+        from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
+
+        plugins = load_handler_plugins()
+
+        assert (
+            len(plugins) > 0
+        ), "Test assumes that some ParameterHandler plugins are available"
+
+        assert ForceField(load_plugins=False)._plugin_parameter_handler_classes == []
+        assert ForceField(load_plugins=True)._plugin_parameter_handler_classes == [
+            *plugins
+        ]
+
+
 class TestForceFieldSerializaiton(_ForceFieldFixtures):
     def test_json_dump(self, force_field):
         """Test that at a ForceField can at least be dumped to JSON without error."""

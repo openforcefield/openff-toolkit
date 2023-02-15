@@ -4,7 +4,10 @@ Test classes and function in module openff.toolkit.typing.engines.smirnoff.plugi
 import pytest
 
 from openff.toolkit.typing.engines.smirnoff import ForceField
-from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
+from openff.toolkit.typing.engines.smirnoff.plugins import (
+    _load_handler_plugins,
+    load_handler_plugins,
+)
 
 
 def test_force_field_custom_handler():
@@ -48,3 +51,17 @@ def test_load_handler_plugins():
 
     assert len(registered_plugins) == 1
     assert registered_plugins[0].__name__ == "CustomHandler"
+
+
+def test_do_not_load_other_type():
+    with pytest.raises(NotImplementedError, match="foobar"):
+        _load_handler_plugins(handler_name="foobar", expected_type=type(None))
+
+
+def test_skip_wrong_subclass(caplog):
+    import logging
+
+    caplog.set_level(logging.INFO)
+    load_handler_plugins()
+
+    assert "does not inherit from ParameterHandler" in caplog.text

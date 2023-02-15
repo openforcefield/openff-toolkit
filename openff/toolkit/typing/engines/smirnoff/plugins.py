@@ -22,6 +22,9 @@ where in this example your package is named ``myapp`` and contains a class which
 inherits from ``ParameterHandler`` named ``CustomHandler``.
 """
 import logging
+from typing import List, Type
+
+from typing_extensions import TypeAlias
 
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 
@@ -30,7 +33,7 @@ logger = logging.getLogger(__name__)
 SUPPORTED_PLUGIN_NAMES = ["handlers"]  # io_handlers could be supported in future.
 
 
-def _load_handler_plugins(handler_name: str, expected_type):
+def _load_handler_plugins(handler_name: str, expected_type) -> List[Type]:
     """Loads parameter handler plugins of a specified type which have been registered
     with the ``entrypoint`` plugin system.
 
@@ -46,10 +49,15 @@ def _load_handler_plugins(handler_name: str, expected_type):
     """
     from importlib_metadata import entry_points
 
-    discovered_plugins = []
-
     if handler_name not in SUPPORTED_PLUGIN_NAMES:
-        raise NotImplementedError()
+        raise NotImplementedError(
+            f"Plugins named {handler_name} not supported. The list of currently "
+            f"supported plugin names is: {SUPPORTED_PLUGIN_NAMES}."
+        )
+
+    PluginType: TypeAlias = Type[ParameterHandler]
+
+    discovered_plugins: List[PluginType] = list()
 
     for entry_point in entry_points().select(
         group=f"openff.toolkit.plugins.{handler_name}"
@@ -60,7 +68,8 @@ def _load_handler_plugins(handler_name: str, expected_type):
             logger.exception(f"Could not load the {entry_point} plugin")
             continue
 
-    valid_plugins = []
+    valid_plugins: List[PluginType] = list()
+
     for discovered_plugin in discovered_plugins:
         if not issubclass(discovered_plugin, expected_type):
             logger.info(
@@ -75,7 +84,7 @@ def _load_handler_plugins(handler_name: str, expected_type):
     return valid_plugins
 
 
-def load_handler_plugins():
+def load_handler_plugins() -> List[Type[ParameterHandler]]:
     """Loads any ``ParameterHandler`` class plugins which have been registered through
     the ``entrypoint`` plugin system.
 
