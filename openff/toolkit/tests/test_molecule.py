@@ -41,6 +41,7 @@ from openff.toolkit.tests.utils import (
 )
 from openff.toolkit.topology.molecule import (
     Atom,
+    BondExistsError,
     FrozenMolecule,
     HierarchyElement,
     HierarchySchemeNotFoundException,
@@ -3097,7 +3098,7 @@ class TestMolecule:
                 fractional_bond_order=bond.fractional_bond_order,
             )
         # Try to add the final bond twice, which should raise an Exception
-        with pytest.raises(Exception):
+        with pytest.raises(BondExistsError):
             molecule_copy.add_bond(
                 bond.atom1_index,
                 bond.atom2_index,
