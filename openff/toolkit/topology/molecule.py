@@ -30,6 +30,7 @@ import pathlib
 import warnings
 from collections import UserDict
 from copy import deepcopy
+from functools import cmp_to_key
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -5762,7 +5763,7 @@ class HierarchyScheme:
 
     def add_hierarchy_element(
         self,
-        identifier: Tuple[str, int],
+        identifier: Tuple[Union[str, int]],
         atom_indices: Sequence[int],
     ):
         """
@@ -5789,68 +5790,45 @@ class HierarchyScheme:
         their identifiers.
         """
 
-        def _force_int(value: Union[str, int]) -> int:
-            """
-            Given an in or a string that looks like an int (`"1"`, `"2"`, etc.), return an int.
-            `"None"` and empty strings are treated as 0.
-            """
-            if isinstance(value, int):
-                return value
-            elif isinstance(value, str):
-                if value == "None" or len(value.strip()) == 0:
-                    return 0
-                else:
-                    try:
-                        return int(value)
-                    except ValueError as error:
-                        raise ValueError(
-                            "residue number expected to be int or int-like, found {value}"
-                        ) from error
-            else:
-                raise TypeError(f"value expected to be str or int, found {type(value)}")
+        def compare_hier_identifiers(a, b):
+            """A comparison function which can compare hierarchy elements.
+            Expects identifiers to be tuples of string and int.
+            Attempts to cast strings to int. Assumes that ints are "greater than" strings.
 
-        def _sort_chains(element: HierarchyElement) -> str:
-            """Sort chains, who have only one element (the chain ID)"""
-            return str(element.identifier[0])
+            Returns -1 if a < b, 0 if a==b, and 1 if a>b.
 
-        def _sort_residues(element: HierarchyElement) -> Tuple[Union[str, int]]:
+            See https://docs.python.org/3/howto/sorting.html#comparison-functions
             """
-            Sort residues, whose elements are fine as str except for residue_number which must be handled
-            as a special case given the set of possible values."""
-            return tuple(  # type: ignore[return-value]
-                _force_int(id) if criteria == "residue_number" else str(id)  # type: ignore[arg-type]
-                for id, criteria in zip(
-                    element.identifier, element.scheme.uniqueness_criteria
-                )
-            )
 
-        def _sort_other(element: HierarchyElement) -> Tuple[Union[str, int], ...]:
-            """
-            A best-effort attempt to sort schemes that aren't chains or residues.
-            If it looks like an int, cast it to an int, otherwise leave it as a string.
-            """
-            x: List[Union[str, int]] = list()
-            for identifier in element.identifier:
-                # If an identifier is int-ish, cast it to int,
-                # otherwise let it remain as a string
-                assert isinstance(identifier, (int, str))
+            # Iterate over identifier components for comparison
+            for val1, val2 in zip(a.identifier, b.identifier):
+                # Try converting strings to ints
                 try:
-                    x.append(int(identifier))
+                    val1 = int(val1)
                 except ValueError:
-                    x.append(identifier)
+                    pass
+                try:
+                    val2 = int(val2)
+                except ValueError:
+                    pass
 
-            return tuple(x)
+                # If a_ele and b_ele are the same type, use built-in comparison
+                if type(val1) is type(val2):
+                    if val1 < val2:
+                        return -1
+                    elif val1 > val2:
+                        return 1
+                    else:
+                        continue
+                else:
+                    # Otherwise, assume that ints are "greater than" strings.
+                    if type(val1) is int:
+                        return 1
+                    else:
+                        return -1
+            return 0
 
-        # Using chain- and residue-specific sorting functions might be safer against some corner
-        # cases, but the logic built into the fallback `_sort_other` works for existing tests
-        _sort_functions = {
-            "chains": _sort_chains,
-            "residues": _sort_residues,
-        }
-
-        self.hierarchy_elements.sort(
-            key=_sort_functions.get(self.iterator_name, _sort_other)
-        )
+        self.hierarchy_elements.sort(key=cmp_to_key(compare_hier_identifiers))
 
     def __str__(self):
         return (
