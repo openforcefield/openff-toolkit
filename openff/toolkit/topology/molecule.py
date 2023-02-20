@@ -5802,7 +5802,7 @@ class HierarchyScheme:
 
             # Iterate over identifier components for comparison
             for val1, val2 in zip(a.identifier, b.identifier):
-                # Try converting strings to ints
+                # Try converting any strings to ints
                 try:
                     val1 = int(val1)
                 except ValueError:
@@ -5812,7 +5812,7 @@ class HierarchyScheme:
                 except ValueError:
                     pass
 
-                # If a_ele and b_ele are the same type, use built-in comparison
+                # If val1 and val2 are the same type, use built-in comparison
                 if type(val1) is type(val2):
                     if val1 < val2:
                         return -1
@@ -5820,12 +5820,16 @@ class HierarchyScheme:
                         return 1
                     else:
                         continue
+
+                # Otherwise, assume that ints are "greater than" strings.
                 else:
-                    # Otherwise, assume that ints are "greater than" strings.
                     if type(val1) is int:
                         return 1
-                    else:
+                    elif type(val2) is int:
                         return -1
+            # If we've finished comparing the values in the identifiers without
+            # finding one to be greater than the other, then these two identifiers
+            # must be equal.
             return 0
 
         self.hierarchy_elements.sort(key=cmp_to_key(compare_hier_identifiers))
