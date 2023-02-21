@@ -16,6 +16,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Behavior changes
 - [PR #1498](https://github.com/openforcefield/openff-toolkit/pull/1498): New, more complete, and more descriptive errors for `Molecule.remap()`.
 - [PR #1525](https://github.com/openforcefield/openff-toolkit/pull/1525): Some unrelesed force fields previously accesible from `"openff/toolkit/data/test_forcefields/"` are no longer implicitly available to the `ForceField` constructor.
+- [PR #1545](https://github.com/openforcefield/openff-toolkit/pull/1545): Replaced the logic that sorts `HierarchyElements` with dedicated code in the OpenFF Toolkit instead of relying on deprecated features in the `packaging` module.
+
 
 ### Improved documentation and warnings
 - [PR #1498](https://github.com/openforcefield/openff-toolkit/pull/1498): Improved documentation for `Molecule.remap()`, `Molecule.from_smiles()`, and `Molecule.from_mapped_smiles()`, emphasizing the relationships between these methods. In particular, the documentation now clearly states that `from_smiles()` will not reorder atoms based on SMILES atom mapping.
