@@ -5876,7 +5876,7 @@ class HierarchyElement:
         ):
             setattr(self, uniqueness_component, id_component)
 
-    def to_dict(self) -> Dict[str, Union[Tuple[str, int], Sequence[int]]]:
+    def to_dict(self) -> Dict[str, Union[Tuple[Union[str, int]], Sequence[int]]]:
         """
         Serialize this object to a basic dict of strings and lists of ints.
         """
