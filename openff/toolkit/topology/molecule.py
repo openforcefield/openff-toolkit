@@ -30,6 +30,7 @@ import pathlib
 import warnings
 from collections import UserDict
 from copy import deepcopy
+from functools import cmp_to_key
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -38,6 +39,7 @@ from typing import (
     Generator,
     List,
     Optional,
+    Sequence,
     Set,
     TextIO,
     Tuple,
@@ -49,7 +51,6 @@ import numpy as np
 from openff.units import Quantity, unit
 from openff.units.elements import MASSES, SYMBOLS
 from openff.utilities.exceptions import MissingOptionalDependencyError
-from packaging import version
 from typing_extensions import TypeAlias
 
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
@@ -5761,7 +5762,11 @@ class HierarchyScheme:
 
         self.sort_hierarchy_elements()
 
-    def add_hierarchy_element(self, identifier, atom_indices):
+    def add_hierarchy_element(
+        self,
+        identifier: Tuple[Union[str, int]],
+        atom_indices: Sequence[int],
+    ):
         """
         Instantiate a new HierarchyElement belonging to this HierarchyScheme.
 
@@ -5772,7 +5777,7 @@ class HierarchyScheme:
         identifier : tuple of str and int
             Tuple of metadata values (not keys) that define the uniqueness
             criteria for this element
-        atom_indices : iterable int
+        atom_indices : sequence of int
             The indices of atoms in ``scheme.parent`` that are in this
             element
         """
@@ -5786,11 +5791,49 @@ class HierarchyScheme:
         their identifiers.
         """
 
-        # hard-code the sort_func value here, since it's hard to serialize safely
-        def sort_func(x):
-            return version.parse(".".join([str(i) for i in x.identifier]))
+        def compare_hier_identifiers(a, b):
+            """A comparison function which can compare hierarchy elements.
+            Expects identifiers to be tuples of string and int.
+            Attempts to cast strings to int. Assumes that ints are "greater than" strings.
 
-        self.hierarchy_elements.sort(key=sort_func)
+            Returns -1 if a < b, 0 if a==b, and 1 if a>b.
+
+            See https://docs.python.org/3/howto/sorting.html#comparison-functions
+            """
+
+            # Iterate over identifier components for comparison
+            for val1, val2 in zip(a.identifier, b.identifier):
+                # Try converting any strings to ints
+                try:
+                    val1 = int(val1)
+                except ValueError:
+                    pass
+                try:
+                    val2 = int(val2)
+                except ValueError:
+                    pass
+
+                # If val1 and val2 are the same type, use built-in comparison
+                if type(val1) is type(val2):
+                    if val1 < val2:
+                        return -1
+                    elif val1 > val2:
+                        return 1
+                    else:
+                        continue
+
+                # Otherwise, assume that ints are "greater than" strings.
+                else:
+                    if type(val1) is int:
+                        return 1
+                    elif type(val2) is int:
+                        return -1
+            # If we've finished comparing the values in the identifiers without
+            # finding one to be greater than the other, then these two identifiers
+            # must be equal.
+            return 0
+
+        self.hierarchy_elements.sort(key=cmp_to_key(compare_hier_identifiers))
 
     def __str__(self):
         return (
@@ -5808,8 +5851,8 @@ class HierarchyElement:
     def __init__(
         self,
         scheme: HierarchyScheme,
-        identifier: Tuple[str, int],
-        atom_indices: List[int],
+        identifier: Tuple[Union[str, int]],
+        atom_indices: Sequence[int],
     ):
         """
         Create a new hierarchy element.
@@ -5822,7 +5865,7 @@ class HierarchyElement:
         identifier : tuple of str and int
             Tuple of metadata values (not keys) that define the uniqueness
             criteria for this element
-        atom_indices : list of int
+        atom_indices : sequence of int
             The indices of particles in ``scheme.parent`` that are in this
             element
         """
@@ -5834,7 +5877,7 @@ class HierarchyElement:
         ):
             setattr(self, uniqueness_component, id_component)
 
-    def to_dict(self) -> Dict[str, Union[Tuple[str, int], List[int]]]:
+    def to_dict(self) -> Dict[str, Union[Tuple[Union[str, int]], Sequence[int]]]:
         """
         Serialize this object to a basic dict of strings and lists of ints.
         """

@@ -44,6 +44,7 @@ from openff.toolkit.topology.molecule import (
     BondExistsError,
     FrozenMolecule,
     HierarchyElement,
+    HierarchyScheme,
     HierarchySchemeNotFoundException,
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
     InvalidAtomMetadataError,
@@ -4497,3 +4498,73 @@ class TestHierarchies:
         assert ("A", "1", " ", "ACE") == dipeptide_hierarchy_perceived.residues[
             0
         ].identifier
+
+    def test_hierarchy_element_generation(self):
+        """Ensure that hierarchy elements are generated correctly from atom metadata"""
+        from openff.toolkit.tests.create_molecules import create_ethanol
+
+        ethanol = create_ethanol()
+
+        for atom in ethanol.atoms:
+            atom.metadata["residue_name"] = "AAA"
+            atom.metadata["residue_number"] = 1
+            atom.metadata["chain_id"] = "A"
+
+        ethanol.atoms[1].metadata["chain_id"] = "Z"
+        del ethanol.atoms[2].metadata["chain_id"]
+        ethanol.atoms[3].metadata["chain_id"] = 1
+        ethanol.atoms[4].metadata["residue_number"] = "1"
+        ethanol.atoms[5].metadata["residue_name"] = "ZZZ"
+        del ethanol.atoms[6].metadata["residue_name"]
+        ethanol.atoms[7].metadata["residue_number"] = 2
+        ethanol.add_default_hierarchy_schemes()
+
+        expected_chains = [(("A",), 6), (("None",), 1), (("Z",), 1), ((1,), 1)]
+
+        assert len(ethanol.chains) == len(expected_chains)
+        for chain, exp_chain in zip(ethanol.chains, expected_chains):
+            assert chain.identifier == exp_chain[0]
+            assert len(chain.atom_indices) == exp_chain[1]
+
+        expected_residues = [
+            (("A", 1, "None", "AAA"), 2),
+            (("A", "1", "None", "AAA"), 1),
+            (("A", 1, "None", "None"), 1),
+            (("A", 1, "None", "ZZZ"), 1),
+            (("A", 2, "None", "AAA"), 1),
+            (("None", 1, "None", "AAA"), 1),
+            (("Z", 1, "None", "AAA"), 1),
+            ((1, 1, "None", "AAA"), 1),
+        ]
+
+        assert len(ethanol.residues) == len(expected_residues)
+        for residue, exp_residue in zip(ethanol.residues, expected_residues):
+            assert residue.identifier == exp_residue[0]
+            assert len(residue.atom_indices) == exp_residue[1]
+
+    def test_hierarchy_element_sorting(self):
+        """Ensure that hierarchy elements are sorted correctly"""
+        hs = HierarchyScheme(None, ("foo", "bar"), "foobar")
+        # Atom lists are used here to indicate the positions
+        # that this element may have in the "proper" sorting.
+        hs.add_hierarchy_element(("Z", 10), [13])
+        hs.add_hierarchy_element(("Z", 5), [12])
+        # Switch two values so the list isn't just reversed from the correct sorting
+        hs.add_hierarchy_element(("None", "10"), [10])
+        hs.add_hierarchy_element(("Y", 10), [11])
+        hs.add_hierarchy_element(("A", 10), [8, 9])
+        hs.add_hierarchy_element(("A", "10"), [8, 9])
+        hs.add_hierarchy_element(("A", 1), [5, 6, 7])
+        hs.add_hierarchy_element(("A", "1"), [5, 6, 7])
+        hs.add_hierarchy_element(("A", "  1"), [5, 6, 7])
+        hs.add_hierarchy_element(("A", "None"), [4])
+        hs.add_hierarchy_element(("A", " "), [2, 3])
+        hs.add_hierarchy_element(("A", ""), [2, 3])
+        hs.add_hierarchy_element((" ", "10"), [0, 1])
+        hs.add_hierarchy_element(("", "10"), [0, 1])
+        hs.sort_hierarchy_elements()
+
+        # Compare the sorted hierarchyelements to their expected sortings
+        # (assuming that the atom indices indicate valid positions for the resulting elements in the proper sorting)
+        for idx, ele in enumerate(hs.hierarchy_elements):
+            assert idx in ele.atom_indices
