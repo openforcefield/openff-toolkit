@@ -1376,16 +1376,14 @@ class TestForceField(_ForceFieldFixtures):
         AngleHandler._DEPENDENCIES = orig_ah_depends
 
     def test_parameterize_ethanol_missing_torsion(self):
-        from openff.toolkit.typing.engines.smirnoff.parameters import (
-            UnassignedProperTorsionParameterException,
-        )
+        from openff.interchange.exceptions import UnassignedTorsionError
 
         forcefield = ForceField(xml_missing_torsion)
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         molecules = [create_ethanol()]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         with pytest.raises(
-            UnassignedProperTorsionParameterException,
+            UnassignedTorsionError,
             match="- Topology indices [(]5, 0, 1, 6[)]: "
             r"names and elements [(](H\d+)? H[)], [(](C\d+)? C[)], [(](C\d+)? C[)], [(](H\d+)? H[)],",
         ):
@@ -2041,7 +2039,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
     def test_nonintegral_charge_exception(self, toolkit_registry, force_field):
         # Create an ethanol molecule without using a toolkit
-        from openff.interchange.exceptions import NonIntegralMoleculeChargeException
+        from openff.interchange.exceptions import NonIntegralMoleculeChargeError
 
         ethanol = create_ethanol()
         ethanol.partial_charges[0] = 1.0 * unit.elementary_charge
@@ -2050,7 +2048,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=[ethanol])
 
         with pytest.raises(
-            NonIntegralMoleculeChargeException, match="Molecule .* has a net charge"
+            NonIntegralMoleculeChargeError, match="Molecule .* has a net charge"
         ):
             force_field.create_openmm_system(
                 topology,
