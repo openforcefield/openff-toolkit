@@ -6,7 +6,7 @@ dependencies:
     # Base depends
   - python
   - pip
-  - packaging =21
+  - packaging
   - numpy
   - networkx
   - cachetools
@@ -37,8 +37,10 @@ dependencies:
   - qcengine
   - mdtraj
   - parmed
+  - ipywidgets =7
   - nbval
   - mypy
+  - typing_extensions
   - pip:
     - types-pkg_resources
     - types-setuptools

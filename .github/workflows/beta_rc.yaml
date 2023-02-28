@@ -24,7 +24,8 @@ jobs:
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
-      PYTEST_ARGS: -r fE --tb=short --cov=openff --cov-config=setup.cfg --cov-append --cov-report=xml
+      PYTEST_ARGS: -r fE --tb=short -nauto
+      COV: --cov=openff/toolkit --cov-config=setup.cfg --cov-append --cov-report=xml
 
     steps:
       - uses: actions/checkout@v3
@@ -53,12 +54,11 @@ jobs:
       - name: Install package
         run: |
           conda remove --force openff-toolkit openff-toolkit-base
-          python setup.py develop --no-deps
+          python -m pip install .
 
       - name: Install test plugins
         run: |
-          cd utilities/test_plugins
-          python setup.py develop --no-deps
+          python -m pip install utilities/test_plugins
 
       - name: Environment Information
         run: |
@@ -78,7 +78,7 @@ jobs:
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_examples.py"
           PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
           PYTEST_ARGS+=" --runslow"
-          pytest $PYTEST_ARGS openff/toolkit/tests/
+          pytest $PYTEST_ARGS $COV openff/toolkit/tests/
 
       - name: Run code snippets in docs
         run: |

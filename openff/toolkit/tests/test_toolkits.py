@@ -246,7 +246,6 @@ openeye_iupac_bad_stereo = [
 
 @pytest.fixture()
 def formic_acid_molecule() -> Molecule:
-
     formic_acid = Molecule()
     formic_acid.add_atom(8, 0, False)  # O1
     formic_acid.add_atom(6, 0, False)  # C1
@@ -263,7 +262,6 @@ def formic_acid_molecule() -> Molecule:
 
 @pytest.fixture()
 def formic_acid_conformers() -> Dict[str, unit.Quantity]:
-
     return {
         "cis": unit.Quantity(
             np.array(
@@ -320,11 +318,11 @@ class TestOpenEyeToolkitWrapper:
         unspec_db_smiles = r"CC(F)=C(F)C[C@@](C)(Cl)Br"
         spec_db_smiles = r"C\C(F)=C(/F)C[C@@](C)(Cl)Br"
 
-        for title, smiles, raises_exception in [
-            ("unspec_chiral_smiles", unspec_chiral_smiles, True),
-            ("spec_chiral_smiles", spec_chiral_smiles, False),
-            ("unspec_db_smiles", unspec_db_smiles, True),
-            ("spec_db_smiles", spec_db_smiles, False),
+        for smiles, raises_exception in [
+            (unspec_chiral_smiles, True),
+            (spec_chiral_smiles, False),
+            (unspec_db_smiles, True),
+            (spec_db_smiles, False),
         ]:
             if raises_exception:
                 with pytest.raises(UndefinedStereochemistryError):
@@ -799,7 +797,8 @@ class TestOpenEyeToolkitWrapper:
     )
     def test_non_standard_inchi_round_trip(self, molecule):
         """Test if a molecule can survive an InChi round trip test in some cases the standard InChI
-        will not enough to ensure information is preserved so we test the non-standard inchi here."""
+        will not enough to ensure information is preserved so we test the non-standard inchi here.
+        """
 
         from openff.toolkit.utils.toolkits import UndefinedStereochemistryError
 
@@ -1784,7 +1783,6 @@ class TestOpenEyeToolkitWrapper:
             use_conformers=molecule2.conformers,
         )
         for i in molecule2.bonds:
-
             if i.is_aromatic:
                 # Checking aromatic bonds
                 assert 1.05 < i.fractional_bond_order < 1.65
@@ -2172,7 +2170,8 @@ class TestRDKitToolkitWrapper:
     @pytest.mark.parametrize("molecule", get_mini_drug_bank(RDKitToolkitWrapper))
     def test_non_standard_inchi_round_trip(self, molecule):
         """Test if a molecule can survive an InChi round trip test in some cases the standard InChI
-        will not be enough to ensure information is preserved so we test the non-standard inchi here."""
+        will not be enough to ensure information is preserved so we test the non-standard inchi here.
+        """
 
         from openff.toolkit.utils.toolkits import UndefinedStereochemistryError
 
@@ -2373,7 +2372,6 @@ class TestRDKitToolkitWrapper:
 
             # Check RDMol
             for orig_atom, rd_atom in zip(molecule.atoms, rdmol.GetAtoms()):
-
                 atom_has_any_metadata = (
                     ("residue_name" in orig_atom.metadata)
                     or ("residue_number" in orig_atom.metadata)
@@ -2810,7 +2808,7 @@ class TestRDKitToolkitWrapper:
             toolkit_registry=RDKitToolkitWrapper(),
         )
 
-    @pytest.mark.parametrize("partial_charge_method", ["mmff94"])
+    @pytest.mark.parametrize("partial_charge_method", ["mmff94", "gasteiger"])
     def test_assign_partial_charges_neutral(self, partial_charge_method):
         """Test RDKitToolkitWrapper assign_partial_charges()"""
 
@@ -2827,7 +2825,7 @@ class TestRDKitToolkitWrapper:
         charge_sum = np.sum(molecule.partial_charges)
         assert 1.0e-10 > abs(charge_sum.m_as(unit.elementary_charge))
 
-    @pytest.mark.parametrize("partial_charge_method", ["mmff94"])
+    @pytest.mark.parametrize("partial_charge_method", ["mmff94", "gasteiger"])
     def test_assign_partial_charges_net_charge(self, partial_charge_method):
         """
         Test RDKitToolkitWrapper assign_partial_charges() on a molecule with net charge.
@@ -2887,7 +2885,6 @@ class TestRDKitToolkitWrapper:
     def test_elf_prune_problematic_conformers_acid(
         self, formic_acid_molecule, formic_acid_conformers
     ):
-
         formic_acid_molecule._conformers = [*formic_acid_conformers.values()]
 
         pruned_conformers = RDKitToolkitWrapper._elf_prune_problematic_conformers(
@@ -3264,7 +3261,7 @@ class TestRDKitToolkitWrapper:
         rdmol = mol.to_rdkit()
 
         # now make sure the aromaticity matches for each atom
-        for (offatom, rdatom) in zip(mol.atoms, rdmol.GetAtoms()):
+        for offatom, rdatom in zip(mol.atoms, rdmol.GetAtoms()):
             assert offatom.is_aromatic is rdatom.GetIsAromatic()
 
     @pytest.mark.slow
@@ -3519,20 +3516,22 @@ class TestAmberToolsToolkitWrapper:
             )
 
     @pytest.mark.parametrize(
-        "partial_charge_method,expected_n_confs",
-        [("am1bcc", 1), ("am1-mulliken", 1), ("gasteiger", 0)],
+        "partial_charge_method, expected_n_confs, toolkit_wrappers",
+        [
+            ("am1bcc", 1, [AmberToolsToolkitWrapper, RDKitToolkitWrapper]),
+            ("am1-mulliken", 1, [AmberToolsToolkitWrapper, RDKitToolkitWrapper]),
+            ("gasteiger", 0, [AmberToolsToolkitWrapper]),
+        ],
     )
     def test_assign_partial_charges_wrong_n_confs(
-        self, partial_charge_method, expected_n_confs
+        self, partial_charge_method, expected_n_confs, toolkit_wrappers
     ):
         """
         Test AmberToolsToolkitWrapper assign_partial_charges() when requesting to use an incorrect number of
         conformers
         """
 
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
-        )
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=toolkit_wrappers)
         molecule = create_ethanol()
         molecule.generate_conformers(n_conformers=2, rms_cutoff=0.01 * unit.angstrom)
 

@@ -112,8 +112,16 @@ class NotInTopologyError(OpenFFToolkitException):
     """An object was not found in a topology."""
 
 
+class RemapIndexError(OpenFFToolkitException):
+    """An error with indices used to remap a molecule"""
+
+
 class AtomNotInTopologyError(NotInTopologyError):
     """An atom was not found in a topology."""
+
+
+class BondNotInTopologyError(NotInTopologyError):
+    """An bond was not found in a topology."""
 
 
 class MoleculeNotInTopologyError(NotInTopologyError):
@@ -122,6 +130,10 @@ class MoleculeNotInTopologyError(NotInTopologyError):
 
 class InvalidAtomMetadataError(OpenFFToolkitException):
     """The program attempted to set atom metadata to an invalid type"""
+
+
+class BondExistsError(OpenFFToolkitException):
+    """The program attempted to add a bond that already exists"""
 
 
 class DuplicateUniqueMoleculeError(OpenFFToolkitException):
@@ -167,6 +179,7 @@ class SMIRKSMismatchError(OpenFFToolkitException):
     """
 
 
+# TODO: This should be renamed to SMARTSParsingError
 class SMIRKSParsingError(OpenFFToolkitException):
     """
     Exception for when SMIRKS are not parseable for any environment

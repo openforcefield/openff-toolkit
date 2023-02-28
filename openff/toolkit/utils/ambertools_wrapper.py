@@ -8,9 +8,10 @@ import subprocess
 import tempfile
 from collections import defaultdict
 from shutil import which
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 import numpy as np
-from openff.units import unit
+from openff.units import Quantity, unit
 
 from openff.toolkit.utils import base_wrapper, rdkit_wrapper
 from openff.toolkit.utils.exceptions import (
@@ -20,6 +21,9 @@ from openff.toolkit.utils.exceptions import (
     ToolkitUnavailableException,
 )
 from openff.toolkit.utils.utils import temporary_cd
+
+if TYPE_CHECKING:
+    from openff.toolkit.topology.molecule import Molecule
 
 
 class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
@@ -57,7 +61,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         self._rdkit_toolkit_wrapper = rdkit_wrapper.RDKitToolkitWrapper()
 
     @staticmethod
-    def is_available():
+    def is_available() -> bool:
         """
         Check whether the AmberTools toolkit is installed
 
@@ -78,11 +82,11 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def assign_partial_charges(
         self,
-        molecule,
-        partial_charge_method=None,
-        use_conformers=None,
-        strict_n_conformers=False,
-        normalize_partial_charges=True,
+        molecule: "Molecule",
+        partial_charge_method: Optional[str] = None,
+        use_conformers: Optional[List[Quantity]] = None,
+        strict_n_conformers: bool = False,
+        normalize_partial_charges: bool = True,
         _cls=None,
     ):
         """
@@ -135,7 +139,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
             # Standardize method name for string comparisons
             partial_charge_method = partial_charge_method.lower()
 
-        SUPPORTED_CHARGE_METHODS = {
+        SUPPORTED_CHARGE_METHODS: Dict[str, Dict[str, Union[int, str]]] = {
             "am1bcc": {
                 "antechamber_keyword": "bcc",
                 "min_confs": 1,
@@ -187,8 +191,8 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
             self._check_n_conformers(
                 mol_copy,
                 partial_charge_method=partial_charge_method,
-                min_confs=charge_method["min_confs"],
-                max_confs=charge_method["max_confs"],
+                min_confs=charge_method["min_confs"],  # type: ignore[arg-type]
+                max_confs=charge_method["max_confs"],  # type: ignore[arg-type]
                 strict_n_conformers=strict_n_conformers,
             )
 
@@ -226,7 +230,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
                         "-dr",
                         "n",
                         "-c",
-                        short_charge_method,
+                        str(short_charge_method),
                         "-nc",
                         str(net_charge),
                     ]
@@ -275,57 +279,6 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         if normalize_partial_charges:
             molecule._normalize_partial_charges()
-
-    def compute_partial_charges_am1bcc(
-        self, molecule, use_conformers=None, strict_n_conformers=False
-    ):
-        """
-        .. deprecated:: 0.11.0
-
-            This method was deprecated in v0.11.0 and will soon be removed.
-            Use :py:meth:`assign_partial_charges(partial_charge_method='am1bcc')
-            <AmberToolsToolkitWrapper.assign_partial_charges>` instead.
-
-        Compute partial charges with AmberTools using antechamber/sqm. This will calculate AM1-BCC charges on the first
-        conformer only.
-
-        .. warning :: This API is experimental and subject to change.
-
-        Parameters
-        ----------
-        molecule : Molecule
-            Molecule for which partial charges are to be computed
-        use_conformers : iterable of unit-wrapped numpy arrays,
-            each with shape (n_atoms, 3) and dimension of distance. Optional, default = None
-            Coordinates to use for partial charge calculation. If None, an appropriate number
-            of conformers will be generated.
-        strict_n_conformers : bool, default=False
-            Whether to raise an exception if an invalid number of conformers is provided.
-            If this is False and an invalid number of conformers is found, a warning will
-            be raised instead of an Exception.
-
-        Returns
-        -------
-        charges : numpy.array of shape (natoms) of type float
-            The partial charges
-        """
-        # TODO: Remove in version 0.12.0
-
-        import warnings
-
-        warnings.warn(
-            "compute_partial_charges_am1bcc is deprecated and will be removed in version 0.12.0. "
-            "Use assign_partial_charges(partial_charge_method='am1bcc') instead.",
-            UserWarning,
-        )
-
-        self.assign_partial_charges(
-            molecule,
-            partial_charge_method="AM1BCC",
-            use_conformers=use_conformers,
-            strict_n_conformers=strict_n_conformers,
-        )
-        return molecule.partial_charges
 
     def _modify_sqm_in_to_request_bond_orders(self, file_path):
         """
@@ -439,7 +392,11 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         return bond_orders
 
     def assign_fractional_bond_orders(
-        self, molecule, bond_order_model=None, use_conformers=None, _cls=None
+        self,
+        molecule: "Molecule",
+        bond_order_model: Optional[str] = None,
+        use_conformers: Optional[List[str]] = None,
+        _cls=None,
     ):
         """
         Update and store list of bond orders this molecule. Bond orders are stored on each
@@ -512,9 +469,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         bond_orders = defaultdict(list)
 
         for conformer in [*temp_mol.conformers]:
-
             with tempfile.TemporaryDirectory() as tmpdir:
-
                 with temporary_cd(tmpdir):
                     net_charge = temp_mol.total_charge
                     # Write out molecule in SDF format

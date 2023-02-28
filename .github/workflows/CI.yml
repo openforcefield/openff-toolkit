@@ -38,15 +38,12 @@ jobs:
             python-version: "3.9"
           - openeye: true
             python-version: "3.10"
-          # As of 7/6/22, this cannot solve due to a missing OpenMM build.
-          # Revisit when OpenMM 7.8+ is released and new builds are up.
-          - python-version: "3.10"
-            os: macos-latest
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openff
-      PYTEST_ARGS: -r fE --tb=short -nauto --cov=openff --cov-config=setup.cfg --cov-append --cov-report=xml
+      PYTEST_ARGS: -r fE --tb=short -nauto
+      COV: --cov=openff/toolkit --cov-config=setup.cfg --cov-append --cov-report=xml
 
     steps:
       - uses: actions/checkout@v3
@@ -104,12 +101,11 @@ jobs:
           # against a conda build of Interchange. (It may also be pulled down
           # by `openmmforcefields` and should be removed in that case a well.)
           conda remove --force openff-toolkit openff-toolkit-base
-          python setup.py develop --no-deps
+          python -m pip install .
 
       - name: Install test plugins
         run: |
-          cd utilities/test_plugins
-          python setup.py develop --no-deps
+          python -m pip install utilities/test_plugins
 
       - name: Remove undesired toolkits
         run: |
@@ -152,7 +148,7 @@ jobs:
 
       - name: Run mypy
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: mypy --namespace-packages -p "openff.toolkit"
+        run: mypy -p "openff.toolkit" --exclude "openff/toolkit/data"
 
       - name: Run unit tests
         run: |
@@ -161,7 +157,7 @@ jobs:
           if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
             PYTEST_ARGS+=" --runslow"
           fi
-          pytest $PYTEST_ARGS openff/toolkit/tests/
+          python -m pytest $PYTEST_ARGS $COV openff/toolkit/
 
       - name: Run code snippets in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}

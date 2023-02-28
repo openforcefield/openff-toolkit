@@ -8,15 +8,51 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+## 0.12.1
+
 ### New features
-- [PR #1484](https://github.com/openforcefield/openff-toolkit/pull/1484): A `positions` argument has been added to `Topology.from_openmm()` and `Topology.from_mdtraj()`, which allows the topology's positions to be set more conveniently.
+- [PR #1502](https://github.com/openforcefield/openff-toolkit/pull/1502): Adds Gasteiger charge computation using the RDKit backend.
+- [PR #1498](https://github.com/openforcefield/openff-toolkit/pull/1498): `Molecule.remap()` now supports partial mappings with the `partial` argument.
+- [PR #1528](https://github.com/openforcefield/openff-toolkit/pull/1528): `Topology.box_vectors` are can now be set with `openmm.unit.Quantity`s, which are internally converted.
 
 ### Behavior changes
+- [PR #1498](https://github.com/openforcefield/openff-toolkit/pull/1498): New, more complete, and more descriptive errors for `Molecule.remap()`.
+- [PR #1525](https://github.com/openforcefield/openff-toolkit/pull/1525): Some unreleased force fields previously accessible from `"openff/toolkit/data/test_forcefields/"` are no longer implicitly available to the `ForceField` constructor.
+- [PR #1545](https://github.com/openforcefield/openff-toolkit/pull/1545): Replaced the logic that sorts `HierarchyElements` with dedicated code in the OpenFF Toolkit instead of relying on deprecated features in the `packaging` module.
+
+
+### Bugfixes
+
+- [PR #1543](https://github.com/openforcefield/openff-toolkit/pull/1543): Fixes a bug in which plugins are not loaded if a `ForceField` is constructed prior without plugins.
+
+### Improved documentation and warnings
+- [PR #1498](https://github.com/openforcefield/openff-toolkit/pull/1498): Improved documentation for `Molecule.remap()`, `Molecule.from_smiles()`, and `Molecule.from_mapped_smiles()`, emphasizing the relationships between these methods. In particular, the documentation now clearly states that `from_smiles()` will not reorder atoms based on SMILES atom mapping.
+- [PR #1525](https://github.com/openforcefield/openff-toolkit/pull/1525): Improves reporting failures when loading force fields.
+- [PR #1513](https://github.com/openforcefield/openff-toolkit/pull/1513): Improves error messages and documentation around supported aromaticity models (currently only "OEAroModel_MDL").
+
+
+## 0.12.0
+
+### New features
+- [PR #1484](https://github.com/openforcefield/openff-toolkit/pull/1484): A `positions` argument has been added to `Topology.from_openmm()` and `Topology.from_mdtraj()`, which allows the topology's positions to be set more conveniently.
+- [PR #1468](https://github.com/openforcefield/openff-toolkit/pull/1468): Track which `ParameterHandler`s are loaded as plugins.
+
+### Behavior changes
+- [PR #1481](https://github.com/openforcefield/openff-toolkit/pull/1481):
+  Removes `compute_partial_charges_am1bcc`, which was deprecated in 0.11.0.
 - [PR #1466](https://github.com/openforcefield/openff-toolkit/pull/1466):
   Replaces the use of `collections.OrderedDict` throughout the toolkit with
   the built-in `dict`.
   `attach_units`, `detach_units`, and `extract_serialized_units_from_dict` have been removed from
   `openff.toolkit.utils.utils`.
+- [PR #1472](https://github.com/openforcefield/openff-toolkit/pull/1472):
+  Removes [`ParameterHandler._VALENCE_TYPE`] and the same attribute of its subclasses, which were
+  previously not used. Also deprecates `ChemicalEnvironment` and, by extension, the
+  `openff.toolkit.typing.chemistry` submodule.
+
+[`ChemicalEnvironment`]: ChemicalEnvironment
+[`ParameterHandler._VALENCE_TYPE`]: ParameterHandler._VALENCE_TYPE
+
 
 ### Bugfixes
 - [PR #1476](https://github.com/openforcefield/openff-toolkit/pull/1476): Fixes
@@ -24,6 +60,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   a `ParameterHandler`'s class when calling `ForceField.register_parameter_handler`.
 - [PR #1480](https://github.com/openforcefield/openff-toolkit/pull/1480): Fixes
   [#1479](https://github.com/openforcefield/openff-toolkit/issues/1479) by requiring that `Atom.atomic_number` is a positive integer.
+- [PR #1494](https://github.com/openforcefield/openff-toolkit/pull/1494): Fixes
+  [#1493](https://github.com/openforcefield/openff-toolkit/issues/1493) in which some OFFXML file
+  contents were parsed to `unit.Quantity` objects despite not representing physical quantities.
 
 [`Atom.atomic_number`]: Atom.atomic_number
 
