@@ -97,6 +97,7 @@ def _molecule_deprecation(old_method, new_method):
     warnings.warn(
         f"Molecule.{old_method} is deprecated. Use Molecule.{new_method} instead.",
         MoleculeDeprecationWarning,
+        stacklevel=2,
     )
 
 
@@ -2493,6 +2494,7 @@ class FrozenMolecule(Serializable):
                     f"run on this molecule (found {self.n_atoms} atoms). For more, see "
                     "https://docs.openforcefield.org/projects/toolkit/en/stable/faq.html"
                     "#parameterizing-my-system-which-contains-a-large-molecule-is-taking-forever-whats-wrong",
+                    stacklevel=2,
                 )
 
         if isinstance(toolkit_registry, ToolkitRegistry):
@@ -5391,7 +5393,8 @@ class Molecule(FrozenMolecule):
                 warnings.warn(
                     "RDKit was requested as a visualization backend but "
                     "it was not found to be installed. Falling back to "
-                    "trying to use OpenEye for visualization."
+                    "trying to use OpenEye for visualization.",
+                    stacklevel=2,
                 )
                 backend = "openeye"
         if backend == "openeye":

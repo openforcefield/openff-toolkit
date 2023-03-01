@@ -1179,7 +1179,7 @@ class ForceField:
                 "`Interchange.to_openmm_topology`, and `Interchange.to_openmm` "
                 "for long-term replacements for `return_topology` functionality."
             )
-            warnings.warn(warning_msg, DeprecationWarning)
+            warnings.warn(warning_msg, DeprecationWarning, stacklevel=2)
             return openmm_system, copy.deepcopy(interchange.topology)
 
     @requires_package("openff.interchange")

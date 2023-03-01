@@ -987,7 +987,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     f" as {element_name}. Does your mol2 file uses Tripos SYBYL atom types?"
                     " Other atom types such as GAFF are not supported."
                 )
-                warnings.warn(warn_msg, GAFFAtomTypeWarning)
+                warnings.warn(warn_msg, GAFFAtomTypeWarning, stacklevel=2)
 
     @staticmethod
     def _openeye_cip_atom_stereochemistry(oemol, oeatom):

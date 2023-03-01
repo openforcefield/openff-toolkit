@@ -253,7 +253,7 @@ class ToolkitWrapper:
             wrong_confs_msg += exception_suffix
             raise IncorrectNumConformersError(wrong_confs_msg)
         else:
-            warnings.warn(wrong_confs_msg, IncorrectNumConformersWarning)
+            warnings.warn(wrong_confs_msg, IncorrectNumConformersWarning, stacklevel=2)
 
     def __repr__(self):
         return (
