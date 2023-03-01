@@ -1,6 +1,6 @@
 import importlib
 import warnings
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, Type
 
 from openff.toolkit.utils.base_wrapper import ToolkitWrapper
 from openff.toolkit.utils.exceptions import ToolkitUnavailableException
@@ -55,7 +55,7 @@ class _NAGLToolkitWrapper(ToolkitWrapper):
         use_conformers: Optional[List["Quantity"]] = None,
         strict_n_conformers: bool = False,
         normalize_partial_charges: bool = True,
-        _cls: Optional["FrozenMolecule"] = None,
+        _cls: Optional[Type["FrozenMolecule"]] = None,
     ):
         if _cls is None:
             from openff.toolkit.topology.molecule import Molecule
