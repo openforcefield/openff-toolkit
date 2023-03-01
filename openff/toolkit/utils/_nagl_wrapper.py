@@ -1,18 +1,20 @@
 import importlib
+import warnings
 from typing import TYPE_CHECKING, List, Optional
 
 from openff.toolkit.utils.base_wrapper import ToolkitWrapper
 from openff.toolkit.utils.exceptions import ToolkitUnavailableException
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Molecule
+    from openff.units import Quantity
+
+    from openff.toolkit.topology.molecule import FrozenMolecule, Molecule
 
 
 __all__ = ("_NAGLToolkitWrapper",)
 
 
 class _NAGLToolkitWrapper(ToolkitWrapper):
-
     _toolkit_name = "OpenFF NAGL"
     _toolkit_installation_instructions = (
         "Installation instructions are in flux. See for updates: "
@@ -50,33 +52,46 @@ class _NAGLToolkitWrapper(ToolkitWrapper):
         self,
         molecule: "Molecule",
         partial_charge_method: str = "_nagl_am1bccelf10",
-        use_conformers: Optional[List] = None,
+        use_conformers: Optional[List["Quantity"]] = None,
         strict_n_conformers: bool = False,
         normalize_partial_charges: bool = True,
-        _cls=None,
+        _cls: Optional["FrozenMolecule"] = None,
     ):
-
         if _cls is None:
             from openff.toolkit.topology.molecule import Molecule
 
             _cls = Molecule
 
         if use_conformers:
-            raise Exception
+            warnings.warn(
+                "`_NAGLToolkitWrapper.assign_partial_charges` was passed optional orgument "
+                "`use_conformers` which will not be used. OpenFF NAGL does not generate "
+                "conformers as part of assigning partial charges.",
+                UserWarning,
+            )
 
         if strict_n_conformers:
-            raise Exception
+            warnings.warn(
+                "`_NAGLToolkitWrapper.assign_partial_charges` was passed optional orgument "
+                "`strict_n_conformers` which will not be used. OpenFF NAGL does not generate "
+                "conformers as part of assigning partial charges.",
+                UserWarning,
+            )
 
         if partial_charge_method == "_nagl_am1bccelf10":
-            # I can't yet tell from the source code where in NAGL a high-level
-            # `def charge(Molecule, ...):` function is implemented, but I'm sure
-            # it's there somewhere
-            from openff.nagl import charge
+            from openff.nagl.data.files import EXAMPLE_AM1BCC_MODEL
+            from openff.nagl.nn._models import GNNModel
 
-            charge(molecule)
+            model = GNNModel.load(EXAMPLE_AM1BCC_MODEL, eval_mode=True)
+
+            model.compute_property(molecule, as_numpy=True)
 
         else:
-            raise Exception
+            # This should be a more specific exception that inherits from ValueError?
+            raise ValueError(
+                f"Charge model {partial_charge_method} not supported by "
+                f"{self.__class__.__name__}."
+            )
 
         if normalize_partial_charges:
             molecule._normalize_partial_charges()

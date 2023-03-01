@@ -36,3 +36,5 @@ dependencies:
   - qcengine
   - mdtraj
   - parmed
+  - pip:
+    - git+https://github.com/openforcefield/openff-nagl@add-loader

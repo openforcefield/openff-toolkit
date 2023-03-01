@@ -1,4 +1,5 @@
 import numpy
+import pytest
 from openff.utilities.testing import skip_if_missing
 
 from openff.toolkit.tests.create_molecules import create_ethanol
@@ -10,10 +11,12 @@ from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 @skip_if_missing("openff.nagl")
 class TestNAGLToolkitWrapper:
     def test_version(self):
-        assert "0.1.0" in _NAGLToolkitWrapper()._toolkit_version
+        from openff.nagl import __version__ as parsed_version
+
+        assert parsed_version == _NAGLToolkitWrapper()._toolkit_version
 
     @requires_openeye
-    def test_charges_sanity(self):
+    def test_assign_partial_charges_basic(self):
         molecule = create_ethanol()
 
         molecule.assign_partial_charges(
@@ -33,3 +36,10 @@ class TestNAGLToolkitWrapper:
         nagl_charges = molecule.partial_charges
 
         assert numpy.allclose(openeye_charges, nagl_charges)
+
+    def test_unsupported_charge_method(self):
+        with pytest.raises(ValueError, match="Charge model hartree_fock not supported"):
+            create_ethanol().assign_partial_charges(
+                partial_charge_method="hartree_fock",
+                toolkit_registry=_NAGLToolkitWrapper(),
+            )
