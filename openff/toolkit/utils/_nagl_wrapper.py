@@ -68,6 +68,7 @@ class _NAGLToolkitWrapper(ToolkitWrapper):
                 "`use_conformers` which will not be used. OpenFF NAGL does not generate "
                 "conformers as part of assigning partial charges.",
                 UserWarning,
+                stacklevel=2,
             )
 
         if strict_n_conformers:
@@ -76,11 +77,13 @@ class _NAGLToolkitWrapper(ToolkitWrapper):
                 "`strict_n_conformers` which will not be used. OpenFF NAGL does not generate "
                 "conformers as part of assigning partial charges.",
                 UserWarning,
+                stacklevel=2,
             )
 
         if partial_charge_method == "_nagl_am1bccelf10":
-            from openff.nagl.data.files import EXAMPLE_AM1BCC_MODEL
+            # TODO: Replace this with a release GCNN model when available.
             from openff.nagl.nn._models import GNNModel
+            from openff.nagl.tests.data.files import EXAMPLE_AM1BCC_MODEL
 
             model = GNNModel.load(EXAMPLE_AM1BCC_MODEL, eval_mode=True)
 
