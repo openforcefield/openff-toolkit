@@ -48,6 +48,8 @@ class TestNAGLToolkitWrapper:
             toolkit_registry=_NAGLToolkitWrapper(),
         )
 
+        assert molecule.partial_charges is not None
+
         nagl_charges = molecule.partial_charges
 
         assert numpy.allclose(openeye_charges, nagl_charges)

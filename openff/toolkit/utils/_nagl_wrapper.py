@@ -2,6 +2,8 @@ import importlib
 import warnings
 from typing import TYPE_CHECKING, List, Optional, Type
 
+from openff.units import unit
+
 from openff.toolkit.utils.base_wrapper import ToolkitWrapper
 from openff.toolkit.utils.exceptions import ToolkitUnavailableException
 
@@ -87,7 +89,10 @@ class _NAGLToolkitWrapper(ToolkitWrapper):
 
             model = GNNModel.load(EXAMPLE_AM1BCC_MODEL, eval_mode=True)
 
-            model.compute_property(molecule, as_numpy=True)
+            molecule.partial_charges = unit.Quantity(
+                model.compute_property(molecule, as_numpy=True),
+                unit.elementary_charge,
+            )
 
         else:
             # This should be a more specific exception that inherits from ValueError?
