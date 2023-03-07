@@ -79,6 +79,7 @@ def _topology_deprecation(old_method, new_method):
     warnings.warn(
         f"Topology.{old_method} is deprecated. Use Topology.{new_method} instead.",
         TopologyDeprecationWarning,
+        stacklevel=2,
     )
 
 

@@ -78,6 +78,7 @@ class ChemicalEnvironment:
             "release. If you rely on the functionality in this class, please "
             "open an issue on the openff-toolkit GitHub.",
             ChemicalEnvironmentDeprecationWarning,
+            stacklevel=2,
         )
 
         # Support string input for toolkit names for legacy reasons
