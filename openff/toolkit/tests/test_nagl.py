@@ -61,7 +61,7 @@ class TestNAGLToolkitWrapper:
 
         for molecule in [forward, reverse]:
             molecule.assign_partial_charges(
-                partial_charge_method="am1bccelf10",
+                partial_charge_method="_nagl_am1bccelf10",
                 toolkit_registry=_NAGLToolkitWrapper(),
             )
 
