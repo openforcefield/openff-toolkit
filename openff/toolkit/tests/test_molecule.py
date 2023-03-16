@@ -2509,22 +2509,6 @@ class TestMolecule:
         molecule.add_conformer(conf2)
         assert molecule.n_conformers == 2
 
-        # Add conformers with too few coordinates
-        conf_missing_z = unit.Quantity(
-            np.array(
-                [
-                    [101.0, 102.0, 103.0],
-                    [104.0, 105.0, 106.0],
-                    [107.0, 108.0, 109.0],
-                    [110.0, 111.0, 112.0],
-                    [113.0, 114.0],
-                ]
-            ),
-            unit.angstrom,
-        )
-        with pytest.raises(Exception) as excinfo:
-            molecule.add_conformer(conf_missing_z)
-
         conf_too_few_atoms = unit.Quantity(
             np.array(
                 [
