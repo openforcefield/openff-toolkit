@@ -62,6 +62,7 @@ from openff.toolkit.utils.exceptions import (
 )
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
+from openff.toolkit.utils.utils import get_data_file_path, requires_package
 
 if TYPE_CHECKING:
     import mdtraj
@@ -1520,6 +1521,111 @@ class Topology(Serializable):
                         hier_elem.generate_unique_atom_names()
             elif not molecule.has_unique_atom_names:
                 molecule.generate_unique_atom_names()
+
+
+
+    @classmethod
+    @requires_package("openmm")
+    def from_multicomponent_pdb(
+        cls,
+        file_path: Union[str, TextIO],
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+    ):
+        """
+        Loads polymers and small molecules from a PDB file.
+
+        Stereochemistry from small molecules will be assigned based on
+        the loaded geometry, NOT the reference molecule
+
+        Currently only supports proteins with canonical amino acids that are
+        either uncapped or capped by ACE/NME groups, but may later be extended
+        to handle other common polymers, or accept user-defined polymer
+        templates. Only one polymer chain may be present in the PDB file, and it
+        must be the only molecule present.
+
+        Connectivity and bond orders are assigned by matching SMARTS codes for
+        the supported residues against atom names. The PDB file must include
+        all atoms with the correct standard atom names described in the
+        `PDB Chemical Component Dictionary <https://www.wwpdb.org/data/ccd>`_.
+        Residue names are used to assist trouble-shooting failed assignments,
+        but are not used in the actual assignment process.
+
+        Metadata such as residues, chains, and atom names are recorded in the
+        ``Atom.metadata`` attribute, which is a dictionary mapping from
+        strings like "residue_name" to the appropriate value. ``from_polymer_pdb``
+        returns a molecule that can be iterated over with the ``.residues`` and
+        ``.chains`` attributes, as well as the usual ``.atoms``.
+
+        Parameters
+        ----------
+        file_path : str or file object
+            PDB information to be passed to OpenMM PDBFile object for loading
+        toolkit_registry = ToolkitWrapper or ToolkitRegistry. Default = None
+            Either a ToolkitRegistry, ToolkitWrapper
+
+        Returns
+        -------
+        molecule : openff.toolkit.topology.Molecule
+
+        Raises
+        ------
+
+        UnassignedChemistryInPDBError
+            If an atom or bond could not be assigned; the exception will
+            provide a detailed diagnostic of what went wrong.
+
+        MultipleMoleculesInPDBError
+            If all atoms and bonds could be assigned, but the PDB includes
+            multiple chains or molecules.
+
+        """
+        import openmm.unit as openmm_unit
+        from openmm.app import PDBFile
+
+        if isinstance(toolkit_registry, ToolkitWrapper):
+            toolkit_registry = ToolkitRegistry([toolkit_registry])
+
+        pdb = PDBFile(file_path)
+
+        substructure_file_path = get_data_file_path(
+            "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
+        )
+
+        with open(substructure_file_path, "r") as subfile:
+            substructure_dictionary = json.load(subfile)
+
+        offmol = toolkit_registry.call(
+            "_polymer_openmm_topology_to_offtop", pdb.topology, substructure_dictionary
+        )
+
+        coords = unit.Quantity(
+            np.array(
+                [
+                    [*vec3.value_in_unit(openmm_unit.angstrom)]
+                    for vec3 in pdb.getPositions()
+                ]
+            ),
+            unit.angstrom,
+        )
+        offmol.add_conformer(coords)
+        offmol = toolkit_registry.call("_assign_aromaticity_and_stereo_from_3d", offmol)
+        for i, atom in enumerate(pdb.topology.atoms()):
+            offmol.atoms[i].name = atom.name
+            offmol.atoms[i].metadata["residue_name"] = atom.residue.name
+            offmol.atoms[i].metadata["residue_number"] = atom.residue.id
+            offmol.atoms[i].metadata["insertion_code"] = atom.residue.insertionCode
+            offmol.atoms[i].metadata["chain_id"] = atom.residue.chain.id
+        offmol.add_default_hierarchy_schemes()
+
+        if offmol._has_multiple_molecules():
+            raise MultipleMoleculesInPDBError(
+                "This PDB has multiple molecules. The OpenFF Toolkit requires "
+                + "that only one molecule is present in a PDB. Try splitting "
+                + "each molecule into its own PDB with another tool, and "
+                + "load any small molecules with Molecule.from_pdb_and_smiles."
+            )
+
+        return offmol
 
     @requires_package("openmm")
     def to_openmm(self, ensure_unique_atom_names: Union[str, bool] = "residues"):
