@@ -8,6 +8,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## 0.10.7 Bugfix release
 
+Please be aware that the 5-month deprecation window for the 0.10 line of the OpenFF Toolkit will begin soon,
+as the upcoming Interchange 0.3.0 will offer replacements for smirnoff plugins and GBSA support. If you haven't 
+already, please begin updating your code to use OpenFF Toolkit >=0.11, as we will no longer offer even critical
+bugfixes to the 0.10 line after this deprecation period. 
+
 - [PR #1470](https://github.com/openforcefield/openff-toolkit/pull/1470): Fixes 
   [Issue #1422](https://github.com/openforcefield/openff-toolkit/issues/1422), an 
   error that occurs when a `VirtualSiteHandler` is present in a `ForceField`, and 
