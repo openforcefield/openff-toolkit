@@ -6,8 +6,12 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-## Current development
+## 0.10.7 Bugfix release
 
+- [PR #1470](https://github.com/openforcefield/openff-toolkit/pull/1470): Fixes 
+  [Issue #1422](https://github.com/openforcefield/openff-toolkit/issues/1422), an 
+  error that occurs when a `VirtualSiteHandler` is present in a `ForceField`, and 
+  `label_molecules` is called.
 - [PR #1313](https://github.com/openforcefield/openff-toolkit/pull/1313): Fixes 
   [Issue #1287](https://github.com/openforcefield/openff-toolkit/issues/1287), where  
   `OpenEyeToolkitWrapper.assign_partial_charges` didn't request symmetrized charges when
