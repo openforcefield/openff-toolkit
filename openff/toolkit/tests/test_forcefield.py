@@ -3405,7 +3405,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         # Create OpenFF System with the current toolkit.
         ff = ForceField(
             get_data_file_path("test_forcefields/test_forcefield.offxml"),
-            get_data_file_path(off_gbsas[gbsa_model])
+            get_data_file_path(off_gbsas[gbsa_model]),
         )
 
         # OpenMM 7.7 and older don't properly handle parsing prmtop files with a GBSA model and
@@ -3724,7 +3724,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
 
         ff = ForceField(
             get_data_file_path("test_forcefields/test_forcefield.offxml"),
-            get_data_file_path(off_gbsas[gbsa_model])
+            get_data_file_path(off_gbsas[gbsa_model]),
         )
         ff.get_parameter_handler("GBSA").sa_model = None
         off_top = Topology.from_molecules([molecule, molecule])

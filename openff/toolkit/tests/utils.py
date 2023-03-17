@@ -45,6 +45,7 @@ requires_openeye_mol2 = pytest.mark.skipif(
     reason="Test requires OE toolkit to read mol2 files",
 )
 
+
 def has_pkg(pkg_name):
     """
     Helper function to generically check if a package is installed. Intended
