@@ -18,7 +18,7 @@ dependencies:
   - smirnoff99Frosst
   - openff-units >=0.2
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.3.0beta2
+  - openff-interchange-base >=0.3.0beta3
   - typing_extensions
     # Toolkit-specific
   - ambertools
@@ -40,3 +40,5 @@ dependencies:
   - ipywidgets =7
   - pdbfixer
   - openmmforcefields >=0.11.2
+  - pip:
+    - git+https://github.com/openforcefield/openff-interchange@fix-gbsa-1
