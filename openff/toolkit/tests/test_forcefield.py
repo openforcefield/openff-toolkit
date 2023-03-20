@@ -30,7 +30,6 @@ from openff.toolkit.tests.utils import (
     requires_openeye,
     requires_openeye_mol2,
     requires_rdkit,
-    unimplemented_interchange,
 )
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import (
@@ -3358,7 +3357,6 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
             ignore_improper_folds=True,
         )
 
-    @unimplemented_interchange
     @requires_openeye_mol2
     @pytest.mark.parametrize(("is_periodic"), (False, True))
     @pytest.mark.parametrize(("gbsa_model"), ["HCT", "OBC1", "OBC2"])
@@ -3406,7 +3404,8 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         }
         # Create OpenFF System with the current toolkit.
         ff = ForceField(
-            "test_forcefields/test_forcefield.offxml", off_gbsas[gbsa_model]
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            get_data_file_path(off_gbsas[gbsa_model]),
         )
 
         # OpenMM 7.7 and older don't properly handle parsing prmtop files with a GBSA model and
@@ -3681,7 +3680,6 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         #     modify_system=False,
         # )
 
-    @unimplemented_interchange
     @requires_openeye_mol2
     @pytest.mark.parametrize("zero_charges", [True, False])
     @pytest.mark.parametrize(("gbsa_model"), ["HCT", "OBC1", "OBC2"])
@@ -3725,7 +3723,8 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         }
 
         ff = ForceField(
-            "test_forcefields/test_forcefield.offxml", off_gbsas[gbsa_model]
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            get_data_file_path(off_gbsas[gbsa_model]),
         )
         ff.get_parameter_handler("GBSA").sa_model = None
         off_top = Topology.from_molecules([molecule, molecule])
