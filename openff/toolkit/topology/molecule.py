@@ -37,6 +37,7 @@ from typing import (
     DefaultDict,
     Dict,
     Generator,
+    Iterable,
     List,
     Optional,
     Sequence,
@@ -2404,7 +2405,7 @@ class FrozenMolecule(Serializable):
         self,
         partial_charge_method: str,
         strict_n_conformers: bool = False,
-        use_conformers: Optional[List[Quantity]] = None,
+        use_conformers: Optional[Iterable[Quantity]] = None,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         normalize_partial_charges: bool = True,
     ):
@@ -2422,8 +2423,17 @@ class FrozenMolecule(Serializable):
         - ``"mmff94"``
         - ``"gasteiger"``
 
-        For more supported charge methods and details, see the corresponding
-        methods in each toolkit wrapper:
+        By default, any coordinates needed for charge calculation are generated
+        by this method. Coordinates can be provided via the ``use_conformers``
+        argument. ELF10 methods will neither fail nor warn when fewer than the
+        expected number of conformers could be generated, as many small
+        molecules are too rigid to provide a large number of conformers. Note
+        that only the ``"am1bcc"`` method does not use ELF10 conformer
+        selection, unlike the `ToolkitAM1BCC`_ SMIRNOFF tag which may or may
+        not.
+
+        For more supported charge methods and their details, see the
+        corresponding methods in each toolkit wrapper:
 
         - :meth:`OpenEyeToolkitWrapper.assign_partial_charges \
           <openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.assign_partial_charges>`
@@ -2434,6 +2444,9 @@ class FrozenMolecule(Serializable):
         - :meth:`BuiltInToolkitWrapper.assign_partial_charges \
           <openff.toolkit.utils.toolkits.BuiltInToolkitWrapper.assign_partial_charges>`
 
+        .. _ToolkitAM1BCC: https://openforcefield.github.io/standards/standards/smirnoff/\
+            #toolkitam1bcc-temporary-support-for-toolkit-based-am1-bcc-partial-charges
+
         Parameters
         ----------
         partial_charge_method : string
@@ -2443,13 +2456,10 @@ class FrozenMolecule(Serializable):
             Whether to raise an exception if an invalid number of conformers is
             provided for the given charge method. If this is False and an
             invalid number of conformers is found, a warning will be raised.
-        use_conformers : iterable of openff.unit.Quantity-wrapped numpy arrays, each with shape (n_atoms, 3) and
-            dimension of distance. Optional, default=None
-            Coordinates to use for partial charge calculation. If None, an
+        use_conformers : Arrays with shape (n_atoms, 3) and dimensions of distance
+            Coordinates to use for partial charge calculation. If ``None``, an
             appropriate number of conformers will be generated.
-        toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
-            openff.toolkit.utils.toolkits.ToolkitWrapper,
-            optional, default=None
+        toolkit_registry
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the
             calculation.
         normalize_partial_charges : bool, default=True
@@ -2461,8 +2471,20 @@ class FrozenMolecule(Serializable):
         Examples
         --------
 
+        Generate AM1 Mulliken partial charges. Conformers for the AM1
+        calculation are generated automatically:
+
         >>> molecule = Molecule.from_smiles('CCCCCC')
         >>> molecule.assign_partial_charges('am1-mulliken')
+
+        To use pre-generated conformations, use the ``use_conformers`` argument:
+
+        >>> molecule = Molecule.from_smiles('CCCCCC')
+        >>> molecule.generate_conformers(n_conformers=1)
+        >>> molecule.assign_partial_charges(
+        ...     'am1-mulliken',
+        ...     use_conformers=molecule.conformers
+        ... )
 
         Raises
         ------
