@@ -34,3 +34,5 @@ dependencies:
   - qcelemental
   - qcportal >=0.15
   - qcengine
+  - ipywidgets =7.7.3
+
