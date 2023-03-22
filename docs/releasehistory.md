@@ -8,6 +8,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### Improved documentation and warnings
+
+- [PR #1564] Improve documentation of conformer selection in `Molecule.assign_partial_charges()`
+
 ## 0.12.1
 
 ### New features
