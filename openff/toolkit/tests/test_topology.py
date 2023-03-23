@@ -58,6 +58,7 @@ from openff.toolkit.utils.exceptions import (
     InvalidPeriodicityError,
     MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
+    UnassignedChemistryInPDBError,
     WrongShapeError,
 )
 
@@ -702,6 +703,15 @@ class TestTopology:
                 assert original == roundtrip
             else:
                 assert roundtrip_atom.metadata["chain_id"] == "X"
+
+    def test_from_multicomponent_pdb(self):
+        with pytest.raises(UnassignedChemistryInPDBError):
+            Topology.from_multicomponent_pdb(get_data_file_path("proteins/5tbm_complex_solv.pdb"))
+
+        ligand = Molecule.from_file(get_data_file_path("molecules/PT2385.sdf"))
+        top = Topology.from_multicomponent_pdb(get_data_file_path("proteins/5tbm_complex_solv.pdb"),
+                                               unique_molecules=[ligand])
+        print(top)
 
     @requires_pkg("mdtraj")
     def test_from_mdtraj(self):

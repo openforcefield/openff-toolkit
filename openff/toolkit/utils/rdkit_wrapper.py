@@ -37,7 +37,7 @@ from openff.toolkit.utils.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Atom, Bond, Molecule
+    from openff.toolkit.topology.molecule import Atom, Bond, Molecule, Topology
 
 logger = logging.getLogger(__name__)
 
@@ -262,6 +262,23 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         offmol = self.from_rdkit(rdkit_mol, allow_undefined_stereo=True)
         return offmol
 
+    def _polymer_openmm_topology_to_offtop(self, omm_top, substructure_dictionary):
+        from rdkit import Chem
+        from openff.toolkit import Topology
+        rdkit_mol = self._polymer_openmm_topology_to_rdmol(
+            omm_top, substructure_dictionary
+        )
+        rdmols = Chem.GetMolFrags(rdkit_mol,
+                                  asMols=True,
+                                  sanitizeFrags=False
+                                  )
+        top = Topology()
+        for rdmol in rdmols:
+            offmol = self.from_rdkit(rdmol, allow_undefined_stereo=True)
+            top.add_molecule(offmol)
+        return top
+
+
     def _polymer_openmm_topology_to_rdmol(
         self,
         omm_top,
@@ -316,7 +333,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 # then create a looser definition for pattern matching...
                 # be lax about double bonds and chirality
                 fuzzy = self._fuzzy_query(ref)
-
                 # It's important that we do the substructure search on `rdkit_mol`, but the chemical
                 # info is added to `mol`. If we use the same rdkit molecule for search AND info addition,
                 # then single bonds may no longer be present for subsequent overlapping matches.
@@ -325,7 +341,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         matches[i].append(res_name)
 
                     if any(m in already_assigned_nodes for m in match) and (
-                        res_name not in ["PEPTIDE_BOND", "DISULFIDE"]
+                        res_name not in ["PEPTIDE_BOND", "DISULFIDE", "UNIQUE_MOLECULE"]
                     ):
                         continue
                     already_assigned_nodes.update(match)
