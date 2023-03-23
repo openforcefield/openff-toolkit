@@ -264,20 +264,18 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def _polymer_openmm_topology_to_offtop(self, omm_top, substructure_dictionary):
         from rdkit import Chem
+
         from openff.toolkit import Topology
+
         rdkit_mol = self._polymer_openmm_topology_to_rdmol(
             omm_top, substructure_dictionary
         )
-        rdmols = Chem.GetMolFrags(rdkit_mol,
-                                  asMols=True,
-                                  sanitizeFrags=False
-                                  )
+        rdmols = Chem.GetMolFrags(rdkit_mol, asMols=True, sanitizeFrags=False)
         top = Topology()
         for rdmol in rdmols:
             offmol = self.from_rdkit(rdmol, allow_undefined_stereo=True)
             top.add_molecule(offmol)
         return top
-
 
     def _polymer_openmm_topology_to_rdmol(
         self,

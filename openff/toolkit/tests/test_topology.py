@@ -706,11 +706,15 @@ class TestTopology:
 
     def test_from_multicomponent_pdb(self):
         with pytest.raises(UnassignedChemistryInPDBError):
-            Topology.from_multicomponent_pdb(get_data_file_path("proteins/5tbm_complex_solv.pdb"))
+            Topology.from_multicomponent_pdb(
+                get_data_file_path("proteins/5tbm_complex_solv.pdb")
+            )
 
         ligand = Molecule.from_file(get_data_file_path("molecules/PT2385.sdf"))
-        top = Topology.from_multicomponent_pdb(get_data_file_path("proteins/5tbm_complex_solv.pdb"),
-                                               unique_molecules=[ligand])
+        top = Topology.from_multicomponent_pdb(
+            get_data_file_path("proteins/5tbm_complex_solv.pdb"),
+            unique_molecules=[ligand],
+        )
         print(top)
 
     @requires_pkg("mdtraj")

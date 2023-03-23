@@ -42,7 +42,7 @@ from typing_extensions import TypeAlias
 from openff.toolkit.topology import Molecule
 from openff.toolkit.topology._mm_molecule import _SimpleBond, _SimpleMolecule
 from openff.toolkit.topology.molecule import FrozenMolecule, HierarchyElement
-from openff.toolkit.utils import quantity_to_string, string_to_quantity, ToolkitWrapper
+from openff.toolkit.utils import ToolkitWrapper, quantity_to_string, string_to_quantity
 from openff.toolkit.utils.constants import (
     ALLOWED_AROMATICITY_MODELS,
     DEFAULT_AROMATICITY_MODEL,
@@ -1522,8 +1522,6 @@ class Topology(Serializable):
             elif not molecule.has_unique_atom_names:
                 molecule.generate_unique_atom_names()
 
-
-
     @classmethod
     @requires_package("openmm")
     def from_multicomponent_pdb(
@@ -1577,9 +1575,10 @@ class Topology(Serializable):
             provide a detailed diagnostic of what went wrong.
 
         """
+        import json
+
         import openmm.unit as openmm_unit
         from openmm.app import PDBFile
-        import json
 
         if isinstance(toolkit_registry, ToolkitWrapper):
             toolkit_registry = ToolkitRegistry([toolkit_registry])
@@ -1603,18 +1602,18 @@ class Topology(Serializable):
         substructure_dictionary["Br"] = {"[Br-1:1]": ["Br"]}
         substructure_dictionary["I"] = {"[I-1:1]": ["I"]}
 
-        if not(unique_molecules):
+        if not (unique_molecules):
             unique_molecules = []
         else:
             substructure_dictionary["UNIQUE_MOLECULE"] = {}
 
         for unique_molecule in unique_molecules:
             mapped_smiles = unique_molecule.to_smiles(mapped=True)
-            #mapped_smiles = mapped_smiles.replace("@","")
-            substructure_dictionary["UNIQUE_MOLECULE"][mapped_smiles] = [a.name for a in unique_molecule.atoms]
-        #print([*substructure_dictionary.items()][-1])
-
-
+            # mapped_smiles = mapped_smiles.replace("@","")
+            substructure_dictionary["UNIQUE_MOLECULE"][mapped_smiles] = [
+                a.name for a in unique_molecule.atoms
+            ]
+        # print([*substructure_dictionary.items()][-1])
 
         topology = toolkit_registry.call(
             "_polymer_openmm_topology_to_offtop", pdb.topology, substructure_dictionary
@@ -1630,8 +1629,8 @@ class Topology(Serializable):
             unit.angstrom,
         )
         topology.positions = coords
-        #offmol.add_conformer(coords)
-        #for i, atom in topology.atoms:
+        # offmol.add_conformer(coords)
+        # for i, atom in topology.atoms:
         for i, atom in enumerate(pdb.topology.atoms()):
             topology.atom(i).name = atom.name
             topology.atom(i).metadata["residue_name"] = atom.residue.name
@@ -1640,7 +1639,9 @@ class Topology(Serializable):
             topology.atom(i).metadata["chain_id"] = atom.residue.chain.id
 
         for offmol in topology.molecules:
-            offmol = toolkit_registry.call("_assign_aromaticity_and_stereo_from_3d", offmol)
+            offmol = toolkit_registry.call(
+                "_assign_aromaticity_and_stereo_from_3d", offmol
+            )
             offmol.add_default_hierarchy_schemes()
 
         # if offmol._has_multiple_molecules():
