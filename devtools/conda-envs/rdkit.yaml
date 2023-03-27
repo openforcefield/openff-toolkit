@@ -36,3 +36,5 @@ dependencies:
   - qcportal >=0.15
   - qcengine
   - openff-models
+  - ipywidgets =7
+

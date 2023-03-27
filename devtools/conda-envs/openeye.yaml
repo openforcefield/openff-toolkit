@@ -38,3 +38,4 @@ dependencies:
   - mdtraj
   - parmed
   - openff-models
+  - ipywidgets =7

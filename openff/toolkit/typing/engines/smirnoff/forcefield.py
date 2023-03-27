@@ -1130,6 +1130,11 @@ class ForceField:
     ) -> Union["openmm.System", Tuple["openmm.System", "Topology"]]:
         """Create an OpenMM System from this ForceField and a Topology.
 
+        Note that most force fields specify their own partial charges, and any
+        partial charges defined on the ``Molecule`` objects in the topology are
+        ignored. To use custom partial charges, see the
+        ``charge_from_molecules`` argument.
+
         Parameters
         ----------
         topology
