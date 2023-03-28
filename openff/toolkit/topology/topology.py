@@ -1527,7 +1527,7 @@ class Topology(Serializable):
     def from_multicomponent_pdb(
         cls,
         file_path: Union[str, TextIO],
-        unique_molecules: Iterable[Molecule] = None,
+        unique_molecules: Optional[Iterable[Molecule]] = None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
@@ -1615,31 +1615,31 @@ class Topology(Serializable):
             ]
         # print([*substructure_dictionary.items()][-1])
 
-        topology = toolkit_registry.call(
-            "_polymer_openmm_topology_to_offtop", pdb.topology, substructure_dictionary
-        )
-
-        coords = unit.Quantity(
-            np.array(
+        coords_angstrom = np.array(
                 [
                     [*vec3.value_in_unit(openmm_unit.angstrom)]
                     for vec3 in pdb.getPositions()
                 ]
-            ),
-            unit.angstrom,
+            )
+
+        topology = toolkit_registry.call(
+            "_polymer_openmm_pdbfile_to_offtop", pdb, substructure_dictionary, coords_angstrom
         )
-        topology.positions = coords
+
+
+        #topology.positions = coords
         # offmol.add_conformer(coords)
         # for i, atom in topology.atoms:
         for i, atom in enumerate(pdb.topology.atoms()):
-            topology.atom(i).name = atom.name
-            topology.atom(i).metadata["residue_name"] = atom.residue.name
-            topology.atom(i).metadata["residue_number"] = atom.residue.id
-            topology.atom(i).metadata["insertion_code"] = atom.residue.insertionCode
-            topology.atom(i).metadata["chain_id"] = atom.residue.chain.id
+            off_atom = topology.atom(i)
+            off_atom.name = atom.name
+            off_atom.metadata["residue_name"] = atom.residue.name
+            off_atom.metadata["residue_number"] = atom.residue.id
+            off_atom.metadata["insertion_code"] = atom.residue.insertionCode
+            off_atom.metadata["chain_id"] = atom.residue.chain.id
 
         for offmol in topology.molecules:
-            offmol = toolkit_registry.call(
+            #offmol = toolkit_registry.call(
                 "_assign_aromaticity_and_stereo_from_3d", offmol
             )
             offmol.add_default_hierarchy_schemes()
