@@ -704,6 +704,7 @@ class TestTopology:
             else:
                 assert roundtrip_atom.metadata["chain_id"] == "X"
 
+    @requires_rdkit
     def test_from_multicomponent_pdb(self):
         with pytest.raises(UnassignedChemistryInPDBError):
             Topology.from_multicomponent_pdb(
@@ -711,9 +712,10 @@ class TestTopology:
             )
 
         ligand = Molecule.from_file(get_data_file_path("molecules/PT2385.sdf"))
-        top = Topology.from_multicomponent_pdb(
-            get_data_file_path("proteins/5tbm_complex_solv.pdb"),
-            unique_molecules=[ligand],
+        top = Topology.from_multicomponent_pdb(get_data_file_path("proteins/5tbm_complex_solv.pdb"),
+        #top = Topology.from_multicomponent_pdb("/Users/jeffreywagner/projects/OpenForceField/openff-toolkit/examples/toolkit_showcase/big_test.pdb",
+                                               unique_molecules=[ligand,
+                                                                 Molecule.from_smiles('[H]S[H]')],
         )
         print(top)
 
