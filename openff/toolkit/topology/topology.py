@@ -1616,18 +1616,17 @@ class Topology(Serializable):
         # print([*substructure_dictionary.items()][-1])
 
         coords_angstrom = np.array(
-                [
-                    [*vec3.value_in_unit(openmm_unit.angstrom)]
-                    for vec3 in pdb.getPositions()
-                ]
-            )
-
-        topology = toolkit_registry.call(
-            "_polymer_openmm_pdbfile_to_offtop", pdb, substructure_dictionary, coords_angstrom
+            [[*vec3.value_in_unit(openmm_unit.angstrom)] for vec3 in pdb.getPositions()]
         )
 
+        topology = toolkit_registry.call(
+            "_polymer_openmm_pdbfile_to_offtop",
+            pdb,
+            substructure_dictionary,
+            coords_angstrom,
+        )
 
-        #topology.positions = coords
+        # topology.positions = coords
         # offmol.add_conformer(coords)
         # for i, atom in topology.atoms:
         for i, atom in enumerate(pdb.topology.atoms()):
