@@ -1639,7 +1639,7 @@ class Topology(Serializable):
             off_atom.metadata["chain_id"] = atom.residue.chain.id
 
         for offmol in topology.molecules:
-            #offmol = toolkit_registry.call(
+            offmol = toolkit_registry.call(
                 "_assign_aromaticity_and_stereo_from_3d", offmol
             )
             offmol.add_default_hierarchy_schemes()
