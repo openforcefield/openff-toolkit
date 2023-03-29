@@ -264,8 +264,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return offmol
 
     def _polymer_openmm_pdbfile_to_offtop(self, pdbfile, substructure_dictionary, coords_angstrom):
-        from rdkit import Chem
-, Geometry
+        from rdkit import Chem, Geometry
         from openff.toolkit import Topology
         omm_top = pdbfile.topology
         rdkit_mol = self._polymer_openmm_topology_to_rdmol(
