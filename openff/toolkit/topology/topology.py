@@ -1625,7 +1625,6 @@ class Topology(Serializable):
         )
 
         for off_atom, atom in zip([*topology.atoms], pdb.topology.atoms()):
-
             off_atom.metadata["residue_name"] = atom.residue.name
             off_atom.metadata["residue_number"] = atom.residue.id
             off_atom.metadata["insertion_code"] = atom.residue.insertionCode
