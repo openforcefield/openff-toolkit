@@ -37,8 +37,8 @@ from openff.toolkit.utils.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Atom, Bond, Molecule
     from openff.toolkit.topology import Topology
+    from openff.toolkit.topology.molecule import Atom, Bond, Molecule
 
 logger = logging.getLogger(__name__)
 
@@ -263,9 +263,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         offmol = self.from_rdkit(rdkit_mol, allow_undefined_stereo=True)
         return offmol
 
-    def _polymer_openmm_pdbfile_to_offtop(self, pdbfile, substructure_dictionary, coords_angstrom):
+    def _polymer_openmm_pdbfile_to_offtop(
+        self, pdbfile, substructure_dictionary, coords_angstrom
+    ):
         from rdkit import Chem, Geometry
+
         from openff.toolkit import Topology
+
         omm_top = pdbfile.topology
         rdkit_mol = self._polymer_openmm_topology_to_rdmol(
             omm_top, substructure_dictionary
@@ -278,8 +282,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         rdkit_mol.AddConformer(rdmol_conformer, assignId=True)
         Chem.SanitizeMol(
             rdkit_mol,
-            Chem.SANITIZE_ALL
-            ^ Chem.SANITIZE_ADJUSTHS,
+            Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS,
         )
         Chem.AssignStereochemistryFrom3D(rdkit_mol)
         Chem.Kekulize(rdkit_mol, clearAromaticFlags=True)
