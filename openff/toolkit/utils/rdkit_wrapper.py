@@ -289,9 +289,25 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         Chem.SetAromaticity(rdkit_mol, Chem.AromaticityModel.AROMATICITY_MDL)
         rdmols = Chem.GetMolFrags(rdkit_mol, asMols=True, sanitizeFrags=False)
         top = Topology()
+
+        # Identify unique molecules and only run from_rdkit on them once.
+        # Note that this identity comparison COULD match two chemically equivalent
+        # atoms with different atom names, but that doesn't matter because we do
+        # the metadata assignment and coordinate setting outside this method, so
+        # as long as a chemically equivalent atom is sitting at the right index
+        # in the topology when the metadata is assigned there's no difference.
+        smiles2offmol = dict()
         for rdmol in rdmols:
-            offmol = self.from_rdkit(rdmol, allow_undefined_stereo=True)
-            top.add_molecule(offmol)
+            for atom in rdmol.GetAtoms():
+                # the mapping must start from 1, as RDKit uses 0 to represent no mapping.
+                atom.SetAtomMapNum(atom.GetIdx() + 1)
+            mapped_smi = Chem.MolToSmiles(rdmol)
+            if mapped_smi in smiles2offmol.keys():
+                offmol = copy.deepcopy(smiles2offmol[mapped_smi])
+            else:
+                offmol = self.from_rdkit(rdmol, allow_undefined_stereo=True)
+                smiles2offmol[mapped_smi] = copy.deepcopy(offmol)
+            top._add_molecule_keep_cache(offmol)
         return top
 
     def _polymer_openmm_topology_to_rdmol(

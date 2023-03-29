@@ -1609,11 +1609,9 @@ class Topology(Serializable):
 
         for unique_molecule in unique_molecules:
             mapped_smiles = unique_molecule.to_smiles(mapped=True)
-            # mapped_smiles = mapped_smiles.replace("@","")
             substructure_dictionary["UNIQUE_MOLECULE"][mapped_smiles] = [
                 a.name for a in unique_molecule.atoms
             ]
-        # print([*substructure_dictionary.items()][-1])
 
         coords_angstrom = np.array(
             [[*vec3.value_in_unit(openmm_unit.angstrom)] for vec3 in pdb.getPositions()]
@@ -1626,30 +1624,15 @@ class Topology(Serializable):
             coords_angstrom,
         )
 
-        # topology.positions = coords
-        # offmol.add_conformer(coords)
-        # for i, atom in topology.atoms:
-        for i, atom in enumerate(pdb.topology.atoms()):
-            off_atom = topology.atom(i)
-            off_atom.name = atom.name
+        for off_atom, atom in zip([*topology.atoms], pdb.topology.atoms()):
+
             off_atom.metadata["residue_name"] = atom.residue.name
             off_atom.metadata["residue_number"] = atom.residue.id
             off_atom.metadata["insertion_code"] = atom.residue.insertionCode
             off_atom.metadata["chain_id"] = atom.residue.chain.id
 
         for offmol in topology.molecules:
-            offmol = toolkit_registry.call(
-                "_assign_aromaticity_and_stereo_from_3d", offmol
-            )
             offmol.add_default_hierarchy_schemes()
-
-        # if offmol._has_multiple_molecules():
-        #     raise MultipleMoleculesInPDBError(
-        #         "This PDB has multiple molecules. The OpenFF Toolkit requires "
-        #         + "that only one molecule is present in a PDB. Try splitting "
-        #         + "each molecule into its own PDB with another tool, and "
-        #         + "load any small molecules with Molecule.from_pdb_and_smiles."
-        #     )
 
         return topology
 
