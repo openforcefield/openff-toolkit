@@ -717,22 +717,22 @@ class TestTopology:
 
         top = Topology.from_multicomponent_pdb(
             get_data_file_path("proteins/5tbm_complex_solv.pdb"),
-            unique_molecules=[ligand,
-                              Molecule.from_smiles("[H]S[H]"),
-                              # Unlike bond order and formal charge, the stereo is
-                              # assigned by 3D geometry, so providing stereoisomer1 should allow
-                              # us to load stereoisomers 1 and 2 correctly
-                              stereoisomer1
-                              ],
+            unique_molecules=[
+                ligand,
+                Molecule.from_smiles("[H]S[H]"),
+                # Unlike bond order and formal charge, the stereo is
+                # assigned by 3D geometry, so providing stereoisomer1 should allow
+                # us to load stereoisomers 1 and 2 correctly
+                stereoisomer1,
+            ],
         )
 
-        res_iter = top.hierarchy_iterator('residues')
+        res_iter = top.hierarchy_iterator("residues")
         assert len([*res_iter]) == 130
-        chain_iter = top.hierarchy_iterator('chains')
+        chain_iter = top.hierarchy_iterator("chains")
         assert len([*chain_iter]) == 19
 
-        assert top.molecule(1).is_isomorphic_with(ligand
-                                                  )
+        assert top.molecule(1).is_isomorphic_with(ligand)
         water = Molecule.from_smiles("O")
         assert top.molecule(2).is_isomorphic_with(water)
         assert top.molecule(3).is_isomorphic_with(water)
@@ -741,9 +741,9 @@ class TestTopology:
 
         # Ensure the stereo twins were loaded correctly
         assert top.molecule(6).is_isomorphic_with(stereoisomer1)
-        assert not(top.molecule(6).is_isomorphic_with(stereoisomer2))
+        assert not (top.molecule(6).is_isomorphic_with(stereoisomer2))
         assert top.molecule(7).is_isomorphic_with(stereoisomer2)
-        assert not(top.molecule(7).is_isomorphic_with(stereoisomer1))
+        assert not (top.molecule(7).is_isomorphic_with(stereoisomer1))
 
         # Test loading monoatomic ions added by pdbfixer
         cl_minus = Molecule.from_smiles("[Cl-]")
@@ -762,7 +762,6 @@ class TestTopology:
         assert top.molecule(16).is_isomorphic_with(Molecule.from_smiles("[F-]"))
         assert top.molecule(17).is_isomorphic_with(Molecule.from_smiles("[Br-]"))
         assert top.molecule(18).is_isomorphic_with(Molecule.from_smiles("[I-]"))
-
 
     @requires_pkg("mdtraj")
     def test_from_mdtraj(self):
