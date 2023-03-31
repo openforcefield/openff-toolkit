@@ -854,6 +854,7 @@ class FrozenMolecule(Serializable):
 
     def __init__(
         self,
+        name: str = "",
         other=None,
         file_format: Optional[str] = None,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
@@ -884,6 +885,8 @@ class FrozenMolecule(Serializable):
             * an ``rdkit.Chem.rdchem.Mol``
             * a serialized :class:`Molecule` object
 
+        name: str, optional, default=''
+            A name for the molecule
         file_format : str, optional, default=None
             If providing a file-like object, you must specify the format
             of the data. If providing a file, the file format will attempt
@@ -1032,6 +1035,8 @@ class FrozenMolecule(Serializable):
                 for value_error in value_errors:
                     msg += str(value_error)
                 raise ValueError(msg)
+
+        self._name = name
 
     @property
     def has_unique_atom_names(self) -> bool:
@@ -5108,63 +5113,7 @@ class Molecule(FrozenMolecule):
 
     def __init__(self, *args, **kwargs):
         """
-        Create a new Molecule object
-
-        Parameters
-        ----------
-        other : optional, default=None
-            If specified, attempt to construct a copy of the molecule from the
-            specified object. This can be any one of the following:
-
-            * a :class:`Molecule` object
-            * a file that can be used to construct a :class:`Molecule` object
-            * an ``openeye.oechem.OEMol``
-            * an ``rdkit.Chem.rdchem.Mol``
-            * a serialized :class:`Molecule` object
-
-        Examples
-        --------
-
-        Create an empty molecule:
-
-        >>> empty_molecule = Molecule()
-
-        Create a molecule from a file that can be used to construct a molecule,
-        using either a filename or file-like object:
-
-        >>> from openff.toolkit.utils import get_data_file_path
-        >>> sdf_filepath = get_data_file_path('molecules/ethanol.sdf')
-        >>> molecule = Molecule(sdf_filepath)
-        >>> molecule = Molecule(open(sdf_filepath, 'r'), file_format='sdf')
-
-        >>> import gzip
-        >>> mol2_gz_filepath = get_data_file_path('molecules/toluene.mol2.gz')
-        >>> molecule = Molecule(gzip.GzipFile(mol2_gz_filepath, 'r'), file_format='mol2')
-
-        Create a molecule from another molecule:
-
-        >>> molecule_copy = Molecule(molecule)
-
-        Convert to OpenEye OEMol object
-
-        >>> oemol = molecule.to_openeye()
-
-        Create a molecule from an OpenEye molecule:
-
-        >>> molecule = Molecule(oemol)
-
-        Convert to RDKit Mol object
-
-        >>> rdmol = molecule.to_rdkit()
-
-        Create a molecule from an RDKit molecule:
-
-        >>> molecule = Molecule(rdmol)
-
-        Convert the molecule into a dictionary and back again:
-
-        >>> serialized_molecule = molecule.to_dict()
-        >>> molecule_copy = Molecule(serialized_molecule)
+        See FrozenMolecule.__init__
 
         .. todo ::
 
