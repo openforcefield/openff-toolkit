@@ -1,4 +1,4 @@
-REMARK   1 CREATED WITH OPENMM 8.0, 2023-03-23
+REMARK   1 CREATED WITH OPENMM 8.0, 2023-03-31
 HETATM    1  CH3 ACE A   1      13.128 -15.542  -1.183  1.00  0.00           C  
 HETATM    2  C   ACE A   1      14.349 -15.180  -2.017  1.00  0.00           C  
 HETATM    3  O   ACE A   1      14.219 -14.390  -2.940  1.00  0.00           O  
@@ -1775,23 +1775,23 @@ HETATM 1773 C12x UNK B   1      19.422  -2.109 -10.876  1.00  0.00           C
 HETATM 1774  F1x UNK B   1      18.854  -3.317 -11.082  1.00  0.00           F  
 HETATM 1775 C13x UNK B   1      18.736  -1.152 -10.139  1.00  0.00           C  
 HETATM 1776 C14x UNK B   1      19.288   0.123  -9.955  1.00  0.00           C  
-HETATM 1777 C15x UNK B   1      18.570   1.166  -9.240  1.00  0.00           C  
+HETATM 1777 C15x UNK B   1      18.570   1.167  -9.240  1.00  0.00           C  
 HETATM 1778 C16x UNK B   1      20.548   0.390 -10.451  1.00  0.00           C  
 HETATM 1779  S1x UNK B   1      27.520  -1.066  -8.579  1.00  0.00           S  
 HETATM 1780  O3x UNK B   1      27.211  -1.978  -7.478  1.00  0.00           O  
 HETATM 1781  O4x UNK B   1      28.600  -1.405  -9.508  1.00  0.00           O  
-HETATM 1782 C17x UNK B   1      27.906   0.612  -7.865  1.00  0.00           C  
+HETATM 1782 C17x UNK B   1      27.906   0.612  -7.864  1.00  0.00           C  
 HETATM 1783  F2x UNK B   1      27.059   1.322 -13.829  1.00  0.00           F  
 HETATM 1784  F3x UNK B   1      26.674  -0.800 -13.663  1.00  0.00           F  
 HETATM 1785  N1x UNK B   1      18.020   2.005  -8.663  1.00  0.00           N  
 HETATM 1786  H1x UNK B   1      28.340   1.877 -11.653  1.00  0.00           H  
-HETATM 1787  H2x UNK B   1      27.997  -0.381 -11.703  1.00  0.00           H  
-HETATM 1788  H3x UNK B   1      24.430   0.182 -13.665  1.00  0.00           H  
+HETATM 1787  H2x UNK B   1      27.996  -0.381 -11.703  1.00  0.00           H  
+HETATM 1788  H3x UNK B   1      24.430   0.181 -13.665  1.00  0.00           H  
 HETATM 1789  H4x UNK B   1      24.795   1.642 -12.767  1.00  0.00           H  
 HETATM 1790  H5x UNK B   1      24.781  -1.491  -7.902  1.00  0.00           H  
 HETATM 1791  H6x UNK B   1      22.685  -1.220  -9.098  1.00  0.00           H  
 HETATM 1792  H7x UNK B   1      21.218  -2.583 -11.944  1.00  0.00           H  
-HETATM 1793  H8x UNK B   1      17.795  -1.436  -9.704  1.00  0.00           H  
+HETATM 1793  H8x UNK B   1      17.796  -1.436  -9.704  1.00  0.00           H  
 HETATM 1794  H9x UNK B   1      21.008   1.352 -10.263  1.00  0.00           H  
 HETATM 1795 H10x UNK B   1      28.921   0.544  -7.482  1.00  0.00           H  
 HETATM 1796 H11x UNK B   1      27.193   0.840  -7.071  1.00  0.00           H  
@@ -1805,22 +1805,56 @@ HETATM 1803  O   HOH D   1      26.151   3.505  -9.557  1.00  0.00           O
 HETATM 1804  H1  HOH D   1      25.180   3.262  -9.607  1.00  0.00           H  
 HETATM 1805  H2  HOH D   1      26.679   2.883 -10.135  1.00  0.00           H  
 TER    1806      HOH D   1
-HETATM 1807  O   HOH E   1      16.433  -6.577 -21.619  1.00  0.00           O  
-HETATM 1808  H1  HOH E   1      15.930  -7.219 -21.039  1.00  0.00           H  
-HETATM 1809  H2  HOH E   1      15.883  -6.354 -22.424  1.00  0.00           H  
+HETATM 1807  O   HOH E   1      10.081 -15.418 -38.536  1.00  0.00           O  
+HETATM 1808  H1  HOH E   1       9.452 -16.119 -38.365  1.00  0.00           H  
+HETATM 1809  H2  HOH E   1       9.629 -14.833 -39.144  1.00  0.00           H  
 TER    1810      HOH E   1
-HETATM 1811  S   H2S F   1      14.712  10.567  -4.073  1.00  0.00           S
-HETATM 1812  HS1 H2S F   1      14.126   9.829  -4.413  1.00  0.00           H
-HETATM 1813  HS2 H2S F   1      14.305  11.450  -4.309  1.00  0.00           H
-TER    1814      H2S F   1
-HETATM 1815 Cl    CL G   1       9.954  18.545  -3.910  1.00  0.00          Cl  
-TER    1816       CL G   1
-HETATM 1817 Cl    CL H   1      35.046 -11.362   8.649  1.00  0.00          Cl  
-TER    1818       CL H   1
-HETATM 1819 Na    NA I   1       1.870  -7.640  -4.128  1.00  0.00          Na  
-TER    1820       NA I   1
-HETATM 1821 Na    NA J   1      27.552  23.387 -30.235  1.00  0.00          Na  
-TER    1822       NA J   1
+HETATM 1811  O   HOH F   1       8.828 -21.020 -12.111  1.00  0.00           O  
+HETATM 1812  H1  HOH F   1       8.427 -20.269 -12.547  1.00  0.00           H  
+HETATM 1813  H2  HOH F   1       9.537 -20.644 -11.589  1.00  0.00           H  
+TER    1814      HOH F   1
+HETATM 1815  C1x UNK G   1      -1.123  -0.119   0.085  1.00  0.00           C  
+HETATM 1816 Cl1x UNK G   1      -1.416   1.445  -0.663  1.00  0.00          Cl  
+HETATM 1817  F1x UNK G   1      -1.706  -1.144  -0.636  1.00  0.00           F  
+HETATM 1818  C2x UNK G   1       0.327  -0.414   0.238  1.00  0.00           C  
+HETATM 1819  C3x UNK G   1       1.280   0.385  -0.189  1.00  0.00           C  
+HETATM 1820  F2x UNK G   1       2.566   0.031  -0.004  1.00  0.00           F  
+HETATM 1821  H1x UNK G   1      -1.571  -0.152   1.120  1.00  0.00           H  
+HETATM 1822  H2x UNK G   1       0.582  -1.345   0.734  1.00  0.00           H  
+HETATM 1823  H3x UNK G   1       1.061   1.314  -0.684  1.00  0.00           H  
+TER    1824      UNK G   1
+HETATM 1825  C1x UNK H   1      -6.091  -4.883  -4.991  1.00  0.00           C  
+HETATM 1826 Cl1x UNK H   1      -6.473  -5.827  -3.532  1.00  0.00          Cl  
+HETATM 1827  F1x UNK H   1      -6.371  -5.603  -6.133  1.00  0.00           F  
+HETATM 1828  C2x UNK H   1      -4.681  -4.455  -4.938  1.00  0.00           C  
+HETATM 1829  C3x UNK H   1      -3.682  -5.283  -5.149  1.00  0.00           C  
+HETATM 1830  F2x UNK H   1      -3.925  -6.579  -5.426  1.00  0.00           F  
+HETATM 1831  H1x UNK H   1      -6.724  -3.988  -5.006  1.00  0.00           H  
+HETATM 1832  H2x UNK H   1      -4.409  -3.408  -4.716  1.00  0.00           H  
+HETATM 1833  H3x UNK H   1      -2.644  -4.972  -5.110  1.00  0.00           H  
+TER    1834      UNK H   1
+HETATM 1835 Cl    CL I   1      46.637 -27.064  -7.653  1.00  0.00          Cl  
+TER    1836       CL I   1
+HETATM 1837 Cl    CL J   1      25.769  -6.330 -33.233  1.00  0.00          Cl  
+TER    1838       CL J   1
+HETATM 1839 Na    NA K   1      49.639 -24.051  -6.785  1.00  0.00          Na  
+TER    1840       NA K   1
+HETATM 1841 Na    NA L   1      44.354   1.402  -7.056  1.00  0.00          Na  
+TER    1842       NA L   1
+HETATM 1843      UNK M   1       5.000   5.000   5.000  1.00  0.00          Li  
+TER    1844      UNK M   1
+HETATM 1845      UNK N   1       6.000   6.000   6.000  1.00  0.00           K  
+TER    1846      UNK N   1
+HETATM 1847      UNK O   1       7.000   7.000   7.000  1.00  0.00          Rb  
+TER    1848      UNK O   1
+HETATM 1849      UNK P   1       8.000   8.000   8.000  1.00  0.00          Cs  
+TER    1850      UNK P   1
+HETATM 1851      UNK Q   1       9.000   9.000   9.000  1.00  0.00           F  
+TER    1852      UNK Q   1
+HETATM 1853      UNK R   1      10.000  10.000  10.000  1.00  0.00          Br  
+TER    1854      UNK R   1
+HETATM 1855      UNK S   1      11.000  11.000  11.000  1.00  0.00           I  
+TER    1856      UNK S   1
 CONECT    1    2    4    5    6
 CONECT    2    1    3    7
 CONECT    3    2
@@ -1873,6 +1907,22 @@ CONECT 1794 1778
 CONECT 1795 1782
 CONECT 1796 1782
 CONECT 1797 1782
-CONECT 1811 1812
-CONECT 1811 1813
+CONECT 1815 1816 1817 1818 1821
+CONECT 1816 1815
+CONECT 1817 1815
+CONECT 1818 1815 1819 1822
+CONECT 1819 1818 1820 1823
+CONECT 1820 1819
+CONECT 1821 1815
+CONECT 1822 1818
+CONECT 1823 1819
+CONECT 1825 1826 1827 1828 1831
+CONECT 1826 1825
+CONECT 1827 1825
+CONECT 1828 1825 1829 1832
+CONECT 1829 1828 1830 1833
+CONECT 1830 1829
+CONECT 1831 1825
+CONECT 1832 1828
+CONECT 1833 1829
 END

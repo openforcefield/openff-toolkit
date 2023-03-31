@@ -712,12 +712,57 @@ class TestTopology:
             )
 
         ligand = Molecule.from_file(get_data_file_path("molecules/PT2385.sdf"))
+        stereoisomer1 = Molecule.from_smiles("[C@H](Cl)(F)/C=C/F")
+        stereoisomer2 = Molecule.from_smiles("[C@@H](Cl)(F)/C=C\F")
+
         top = Topology.from_multicomponent_pdb(
             get_data_file_path("proteins/5tbm_complex_solv.pdb"),
-            # top = Topology.from_multicomponent_pdb("/Users/jeffreywagner/projects/OpenForceField/openff-toolkit/examples/toolkit_showcase/big_test.pdb",
-            unique_molecules=[ligand, Molecule.from_smiles("[H]S[H]")],
+            unique_molecules=[ligand,
+                              Molecule.from_smiles("[H]S[H]"),
+                              # Unlike bond order and formal charge, the stereo is
+                              # assigned by 3D geometry, so providing stereoisomer1 should allow
+                              # us to load stereoisomers 1 and 2 correctly
+                              stereoisomer1
+                              ],
         )
-        print(top)
+
+        res_iter = top.hierarchy_iterator('residues')
+        assert len([*res_iter]) == 130
+        chain_iter = top.hierarchy_iterator('chains')
+        assert len([*chain_iter]) == 19
+
+        assert top.molecule(1).is_isomorphic_with(ligand
+                                                  )
+        water = Molecule.from_smiles("O")
+        assert top.molecule(2).is_isomorphic_with(water)
+        assert top.molecule(3).is_isomorphic_with(water)
+        assert top.molecule(4).is_isomorphic_with(water)
+        assert top.molecule(5).is_isomorphic_with(water)
+
+        # Ensure the stereo twins were loaded correctly
+        assert top.molecule(6).is_isomorphic_with(stereoisomer1)
+        assert not(top.molecule(6).is_isomorphic_with(stereoisomer2))
+        assert top.molecule(7).is_isomorphic_with(stereoisomer2)
+        assert not(top.molecule(7).is_isomorphic_with(stereoisomer1))
+
+        # Test loading monoatomic ions added by pdbfixer
+        cl_minus = Molecule.from_smiles("[Cl-]")
+        assert top.molecule(8).is_isomorphic_with(cl_minus)
+        assert top.molecule(9).is_isomorphic_with(cl_minus)
+
+        na_plus = Molecule.from_smiles("[Na+]")
+        assert top.molecule(10).is_isomorphic_with(na_plus)
+        assert top.molecule(11).is_isomorphic_with(na_plus)
+
+        # Test loading monoatomic ions added as SMILES
+        assert top.molecule(12).is_isomorphic_with(Molecule.from_smiles("[Li+]"))
+        assert top.molecule(13).is_isomorphic_with(Molecule.from_smiles("[K+]"))
+        assert top.molecule(14).is_isomorphic_with(Molecule.from_smiles("[Rb+]"))
+        assert top.molecule(15).is_isomorphic_with(Molecule.from_smiles("[Cs+]"))
+        assert top.molecule(16).is_isomorphic_with(Molecule.from_smiles("[F-]"))
+        assert top.molecule(17).is_isomorphic_with(Molecule.from_smiles("[Br-]"))
+        assert top.molecule(18).is_isomorphic_with(Molecule.from_smiles("[I-]"))
+
 
     @requires_pkg("mdtraj")
     def test_from_mdtraj(self):
