@@ -287,6 +287,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         Chem.AssignStereochemistryFrom3D(rdkit_mol)
         Chem.Kekulize(rdkit_mol, clearAromaticFlags=True)
         Chem.SetAromaticity(rdkit_mol, Chem.AromaticityModel.AROMATICITY_MDL)
+
+        # Don't sanitize or we risk assigning non-MDL aromaticity
         rdmols = Chem.GetMolFrags(rdkit_mol, asMols=True, sanitizeFrags=False)
         top = Topology()
 
@@ -298,10 +300,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # in the topology when the metadata is assigned there's no difference.
         smiles2offmol = dict()
         for rdmol in rdmols:
-            for atom in rdmol.GetAtoms():
+            # Make a copy of the molecule to assign atom maps, since
+            # otherwise the atom maps will mess with stereo assignment.
+            mapped_rdmol = Chem.Mol(rdmol)
+            for atom in mapped_rdmol.GetAtoms():
                 # the mapping must start from 1, as RDKit uses 0 to represent no mapping.
                 atom.SetAtomMapNum(atom.GetIdx() + 1)
-            mapped_smi = Chem.MolToSmiles(rdmol)
+            mapped_smi = Chem.MolToSmiles(mapped_rdmol)
             if mapped_smi in smiles2offmol.keys():
                 offmol = copy.deepcopy(smiles2offmol[mapped_smi])
             else:
