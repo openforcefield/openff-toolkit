@@ -1107,6 +1107,17 @@ class TestMolecule:
             cholesterol, Molecule.from_iupac(cholesterol_iupac)
         )
 
+    def test_to_from_iupac_wrapper(self):
+        """Test that IUPAC methods work if passed just `OpenEyeToolkitWrapper`."""
+        from openff.toolkit.utils import OpenEyeToolkitWrapper
+
+        assert (
+            Molecule.from_iupac(
+                "benzene", toolkit_registry=OpenEyeToolkitWrapper()
+            ).to_iupac(toolkit_registry=OpenEyeToolkitWrapper())
+            == "benzene"
+        )
+
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_to_from_topology(self, molecule):
         """Test that conversion/creation of a molecule to and from a Topology is consistent."""

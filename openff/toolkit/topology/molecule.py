@@ -64,6 +64,7 @@ from openff.toolkit.utils.exceptions import (
     InvalidBondOrderError,
     InvalidConformerError,
     MissingPartialChargesError,
+    MoleculeParseError,
     MultipleMoleculesInPDBError,
     RemapIndexError,
     SmilesParsingError,
@@ -337,7 +338,7 @@ class Atom(Particle):
             if not isinstance(other, openmm_unit.Quantity):
                 raise IncompatibleUnitError(
                     "Unsupported type passed to formal_charge setter. "
-                    "Found object of type {type(other)}."
+                    f"Found object of type {type(other)}."
                 )
 
             from openff.units.openmm import from_openmm
@@ -472,7 +473,7 @@ class Atom(Particle):
             The new name for this atom
         """
         if type(other) != str:
-            raise Exception(
+            raise ValueError(
                 f"In setting atom name. Expected str, received {other} (type {type(other)})."
             )
         self._name = other
@@ -2892,7 +2893,7 @@ class FrozenMolecule(Serializable):
             atom1_atom = atom1
             atom2_atom = atom2
         else:
-            raise Exception(
+            raise ValueError(
                 "Invalid inputs to molecule._add_bond. Expected ints or Atoms. "
                 f"Received {atom1} (type {type(atom1)}) and {atom2} (type {type(atom2)}) "
             )
@@ -3396,7 +3397,7 @@ class FrozenMolecule(Serializable):
         elif type(other) is str:
             self._name = other
         else:
-            raise Exception("Molecule name must be a string")
+            raise ValueError("Molecule name must be a string")
 
     @property
     def properties(self) -> Dict[str, Any]:
@@ -3568,7 +3569,7 @@ class FrozenMolecule(Serializable):
                 **kwargs,
             )
         else:
-            raise Exception(
+            raise InvalidToolkitRegistryError(
                 "Invalid toolkit_registry passed to from_iupac. Expected ToolkitRegistry or ToolkitWrapper. "
                 f"Got {type(toolkit_registry)}."
             )
@@ -3599,7 +3600,7 @@ class FrozenMolecule(Serializable):
         elif isinstance(toolkit_registry, ToolkitWrapper):
             to_iupac_method = toolkit_registry.to_iupac
         else:
-            raise Exception(
+            raise InvalidToolkitRegistryError(
                 "Invalid toolkit_registry passed to to_iupac. Expected ToolkitRegistry or ToolkitWrapper. "
                 f"Got {type(toolkit_registry)}"
             )
@@ -3716,7 +3717,7 @@ class FrozenMolecule(Serializable):
             if isinstance(file_path, pathlib.Path):
                 file_path: str = file_path.as_posix()
             if not isinstance(file_path, str):
-                raise Exception(
+                raise ValueError(
                     "If providing a file-like object for reading molecules, the format must be specified"
                 )
             # Assume that files ending in ".gz" should use their second-to-last suffix for compatibility check
@@ -3809,7 +3810,7 @@ class FrozenMolecule(Serializable):
             )
 
         if len(mols) == 0:
-            raise Exception(f"Unable to read molecule from file: {file_path}")
+            raise MoleculeParseError(f"Unable to read molecule from file: {file_path}")
         elif len(mols) == 1:
             return mols[0]
 
@@ -5587,7 +5588,7 @@ def _networkx_graph_to_hill_formula(graph: "nx.Graph") -> str:
     import networkx as nx
 
     if not isinstance(graph, nx.Graph):
-        raise Exception("The graph must be a NetworkX graph.")
+        raise ValueError("The graph must be a NetworkX graph.")
 
     atom_nums = list(dict(graph.nodes(data="atomic_number", default=1)).values())
     return _atom_nums_to_hill_formula(atom_nums)

@@ -514,7 +514,7 @@ class ForceField:
             tagname = parameter_handler_class._TAGNAME
             if tagname is not None:
                 if tagname in self._parameter_handler_classes:
-                    raise Exception(
+                    raise ParameterHandlerRegistrationError(
                         "Attempting to register ParameterHandler {}, which provides a parser for tag"
                         " '{}', but ParameterHandler {} has already been registered to handle that tag.".format(
                             parameter_handler_class,
@@ -546,7 +546,7 @@ class ForceField:
             serialization_format = parameter_io_handler_class._FORMAT
             if serialization_format is not None:
                 if serialization_format in self._parameter_io_handler_classes.keys():
-                    raise Exception(
+                    raise ParameterHandlerRegistrationError(
                         "Attempting to register ParameterIOHandler {}, which provides a IO parser for format "
                         "'{}', but ParameterIOHandler {} has already been registered to handle that tag.".format(
                             parameter_io_handler_class,

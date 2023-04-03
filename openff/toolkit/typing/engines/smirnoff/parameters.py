@@ -1813,7 +1813,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         elif isinstance(new_version, (float, int)):
             new_version = Version(str(new_version))
         else:
-            raise Exception(f"Could not convert type {type(new_version)}")
+            raise ValueError(f"Could not convert type {type(new_version)}")
 
         # Use PEP-440 compliant version number comparison, if requested
         if (new_version > self._MAX_SUPPORTED_SECTION_VERSION) or (
