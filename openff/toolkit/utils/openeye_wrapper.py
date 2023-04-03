@@ -1063,7 +1063,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         oemol,
         allow_undefined_stereo: bool = False,
         _cls=None,
-        name: str="",
+        name: str = "",
     ) -> "Molecule":
         """
         Create a Molecule from an OpenEye molecule. If the OpenEye molecule has
@@ -1955,7 +1955,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         hydrogens_are_explicit: bool = False,
         allow_undefined_stereo: bool = False,
         _cls=None,
-        name:str ="",
+        name: str = "",
     ) -> "Molecule":
         """
         Create a Molecule from a SMILES string using the OpenEye toolkit.
