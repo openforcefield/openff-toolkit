@@ -763,6 +763,28 @@ class TestTopology:
         assert top.molecule(17).is_isomorphic_with(Molecule.from_smiles("[Br-]"))
         assert top.molecule(18).is_isomorphic_with(Molecule.from_smiles("[I-]"))
 
+    @requires_rdkit
+    def test_from_multicomponent_pdb_overlapping_unique_mols(self):
+        """Test that even overlapping unique molecules can be loaded using from_multicomponent_pdb"""
+        po4 = Molecule.from_smiles("P(=O)([O-])([O-])([O-])")
+        phenylphosphate = Molecule.from_smiles("c1ccccc1OP(=O)([O-1])([O-1])")
+
+        # Load the topology with po4 listed as the first unique mol
+        top1 = Topology.from_multicomponent_pdb(
+            get_data_file_path("molecules/po4_phenylphosphate.pdb"),
+            unique_molecules=[po4, phenylphosphate]
+        )
+        assert po4.is_isomorphic_with(top1.molecule(0))
+        assert phenylphosphate.is_isomorphic_with(top1.molecule(1))
+
+        # Load the topology with phenylphosphate listed as the first unique mol
+        top2 = Topology.from_multicomponent_pdb(
+            get_data_file_path("molecules/po4_phenylphosphate.pdb"),
+            unique_molecules=[phenylphosphate, po4]
+        )
+        assert po4.is_isomorphic_with(top2.molecule(0))
+        assert phenylphosphate.is_isomorphic_with(top2.molecule(1))
+
     @requires_pkg("mdtraj")
     def test_from_mdtraj(self):
         """Test construction of an OpenFF Topology from an MDTraj Topology object"""

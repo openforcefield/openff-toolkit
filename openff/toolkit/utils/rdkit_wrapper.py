@@ -355,7 +355,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         rdkit_mol = self._get_connectivity_from_openmm_top(omm_top)
         mol = Chem.Mol(rdkit_mol)
-
+        # Get a tuple of tuples of atom indices belonging to separate molecules in this RDMol
+        # (note that this rdmol may actually be a solvated protein-ligand system)
+        sorted_mol_frags = [tuple(sorted(i)) for i in Chem.GetMolFrags(mol)]
         for res_name in substructure_library:
             # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes
             # so it just does the biggest substructures first
@@ -373,9 +375,18 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 # info is added to `mol`. If we use the same rdkit molecule for search AND info addition,
                 # then single bonds may no longer be present for subsequent overlapping matches.
                 for match in rdkit_mol.GetSubstructMatches(fuzzy, maxMatches=0):
+                    # Keep track of all residue names that have been assigned to
+                    # each atom, for use in generating a useful error message later
                     for i in match:
                         matches[i].append(res_name)
 
+                    # Unique molecule matches should only apply if they match entire molecule
+                    if res_name == "UNIQUE_MOLECULE":
+                        sorted_match = tuple(sorted(match))
+                        if sorted_match not in sorted_mol_frags:
+                            continue
+
+                    # Some special residues are allowed to overlap/override previous matches
                     if any(m in already_assigned_nodes for m in match) and (
                         res_name not in ["PEPTIDE_BOND", "DISULFIDE", "UNIQUE_MOLECULE"]
                     ):
@@ -452,11 +463,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             atom.SetNoImplicit(True)
         for bond in omm_top.bonds():
             rwmol.AddBond(bond[0].index, bond[1].index, Chem.BondType.SINGLE)
-
-        # conf = Chem.Conformer()
-        # for i, pos in enumerate(omm_top.getPositions()):
-        #     conf.SetAtomPosition(i, list(pos.value_in_unit(pos.unit)))
-        # rwmol.AddConformer(conf)
 
         return rwmol
 

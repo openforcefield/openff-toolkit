@@ -1555,6 +1555,9 @@ class Topology(Serializable):
         returns a molecule that can be iterated over with the ``.residues`` and
         ``.chains`` attributes, as well as the usual ``.atoms``.
 
+        Any unique molecules provided must match molecules in the input PDB
+        fully, with no missing atoms.
+
         Parameters
         ----------
         file_path : str or file object
