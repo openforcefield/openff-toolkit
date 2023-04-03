@@ -1060,7 +1060,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     @staticmethod
     def from_openeye(
-        oemol, allow_undefined_stereo: bool = False, _cls=None
+        oemol,
+        allow_undefined_stereo: bool = False,
+        _cls=None,
+        name: str="",
     ) -> "Molecule":
         """
         Create a Molecule from an OpenEye molecule. If the OpenEye molecule has
@@ -1188,8 +1191,11 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
             _cls = Molecule
 
-        molecule = _cls()
-        molecule.name = oemol.GetTitle()
+        molecule = _cls(name=name)
+
+        # OEMol.GetTitle() happens to default to an empty string
+        if oemol.GetTitle() != "":
+            molecule.name = oemol.GetTitle()
 
         # Copy any attached SD tag information
         for dp in oechem.OEGetSDDataPairs(oemol):
@@ -1949,6 +1955,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         hydrogens_are_explicit: bool = False,
         allow_undefined_stereo: bool = False,
         _cls=None,
+        name:str ="",
     ) -> "Molecule":
         """
         Create a Molecule from a SMILES string using the OpenEye toolkit.
@@ -2002,12 +2009,19 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             atom.SetPartialCharge(float("nan"))
 
         molecule = self.from_openeye(
-            oemol, _cls=_cls, allow_undefined_stereo=allow_undefined_stereo
+            oemol,
+            _cls=_cls,
+            allow_undefined_stereo=allow_undefined_stereo,
+            name=name,
         )
         return molecule
 
     def from_inchi(
-        self, inchi: str, allow_undefined_stereo: bool = False, _cls=None
+        self,
+        inchi: str,
+        allow_undefined_stereo: bool = False,
+        _cls=None,
+        name: str = "",
     ) -> "Molecule":
         """
         Construct a Molecule from a InChI representation

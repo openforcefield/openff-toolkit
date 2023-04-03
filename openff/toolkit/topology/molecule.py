@@ -854,11 +854,11 @@ class FrozenMolecule(Serializable):
 
     def __init__(
         self,
-        name: str = "",
         other=None,
         file_format: Optional[str] = None,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         allow_undefined_stereo: bool = False,
+        name: str = "",
     ):
         r"""
         Create a new FrozenMolecule object
@@ -1112,7 +1112,20 @@ class FrozenMolecule(Serializable):
         """
         from openff.toolkit.utils.utils import serialize_numpy
 
-        molecule_dict = dict()
+        # typing.TypedDict might make this cleaner
+        # https://mypy.readthedocs.io/en/latest/typed_dict.html#typeddict
+        molecule_dict: Dict[
+            str,
+            Union[
+                None,
+                str,
+                bytes,
+                Dict[str, Any],
+                List[str],
+                List[bytes],
+                List[HierarchyElement],
+            ],
+        ] = dict()
         molecule_dict["name"] = self._name
 
         molecule_dict["atoms"] = [atom.to_dict() for atom in self._atoms]
@@ -1144,7 +1157,7 @@ class FrozenMolecule(Serializable):
 
         molecule_dict["hierarchy_schemes"] = dict()
         for iter_name, hier_scheme in self._hierarchy_schemes.items():
-            molecule_dict["hierarchy_schemes"][iter_name] = hier_scheme.to_dict()
+            molecule_dict["hierarchy_schemes"][iter_name] = hier_scheme.to_dict()  # type: ignore[index]
 
         return molecule_dict
 
@@ -1601,6 +1614,7 @@ class FrozenMolecule(Serializable):
         inchi: str,
         allow_undefined_stereo: bool = False,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
+        name: str = "",
     ):
         """
         Construct a Molecule from a InChI representation
@@ -1637,11 +1651,15 @@ class FrozenMolecule(Serializable):
                 inchi,
                 _cls=cls,
                 allow_undefined_stereo=allow_undefined_stereo,
+                name=name,
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
             molecule = toolkit.from_inchi(  # type: ignore[attr-defined]
-                inchi, _cls=cls, allow_undefined_stereo=allow_undefined_stereo
+                inchi,
+                _cls=cls,
+                allow_undefined_stereo=allow_undefined_stereo,
+                name=name,
             )
         else:
             raise InvalidToolkitRegistryError(
@@ -1754,6 +1772,7 @@ class FrozenMolecule(Serializable):
         hydrogens_are_explicit: bool = False,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         allow_undefined_stereo: bool = False,
+        name: str = "",
     ) -> "Molecule":
         """
         Construct a ``Molecule`` from a SMILES representation
@@ -1817,6 +1836,7 @@ class FrozenMolecule(Serializable):
                 hydrogens_are_explicit=hydrogens_are_explicit,
                 allow_undefined_stereo=allow_undefined_stereo,
                 _cls=cls,
+                name=name,
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
@@ -1825,6 +1845,7 @@ class FrozenMolecule(Serializable):
                 hydrogens_are_explicit=hydrogens_are_explicit,
                 allow_undefined_stereo=allow_undefined_stereo,
                 _cls=cls,
+                name=name,
             )
         else:
             raise InvalidToolkitRegistryError(
@@ -3774,6 +3795,7 @@ class FrozenMolecule(Serializable):
                         "is likely to be lost. PDBs can be used along with a valid smiles string with RDKit using "
                         "the constructor Molecule.from_pdb_and_smiles(file_path, smiles)"
                     )
+
                 raise NotImplementedError(msg)
 
         elif isinstance(toolkit_registry, ToolkitWrapper):
@@ -3826,6 +3848,7 @@ class FrozenMolecule(Serializable):
         cls,
         file_path: Union[str, TextIO],
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        name: str = "",
     ):
         """
         Loads a polymer from a PDB file.
@@ -3917,6 +3940,8 @@ class FrozenMolecule(Serializable):
                 + "each molecule into its own PDB with another tool, and "
                 + "load any small molecules with Molecule.from_pdb_and_smiles."
             )
+
+        offmol.name = name
 
         return offmol
 
@@ -4172,7 +4197,11 @@ class FrozenMolecule(Serializable):
     @classmethod
     @RDKitToolkitWrapper.requires_toolkit()
     def from_rdkit(
-        cls, rdmol, allow_undefined_stereo=False, hydrogens_are_explicit=False
+        cls,
+        rdmol,
+        allow_undefined_stereo=False,
+        hydrogens_are_explicit=False,
+        name=name,
     ):
         """
         Create a Molecule from an RDKit molecule.
@@ -4254,7 +4283,7 @@ class FrozenMolecule(Serializable):
 
     @classmethod
     @OpenEyeToolkitWrapper.requires_toolkit()
-    def from_openeye(cls, oemol, allow_undefined_stereo=False):
+    def from_openeye(cls, oemol, allow_undefined_stereo=False, name=name):
         """
         Create a ``Molecule`` from an OpenEye molecule.
 

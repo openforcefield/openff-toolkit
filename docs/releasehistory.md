@@ -8,6 +8,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### New features
+- [PR #15XX](https://github.com/openforcefield/openff-toolkit/pull/15XX): Allows setting `Molecule.name` on the constructor and several `from_` methods.
+
 ### Improved documentation and warnings
 
 - [PR #1564] Improve documentation of conformer selection in `Molecule.assign_partial_charges()`
