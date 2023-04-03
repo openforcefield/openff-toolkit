@@ -41,6 +41,7 @@ from openff.toolkit.tests.utils import (
 )
 from openff.toolkit.topology.molecule import (
     Atom,
+    Bond,
     BondExistsError,
     FrozenMolecule,
     HierarchyElement,
@@ -426,11 +427,33 @@ class TestAtom:
 
 
 class TestBond:
-    def test_float_bond_order(self):
+    @pytest.fixture()
+    def bond(self):
+        return create_ethanol().bond(0)
+
+    def test_cannot_change_molecule(self, bond):
+        with pytest.raises(
+            AssertionError,
+            match="Bond.molecule is already set and can only be set once",
+        ):
+            bond.molecule = create_reversed_ethanol()
+
+    def test_initialize_from_dict(self):
         molecule = create_ethanol()
 
+        bond = Bond.from_dict(molecule=molecule, d=molecule.bond(0).to_dict())
+
+        assert bond.atom1_index == 0
+        assert bond.atom2_index == 1
+        assert bond.atom1.atomic_number == 6
+        assert bond.atom2.atomic_number == 6
+
+    def test_set_bond_order(self, bond):
+        bond.bond_order = 2
+
+    def test_float_bond_order(self, bond):
         with pytest.raises(InvalidBondOrderError):
-            molecule.bond(0).bond_order = 1.2
+            bond.bond_order = 1.2
 
 
 class TestMolecule:
