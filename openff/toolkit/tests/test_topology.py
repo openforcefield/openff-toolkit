@@ -706,10 +706,14 @@ class TestTopology:
 
     @requires_rdkit
     def test_from_multicomponent_pdb(self):
-        with pytest.raises(UnassignedChemistryInPDBError):
+        with pytest.raises(UnassignedChemistryInPDBError) as exc_info:
             Topology.from_multicomponent_pdb(
                 get_data_file_path("proteins/5tbm_complex_solv.pdb")
             )
+        # Make sure that the error message above doesn't contain the "multiple chains" hint
+        assert "input has multiple chain identifiers" not in exc_info.value.args[
+            0
+        ].join("")
 
         ligand = Molecule.from_file(get_data_file_path("molecules/PT2385.sdf"))
         stereoisomer1 = Molecule.from_smiles("[C@H](Cl)(F)/C=C/F")
@@ -772,7 +776,7 @@ class TestTopology:
         # Load the topology with po4 listed as the first unique mol
         top1 = Topology.from_multicomponent_pdb(
             get_data_file_path("molecules/po4_phenylphosphate.pdb"),
-            unique_molecules=[po4, phenylphosphate]
+            unique_molecules=[po4, phenylphosphate],
         )
         assert po4.is_isomorphic_with(top1.molecule(0))
         assert phenylphosphate.is_isomorphic_with(top1.molecule(1))
@@ -780,7 +784,7 @@ class TestTopology:
         # Load the topology with phenylphosphate listed as the first unique mol
         top2 = Topology.from_multicomponent_pdb(
             get_data_file_path("molecules/po4_phenylphosphate.pdb"),
-            unique_molecules=[phenylphosphate, po4]
+            unique_molecules=[phenylphosphate, po4],
         )
         assert po4.is_isomorphic_with(top2.molecule(0))
         assert phenylphosphate.is_isomorphic_with(top2.molecule(1))

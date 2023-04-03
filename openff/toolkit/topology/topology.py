@@ -1607,8 +1607,8 @@ class Topology(Serializable):
 
         if not (unique_molecules):
             unique_molecules = []
-        else:
-            substructure_dictionary["UNIQUE_MOLECULE"] = {}
+
+        substructure_dictionary["UNIQUE_MOLECULE"] = {}
 
         for unique_molecule in unique_molecules:
             mapped_smiles = unique_molecule.to_smiles(mapped=True)
