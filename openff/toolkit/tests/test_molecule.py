@@ -1107,6 +1107,7 @@ class TestMolecule:
             cholesterol, Molecule.from_iupac(cholesterol_iupac)
         )
 
+    @requires_openeye
     def test_to_from_iupac_wrapper(self):
         """Test that IUPAC methods work if passed just `OpenEyeToolkitWrapper`."""
         from openff.toolkit.utils import OpenEyeToolkitWrapper
