@@ -8,6 +8,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### Behavior changes
+- [PR #1569](https://github.com/openforcefield/openff-toolkit/pull/1569): Several instances of `Exception` being raised are now replaced with other exceptions being raised.
+
 ### Improved documentation and warnings
 
 - [PR #1564] Improve documentation of conformer selection in `Molecule.assign_partial_charges()`
