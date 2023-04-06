@@ -50,6 +50,7 @@ from openff.toolkit.utils.constants import (
 from openff.toolkit.utils.exceptions import (
     AtomNotInTopologyError,
     BondNotInTopologyError,
+    ConstraintExsistsError,
     DuplicateUniqueMoleculeError,
     IncompatibleUnitError,
     InvalidAromaticityModelError,
@@ -545,7 +546,9 @@ class Topology(Serializable):
 
         if not (self.is_bonded(atom1, atom2)):
             # TODO: Raise more specific exception.
-            raise Exception(f"Atoms {atom1} and {atom2} are not bonded in topology")
+            raise NotBondedError(
+                f"Atoms {atom1} and {atom2} are not bonded in topology"
+            )
 
     @property
     def aromaticity_model(self) -> str:
@@ -2182,7 +2185,7 @@ class Topology(Serializable):
                     openmm_atom_to_oe_atom[openmm_at] = oe_atom
 
         if self.n_atoms != oe_mol.NumAtoms():
-            raise Exception(
+            raise RuntimeError(
                 "OEMol has an unexpected number of atoms: Topology has {self.n_atoms} atoms while OEMol has "
                 "{oe_mol.NumAtoms()} atoms."
             )
@@ -2244,7 +2247,7 @@ class Topology(Serializable):
             atomi = i
             atomj = j
         else:
-            raise Exception(
+            raise ValueError(
                 "Invalid input passed to is_bonded(). Expected ints or TopologyAtoms, "
                 "got {} and {}".format(i, j)
             )
@@ -2397,12 +2400,12 @@ class Topology(Serializable):
         if (iatom, jatom) in self._constrained_atom_pairs:
             existing_distance = self._constrained_atom_pairs[(iatom, jatom)]
             if isinstance(existing_distance, unit.Quantity) and distance is True:
-                raise Exception(
+                raise ConstraintExsistsError(
                     f"Atoms ({iatom},{jatom}) already constrained with distance {existing_distance} "
                     "but attempting to override with unspecified distance"
                 )
             if (existing_distance is True) and (distance is True):
-                raise Exception(
+                raise ConstraintExsistsError(
                     f"Atoms ({iatom},{jatom}) already constrained with unspecified distance "
                     "but attempting to override with unspecified distance"
                 )
