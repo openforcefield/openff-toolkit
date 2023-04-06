@@ -7,19 +7,24 @@
 ## Installing via `conda`
 
 The simplest way to install the Open Force Field Toolkit is via the [conda](https://docs.conda.io/en/latest/) package manager.
-We publish [packages](https://github.com/conda-forge/openff-toolkit-feedstock) via [`conda-forge`](https://conda-forge.org/). With Conda installed, use it to install the OpenFF Toolkit:
+We publish [packages](https://github.com/conda-forge/openff-toolkit-feedstock) via [`conda-forge`](https://conda-forge.org/). 
+With Conda installed, use it to install the OpenFF Toolkit into a new environment:
 
 ```shell-session
-$ conda install -c conda-forge openff-toolkit
+$ conda create -n openff-toolkit -c conda-forge openff-toolkit
 ```
 
 If you have Mamba installed, it is often faster:
 
 ```shell-session
-$ mamba install -c conda-forge openff-toolkit
+$ mamba create -n openff-toolkit -c conda-forge openff-toolkit
 ```
 
-If you do not have Mamba or Conda installed, see the [ecosystem installation documentation].
+If you do not have Mamba or Conda installed, see the [ecosystem installation documentation]. To use the new environment in a shell session, activate it:
+
+```shell-session
+$ conda activate openff-toolkit
+```
 
 :::{note}
 Installation via the Conda package manager is the preferred method since all dependencies are automatically fetched and installed for you.
@@ -48,6 +53,7 @@ $ python -m pip install .
 ## Single-file installer
 
 As of release 0.4.1, single-file installers are available for each Open Force Field Toolkit release.
+The single-file installer packages an entire Conda distribution complete will all dependencies needed to run the Toolkit.
 These are provided primarily for users who do not have access to the Anaconda cloud for installing packages.
 These installers have few requirements beyond a Linux or MacOS operating system and will, in one command, produce a functional Python executable containing the Open Force Field Toolkit, as well as all required dependencies.
 The installers are very similar to the widely-used Miniconda `*.sh` files.
@@ -72,7 +78,7 @@ and follow the prompts.
 :::{note}
 You must have write access to the installation directory.
 This is generally somewhere in the user's home directory.
-When prompted, we recommend NOT making modifications to your `bash_profile`.
+When prompted, we recommend NOT initializing the single-file installer.
 :::
 
 :::{warning}
@@ -82,14 +88,14 @@ Conda is intended to support on-the-fly creation of several independent environm
 
 ### Usage
 
-Any time you want to use this Conda environment in a terminal, run
+Any time you want to use the single-file installer Conda environment in a terminal, run
 
 ```shell-session
 $ source <install_directory>/etc/profile.d/conda.sh
 $ conda activate base
 ```
 
-Once the `base` environment is activated, your system will default to use Python (and other executables) from the newly installed Conda environment. For more information about Conda environments, see {ref}`conda_envs`
+Once the single-file installer `base` environment is activated, your shell session will use the Python installation (and any other provided executables) from it. Note that the single-file installer is a rare case in which we recommend altering the `base` environment, as the entire Conda distribution is centered on it. For more information about Conda environments, see [](openff.docs:managing_environments).
 
 ## Optional dependencies (toolkits)
 
