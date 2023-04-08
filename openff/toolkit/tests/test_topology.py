@@ -768,6 +768,36 @@ class TestTopology:
         assert top.molecule(18).is_isomorphic_with(Molecule.from_smiles("[I-]"))
 
     @requires_rdkit
+    def test_from_multicomponent_pdb_two_polymers_metadata(self):
+        """Test that a PDB with two capped polymers is loaded correctly"""
+        top = Topology.from_multicomponent_pdb(
+            get_data_file_path("proteins/TwoMol_SER_CYS.pdb")
+        )
+        assert top.molecule(0).is_isomorphic_with(
+            Molecule.from_smiles(
+                "[H][O][C]([H])([H])[C@@]([H])([C](=[O])[N]([H])[C]([H])([H])[H])[N]([H])[C](=[O])[C]([H])([H])[H]"
+            )
+        )
+        assert top.molecule(1).is_isomorphic_with(
+            Molecule.from_smiles(
+                "[H][S][C]([H])([H])[C@@]([H])([C](=[O])[N]([H])[C]([H])([H])[H])[N]([H])[C](=[O])[C]([H])([H])[H]"
+            )
+        )
+
+        expected_residues = (
+            (6, ("A", "1", " ", "ACE")),
+            (11, ("A", "2", " ", "SER")),
+            (6, ("A", "3", " ", "NME")),
+            (6, ("B", "1", " ", "ACE")),
+            (11, ("B", "2", " ", "CYS")),
+            (6, ("B", "3", " ", "NME")),
+        )
+        res_iter = top.hierarchy_iterator("residues")
+        for (n_atoms, identifier), residue in zip(expected_residues, res_iter):
+            assert residue.n_atoms == n_atoms
+            assert residue.identifier == identifier
+
+    @requires_rdkit
     def test_from_multicomponent_pdb_overlapping_unique_mols(self):
         """Test that even overlapping unique molecules can be loaded using from_multicomponent_pdb"""
         po4 = Molecule.from_smiles("P(=O)([O-])([O-])([O-])")
