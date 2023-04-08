@@ -3858,7 +3858,7 @@ class FrozenMolecule(Serializable):
             substructure_dictionary = json.load(subfile)
 
         offmol = toolkit_registry.call(
-            "_polymer_openmm_topology_to_offmol", pdb.topology, substructure_dictionary
+            "_polymer_openmm_topology_to_offmol", cls, pdb.topology, substructure_dictionary
         )
 
         coords = unit.Quantity(

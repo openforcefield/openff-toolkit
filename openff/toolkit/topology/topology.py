@@ -36,13 +36,12 @@ import numpy as np
 from networkx import Graph
 from numpy.typing import NDArray
 from openff.units import Quantity, ensure_quantity, unit
-from openff.utilities import requires_package
 from typing_extensions import TypeAlias
 
 from openff.toolkit.topology import Molecule
 from openff.toolkit.topology._mm_molecule import _SimpleBond, _SimpleMolecule
 from openff.toolkit.topology.molecule import FrozenMolecule, HierarchyElement
-from openff.toolkit.utils import ToolkitWrapper, quantity_to_string, string_to_quantity
+from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.constants import (
     ALLOWED_AROMATICITY_MODELS,
     DEFAULT_AROMATICITY_MODEL,
@@ -1576,8 +1575,8 @@ class Topology(Serializable):
             PDB information to be passed to OpenMM PDBFile object for loading
         unique_molecules : Iterable of Molecule. Default = None
             OpenFF Molecule objects corresponding to the molecules in the input PDB.
-        toolkit_registry : ToolkitWrapper or ToolkitRegistry. Default = None
-            Either a ToolkitRegistry, ToolkitWrapper
+        toolkit_registry : ToolkitRegistry. Default = None
+            The ToolkitRegistry to use as the cheminformatics backend.
 
         Returns
         -------
@@ -1611,9 +1610,6 @@ class Topology(Serializable):
 
         import openmm.unit as openmm_unit
         from openmm.app import PDBFile
-
-        if isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit_registry = ToolkitRegistry([toolkit_registry])
 
         pdb = PDBFile(file_path)
 
@@ -1651,6 +1647,7 @@ class Topology(Serializable):
 
         topology = toolkit_registry.call(
             "_polymer_openmm_pdbfile_to_offtop",
+            cls,
             pdb,
             substructure_dictionary,
             coords_angstrom,

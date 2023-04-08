@@ -497,7 +497,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
         ):
             return [
                 "Hint: The input has multiple chain identifiers. The OpenFF "
-                + "Toolkit's Molecule.from_polymer_pdb method only supports "
+                + "Toolkit Molecule.from_polymer_pdb method only supports "
                 + "single-molecule PDB files. Please use Topology.from_multicomponent_pdb "
                 + "or split the file into individual chains and load each "
                 + "separately.",

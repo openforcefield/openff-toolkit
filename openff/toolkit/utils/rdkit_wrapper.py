@@ -37,7 +37,6 @@ from openff.toolkit.utils.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology import Topology
     from openff.toolkit.topology.molecule import Atom, Bond, Molecule
 
 logger = logging.getLogger(__name__)
@@ -256,19 +255,17 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return new_mol
 
-    def _polymer_openmm_topology_to_offmol(self, omm_top, substructure_dictionary):
+    def _polymer_openmm_topology_to_offmol(self, molecule_class, omm_top, substructure_dictionary):
         rdkit_mol = self._polymer_openmm_topology_to_rdmol(
             omm_top, substructure_dictionary
         )
-        offmol = self.from_rdkit(rdkit_mol, allow_undefined_stereo=True)
+        offmol = molecule_class.from_rdkit(rdkit_mol, allow_undefined_stereo=True)
         return offmol
 
     def _polymer_openmm_pdbfile_to_offtop(
-        self, pdbfile, substructure_dictionary, coords_angstrom
+        self, topology_class, pdbfile, substructure_dictionary, coords_angstrom
     ):
         from rdkit import Chem, Geometry
-
-        from openff.toolkit import Topology
 
         omm_top = pdbfile.topology
         rdkit_mol = self._polymer_openmm_topology_to_rdmol(
@@ -290,7 +287,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # Don't sanitize or we risk assigning non-MDL aromaticity
         rdmols = Chem.GetMolFrags(rdkit_mol, asMols=True, sanitizeFrags=False)
-        top = Topology()
+        top = topology_class()
 
         # Identify unique molecules and only run from_rdkit on them once.
         # Note that this identity comparison COULD match two chemically equivalent
