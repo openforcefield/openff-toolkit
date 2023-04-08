@@ -488,9 +488,9 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
 
     def multiple_chains_hint(self) -> List[str]:
         # Only raise this error if we're in Molecule.from_polymer_pdb,
-        # since Topology.from_multicomponent_pdb DOES accept multiple
+        # since Topology.from_pdb DOES accept multiple
         # chains. We can tell the difference because
-        # Topology.from_multicomponent_pdb will have added the
+        # Topology.from_pdb will have added the
         # "UNIQUE_MOLECULE" key to the substructure library,
         if (self.omm_top.getNumChains() > 1) and (
             "UNIQUE_MOLECULE" not in self.substructure_library
@@ -498,7 +498,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
             return [
                 "Hint: The input has multiple chain identifiers. The OpenFF "
                 + "Toolkit Molecule.from_polymer_pdb method only supports "
-                + "single-molecule PDB files. Please use Topology.from_multicomponent_pdb "
+                + "single-molecule PDB files. Please use Topology.from_pdb "
                 + "or split the file into individual chains and load each "
                 + "separately.",
                 "",

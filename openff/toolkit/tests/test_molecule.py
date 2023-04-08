@@ -4162,7 +4162,7 @@ class TestMoleculeFromPDB:
                 + r"\n\n"
                 + r"Hint: The input has multiple chain identifiers\. The OpenFF "
                 + r"Toolkit Molecule.from_polymer_pdb method only supports "
-                + r"single-molecule PDB files\. Please use Topology.from\_multicomponent\_pdb "
+                + r"single-molecule PDB files\. Please use Topology.from\_pdb "
                 + r"or split the file into individual chains and load each\."
                 + r"separately\.\n\n"
                 + r"Hint: The following residue names with unassigned atoms "

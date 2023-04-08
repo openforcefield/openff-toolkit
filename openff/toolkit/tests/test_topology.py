@@ -705,9 +705,9 @@ class TestTopology:
                 assert roundtrip_atom.metadata["chain_id"] == "X"
 
     @requires_rdkit
-    def test_from_multicomponent_pdb(self):
+    def test_from_pdb(self):
         with pytest.raises(UnassignedChemistryInPDBError) as exc_info:
-            Topology.from_multicomponent_pdb(
+            Topology.from_pdb(
                 get_data_file_path("proteins/5tbm_complex_solv.pdb")
             )
         # Make sure that the error message above doesn't contain the "multiple chains" hint
@@ -719,7 +719,7 @@ class TestTopology:
         stereoisomer1 = Molecule.from_smiles("[C@H](Cl)(F)/C=C/F")
         stereoisomer2 = Molecule.from_smiles("[C@@H](Cl)(F)/C=C\F")
 
-        top = Topology.from_multicomponent_pdb(
+        top = Topology.from_pdb(
             get_data_file_path("proteins/5tbm_complex_solv.pdb"),
             unique_molecules=[
                 ligand,
@@ -768,9 +768,9 @@ class TestTopology:
         assert top.molecule(18).is_isomorphic_with(Molecule.from_smiles("[I-]"))
 
     @requires_rdkit
-    def test_from_multicomponent_pdb_two_polymers_metadata(self):
+    def test_from_pdb_two_polymers_metadata(self):
         """Test that a PDB with two capped polymers is loaded correctly"""
-        top = Topology.from_multicomponent_pdb(
+        top = Topology.from_pdb(
             get_data_file_path("proteins/TwoMol_SER_CYS.pdb")
         )
         assert top.molecule(0).is_isomorphic_with(
@@ -798,13 +798,13 @@ class TestTopology:
             assert residue.identifier == identifier
 
     @requires_rdkit
-    def test_from_multicomponent_pdb_overlapping_unique_mols(self):
-        """Test that even overlapping unique molecules can be loaded using from_multicomponent_pdb"""
+    def test_from_pdb_overlapping_unique_mols(self):
+        """Test that even overlapping unique molecules can be loaded using from_pdb"""
         po4 = Molecule.from_smiles("P(=O)([O-])([O-])([O-])")
         phenylphosphate = Molecule.from_smiles("c1ccccc1OP(=O)([O-1])([O-1])")
 
         # Load the topology with po4 listed as the first unique mol
-        top1 = Topology.from_multicomponent_pdb(
+        top1 = Topology.from_pdb(
             get_data_file_path("molecules/po4_phenylphosphate.pdb"),
             unique_molecules=[po4, phenylphosphate],
         )
@@ -812,7 +812,7 @@ class TestTopology:
         assert phenylphosphate.is_isomorphic_with(top1.molecule(1))
 
         # Load the topology with phenylphosphate listed as the first unique mol
-        top2 = Topology.from_multicomponent_pdb(
+        top2 = Topology.from_pdb(
             get_data_file_path("molecules/po4_phenylphosphate.pdb"),
             unique_molecules=[phenylphosphate, po4],
         )

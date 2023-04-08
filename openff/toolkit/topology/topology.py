@@ -1523,7 +1523,7 @@ class Topology(Serializable):
 
     @classmethod
     @requires_package("openmm")
-    def from_multicomponent_pdb(
+    def from_pdb(
         cls,
         file_path: Union[str, TextIO],
         unique_molecules: Optional[Iterable[Molecule]] = None,
@@ -1594,7 +1594,7 @@ class Topology(Serializable):
 
         >>> from openff.toolkit import Topology
         >>> from openff.toolkit.utils import get_data_file_path
-        >>> top = Topology.from_multicomponent_pdb(get_data_file_path("proteins/TwoMol_SER_CYS.pdb"))
+        >>> top = Topology.from_pdb(get_data_file_path("proteins/TwoMol_SER_CYS.pdb"))
         >>> top.molecule(0).to_smiles()
         '[H][O][C]([H])([H])[C@@]([H])([C](=[O])[N]([H])[C]([H])([H])[H])[N]([H])[C](=[O])[C]([H])([H])[H]'z
         >>> [*top.hierarchy_iterator("residues")]
