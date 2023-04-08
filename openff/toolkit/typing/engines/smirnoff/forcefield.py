@@ -514,7 +514,7 @@ class ForceField:
             tagname = parameter_handler_class._TAGNAME
             if tagname is not None:
                 if tagname in self._parameter_handler_classes:
-                    raise Exception(
+                    raise ParameterHandlerRegistrationError(
                         "Attempting to register ParameterHandler {}, which provides a parser for tag"
                         " '{}', but ParameterHandler {} has already been registered to handle that tag.".format(
                             parameter_handler_class,
@@ -546,7 +546,7 @@ class ForceField:
             serialization_format = parameter_io_handler_class._FORMAT
             if serialization_format is not None:
                 if serialization_format in self._parameter_io_handler_classes.keys():
-                    raise Exception(
+                    raise ParameterHandlerRegistrationError(
                         "Attempting to register ParameterIOHandler {}, which provides a IO parser for format "
                         "'{}', but ParameterIOHandler {} has already been registered to handle that tag.".format(
                             parameter_io_handler_class,
@@ -1129,6 +1129,11 @@ class ForceField:
         allow_nonintegral_charges: bool = False,
     ) -> Union["openmm.System", Tuple["openmm.System", "Topology"]]:
         """Create an OpenMM System from this ForceField and a Topology.
+
+        Note that most force fields specify their own partial charges, and any
+        partial charges defined on the ``Molecule`` objects in the topology are
+        ignored. To use custom partial charges, see the
+        ``charge_from_molecules`` argument.
 
         Parameters
         ----------

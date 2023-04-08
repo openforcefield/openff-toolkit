@@ -36,3 +36,4 @@ dependencies:
   - qcengine
   - mdtraj
   - parmed
+  - ipywidgets =7

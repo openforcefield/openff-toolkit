@@ -11,6 +11,13 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### New features
 - [PR #1565](https://github.com/openforcefield/openff-toolkit/pull/1565): Adds :py:meth:`Topology.from_pdb`
 
+### Behavior changes
+- [PR #1569](https://github.com/openforcefield/openff-toolkit/pull/1569): Several instances of `Exception` being raised are now replaced with other exceptions being raised.
+
+### Improved documentation and warnings
+
+- [PR #1564] Improve documentation of conformer selection in `Molecule.assign_partial_charges()`
+
 ## 0.12.1
 
 ### New features

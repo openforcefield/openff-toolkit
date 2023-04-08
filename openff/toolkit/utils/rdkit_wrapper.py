@@ -28,6 +28,7 @@ from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ConformerGenerationError,
     InvalidAromaticityModelError,
+    MoleculeParseError,
     NotAttachedToMoleculeError,
     RadicalsNotSupportedError,
     SMILESParseError,
@@ -613,7 +614,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 mols.append(mol)
 
         elif file_format == "PDB":
-            raise Exception(
+            raise MoleculeParseError(
                 "RDKit can not safely read PDBs on their own. Information about bond order "
                 "and aromaticity is likely to be lost. To read a PDB using RDKit use "
                 "Molecule.from_pdb_and_smiles()"
@@ -705,7 +706,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 )
 
         elif file_format == "PDB":
-            raise Exception(
+            raise MoleculeParseError(
                 "RDKit can not safely read PDBs on their own. Information about bond order and aromaticity "
                 "is likely to be lost. To read a PDB using RDKit use Molecule.from_pdb_and_smiles()"
             )

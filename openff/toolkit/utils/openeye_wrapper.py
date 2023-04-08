@@ -40,6 +40,8 @@ from openff.toolkit.utils.exceptions import (
     InvalidIUPACNameError,
     LicenseError,
     NotAttachedToMoleculeError,
+    OpenEyeError,
+    OpenEyeImportError,
     RadicalsNotSupportedError,
     SMILESParseError,
     ToolkitUnavailableException,
@@ -2082,7 +2084,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         oechem.OETriposAtomNames(oemol)
         result = oechem.OEAddExplicitHydrogens(oemol)
         if not result:
-            raise Exception("Addition of explicit hydrogens failed in from_iupac")
+            raise OpenEyeError("Addition of explicit hydrogens failed in from_iupac")
 
         molecule = self.from_openeye(
             oemol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls, **kwargs
@@ -2540,7 +2542,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             for conformer in use_conformers:
                 temp_mol._add_conformer(conformer)
         if temp_mol.n_conformers == 0:
-            raise Exception(
+            raise ValueError(
                 "No conformers present in molecule submitted for fractional bond order calculation. Consider "
                 "loading the molecule from a file with geometry already present or running "
                 "molecule.generate_conformers() before calling molecule.compute_wiberg_bond_orders()"
@@ -2586,7 +2588,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             status = am1.CalcAM1(am1results, oemol)
 
             if status is False:
-                raise Exception(
+                raise OpenEyeError(
                     "Unable to assign charges (in the process of calculating "
                     "fractional bond orders)"
                 )
@@ -2789,13 +2791,11 @@ def requires_openeye_module(module_name):
             try:
                 module = importlib.import_module("openeye." + module_name)
             except ImportError:
-                # TODO: Custom exception
-                raise Exception("openeye." + module_name)
+                raise OpenEyeImportError("openeye." + module_name)
             try:
                 license_func = OpenEyeToolkitWrapper._license_functions[module_name]
             except KeyError:
-                # TODO: Custom exception
-                raise Exception(f"we do not currently use {module_name}")
+                raise OpenEyeImportError(f"we do not currently use {module_name}")
 
             # TODO: Custom exception
             assert getattr(module, license_func)()

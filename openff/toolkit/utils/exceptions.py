@@ -81,6 +81,10 @@ class AntechamberNotFoundError(OpenFFToolkitException):
     """The antechamber executable was not found"""
 
 
+class MoleculeParseError(OpenFFToolkitException):
+    """The molecule could not be created from the given format"""
+
+
 class SMILESParseError(OpenFFToolkitException, ValueError):
     """The record could not be parsed into the given format"""
 
@@ -134,6 +138,10 @@ class InvalidAtomMetadataError(OpenFFToolkitException):
 
 class BondExistsError(OpenFFToolkitException):
     """The program attempted to add a bond that already exists"""
+
+
+class ConstraintExsistsError(OpenFFToolkitException):
+    """Attempting to override a constraint that already exists with a specified distance."""
 
 
 class DuplicateUniqueMoleculeError(OpenFFToolkitException):
@@ -323,6 +331,14 @@ class InconsistentStereochemistryError(OpenFFToolkitException):
 
 class UnsupportedFileTypeError(OpenFFToolkitException):
     """Error raised when attempting to parse an unsupported file type."""
+
+
+class OpenEyeError(OpenFFToolkitException):
+    """Error raised when an OpenEye Toolkits operation fails."""
+
+
+class OpenEyeImportError(OpenFFToolkitException):
+    """Error raised when importing an OpenEye module fails."""
 
 
 class MultipleMoleculesInPDBError(OpenFFToolkitException):
