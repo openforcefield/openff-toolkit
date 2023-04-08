@@ -1531,44 +1531,57 @@ class Topology(Serializable):
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
-        Loads polymers and small molecules from a PDB file.
+        Loads polymers, waters, monoatomic ions, and user-defined molecules from a PDB file.
 
-        Stereochemistry from small molecules will be assigned based on
-        the loaded geometry, NOT the reference molecule
+        Molecules in the PDB file have the following requirements:
+          * Polymer molecules must use the standard atom names described in the
+            `PDB Chemical Component Dictionary <https://www.wwpdb.org/data/ccd>`_.
+          * There must be no missing atoms (all hydrogens must be explicit).
+          * All particles must correspond to an atomic nucleus (particles in the
+            PDB representing "virtual sites" or "extra points" are not allowed).
+          * CONECT records must correspond only to chemical bonds (CONECT records
+            representing an angle constraints are not allowed).
+          * CONECT records may be redundant with connectivity defined by residue templates.
 
-        Currently only supports proteins with canonical amino acids that are
-        either uncapped or capped by ACE/NME groups, but may later be extended
-        to handle other common polymers, or accept user-defined polymer
-        templates. Only one polymer chain may be present in the PDB file, and it
-        must be the only molecule present.
+        Currently, proteins made of the 20 canonical amino acids are the only supported polymer.
+        For details on the polymer loading used here, see :py:meth:`Molecule.from_polymer_pdb`.
 
-        Connectivity and bond orders are assigned by matching SMARTS codes for
-        the supported residues against atom names. The PDB file must include
-        all atoms with the correct standard atom names described in the
-        `PDB Chemical Component Dictionary <https://www.wwpdb.org/data/ccd>`_.
-        Residue names are used to assist trouble-shooting failed assignments,
-        but are not used in the actual assignment process.
+        Waters can be recognized by residue name "HOH" or by both ATOM records which include
+        element information and CONECT records.
+        The Sage-supported monoatomic ions (Na+, Li+, K+, Rb+, Cs+, F-, Cl-, Br-, and I-) are recognized.
+        To load other monoatomic ions, use the unique_molecules keyword argument.
+
+        The ``unique_molecules`` keyword argument can be used to load arbitrary molecules from the PDB file.
+        The elements and CONECT records of any such molecules must be explicitly stated in the PDB file.
+        Molecules in the PDB file will be matched to the molecules passed in using the unique_molecules
+        keyword via comparison of their atomic elements and CONECT records.
+        A unique molecule must exactly match a molecule in the PDB file to successfully load it (the unique
+        molecule is neither a substructure nor a superstructure of the molecule in the PDB).
+        If a molecule in the PDB file matches a unique molecule, the bond order and formal charge information
+        from the unique molecule is assigned to matching molecules in the PDB, and stereochemistry is assigned
+        based on the geometry in the PDB (even if this differs from the stereochemistry in the unique molecule).
+        Unique molecule matches will overwrite bond order and formal charge assignments from other sources.
 
         Metadata such as residues, chains, and atom names are recorded in the
         ``Atom.metadata`` attribute, which is a dictionary mapping from
-        strings like "residue_name" to the appropriate value. ``from_polymer_pdb``
-        returns a molecule that can be iterated over with the ``.residues`` and
-        ``.chains`` attributes, as well as the usual ``.atoms``.
+        the strings "residue_name", "residue_number", "insertion_code", and "chain_id" to the appropriate value.
+        The topology returned by this method can expose residue and chain iterators which can be accessed
+        using :py:meth:`Topology.hierarchy_iterator`, such as ``top.hierarchy_iterator("residues")`` and
+        ``top.hierarchy_iterator("chains")``.
 
-        Any unique molecules provided must match molecules in the input PDB
-        fully, with no missing atoms.
 
         Parameters
         ----------
         file_path : str or file object
             PDB information to be passed to OpenMM PDBFile object for loading
-        unique_molecules
-        toolkit_registry = ToolkitWrapper or ToolkitRegistry. Default = None
+        unique_molecules : Iterable of Molecule. Default = None
+            OpenFF Molecule objects corresponding to the molecules in the input PDB.
+        toolkit_registry : ToolkitWrapper or ToolkitRegistry. Default = None
             Either a ToolkitRegistry, ToolkitWrapper
 
         Returns
         -------
-        molecule : openff.toolkit.topology.Molecule
+        topology : openff.toolkit.topology.Topology
 
         Raises
         ------
@@ -1576,6 +1589,22 @@ class Topology(Serializable):
         UnassignedChemistryInPDBError
             If an atom or bond could not be assigned; the exception will
             provide a detailed diagnostic of what went wrong.
+
+        Examples
+        --------
+
+        >>> from openff.toolkit import Topology
+        >>> from openff.toolkit.utils import get_data_file_path
+        >>> top = Topology.from_multicomponent_pdb(get_data_file_path("proteins/TwoMol_SER_CYS.pdb"))
+        >>> top.molecule(0).to_smiles()
+        '[H][O][C]([H])([H])[C@@]([H])([C](=[O])[N]([H])[C]([H])([H])[H])[N]([H])[C](=[O])[C]([H])([H])[H]'z
+        >>> [*top.hierarchy_iterator("residues")]
+        [HierarchyElement ('A', '1', ' ', 'ACE') of iterator 'residues' containing 6 atom(s),
+         HierarchyElement ('A', '2', ' ', 'SER') of iterator 'residues' containing 11 atom(s),
+         HierarchyElement ('A', '3', ' ', 'NME') of iterator 'residues' containing 6 atom(s),
+         HierarchyElement ('B', '1', ' ', 'ACE') of iterator 'residues' containing 6 atom(s),
+         HierarchyElement ('B', '2', ' ', 'CYS') of iterator 'residues' containing 11 atom(s),
+         HierarchyElement ('B', '3', ' ', 'NME') of iterator 'residues' containing 6 atom(s)]
 
         """
         import json
