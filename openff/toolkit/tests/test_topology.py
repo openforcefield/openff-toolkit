@@ -707,9 +707,7 @@ class TestTopology:
     @requires_rdkit
     def test_from_pdb(self):
         with pytest.raises(UnassignedChemistryInPDBError) as exc_info:
-            Topology.from_pdb(
-                get_data_file_path("proteins/5tbm_complex_solv.pdb")
-            )
+            Topology.from_pdb(get_data_file_path("proteins/5tbm_complex_solv.pdb"))
         # Make sure that the error message above doesn't contain the "multiple chains" hint
         assert "input has multiple chain identifiers" not in exc_info.value.args[
             0
@@ -770,9 +768,7 @@ class TestTopology:
     @requires_rdkit
     def test_from_pdb_two_polymers_metadata(self):
         """Test that a PDB with two capped polymers is loaded correctly"""
-        top = Topology.from_pdb(
-            get_data_file_path("proteins/TwoMol_SER_CYS.pdb")
-        )
+        top = Topology.from_pdb(get_data_file_path("proteins/TwoMol_SER_CYS.pdb"))
         assert top.molecule(0).is_isomorphic_with(
             Molecule.from_smiles(
                 "[H][O][C]([H])([H])[C@@]([H])([C](=[O])[N]([H])[C]([H])([H])[H])[N]([H])[C](=[O])[C]([H])([H])[H]"
