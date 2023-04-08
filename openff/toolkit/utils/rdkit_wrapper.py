@@ -255,7 +255,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return new_mol
 
-    def _polymer_openmm_topology_to_offmol(self, molecule_class, omm_top, substructure_dictionary):
+    def _polymer_openmm_topology_to_offmol(
+        self, molecule_class, omm_top, substructure_dictionary
+    ):
         rdkit_mol = self._polymer_openmm_topology_to_rdmol(
             omm_top, substructure_dictionary
         )
