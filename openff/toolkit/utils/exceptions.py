@@ -368,6 +368,8 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
             self._atoms: List["OpenMMAtom"] = list(omm_top.atoms())
             self._bonds: List[Tuple["OpenMMAtom", "OpenMMAtom"]] = list(omm_top.bonds())
 
+        if not(substructure_library):
+            substructure_library = {}
         self.substructure_library = substructure_library
         self.unassigned_bonds = [] if unassigned_bonds is None else unassigned_bonds
         self.unassigned_atoms = [] if unassigned_atoms is None else unassigned_atoms
@@ -529,7 +531,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
             return []
 
         # Construct a map from input residues to assigned resnames
-        residues: Mapping[Tuple[str, str], Set[str]] = defaultdict(set)
+        residues: Mapping[Tuple[str, str, str], Set[str]] = defaultdict(set)
         for atom in self.omm_top.atoms():
             input_resname: str = atom.residue.name
             input_resnum: str = atom.residue.id
