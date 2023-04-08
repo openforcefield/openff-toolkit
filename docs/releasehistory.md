@@ -8,6 +8,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### New features
+- [PR #1565](https://github.com/openforcefield/openff-toolkit/pull/1565): Adds :py:meth:`Topology.from_pdb`
+
 ## 0.12.1
 
 ### New features
