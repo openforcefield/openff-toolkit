@@ -46,7 +46,7 @@ class _SimpleMolecule:
             atom1_atom = atom1
             atom2_atom = atom2
         else:
-            raise Exception(
+            raise ValueError(
                 "Invalid inputs to molecule._add_bond. Expected ints or Atoms. "
                 "Received {} (type {}) and {} (type {}) ".format(
                     atom1, type(atom1), atom2, type(atom2)
