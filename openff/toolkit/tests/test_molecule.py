@@ -4138,8 +4138,7 @@ class TestMoleculeFromPDB:
             match=(
                 r"Note: 'HOH' is a residue code for water. You may have "
                 + r"crystallographic waters in your PDB file. Please remove "
-                + r"these before proceeding; they can be added back to the "
-                + r"topology later."
+                + r"these before proceeding, or use Topology.from_pdb\."
             ),
         ):
             Molecule.from_polymer_pdb(
