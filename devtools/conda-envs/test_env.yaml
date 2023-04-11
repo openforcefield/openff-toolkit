@@ -2,7 +2,6 @@ name: test
 channels:
   - openeye
   - conda-forge
-  - conda-forge/label/openff-interchange_rc
 dependencies:
     # Base depends
   - python
@@ -19,7 +18,7 @@ dependencies:
   - smirnoff99Frosst
   - openff-units >=0.2
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.3.0rc1
+  - openff-interchange-base >=0.3.0
     # Toolkit-specific
   - ambertools
   - rdkit
@@ -42,7 +41,6 @@ dependencies:
   - nbval
   - mypy
   - typing_extensions
-  - openff-models
   - pip:
     - types-pkg_resources
     - types-setuptools
