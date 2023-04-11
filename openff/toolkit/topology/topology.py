@@ -1540,7 +1540,7 @@ class Topology(Serializable):
         specified in the ``unique_molecules`` argument are supported when
         CONECT records are provided.
 
-        .. admonition:: Warning
+        .. warning::
             Molecules in the resulting Topology will adopt
             the geometric stereochemistry in the PDB, even if this conflicts
             with the stereochemistry specified in ``unique_molecules``.
