@@ -480,13 +480,18 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
                     if resname not in self.substructure_library
                 ]
             )
-
-            if "HOH" in unknown_resnames:
+            # Only raise this error if we're in Molecule.from_polymer_pdb,
+            # since Topology.from_pdb DOES accept multiple
+            # chains. We can tell the difference because
+            # Topology.from_pdb will have added the
+            # "UNIQUE_MOLECULE" key to the substructure library,
+            if ("HOH" in unknown_resnames) and (
+                "UNIQUE_MOLECULE" not in self.substructure_library
+            ):
                 solvent_note = [
                     "Note: 'HOH' is a residue code for water. You may have "
                     + "crystallographic waters in your PDB file. Please remove "
-                    + "these before proceeding; they can be added back to the "
-                    + "topology later."
+                    + "these before proceeding, or use Topology.from_pdb."
                 ]
             else:
                 solvent_note = [""]
@@ -498,7 +503,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
                     + "identifies residues by matching chemical substructures rather "
                     + "than by residue name, it currently only supports the 20 "
                     + "'canonical' amino acids.",
-                    *(f"    {resname}" for resname in unknown_resnames),
+                    *(f"    {resname}" for resname in sorted(unknown_resnames)),
                     *solvent_note,
                     "",
                 ]
