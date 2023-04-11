@@ -3857,11 +3857,18 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         # Ensure that all system energies are the same
         if zero_charges or gbsa_model in ["HCT", "OBC1"]:
             compare_system_energies(
-                    off_omm_system, amber_omm_system, to_openmm(positions), by_force_type=False,
+                off_omm_system,
+                amber_omm_system,
+                to_openmm(positions),
+                by_force_type=False,
             )
         else:
             compare_system_energies(
-                    off_omm_system, amber_omm_system, to_openmm(positions), by_force_type=False, atol=1e-4,
+                off_omm_system,
+                amber_omm_system,
+                to_openmm(positions),
+                by_force_type=False,
+                atol=1e-4,
             )
 
     @pytest.mark.slow
