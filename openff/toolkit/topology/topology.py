@@ -1598,8 +1598,13 @@ class Topology(Serializable):
         >>> from openff.toolkit import Topology
         >>> from openff.toolkit.utils import get_data_file_path
         >>> top = Topology.from_pdb(get_data_file_path("proteins/TwoMol_SER_CYS.pdb"))
-        >>> top.molecule(0).to_smiles()
-        '[H][O][C]([H])([H])[C@@]([H])([C](=[O])[N]([H])[C]([H])([H])[H])[N]([H])[C](=[O])[C]([H])([H])[H]'z
+        >>> # The molecules in the loaded topology are full-fledged OpenFF Molecule objects
+        >>> for match in top.chemical_environment_matches('[O:1]=[C:2][N:3][H:4]'):
+        >>>    print(match.topology_atom_indices)
+        (1, 0, 6, 13)
+        (9, 8, 17, 19)
+        (24, 23, 29, 36)
+        (32, 31, 40, 42)
         >>> [*top.hierarchy_iterator("residues")]
         [HierarchyElement ('A', '1', ' ', 'ACE') of iterator 'residues' containing 6 atom(s),
          HierarchyElement ('A', '2', ' ', 'SER') of iterator 'residues' containing 11 atom(s),
