@@ -1533,43 +1533,70 @@ class Topology(Serializable):
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
     ):
         """
-        Loads polymers, waters, monoatomic ions, and user-defined molecules from a PDB file.
+        Loads supported or user-specified molecules from a PDB file.
 
-        Molecules in the PDB file have the following requirements:
-          * Polymer molecules must use the standard atom names described in the
-            `PDB Chemical Component Dictionary <https://www.wwpdb.org/data/ccd>`_.
-          * There must be no missing atoms (all hydrogens must be explicit).
-          * All particles must correspond to an atomic nucleus (particles in the
-            PDB representing "virtual sites" or "extra points" are not allowed).
-          * CONECT records must correspond only to chemical bonds (CONECT records
-            representing an angle constraints are not allowed).
-          * CONECT records may be redundant with connectivity defined by residue templates.
+        Currently, canonical proteins, waters, and monoatomic ions are supported
+        without CONECT records via residue and atom names, and molecules
+        specified in the ``unique_molecules`` argument are supported when
+        CONECT records are provided.
 
-        Currently, proteins made of the 20 canonical amino acids are the only supported polymer.
-        For details on the polymer loading used here, see :py:meth:`Molecule.from_polymer_pdb`.
+        .. admonition:: Warning
+            Molecules in the resulting Topology will adopt
+            the geometric stereochemistry in the PDB, even if this conflicts
+            with the stereochemistry specified in ``unique_molecules``.
 
-        Waters can be recognized by residue name "HOH" or by both ATOM records which include
-        element information and CONECT records.
-        The Sage-supported monoatomic ions (Na+, Li+, K+, Rb+, Cs+, F-, Cl-, Br-, and I-) are recognized.
-        To load other monoatomic ions, use the unique_molecules keyword argument.
+        All molecules in the PDB file have the following requirements:
 
-        The ``unique_molecules`` keyword argument can be used to load arbitrary molecules from the PDB file.
-        The elements and CONECT records of any such molecules must be explicitly stated in the PDB file.
-        Molecules in the PDB file will be matched to the molecules passed in using the unique_molecules
-        keyword via comparison of their atomic elements and CONECT records.
-        A unique molecule must exactly match a molecule in the PDB file to successfully load it (the unique
-        molecule is neither a substructure nor a superstructure of the molecule in the PDB).
-        If a molecule in the PDB file matches a unique molecule, the bond order and formal charge information
-        from the unique molecule is assigned to matching molecules in the PDB, and stereochemistry is assigned
-        based on the geometry in the PDB (even if this differs from the stereochemistry in the unique molecule).
-        Unique molecule matches will overwrite bond order and formal charge assignments from other sources.
+        * Polymer molecules must use the standard atom names described in the
+          `PDB Chemical Component Dictionary <https://www.wwpdb.org/data/ccd>`_
+          (PDB CCD).
+        * There must be no missing atoms (all hydrogens must be explicit).
+        * All particles must correspond to an atomic nucleus (particles in the
+          PDB representing "virtual sites" or "extra points" are not allowed).
+        * All bonds must be specified by either CONECT records, or for
+          polymers and water by the PDB CCD via the residue and atom name.
+        * CONECT records must correspond only to chemical bonds (CONECT records
+          representing an angle constraints are not allowed).
+        * CONECT records may be redundant with connectivity defined by residue
+          templates.
+
+        Currently, the only supported polymers are proteins made of the 20
+        canonical amino acids. For details on the polymer loading used here,
+        see :py:meth:`Molecule.from_polymer_pdb`.
+
+        Waters can be recognized in either of two ways:
+
+        * By the residue name "HOH" and atom names "H1", "H2", and "O".
+        * By ATOM records which include element information and CONECT records.
+
+        Monoatomic ions supported by Sage are recognized (Na+, Li+, K+, Rb+,
+        Cs+, F-, Cl-, Br-, and I-). To load other monoatomic ions, use the
+        ``unique_molecules`` keyword argument.
+
+        The ``unique_molecules`` keyword argument can be used to load arbitrary
+        molecules from the PDB file. These molecules match a group of atoms in
+        the PDB file when their atomic elements and connectivity are identical;
+        elements and CONECT records must therefore be explicitly specified in
+        the PDB file. Information missing from the PDB format, such as bond
+        orders and formal charges, is then taken from the matching unique
+        molecule. Unique molecule matches will overwrite bond order and formal
+        charge assignments from other sources. Stereochemistry is assigned
+        based on the geometry in the PDB, even if this differs from the
+        stereochemistry in the unique molecule.
+
+        A user-defined molecule in the PDB file must exactly match a unique
+        molecule to successfully load it - substructures and superstructures
+        will raise :py:exc:`UnassignedChemistryInPDBError`. Unique molecules
+        need not be present in the PDB.
 
         Metadata such as residues, chains, and atom names are recorded in the
-        ``Atom.metadata`` attribute, which is a dictionary mapping from
-        the strings "residue_name", "residue_number", "insertion_code", and "chain_id" to the appropriate value.
-        The topology returned by this method can expose residue and chain iterators which can be accessed
-        using :py:meth:`Topology.hierarchy_iterator`, such as ``top.hierarchy_iterator("residues")`` and
-        ``top.hierarchy_iterator("chains")``.
+        ``Atom.metadata`` attribute, which is a dictionary mapping from the
+        strings ``"residue_name"``, ``"residue_number"``, ``"insertion_code"``,
+        and ``"chain_id"`` to the appropriate value. The topology returned by
+        this method can expose residue and chain iterators which can be
+        accessed using :py:meth:`Topology.hierarchy_iterator`, such as
+        ``top.hierarchy_iterator("residues")`` and ``top.hierarchy_iterator
+        ("chains")``.
 
 
         Parameters
@@ -1577,7 +1604,8 @@ class Topology(Serializable):
         file_path : str or file object
             PDB information to be passed to OpenMM PDBFile object for loading
         unique_molecules : Iterable of Molecule. Default = None
-            OpenFF Molecule objects corresponding to the molecules in the input PDB.
+            OpenFF Molecule objects corresponding to the molecules in the input
+            PDB. See above for details.
         toolkit_registry : ToolkitRegistry. Default = None
             The ToolkitRegistry to use as the cheminformatics backend.
 
