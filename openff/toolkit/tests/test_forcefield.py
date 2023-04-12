@@ -3680,6 +3680,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         #     modify_system=False,
         # )
 
+    @pytest.mark.slow
     @requires_openeye_mol2
     @pytest.mark.parametrize("zero_charges", [True, False])
     @pytest.mark.parametrize(("gbsa_model"), ["HCT", "OBC1", "OBC2"])
