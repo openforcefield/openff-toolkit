@@ -18,6 +18,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 - [PR #1564] Improve documentation of conformer selection in `Molecule.assign_partial_charges()`
 
+### Examples updates
+- [PR #1575](https://github.com/openforcefield/openff-toolkit/pull/1575): The Toolkit Showcase example has been simplified via use of `Topology.from_pdb`
+
 ## 0.12.1
 
 ### New features
