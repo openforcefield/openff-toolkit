@@ -7,12 +7,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `micro` increments represent bugfix releases or improvements in documentation
 
 ## Current development
-<!-- 
-  Please do not add links to the API documentation to the release 
-  notes; it causes problems if the API point is later moved, renamed, 
-  or removed. This is especially important for changes that remove
-  or rename an API point; do not link to the old name.
--->
 
 ### New features
 - [PR #1565](https://github.com/openforcefield/openff-toolkit/pull/1565): Adds `Topology.from_pdb`
