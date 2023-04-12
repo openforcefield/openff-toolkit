@@ -23,6 +23,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Improved documentation and warnings
 
 - [PR #1564] Improve documentation of conformer selection in `Molecule.assign_partial_charges()`
+- [PR #1574](https://github.com/openforcefield/openff-toolkit/pull/1574) Fix class method signature rendering throughout API docs
 
 ## 0.12.1
 
