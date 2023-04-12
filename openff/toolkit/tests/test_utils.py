@@ -84,9 +84,11 @@ def test_sort_smirnoff_dict():
     from collections import OrderedDict
 
     from openff.toolkit.typing.engines.smirnoff import ForceField
-    from openff.toolkit.utils.utils import sort_smirnoff_dict
+    from openff.toolkit.utils.utils import get_data_file_path, sort_smirnoff_dict
 
-    forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+    forcefield = ForceField(
+        get_data_file_path("test_forcefields/test_forcefield.offxml")
+    )
     smirnoff_dict = forcefield._to_smirnoff_data()
 
     # Ensure data is not created or destroyed

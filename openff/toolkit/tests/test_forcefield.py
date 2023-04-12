@@ -30,7 +30,6 @@ from openff.toolkit.tests.utils import (
     requires_openeye,
     requires_openeye_mol2,
     requires_rdkit,
-    unimplemented_interchange,
 )
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import (
@@ -866,7 +865,19 @@ if RDKitToolkitWrapper.is_available() and AmberToolsToolkitWrapper.is_available(
     )
 
 
-class TestForceField:
+class _ForceFieldFixtures:
+    @pytest.fixture()
+    def alkethoh_forcefield(self):
+        return ForceField(
+            get_data_file_path("test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml")
+        )
+
+    @pytest.fixture()
+    def force_field(self):
+        return ForceField(get_data_file_path("test_forcefields/test_forcefield.offxml"))
+
+
+class TestForceField(_ForceFieldFixtures):
     """Test the ForceField class"""
 
     def test_get_available_force_fields(self):
@@ -921,19 +932,21 @@ class TestForceField:
         assert not os.path.isfile("force-field.offxml")
 
         with pytest.raises(
-            OSError, match="Source force-field.offxml could not be read."
+            OSError, match="Source 'force-field.offxml' could not be read."
         ):
             ForceField("force-field.offxml")
 
     def test_load_bad_version(self):
         with pytest.raises(SMIRNOFFVersionError, match="99.3"):
             ForceField(
-                "test_forcefields/unsupported_smirnoff_version.offxml",
+                get_data_file_path(
+                    "test_forcefields/unsupported_smirnoff_version.offxml"
+                ),
                 disable_version_check=False,
             )
 
         ForceField(
-            "test_forcefields/unsupported_smirnoff_version.offxml",
+            get_data_file_path("test_forcefields/unsupported_smirnoff_version.offxml"),
             disable_version_check=True,
         )
 
@@ -974,21 +987,56 @@ class TestForceField:
         with pytest.raises(KeyError):
             forcefield.get_parameter_handler("Angles")
 
-    def test_create_forcefield_from_file(self):
+    def test_create_forcefield_from_file(self, force_field):
         """Test basic file loading in constructor"""
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
-        assert len(forcefield._parameter_handlers["Bonds"]._parameters) == 87
-        assert len(forcefield._parameter_handlers["Angles"]._parameters) == 38
-        assert len(forcefield._parameter_handlers["ProperTorsions"]._parameters) == 158
-        assert len(forcefield._parameter_handlers["ImproperTorsions"]._parameters) == 4
-        assert len(forcefield._parameter_handlers["vdW"]._parameters) == 35
-        assert forcefield.aromaticity_model == "OEAroModel_MDL"
+        assert len(force_field._parameter_handlers["Bonds"]._parameters) == 87
+        assert len(force_field._parameter_handlers["Angles"]._parameters) == 38
+        assert len(force_field._parameter_handlers["ProperTorsions"]._parameters) == 158
+        assert len(force_field._parameter_handlers["ImproperTorsions"]._parameters) == 4
+        assert len(force_field._parameter_handlers["vdW"]._parameters) == 35
+        assert force_field.aromaticity_model == "OEAroModel_MDL"
 
     def test_load_bad_string(self):
         with pytest.raises(IOError) as exception_info:
             ForceField("1234")
-        assert "Source 1234 could not be read." in str(exception_info.value)
-        assert "syntax error" in str(exception_info.value)
+
+        # This may need to be updated if the `openforcefields` package changes name;
+        # searching through `site-packages/` and other paths is probably unrelaiable
+        for match in [
+            "Source '1234' could not be read",
+            "SMIRNOFFParseError",
+            "syntax error",
+            "openforcefields",
+        ]:
+            assert match in str(exception_info.value)
+
+    def test_load_bad_bytes(self):
+        with pytest.raises(IOError) as exception_info:
+            ForceField(b"the holy grail of computational chemistry")
+
+        for match in [
+            "Source 'b'the holy grail",
+            "could not be read",
+            "SMIRNOFFParseError",
+            "syntax error",
+        ]:
+            assert match in str(exception_info.value)
+
+        # See note in test_load_bad_string
+        assert "openforcefields" not in str(exception_info.value)
+
+    def test_load_filelike_object(self):
+        with open(get_data_file_path("test_forcefields/test_forcefield.offxml")) as f:
+            ForceField(f)
+
+    def test_load_bad_filelike_object(self):
+        with open(get_data_file_path("test_forcefields/mangled.offxml")) as f:
+            with pytest.raises(IOError) as exception_info:
+                ForceField(f)
+
+            assert "while trying to parse source as an object" in str(
+                exception_info.value
+            )
 
     def test_create_forcefield_from_xml_string(self):
         forcefield = ForceField(xml_simple_ff)
@@ -1003,7 +1051,6 @@ class TestForceField:
         sage = ForceField("openff-2.0.0.offxml")
 
         for parameter_handler_name in sage.registered_parameter_handlers:
-
             parameter_handler = sage.get_parameter_handler(parameter_handler_name)
 
             for parameter in parameter_handler.parameters:
@@ -1013,7 +1060,7 @@ class TestForceField:
                 # Ensure that, for example, F isn't converted to Farad
                 if (
                     parameter_handler_name == "LibraryCharges"
-                    and getattr(parameter, "name") is not None
+                    and parameter.name is not None
                 ):
                     assert isinstance(parameter.name, str)
                     assert not isinstance(parameter.name, unit.Quantity)
@@ -1101,15 +1148,27 @@ class TestForceField:
 
     def test_read_0_1_smirnoff(self):
         """Test reading an 0.1 spec OFFXML file"""
-        ForceField("test_forcefields/smirnoff99Frosst_reference_0_1_spec.offxml")
+        ForceField(
+            get_data_file_path(
+                "test_forcefields/smirnoff99Frosst_reference_0_1_spec.offxml"
+            )
+        )
 
     def test_read_0_1_smirff(self):
         """Test reading an 0.1 spec OFFXML file, enclosed by the legacy "SMIRFF" tag"""
-        ForceField("test_forcefields/smirff99Frosst_reference_0_1_spec.offxml")
+        ForceField(
+            get_data_file_path(
+                "test_forcefields/smirff99Frosst_reference_0_1_spec.offxml"
+            )
+        )
 
     def test_read_0_2_smirnoff(self):
         """Test reading an 0.2 spec OFFXML file"""
-        ForceField("test_forcefields/smirnoff99Frosst_reference_0_2_spec.offxml")
+        ForceField(
+            get_data_file_path(
+                "test_forcefields/smirnoff99Frosst_reference_0_2_spec.offxml"
+            )
+        )
 
     @pytest.mark.parametrize("file_path_extension", ["xml", "XML", "offxml", "OFFXML"])
     @pytest.mark.parametrize(
@@ -1279,18 +1338,15 @@ class TestForceField:
         """
         Ensure that string values of "None" are correctly interpreted in the GBSAHandler's sa_model field
         """
-        from openff.toolkit.typing.engines.smirnoff import ForceField
-
         ForceField(xml_gbsa_ff)
 
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
-    def test_parameterize_ethanol(self, toolkit_registry):
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+    def test_parameterize_ethanol(self, toolkit_registry, force_field):
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         molecules = [create_ethanol()]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
-        forcefield.create_openmm_system(
+        force_field.create_openmm_system(
             topology,
             toolkit_registry=toolkit_registry,
         )
@@ -1319,16 +1375,14 @@ class TestForceField:
         AngleHandler._DEPENDENCIES = orig_ah_depends
 
     def test_parameterize_ethanol_missing_torsion(self):
-        from openff.toolkit.typing.engines.smirnoff.parameters import (
-            UnassignedProperTorsionParameterException,
-        )
+        from openff.interchange.exceptions import UnassignedTorsionError
 
         forcefield = ForceField(xml_missing_torsion)
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         molecules = [create_ethanol()]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         with pytest.raises(
-            UnassignedProperTorsionParameterException,
+            UnassignedTorsionError,
             match="- Topology indices [(]5, 0, 1, 6[)]: "
             r"names and elements [(](H\d+)? H[)], [(](C\d+)? C[)], [(](C\d+)? C[)], [(](H\d+)? H[)],",
         ):
@@ -1338,9 +1392,9 @@ class TestForceField:
     def test_parameterize_1_cyclohexane_1_ethanol(
         self,
         toolkit_registry,
+        force_field,
     ):
         """Test parameterizing a periodic system of two distinct molecules"""
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         pdbfile = app.PDBFile(
             get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb")
         )
@@ -1350,15 +1404,15 @@ class TestForceField:
         #                                                                      'molecules/cyclohexane.mol2')]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
-        forcefield.create_openmm_system(topology)
+        force_field.create_openmm_system(topology)
 
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
     def test_parameterize_1_cyclohexane_1_ethanol_vacuum(
         self,
         toolkit_registry,
+        force_field,
     ):
         """Test parametrizing a nonperiodic system of two distinct molecules"""
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         pdbfile = app.PDBFile(
             get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb")
         )
@@ -1366,7 +1420,7 @@ class TestForceField:
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         topology.box_vectors = None
 
-        forcefield.create_openmm_system(topology)
+        force_field.create_openmm_system(topology)
 
     @pytest.mark.slow
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
@@ -1383,11 +1437,11 @@ class TestForceField:
         self,
         toolkit_registry,
         box,
+        force_field,
     ):
         """Test parameterizing a large system of several distinct molecules.
         This test is very slow, so it is only run if the --runslow option is provided to pytest.
         """
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         box_file_path = get_data_file_path(
             os.path.join("systems", "packmol_boxes", box)
         )
@@ -1403,20 +1457,21 @@ class TestForceField:
             unique_molecules=molecules,
         )
 
-        forcefield.create_openmm_system(
+        force_field.create_openmm_system(
             topology,
             toolkit_registry=toolkit_registry,
         )
         # TODO: Add check to ensure system energy is finite
 
     @requires_openeye
-    def test_parameterize_ethanol_different_reference_ordering_openeye(self):
+    def test_parameterize_ethanol_different_reference_ordering_openeye(
+        self, force_field
+    ):
         """
         Test parameterizing the same PDB, using reference mol2s that have different atom orderings.
         The results of both should be identical.
         """
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         # Load the unique molecules with one atom ordering
         molecules1 = [Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))]
@@ -1425,7 +1480,7 @@ class TestForceField:
             unique_molecules=molecules1,
         )
 
-        omm_system1 = forcefield.create_openmm_system(
+        omm_system1 = force_field.create_openmm_system(
             topology1,
             toolkit_registry=toolkit_registry,
         )
@@ -1437,7 +1492,7 @@ class TestForceField:
             pdbfile.topology,
             unique_molecules=molecules2,
         )
-        omm_system2 = forcefield.create_openmm_system(
+        omm_system2 = force_field.create_openmm_system(
             topology2,
             toolkit_registry=toolkit_registry,
         )
@@ -1451,7 +1506,7 @@ class TestForceField:
         assert serialized_1 == serialized_2
 
     @requires_rdkit
-    def test_parameterize_ethanol_different_reference_ordering_rdkit(self):
+    def test_parameterize_ethanol_different_reference_ordering_rdkit(self, force_field):
         """
         Test parameterizing the same PDB, using reference sdfs that have different atom orderings.
         The results of both should be identical.
@@ -1459,7 +1514,6 @@ class TestForceField:
         toolkit_registry = ToolkitRegistry(
             toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper]
         )
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
 
         # Load the unique molecules with one atom ordering
@@ -1469,7 +1523,7 @@ class TestForceField:
             unique_molecules=molecules1,
         )
 
-        omm_system1 = forcefield.create_openmm_system(
+        omm_system1 = force_field.create_openmm_system(
             topology1,
             toolkit_registry=toolkit_registry,
         )
@@ -1482,7 +1536,7 @@ class TestForceField:
             pdbfile.topology,
             unique_molecules=molecules2,
         )
-        omm_system2 = forcefield.create_openmm_system(
+        omm_system2 = force_field.create_openmm_system(
             topology2,
             toolkit_registry=toolkit_registry,
         )
@@ -1496,14 +1550,10 @@ class TestForceField:
         assert serialized_1 == serialized_2
 
     @requires_rdkit
-    def test_parameterize_mol_missing_stereo_rdkit(self):
+    def test_parameterize_mol_missing_stereo_rdkit(self, force_field):
         """
         Test parameterizing a molecule with undefined stereochemsity using the RDKit/AmberTools backend.
         """
-
-        from openff.toolkit.topology import Molecule, Topology
-        from openff.toolkit.typing.engines.smirnoff import ForceField
-
         toolkit_registry = ToolkitRegistry(
             toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper]
         )
@@ -1511,28 +1561,20 @@ class TestForceField:
         molecule = Molecule.from_smiles("CC1CCC(=O)O1", allow_undefined_stereo=True)
         topology = Topology.from_molecules([molecule])
 
-        force_field = ForceField("test_forcefields/test_forcefield.offxml")
-
         force_field.create_openmm_system(
             topology,
             toolkit_registry=toolkit_registry,
         )
 
     @requires_openeye
-    def test_parameterize_mol_missing_stereo_openeye(self):
+    def test_parameterize_mol_missing_stereo_openeye(self, force_field):
         """
         Test parameterizing a molecule with undefined stereochemsity using the OpenEye backend.
         """
-
-        from openff.toolkit.topology import Molecule, Topology
-        from openff.toolkit.typing.engines.smirnoff import ForceField
-
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
 
         molecule = Molecule.from_smiles("CC1CCC(=O)O1", allow_undefined_stereo=True)
         topology = Topology.from_molecules([molecule])
-
-        force_field = ForceField("test_forcefields/test_forcefield.offxml")
 
         force_field.create_openmm_system(
             topology,
@@ -1540,10 +1582,10 @@ class TestForceField:
         )
 
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
-    def test_pass_invalid_kwarg_to_create_openmm_system(self, toolkit_registry):
+    def test_pass_invalid_kwarg_to_create_openmm_system(
+        self, toolkit_registry, force_field
+    ):
         """Test to ensure an exception is raised when an unrecognized kwarg is passed"""
-        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        forcefield = ForceField(file_path)
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         molecules = []
         molecules.append(Molecule.from_smiles("CCO"))
@@ -1554,7 +1596,7 @@ class TestForceField:
             match="got an unexpected keyword argument .*invalid_kwarg.*",
         ):
             # TODO: specify desired toolkit_registry behavior in Interchange
-            forcefield.create_openmm_system(
+            force_field.create_openmm_system(
                 topology,
                 invalid_kwarg="aaa",
                 toolkit_registry=toolkit_registry,
@@ -1569,27 +1611,26 @@ class TestForceField:
             handler.switch_width = 1.234 * unit.nanometer
 
     @pytest.mark.parametrize("mod_cuoff", [True, False])
-    def test_nonbonded_cutoff_no_box_vectors(self, mod_cuoff):
+    def test_nonbonded_cutoff_no_box_vectors(self, mod_cuoff, force_field):
         """Ensure that the NonbondedForce objects use the cutoff specified in the
         ParameterHandler, not the OpenMM defaults"""
         top = Topology.from_molecules(create_ethanol())
         assert top.box_vectors is None
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
 
         if mod_cuoff:
             # Ensure a modified, non-default cutoff will be propogated through
-            forcefield["vdW"].cutoff = 0.777 * unit.nanometer
-            forcefield["Electrostatics"].cutoff = 0.777 * unit.nanometer
+            force_field["vdW"].cutoff = 0.777 * unit.nanometer
+            force_field["Electrostatics"].cutoff = 0.777 * unit.nanometer
 
-        omm_sys = forcefield.create_openmm_system(top)
+        omm_sys = force_field.create_openmm_system(top)
 
         for f in omm_sys.getForces():
             if isinstance(f, openmm.NonbondedForce):
                 nonbonded_force = f
 
         found_cutoff = from_openmm(nonbonded_force.getCutoffDistance())
-        vdw_cutoff = forcefield["vdW"].cutoff
-        e_cutoff = forcefield["Electrostatics"].cutoff
+        vdw_cutoff = force_field["vdW"].cutoff
+        e_cutoff = force_field["Electrostatics"].cutoff
         assert (found_cutoff - vdw_cutoff).m_as(unit.nanometer) < 1e-6
         assert (found_cutoff - e_cutoff).m_as(unit.nanometer) < 1e-6
 
@@ -1693,10 +1734,9 @@ class TestForceField:
 
         assert abs(found_cutoff - 7.89) < 1e-6
 
-    def test_registered_parameter_handlers(self):
+    def test_registered_parameter_handlers(self, force_field):
         """Test registered_parameter_handlers property"""
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
-        registered_handlers = forcefield.registered_parameter_handlers
+        registered_handlers = force_field.registered_parameter_handlers
 
         expected_handlers = [
             "Bonds",
@@ -1713,62 +1753,58 @@ class TestForceField:
 
         assert "LibraryChrages" not in registered_handlers
 
-    def test_parameter_handler_lookup(self):
+    def test_parameter_handler_lookup(self, force_field):
         """Ensure __getitem__ lookups work"""
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
 
-        handlers_before = sorted(forcefield._parameter_handlers)
+        handlers_before = sorted(force_field._parameter_handlers)
 
         for val in handlers_before:
-            looked_up_handler = forcefield[val]
+            looked_up_handler = force_field[val]
             assert isinstance(looked_up_handler, ParameterHandler)
 
-        handlers_after = sorted(forcefield._parameter_handlers)
+        handlers_after = sorted(force_field._parameter_handlers)
 
         assert handlers_before == handlers_after
 
     @pytest.mark.parametrize("unregistered_handler", ["LibraryCharges", "foobar"])
-    def test_unregistered_parameter_handler_lookup(self, unregistered_handler):
+    def test_unregistered_parameter_handler_lookup(
+        self, unregistered_handler, force_field
+    ):
         """Ensure ForceField.__getitem__ lookups do not register new handlers"""
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
-
-        assert unregistered_handler not in forcefield._parameter_handlers
+        assert unregistered_handler not in force_field._parameter_handlers
         with pytest.raises(KeyError, match=unregistered_handler):
-            forcefield[unregistered_handler]
-        assert unregistered_handler not in forcefield._parameter_handlers
+            force_field[unregistered_handler]
+        assert unregistered_handler not in force_field._parameter_handlers
 
-    def test_lookup_parameter_handler_object(self):
+    def test_lookup_parameter_handler_object(self, force_field):
         """Ensure ForceField.__getitem__ raises NotImplemented when passed a ParameterHandler object"""
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
-
-        bonds = forcefield["Bonds"]
+        bonds = force_field["Bonds"]
         with pytest.raises(NotImplementedError):
-            forcefield[bonds]
+            force_field[bonds]
         with pytest.raises(NotImplementedError):
-            forcefield[type(bonds)]
+            force_field[type(bonds)]
 
-    def test_lookup_parameter_type(self):
+    def test_lookup_parameter_type(self, force_field):
         """Test both ForceField and ParameterHandler __getitem__ methods"""
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         smirks = "[#6X4:1]-[#6X3:2]=[#8X1+0]"
 
-        param = forcefield["Bonds"][smirks]
+        param = force_field["Bonds"][smirks]
         assert param.smirks == smirks
 
         # Look up the same param by its index in the ParameterList
         param_idx = 2
-        assert param == forcefield["Bonds"][param_idx]
+        assert param == force_field["Bonds"][param_idx]
 
         with pytest.raises(
             ParameterLookupError,
             match="Lookup by instance is not supported",
         ):
-            forcefield["Bonds"][param]
+            force_field["Bonds"][param]
         with pytest.raises(
             ParameterLookupError,
             match=r" not found in ParameterList",
         ):
-            forcefield["vdW"][smirks]
+            force_field["vdW"][smirks]
 
     @pytest.mark.parametrize(
         "to_deregister",
@@ -1805,16 +1841,14 @@ class TestForceField:
         for ff1, ff2 in itertools.combinations(ffs, 2):
             assert hash(ff1) != hash(ff2)
 
-    def test_hash_cosmetic(self):
+    def test_hash_cosmetic(self, force_field):
         """Test that adding a cosmetic attribute does not change the hash"""
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
+        hash_without_cosmetic = hash(force_field)
 
-        hash_without_cosmetic = hash(forcefield)
+        force_field.get_parameter_handler("Bonds").add_cosmetic_attribute("foo", 4)
+        assert "foo" in force_field["Bonds"]._cosmetic_attribs
 
-        forcefield.get_parameter_handler("Bonds").add_cosmetic_attribute("foo", 4)
-        assert "foo" in forcefield["Bonds"]._cosmetic_attribs
-
-        hash_with_cosmetic = hash(forcefield)
+        hash_with_cosmetic = hash(force_field)
 
         assert hash_with_cosmetic == hash_without_cosmetic
 
@@ -1923,28 +1957,41 @@ class TestForceField:
         assert force_field["bogus"] is not None
 
 
-class TestForceFieldSerializaiton:
-    def test_json_dump(self):
+class TestForceFieldPluginLoading:
+    def test_handlers_tracked_if_already_loaded(self):
+        """Reproduce issue #1542."""
+        from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
+
+        plugins = load_handler_plugins()
+
+        assert (
+            len(plugins) > 0
+        ), "Test assumes that some ParameterHandler plugins are available"
+
+        assert ForceField(load_plugins=False)._plugin_parameter_handler_classes == []
+        assert ForceField(load_plugins=True)._plugin_parameter_handler_classes == [
+            *plugins
+        ]
+
+
+class TestForceFieldSerializaiton(_ForceFieldFixtures):
+    def test_json_dump(self, force_field):
         """Test that at a ForceField can at least be dumped to JSON without error."""
         import json
-
-        force_field = ForceField("test_forcefields/test_forcefield.offxml")
 
         json.dumps(force_field._to_smirnoff_data())
 
 
-class TestForceFieldChargeAssignment:
+class TestForceFieldChargeAssignment(_ForceFieldFixtures):
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
-    def test_charges_from_molecule(self, toolkit_registry):
+    def test_charges_from_molecule(self, toolkit_registry, force_field):
         """Test skipping charge generation and instead getting charges from the original Molecule"""
         # Create an ethanol molecule without using a toolkit
         molecules = [create_ethanol()]
 
-        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        forcefield = ForceField(file_path)
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
-        omm_system = forcefield.create_openmm_system(
+        omm_system = force_field.create_openmm_system(
             topology, charge_from_molecules=molecules, toolkit_registry=toolkit_registry
         )
         nonbondedForce = [
@@ -1960,12 +2007,9 @@ class TestForceFieldChargeAssignment:
             assert q == expected_charge
 
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
-    def test_charges_from_molecule_reordered(self, toolkit_registry):
+    def test_charges_from_molecule_reordered(self, toolkit_registry, force_field):
         """A copy of test_charges_from_molecule but with the same molecule in a different atom order."""
         molecules = [create_ethanol()]
-        forcefield = ForceField(
-            get_data_file_path("test_forcefields/test_forcefield.offxml")
-        )
 
         # In 1_ethanol_reordered.pdb, the first three atoms go O-C-C instead of C-C-O. This part of the test ensures
         # that the charges are correctly mapped according to this PDB in the resulting system.
@@ -1974,7 +2018,7 @@ class TestForceFieldChargeAssignment:
         )
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
-        omm_system = forcefield.create_openmm_system(
+        omm_system = force_field.create_openmm_system(
             topology,
             charge_from_molecules=molecules,
             toolkit_registry=toolkit_registry,
@@ -1992,39 +2036,35 @@ class TestForceFieldChargeAssignment:
             assert q == expected_charge
 
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
-    def test_nonintegral_charge_exception(self, toolkit_registry):
+    def test_nonintegral_charge_exception(self, toolkit_registry, force_field):
         # Create an ethanol molecule without using a toolkit
-        from openff.interchange.exceptions import NonIntegralMoleculeChargeException
+        from openff.interchange.exceptions import NonIntegralMoleculeChargeError
 
         ethanol = create_ethanol()
         ethanol.partial_charges[0] = 1.0 * unit.elementary_charge
 
-        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        forcefield = ForceField(file_path)
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=[ethanol])
 
         with pytest.raises(
-            NonIntegralMoleculeChargeException, match="Molecule .* has a net charge"
+            NonIntegralMoleculeChargeError, match="Molecule .* has a net charge"
         ):
-            forcefield.create_openmm_system(
+            force_field.create_openmm_system(
                 topology,
                 charge_from_molecules=[ethanol],
                 toolkit_registry=toolkit_registry,
             )
 
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
-    def test_nonintegral_charge_override(self, toolkit_registry):
+    def test_nonintegral_charge_override(self, toolkit_registry, force_field):
         ethanol = create_ethanol()
         ethanol.partial_charges[0] = 1.0 * unit.elementary_charge
 
-        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        forcefield = ForceField(file_path)
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=[ethanol])
 
         # Pass when the `allow_nonintegral_charges` keyword is included
-        forcefield.create_openmm_system(
+        force_field.create_openmm_system(
             topology,
             charge_from_molecules=[ethanol],
             toolkit_registry=toolkit_registry,
@@ -2032,7 +2072,7 @@ class TestForceFieldChargeAssignment:
         )
 
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
-    def test_some_charges_from_molecule(self, toolkit_registry):
+    def test_some_charges_from_molecule(self, toolkit_registry, force_field):
         """
         Test creating an OpenMM system where some charges come from a Molecule, but others come from toolkit
         calculation
@@ -2041,8 +2081,6 @@ class TestForceFieldChargeAssignment:
         cyclohexane = create_cyclohexane()
         molecules = [ethanol, cyclohexane]
 
-        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        forcefield = ForceField(file_path)
         pdbfile = app.PDBFile(
             get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb")
         )
@@ -2051,7 +2089,7 @@ class TestForceFieldChargeAssignment:
             unique_molecules=molecules,
         )
 
-        omm_system = forcefield.create_openmm_system(
+        omm_system = force_field.create_openmm_system(
             topology, charge_from_molecules=[ethanol], toolkit_registry=toolkit_registry
         )
         nonbondedForce = [
@@ -2073,8 +2111,8 @@ class TestForceFieldChargeAssignment:
         "ff_inputs",
         [
             [
-                "test_forcefields/test_forcefield.offxml",
-                "test_forcefields/tip3p.offxml",
+                get_data_file_path("test_forcefields/test_forcefield.offxml"),
+                get_data_file_path("test_forcefields/tip3p.offxml"),
             ],
             ["openff-2.0.0.offxml"],
         ],
@@ -2193,16 +2231,13 @@ class TestForceFieldChargeAssignment:
             )
             assert charge1 == charge2
 
-    def test_charge_increment_model_invalid_number_of_cis(self):
+    def test_charge_increment_model_invalid_number_of_cis(self, force_field):
         """
         Ensure that we support the behavior where a ChargeIncrement with an incorrect number of tagged atoms
         and chargeincrementX values riases an error
         """
-
-        file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        ff = ForceField(file_path)
-        del ff._parameter_handlers["ToolkitAM1BCC"]
-        cimh = ff.get_parameter_handler(
+        del force_field._parameter_handlers["ToolkitAM1BCC"]
+        cimh = force_field.get_parameter_handler(
             "ChargeIncrementModel",
             handler_kwargs={"version": "0.3", "partial_charge_method": "formal_charge"},
         )
@@ -2222,11 +2257,11 @@ class TestForceFieldChargeAssignment:
             SMIRNOFFSpecError,
             match="number of chargeincrements must be either the same",
         ):
-            ff.create_openmm_system(top)
+            force_field.create_openmm_system(top)
 
         # Ensure that parameterization with the correct number of increments DOES NOT raise an exception
         cimh.parameters[0].charge_increment = cimh.parameters[0].charge_increment[:2]
-        ff.create_openmm_system(top)
+        force_field.create_openmm_system(top)
 
         # Add TWO LESS chargeincrement parameters than there are tagged atoms and ensure an exception is raised
         cimh.parameters[0].charge_increment = cimh.parameters[0].charge_increment[:1]
@@ -2234,7 +2269,7 @@ class TestForceFieldChargeAssignment:
             SMIRNOFFSpecError,
             match="number of chargeincrements must be either the same",
         ):
-            ff.create_openmm_system(top)
+            force_field.create_openmm_system(top)
 
     def test_charge_increment_model_initialize_with_no_elements(self):
         """Ensure that we can initialize a ForceField object from an OFFXML with a ChargeIncrementModel header, but no
@@ -2463,8 +2498,8 @@ class TestForceFieldChargeAssignment:
         assignment is determined by order they are added to the force field"""
         # Test with xml_OH_library_charges_xml loaded last, which should assign dummy partial charges
         ff = ForceField(
-            "test_forcefields/test_forcefield.offxml",
-            "test_forcefields/tip3p.offxml",
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            get_data_file_path("test_forcefields/tip3p.offxml"),
             xml_OH_library_charges_xml,
         )
         mol = Molecule.from_file(
@@ -2481,9 +2516,9 @@ class TestForceFieldChargeAssignment:
 
         # Test again, but with tip3p.offxml loaded last (loading the correct partial charges)
         ff = ForceField(
-            "test_forcefields/test_forcefield.offxml",
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
             xml_OH_library_charges_xml,
-            "test_forcefields/tip3p.offxml",
+            get_data_file_path("test_forcefields/tip3p.offxml"),
         )
         omm_system = ff.create_openmm_system(mol.to_topology())
         nonbondedForce = [
@@ -2497,7 +2532,8 @@ class TestForceFieldChargeAssignment:
     def test_library_charges_to_two_waters(self):
         """Test assigning charges to two water molecules using library charges"""
         ff = ForceField(
-            "test_forcefields/test_forcefield.offxml", "test_forcefields/tip3p.offxml"
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            get_data_file_path("test_forcefields/tip3p.offxml"),
         )
         mol = Molecule.from_file(
             get_data_file_path(os.path.join("systems", "monomers", "water.sdf"))
@@ -2525,7 +2561,8 @@ class TestForceFieldChargeAssignment:
         # C2 has charge -0.1 and its Hs have -0.01, and O3 has charge 0.3, and its H has charge 0.08
 
         ff = ForceField(
-            "test_forcefields/test_forcefield.offxml", xml_ethanol_library_charges_ff
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            xml_ethanol_library_charges_ff,
         )
 
         # ethanol.sdf
@@ -2596,8 +2633,8 @@ class TestForceFieldChargeAssignment:
     def test_library_charges_monatomic_ions(self, monatomic_ion, formal_charge):
         """Test assigning library charges to each of the monatomic ions in openff-1.1.0.xml"""
         ff = ForceField(
-            "test_forcefields/test_forcefield.offxml",
-            "test_forcefields/ion_charges.offxml",
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            get_data_file_path("test_forcefields/ion_charges.offxml"),
         )
         mol = Molecule.from_smiles("[{}]".format(monatomic_ion))
         omm_system = ff.create_openmm_system(mol.to_topology())
@@ -2612,9 +2649,9 @@ class TestForceFieldChargeAssignment:
         """Ensure that molecules are parameterized by charge_from_molecules first, then library charges
         if not applicable, then AM1BCC otherwise"""
         ff = ForceField(
-            "test_forcefields/test_forcefield.offxml",
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
             xml_CH_zeroes_library_charges_xml,
-            "test_forcefields/tip3p.offxml",
+            get_data_file_path("test_forcefields/tip3p.offxml"),
             xml_charge_increment_model_formal_charges,
         )
         # Cyclohexane will be assigned nonzero charges based on `charge_from_molecules` kwarg
@@ -2769,9 +2806,10 @@ class TestForceFieldChargeAssignment:
 
     def test_assign_charges_to_molecule_in_parts_using_multiple_library_charges(self):
         """Test assigning charges to parts of a molecule using two library charge lines. Note that these LibraryCharge
-        SMIRKS have partial overlap, so this also tests that the hierarchy is correctly obeyed."""
+        SMIRKS have partial overlap, so this also tests that the hierarchy is correctly obeyed.
+        """
         ff = ForceField(
-            "test_forcefields/test_forcefield.offxml",
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
             xml_ethanol_library_charges_in_parts_ff,
         )
 
@@ -2810,9 +2848,10 @@ class TestForceFieldChargeAssignment:
 
     def test_assign_charges_using_library_charges_by_single_atoms(self):
         """Test assigning charges to parts of a molecule using per-atom library charges. Note that these LibraryCharge
-        SMIRKS will match multiple atoms, so this is also a test of correct usage of the parameter hierarchy.."""
+        SMIRKS will match multiple atoms, so this is also a test of correct usage of the parameter hierarchy..
+        """
         ff = ForceField(
-            "test_forcefields/test_forcefield.offxml",
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
             xml_ethanol_library_charges_by_atom_ff,
         )
 
@@ -2858,7 +2897,7 @@ class TestForceFieldChargeAssignment:
 
         # The library charges in the FF should not be able to fully cover toluene
         ff = ForceField(
-            "test_forcefields/test_forcefield.offxml",
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
             xml_ethanol_library_charges_by_atom_ff,
         )
         # Delete the ToolkitAM1BCCHandler so the molecule won't get charges from anywhere
@@ -2871,7 +2910,7 @@ class TestForceFieldChargeAssignment:
         # If we do NOT delete the ToolkiAM1BCCHandler, then toluene should be assigned some nonzero partial charges.
         # The exact value will vary by toolkit, so we don't test that here.
         ff = ForceField(
-            "test_forcefields/test_forcefield.offxml",
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
             xml_ethanol_library_charges_by_atom_ff,
         )
         omm_system = ff.create_openmm_system(top)
@@ -2898,7 +2937,10 @@ class TestForceFieldChargeAssignment:
         create_openmm_system"""
         # TODO: Should this test also cover multiple unique molecules?
         mol = create_acetate()
-        ff = ForceField("test_forcefields/test_forcefield.offxml", *additional_offxmls)
+        ff = ForceField(
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            *additional_offxmls,
+        )
         charge_mols = []
         if charge_method == "charge_from_molecules":
             mol.partial_charges = unit.Quantity(
@@ -2925,7 +2967,7 @@ class TestForceFieldChargeAssignment:
                 all_charges_zero = False
         assert not (all_charges_zero)
 
-    def test_library_charges_from_molecule_manual(self):
+    def test_library_charges_from_molecule_manual(self, force_field):
         """Test that constructing a LibraryChargeHandler from partial charges on Molecule objects
         produces the same result as using the `charge_from_molecules` kwarg. while manually
         setting the molecule's partial charges to arbitrary non-physical values"""
@@ -2933,43 +2975,41 @@ class TestForceFieldChargeAssignment:
         mol = Molecule.from_mapped_smiles("[Cl:1][C:2]#[C:3][F:4]")
         mol.partial_charges = np.linspace(-0.3, 0.3, 4) * unit.elementary_charge
 
-        test_forcefield = ForceField("test_forcefields/test_forcefield.offxml")
-        using_kwarg = test_forcefield.create_openmm_system(
+        using_kwarg = force_field.create_openmm_system(
             topology=mol.to_topology(), charge_from_molecules=[mol]
         )
 
         library_charges = LibraryChargeHandler.LibraryChargeType.from_molecule(mol)
-        test_forcefield.register_parameter_handler(LibraryChargeHandler(version=0.3))
-        test_forcefield["LibraryCharges"].add_parameter(parameter=library_charges)
-        using_library_charges = test_forcefield.create_openmm_system(
+        force_field.register_parameter_handler(LibraryChargeHandler(version=0.3))
+        force_field["LibraryCharges"].add_parameter(parameter=library_charges)
+        using_library_charges = force_field.create_openmm_system(
             topology=mol.to_topology()
         )
 
         compare_partial_charges(using_kwarg, using_library_charges)
 
-    def test_library_charges_from_molecule_assigned(self):
+    def test_library_charges_from_molecule_assigned(self, force_field):
         """Test that constructing a LibraryChargeHandler from partial charges on Molecule objects
         produces the same result as using the `charge_from_molecules` kwarg. while manually
         setting the molecule's partial charges to arbitrary non-physical values"""
         mol = Molecule.from_smiles("CCO")
         mol.assign_partial_charges(partial_charge_method="mmff94")
 
-        test_forcefield = ForceField("test_forcefields/test_forcefield.offxml")
-        using_kwarg = test_forcefield.create_openmm_system(
+        using_kwarg = force_field.create_openmm_system(
             topology=mol.to_topology(), charge_from_molecules=[mol]
         )
 
         library_charges = LibraryChargeHandler.LibraryChargeType.from_molecule(mol)
-        test_forcefield.register_parameter_handler(LibraryChargeHandler(version=0.3))
-        test_forcefield["LibraryCharges"].add_parameter(parameter=library_charges)
-        using_library_charges = test_forcefield.create_openmm_system(
+        force_field.register_parameter_handler(LibraryChargeHandler(version=0.3))
+        force_field["LibraryCharges"].add_parameter(parameter=library_charges)
+        using_library_charges = force_field.create_openmm_system(
             topology=mol.to_topology()
         )
 
         compare_partial_charges(using_kwarg, using_library_charges)
 
     @requires_openeye
-    def test_toolkit_am1bcc_uses_elf10_if_oe_is_available(self):
+    def test_toolkit_am1bcc_uses_elf10_if_oe_is_available(self, force_field):
         """Ensure that the ToolkitAM1BCCHandler assigns ELF10 charges if OpenEye is available."""
         # Can't just use CCO - Molecule needs to be big enough to realistically
         # result in more than one conformer when ELF10 is requested
@@ -2977,28 +3017,27 @@ class TestForceFieldChargeAssignment:
 
         # The test forcefield "out of the box" just uses ToolkitAM1BCC, so this
         # should produce ELF10 charges
-        test_forcefield = ForceField("test_forcefields/test_forcefield.offxml")
-        sys = test_forcefield.create_openmm_system(topology=mol.to_topology())
+        sys = force_field.create_openmm_system(topology=mol.to_topology())
 
         # Make another system with a force field that has the ToolkitAM1BCCHandler
         # removed, and is explicitly told to use a ChargeIncrementModelHandler
         # with AM1BCCELF10 charges. Ensure that the resulting charges are identical.
-        test_forcefield.deregister_parameter_handler("ToolkitAM1BCC")
-        cimh = test_forcefield.get_parameter_handler(
+        force_field.deregister_parameter_handler("ToolkitAM1BCC")
+        cimh = force_field.get_parameter_handler(
             "ChargeIncrementModel",
             {"version": 0.3, "partial_charge_method": "am1bccelf10"},
         )
 
-        sys_a1b_elf10 = test_forcefield.create_openmm_system(topology=mol.to_topology())
+        sys_a1b_elf10 = force_field.create_openmm_system(topology=mol.to_topology())
 
         compare_partial_charges(sys, sys_a1b_elf10)
 
         # Now modify the ChargeIncrementModelHandler to specifically use single-conformer
         # AM1BCC and ensure that the resulting charges are different from the first system.
         cimh.partial_charge_method = "am1bcc"
-        assert test_forcefield["ChargeIncrementModel"].partial_charge_method == "am1bcc"
+        assert force_field["ChargeIncrementModel"].partial_charge_method == "am1bcc"
 
-        sys_a1b_single_conf = test_forcefield.create_openmm_system(
+        sys_a1b_single_conf = force_field.create_openmm_system(
             topology=mol.to_topology()
         )
         # Ensure that we get different results with AM1BCC ELF10 and single conf AM1BCC
@@ -3031,7 +3070,9 @@ class TestForceFieldConstraints:
         # Parametrize an ethane molecule.
         ethane = Molecule.from_smiles("CC")
         topology = Topology.from_molecules([ethane])
-        ff = ForceField(XML_FF_GENERICS, "test_forcefields/old/hbonds.offxml")
+        ff = ForceField(
+            XML_FF_GENERICS, get_data_file_path("test_forcefields/old/hbonds.offxml")
+        )
         system = ff.create_openmm_system(topology)
 
         # Check that all C-H bonds have been constrained to the FF bond length.
@@ -3138,14 +3179,14 @@ def generate_freesolv_parameters_assignment_cases():
     return fast_test_cases + slow_test_cases
 
 
-class TestForceFieldParameterAssignment:
+class TestForceFieldParameterAssignment(_ForceFieldFixtures):
     """Regression tests checking that parameters are assigned correctly."""
 
     @requires_openeye_mol2
     @pytest.mark.parametrize(
         "alkethoh_id", generate_alkethoh_parameters_assignment_cases()
     )
-    def test_alkethoh_parameters_assignment(self, alkethoh_id):
+    def test_alkethoh_parameters_assignment(self, alkethoh_id, alkethoh_forcefield):
         """Test that ForceField assign parameters correctly in the AlkEthOH set.
         The test compares the System parameters of a AlkEthOH molecule
         parameterized with AMBER and Frosst_AlkEthOH_parmAtFrosst.offxml.
@@ -3174,9 +3215,6 @@ class TestForceFieldParameterAssignment:
         # Load molecule.
         molecule = Molecule.from_file(mol2_filepath)
 
-        # Load force field
-        forcefield = ForceField("test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml")
-
         # Compare parameters. Skip the energy checks as the parameter check should be
         # sufficient. We test both energies and parameters in the slow test.
         # We ignore the charges for now as they are not included in the force field.
@@ -3184,14 +3222,14 @@ class TestForceFieldParameterAssignment:
         compare_amber_smirnoff(
             top_filepath,
             crd_filepath,
-            forcefield,
+            alkethoh_forcefield,
             molecule,
             check_energies=False,
             ignore_charges=True,
         )
 
     @requires_openeye_mol2
-    def test_multi_alkethoh_parameters_assignment(self):
+    def test_multi_alkethoh_parameters_assignment(self, alkethoh_forcefield):
         """Test that systems with multiple reference molecules are parametrized correctly.
 
         The test relies on the fact that we have already verified we can
@@ -3236,8 +3274,7 @@ class TestForceFieldParameterAssignment:
             structure_mixture.topology, unique_molecules=molecules
         )
         topology.box_vectors = None
-        ff = ForceField("test_forcefields/Frosst_AlkEthOH_parmAtFrosst.offxml")
-        off_system = ff.create_openmm_system(topology)
+        off_system = alkethoh_forcefield.create_openmm_system(topology)
 
         # Translate the molecules a little to avoid overlapping atoms.
         positions = copy.deepcopy(structure_mixture.positions)
@@ -3248,9 +3285,7 @@ class TestForceFieldParameterAssignment:
             # Leave the fourth molecule where it is.
         ]
         current_atom_idx = 0
-        for mol_idx, (translate_vector, mol) in enumerate(
-            zip(translate_vectors, molecules)
-        ):
+        for translate_vector, mol in zip(translate_vectors, molecules):
             n_mol_atoms = len(mol.atoms)
             positions[
                 current_atom_idx : current_atom_idx + n_mol_atoms
@@ -3298,10 +3333,13 @@ class TestForceFieldParameterAssignment:
         )
 
         # Create OpenFF System with the current toolkit.
-        forcefield_file_path = (
+        forcefield_file_path = get_data_file_path(
             "test_forcefields/old/test_ff_" + forcefield_version + "_spec_0_2.offxml"
         )
-        ff = ForceField(forcefield_file_path, "test_forcefields/old/hbonds.offxml")
+        ff = ForceField(
+            forcefield_file_path,
+            get_data_file_path("test_forcefields/old/hbonds.offxml"),
+        )
         ff_system = ff.create_openmm_system(molecule.to_topology())
 
         # Load OpenMM System created with the 0.1 version of the toolkit.
@@ -3319,7 +3357,6 @@ class TestForceFieldParameterAssignment:
             ignore_improper_folds=True,
         )
 
-    @unimplemented_interchange
     @requires_openeye_mol2
     @pytest.mark.parametrize(("is_periodic"), (False, True))
     @pytest.mark.parametrize(("gbsa_model"), ["HCT", "OBC1", "OBC2"])
@@ -3367,7 +3404,8 @@ class TestForceFieldParameterAssignment:
         }
         # Create OpenFF System with the current toolkit.
         ff = ForceField(
-            "test_forcefields/test_forcefield.offxml", off_gbsas[gbsa_model]
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            get_data_file_path(off_gbsas[gbsa_model]),
         )
 
         # OpenMM 7.7 and older don't properly handle parsing prmtop files with a GBSA model and
@@ -3545,7 +3583,6 @@ class TestForceFieldParameterAssignment:
         )
 
     def test_tip5p_dimer_energy(self):
-
         pytest.skip("fails until migration to openff-interchange")
 
         from openff.toolkit.tests.utils import evaluate_molecules_off
@@ -3643,7 +3680,6 @@ class TestForceFieldParameterAssignment:
         #     modify_system=False,
         # )
 
-    @unimplemented_interchange
     @requires_openeye_mol2
     @pytest.mark.parametrize("zero_charges", [True, False])
     @pytest.mark.parametrize(("gbsa_model"), ["HCT", "OBC1", "OBC2"])
@@ -3687,7 +3723,8 @@ class TestForceFieldParameterAssignment:
         }
 
         ff = ForceField(
-            "test_forcefields/test_forcefield.offxml", off_gbsas[gbsa_model]
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            get_data_file_path(off_gbsas[gbsa_model]),
         )
         ff.get_parameter_handler("GBSA").sa_model = None
         off_top = Topology.from_molecules([molecule, molecule])
@@ -3818,9 +3855,21 @@ class TestForceFieldParameterAssignment:
             assert amber_energy[1]._value != 0.0
 
         # Ensure that all system energies are the same
-        compare_system_energies(
-            off_omm_system, amber_omm_system, to_openmm(positions), by_force_type=False
-        )
+        if zero_charges or gbsa_model in ["HCT", "OBC1"]:
+            compare_system_energies(
+                off_omm_system,
+                amber_omm_system,
+                to_openmm(positions),
+                by_force_type=False,
+            )
+        else:
+            compare_system_energies(
+                off_omm_system,
+                amber_omm_system,
+                to_openmm(positions),
+                by_force_type=False,
+                atol=1e-4,
+            )
 
     @pytest.mark.slow
     @requires_openeye_mol2
@@ -3828,34 +3877,34 @@ class TestForceFieldParameterAssignment:
     def test_parameterize_protein(
         self,
         toolkit_registry,
+        force_field,
     ):
         """Test that ForceField assigns parameters correctly for a protein"""
 
         mol_path = get_data_file_path("proteins/T4-protein.mol2")
         molecule = Molecule.from_file(mol_path, allow_undefined_stereo=False)
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml")
         topology = Topology.from_molecules(molecule)
 
-        labels = forcefield.label_molecules(topology)[0]
+        labels = force_field.label_molecules(topology)[0]
 
         assert len(labels["Bonds"]) == 2654
         assert len(labels["Angles"]) == 4789
         assert len(labels["ProperTorsions"]) == 6973
         assert len(labels["ImproperTorsions"]) == 528
 
-        forcefield.create_openmm_system(
+        force_field.create_openmm_system(
             topology,
             charge_from_molecules=[molecule],
             toolkit_registry=toolkit_registry,
         )
 
-    def test_modified_14_factors(self):
+    def test_modified_14_factors(self, force_field):
         """Test that the 1-4 scaling factors for electrostatics and vdW handlers matche,
         to a tight precision, the values specified in the force field."""
         top = Molecule.from_smiles("CCCC").to_topology()
-        default_14 = ForceField("test_forcefields/test_forcefield.offxml")
-        e_mod_14 = ForceField("test_forcefields/test_forcefield.offxml")
-        vdw_mod_14 = ForceField("test_forcefields/test_forcefield.offxml")
+        default_14 = copy.deepcopy(force_field)
+        e_mod_14 = copy.deepcopy(force_field)
+        vdw_mod_14 = copy.deepcopy(force_field)
 
         e_mod_14["Electrostatics"].scale14 = 0.66
         assert e_mod_14["Electrostatics"].scale14 == 0.66
@@ -3888,13 +3937,13 @@ class TestForceFieldParameterAssignment:
                 err_msg="Electrostatics 1-4 scaling factors do not match",
             )
 
-    def test_14_missing_nonbonded_handler(self):
+    def test_14_missing_nonbonded_handler(self, force_field):
         """Test that something sane happens with 1-4 scaling factors if a
         ForceField is missing a vdWHandler and/or ElectrostaticsHandler"""
         top = Molecule.from_smiles("CCCC").to_topology()
 
-        ff_no_vdw = ForceField("test_forcefields/test_forcefield.offxml")
-        ff_no_electrostatics = ForceField("test_forcefields/test_forcefield.offxml")
+        ff_no_vdw = copy.deepcopy(force_field)
+        ff_no_electrostatics = copy.deepcopy(force_field)
 
         ff_no_vdw.deregister_parameter_handler("vdW")
 
@@ -3933,7 +3982,9 @@ class TestForceFieldParameterAssignment:
         mod_bo = [b.fractional_bond_order for b in [*mod_top.unique_molecules][0].bonds]
         assert not default_bo == mod_bo
 
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
+        forcefield = ForceField(
+            get_data_file_path("test_forcefields/test_forcefield.offxml"), xml_ff_bo
+        )
 
         omm_system, omm_sys_top = forcefield.create_openmm_system(
             top, return_topology=True
@@ -3989,7 +4040,9 @@ class TestForceFieldParameterAssignment:
 
         mod_top = Topology.from_molecules(mod_mol)
 
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
+        forcefield = ForceField(
+            get_data_file_path("test_forcefields/test_forcefield.offxml"), xml_ff_bo
+        )
 
         omm_system, omm_sys_top = forcefield.create_openmm_system(
             top, return_topology=True
@@ -4078,7 +4131,9 @@ class TestForceFieldParameterAssignment:
         how the bond orders are obtained.
         """
         mol = get_molecule()
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
+        forcefield = ForceField(
+            get_data_file_path("test_forcefields/test_forcefield.offxml"), xml_ff_bo
+        )
         topology = Topology.from_molecules(mol)
 
         omm_system = forcefield.create_openmm_system(
@@ -4134,7 +4189,10 @@ class TestForceFieldParameterAssignment:
         mol = create_ethanol()
         mol2 = create_reversed_ethanol()
 
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
+        forcefield = ForceField(
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            xml_ff_bo,
+        )
         topology = Topology.from_molecules([mol, mol2])
 
         with pytest.raises(ValueError):
@@ -4160,7 +4218,7 @@ class TestForceFieldParameterAssignment:
         mol = get_molecule()
 
         forcefield = ForceField(
-            "test_forcefields/test_forcefield.offxml",
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
             xml_ff_torsion_bo_standard_supersede,
         )
         topology = Topology.from_molecules([mol])
@@ -4234,7 +4292,10 @@ class TestForceFieldParameterAssignment:
         )
         mol = get_molecule()
 
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
+        forcefield = ForceField(
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            xml_ff_bo,
+        )
         topology = Topology.from_molecules([mol])
 
         omm_system, ret_top = forcefield.create_openmm_system(
@@ -4339,7 +4400,9 @@ class TestForceFieldParameterAssignment:
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
         mol = get_molecule()
 
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
+        forcefield = ForceField(
+            get_data_file_path("test_forcefields/test_forcefield.offxml"), xml_ff_bo
+        )
         topology = Topology.from_molecules([mol])
 
         omm_system, ret_top = forcefield.create_openmm_system(
@@ -4413,7 +4476,9 @@ class TestForceFieldParameterAssignment:
         """
         mol = create_ethanol()
 
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
+        forcefield = ForceField(
+            get_data_file_path("test_forcefields/test_forcefield.offxml"), xml_ff_bo
+        )
         forcefield.get_parameter_handler(
             "ProperTorsions"
         )._fractional_bondorder_interpolation = "invalid method name"
@@ -4430,16 +4495,14 @@ class TestForceFieldParameterAssignment:
             )
 
 
-class TestForceFieldWithToolkits:
+class TestForceFieldWithToolkits(_ForceFieldFixtures):
     """Test interactions between ``ForceField`` methods and wrapped toolkits."""
 
     # TODO: If `_toolkit_registry_manager` is made public or used for other parts of the API,
     #       these tests should be moved/adapted into more unit tests that call it directly
 
-    def test_toolkit_registry_bogus_argument(self):
-
+    def test_toolkit_registry_bogus_argument(self, force_field):
         topology = create_ethanol().to_topology()
-        force_field = ForceField("test_forcefields/test_forcefield.offxml")
         with pytest.raises(
             NotImplementedError,
             match="Only .*ToolkitRegistry.*ToolkitWrapper.* are supported",
@@ -4449,10 +4512,8 @@ class TestForceFieldWithToolkits:
                 toolkit_registry="rdkit",
             )
 
-    def test_toolkit_registry_no_charge_methods(self):
-
+    def test_toolkit_registry_no_charge_methods(self, force_field):
         topology = create_ethanol().to_topology()
-        force_field = ForceField("test_forcefields/test_forcefield.offxml")
         with pytest.raises(
             ValueError, match="No registered toolkits can provide .*find_smarts_matches"
         ):
@@ -4465,7 +4526,7 @@ class TestForceFieldWithToolkits:
     def test_toolkit_registry_bad_charge_method(self):
         topology = create_ethanol().to_topology()
         force_field = ForceField(
-            "test_forcefields/test_forcefield.offxml",
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
             xml_charge_increment_model_ff_ethanol,
         )
         force_field.deregister_parameter_handler("ToolkitAM1BCC")
@@ -4482,25 +4543,23 @@ class TestForceFieldWithToolkits:
             )
 
 
-class TestInterchangeReturnTopology:
+class TestInterchangeReturnTopology(_ForceFieldFixtures):
     # TODO: Remove these tests when `return_topology` is deprecated in version 0.12.0
     # TODO: Turn this test back on once Interchange is tagged with a pre-release supporting
     #       only Electrostatics version 0.4
     @pytest.mark.skip(reason="Interchange needs to be updated")
-    def test_deprecation_warning_raised(self):
+    def test_deprecation_warning_raised(self, force_field):
         """
         Ensure that the deprecation warning is raised when `return_topology` is
         used.
         """
-        forcefield = ForceField("test_forcefields/test_forcefield.offxml", xml_ff_bo)
-
         topology = create_ethanol().to_topology()
         topology.box_vectors = unit.Quantity([4, 4, 4], unit.nanometer)
 
         with pytest.warns(
             DeprecationWarning, match="DEPRECATED and will be removed in version 0.12.0"
         ):
-            omm_system, ret_top = forcefield.create_openmm_system(
+            force_field.create_openmm_system(
                 topology,
                 return_topology=True,
             )
@@ -4545,10 +4604,13 @@ class TestSmirnoffVersionConverter:
 
         # Create OpenFF System with the current toolkit.
         # forcefield_file_path = 'test_forcefields/old/smirnoff99Frosst_1_0_8_spec_0_2.offxml'
-        forcefield_file_path = (
+        forcefield_file_path = get_data_file_path(
             f"test_forcefields/old/test_ff_{forcefield_version}_spec_{spec}.offxml"
         )
-        ff = ForceField(forcefield_file_path, "test_forcefields/old/hbonds.offxml")
+        ff = ForceField(
+            forcefield_file_path,
+            get_data_file_path("test_forcefields/old/hbonds.offxml"),
+        )
         ff_system = ff.create_openmm_system(molecule.to_topology())
 
         # Load OpenMM System created with the 0.1 version of the toolkit.
@@ -4567,7 +4629,7 @@ class TestSmirnoffVersionConverter:
         )
 
 
-class TestForceFieldGetPartialCharges:
+class TestForceFieldGetPartialCharges(_ForceFieldFixtures):
     """Tests for the ForceField.get_partial_charges method."""
 
     @staticmethod
@@ -4583,10 +4645,9 @@ class TestForceFieldGetPartialCharges:
 
         return openmm_unit.Quantity(charges)
 
-    def test_get_partial_charges(self):
+    def test_get_partial_charges(self, force_field):
         """Test that ethanol charges are computed correctly."""
         ethanol: Molecule = create_ethanol()
-        force_field: ForceField = ForceField("test_forcefields/test_forcefield.offxml")
 
         ethanol_partial_charges = from_openmm(
             self.get_partial_charges_from_create_openmm_system(ethanol, force_field)

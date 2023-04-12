@@ -10,7 +10,8 @@ setup(
     include_package_data=True,
     entry_points={
         "openff.toolkit.plugins.handlers": [
-            "CustomHandler = custom_plugins.handler_plugins:CustomHandler"
+            "CustomHandler = custom_plugins.handler_plugins:CustomHandler",
+            "WrongSubclass = custom_plugins.handler_plugins:WrongSubclass",
         ]
     },
 )

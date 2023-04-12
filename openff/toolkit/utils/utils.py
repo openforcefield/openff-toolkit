@@ -26,7 +26,7 @@ __all__ = [
 import contextlib
 import functools
 import logging
-from typing import Dict, List, Tuple, Union
+from typing import Dict, Iterable, List, Tuple, Union
 
 import numpy as np
 import pint
@@ -209,7 +209,7 @@ def string_to_quantity(quantity_string) -> Union[str, int, float, unit.Quantity]
 
 def convert_all_strings_to_quantity(
     smirnoff_data: Dict,
-    ignore_keys: List[str] = list(),
+    ignore_keys: Iterable[str] = tuple(),
 ):
     """
     Traverses a SMIRNOFF data structure, attempting to convert all
@@ -222,6 +222,8 @@ def convert_all_strings_to_quantity(
     ----------
     smirnoff_data : dict
         A hierarchical dict structured in compliance with the SMIRNOFF spec
+    ignore_keys : iterable of str, optional, default=tuple()
+        A list of keys to skip when converting strings to quantities
 
     Returns
     -------
@@ -459,7 +461,6 @@ def convert_0_2_smirnoff_to_0_3(smirnoff_data_0_2):
     sections_not_to_version_0_3 = ["Author", "Date", "version", "aromaticity_model"]
     for l1_tag in smirnoff_data["SMIRNOFF"].keys():
         if l1_tag not in sections_not_to_version_0_3:
-
             if smirnoff_data["SMIRNOFF"][l1_tag] is None:
                 # Handle empty entries, such as the ToolkitAM1BCC handler.
                 smirnoff_data["SMIRNOFF"][l1_tag] = {}
@@ -638,7 +639,6 @@ def recursive_attach_unit_strings(smirnoff_data, units_to_attach):
     # If we're working with a dict, see if there are any new unit entries and store them,
     # then operate recursively on the values in the dict.
     if isinstance(smirnoff_data, dict):
-
         # Go over all key:value pairs once to see if there are new units to attach.
         # Note that units to be attached can be defined in the same dict as the
         # key:value pair they will be attached to, so we need to complete this check
@@ -650,7 +650,6 @@ def recursive_attach_unit_strings(smirnoff_data, units_to_attach):
 
         # Go through once more to attach units as appropriate
         for key in smirnoff_data.keys():
-
             # We use regular expressions to catch possible indexed attributes
             attach_unit = None
             for unit_key, unit_string in units_to_attach.items():
@@ -740,8 +739,7 @@ def get_molecule_parameterIDs(molecules, forcefield):
         # Organize data for this molecule
         data = labels[idx]
         for force_type in data.keys():
-            for atom_indices, parameter_type in data[force_type].items():
-
+            for parameter_type in data[force_type].values():
                 pid = parameter_type.id
                 # Store pid to molecule
                 parameters_by_molecule[smi].append(pid)

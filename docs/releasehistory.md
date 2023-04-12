@@ -6,6 +6,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+## Current development
 
 ## 0.13.0 (or possibly a 0.12.x release)
 
@@ -14,9 +15,38 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   Removes several classes and properties in the `topology` submodule that were [deprecated in version 0.11.0](https://docs.openforcefield.org/projects/toolkit/en/stable/releasehistory.html#breaking-change-topology-molecule-representation).
 
 # Current development
+### New features
+- [PR #1565](https://github.com/openforcefield/openff-toolkit/pull/1565): Adds :py:meth:`Topology.from_pdb`
+
+### Behavior changes
+- [PR #1569](https://github.com/openforcefield/openff-toolkit/pull/1569): Several instances of `Exception` being raised are now replaced with other exceptions being raised.
+
+### Improved documentation and warnings
+
+- [PR #1564] Improve documentation of conformer selection in `Molecule.assign_partial_charges()`
+
+## 0.12.1
 
 ### New features
 - [PR #1502](https://github.com/openforcefield/openff-toolkit/pull/1502): Adds Gasteiger charge computation using the RDKit backend.
+- [PR #1498](https://github.com/openforcefield/openff-toolkit/pull/1498): `Molecule.remap()` now supports partial mappings with the `partial` argument.
+- [PR #1528](https://github.com/openforcefield/openff-toolkit/pull/1528): `Topology.box_vectors` are can now be set with `openmm.unit.Quantity`s, which are internally converted.
+
+### Behavior changes
+- [PR #1498](https://github.com/openforcefield/openff-toolkit/pull/1498): New, more complete, and more descriptive errors for `Molecule.remap()`.
+- [PR #1525](https://github.com/openforcefield/openff-toolkit/pull/1525): Some unreleased force fields previously accessible from `"openff/toolkit/data/test_forcefields/"` are no longer implicitly available to the `ForceField` constructor.
+- [PR #1545](https://github.com/openforcefield/openff-toolkit/pull/1545): Replaced the logic that sorts `HierarchyElements` with dedicated code in the OpenFF Toolkit instead of relying on deprecated features in the `packaging` module.
+
+
+### Bugfixes
+
+- [PR #1543](https://github.com/openforcefield/openff-toolkit/pull/1543): Fixes a bug in which plugins are not loaded if a `ForceField` is constructed prior without plugins.
+
+### Improved documentation and warnings
+- [PR #1498](https://github.com/openforcefield/openff-toolkit/pull/1498): Improved documentation for `Molecule.remap()`, `Molecule.from_smiles()`, and `Molecule.from_mapped_smiles()`, emphasizing the relationships between these methods. In particular, the documentation now clearly states that `from_smiles()` will not reorder atoms based on SMILES atom mapping.
+- [PR #1525](https://github.com/openforcefield/openff-toolkit/pull/1525): Improves reporting failures when loading force fields.
+- [PR #1513](https://github.com/openforcefield/openff-toolkit/pull/1513): Improves error messages and documentation around supported aromaticity models (currently only "OEAroModel_MDL").
+
 
 ## 0.12.0
 
