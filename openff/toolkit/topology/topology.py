@@ -1629,8 +1629,7 @@ class Topology(Serializable):
         >>> from openff.toolkit.utils import get_data_file_path
         >>> top = Topology.from_pdb(get_data_file_path("proteins/TwoMol_SER_CYS.pdb"))
         >>> # The molecules in the loaded topology are full-fledged OpenFF Molecule objects
-        >>> for match in top.chemical_environment_matches('[O:1]=[C:2][N:3][H:4]'):
-        >>>    print(match.topology_atom_indices)
+        >>> for match in top.chemical_environment_matches('[O:1]=[C:2][N:3][H:4]'): print(match.topology_atom_indices)
         (1, 0, 6, 13)
         (9, 8, 17, 19)
         (24, 23, 29, 36)
