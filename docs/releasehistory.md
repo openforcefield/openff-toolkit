@@ -13,6 +13,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Behavior changes
 - [PR #1569](https://github.com/openforcefield/openff-toolkit/pull/1569): Several instances of `Exception` being raised are now replaced with other exceptions being raised.
+- [PR #1577](https://github.com/openforcefield/openff-toolkit/pull/1577): Drops support for Python 3.8, following [NEP-29](https://numpy.org/neps/nep-0029-deprecation_policy.html).
 
 ### Improved documentation and warnings
 
