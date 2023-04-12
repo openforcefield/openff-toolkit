@@ -45,10 +45,6 @@ requires_openeye_mol2 = pytest.mark.skipif(
     reason="Test requires OE toolkit to read mol2 files",
 )
 
-unimplemented_interchange = pytest.mark.skip(
-    reason="Functionality has not or will not be implemented in Interchange"
-)
-
 
 def has_pkg(pkg_name):
     """
@@ -1102,7 +1098,7 @@ def _merge_impropers_folds(improper_parameters):
     See _get_torsion_force_parameters.
 
     """
-    for improper_key, improper_comparer in improper_parameters.items():
+    for improper_comparer in improper_parameters.values():
         # Group parameters by periodicity and phase and sum force constants.
         for comparer2_idx in reversed(range(1, len(improper_comparer.parameters))):
             parameter_comparer2 = improper_comparer.parameters[comparer2_idx]
@@ -1289,7 +1285,7 @@ def _get_improper_torsion_canonical_order(bond_set, i0, i1, i2, i3):
     mapping = {i0: 0, i1: 1, i2: 2, i3: 3}
     inv_mapping = dict([(val, key) for key, val in mapping.items()])
 
-    for (a, b) in itertools.combinations([i0, i1, i2, i3], 2):
+    for a, b in itertools.combinations([i0, i1, i2, i3], 2):
         if (a, b) in bond_set:
             i, j = mapping[a], mapping[b]
             connections[i, j] += 1.0

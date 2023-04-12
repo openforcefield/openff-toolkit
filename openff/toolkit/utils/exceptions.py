@@ -81,6 +81,10 @@ class AntechamberNotFoundError(OpenFFToolkitException):
     """The antechamber executable was not found"""
 
 
+class MoleculeParseError(OpenFFToolkitException):
+    """The molecule could not be created from the given format"""
+
+
 class SMILESParseError(OpenFFToolkitException, ValueError):
     """The record could not be parsed into the given format"""
 
@@ -112,8 +116,16 @@ class NotInTopologyError(OpenFFToolkitException):
     """An object was not found in a topology."""
 
 
+class RemapIndexError(OpenFFToolkitException):
+    """An error with indices used to remap a molecule"""
+
+
 class AtomNotInTopologyError(NotInTopologyError):
     """An atom was not found in a topology."""
+
+
+class BondNotInTopologyError(NotInTopologyError):
+    """An bond was not found in a topology."""
 
 
 class MoleculeNotInTopologyError(NotInTopologyError):
@@ -122,6 +134,14 @@ class MoleculeNotInTopologyError(NotInTopologyError):
 
 class InvalidAtomMetadataError(OpenFFToolkitException):
     """The program attempted to set atom metadata to an invalid type"""
+
+
+class BondExistsError(OpenFFToolkitException):
+    """The program attempted to add a bond that already exists"""
+
+
+class ConstraintExsistsError(OpenFFToolkitException):
+    """Attempting to override a constraint that already exists with a specified distance."""
 
 
 class DuplicateUniqueMoleculeError(OpenFFToolkitException):
@@ -313,6 +333,14 @@ class UnsupportedFileTypeError(OpenFFToolkitException):
     """Error raised when attempting to parse an unsupported file type."""
 
 
+class OpenEyeError(OpenFFToolkitException):
+    """Error raised when an OpenEye Toolkits operation fails."""
+
+
+class OpenEyeImportError(OpenFFToolkitException):
+    """Error raised when importing an OpenEye module fails."""
+
+
 class MultipleMoleculesInPDBError(OpenFFToolkitException):
     """Error raised when a multiple molecules are found when one was expected"""
 
@@ -340,6 +368,8 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
             self._atoms: List["OpenMMAtom"] = list(omm_top.atoms())
             self._bonds: List[Tuple["OpenMMAtom", "OpenMMAtom"]] = list(omm_top.bonds())
 
+        if not (substructure_library):
+            substructure_library = {}
         self.substructure_library = substructure_library
         self.unassigned_bonds = [] if unassigned_bonds is None else unassigned_bonds
         self.unassigned_atoms = [] if unassigned_atoms is None else unassigned_atoms
@@ -365,11 +395,14 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
 
     def residue_of_atom_as_str(self, atom_index: int) -> str:
         res = self._atoms[atom_index].residue
-        return self.fmt_residue(res.name, res.id)
+        return self.fmt_residue(res.name, res.id, res.chain.id)
 
     @staticmethod
-    def fmt_residue(name: str, num: int) -> str:
-        return f"{name}#{num:0>4}"
+    def fmt_residue(name: str, num: int, chain: str = "") -> str:
+        if chain == "":
+            return f"{name}#{num:0>4}"
+        else:
+            return f"{chain}:{name}#{num:0>4}"
 
     def unassigned_atoms_err(self) -> List[str]:
         if self.unassigned_atoms and self.omm_top:
@@ -447,13 +480,18 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
                     if resname not in self.substructure_library
                 ]
             )
-
-            if "HOH" in unknown_resnames:
+            # Only raise this error if we're in Molecule.from_polymer_pdb,
+            # since Topology.from_pdb DOES accept multiple
+            # chains. We can tell the difference because
+            # Topology.from_pdb will have added the
+            # "UNIQUE_MOLECULE" key to the substructure library,
+            if ("HOH" in unknown_resnames) and (
+                "UNIQUE_MOLECULE" not in self.substructure_library
+            ):
                 solvent_note = [
                     "Note: 'HOH' is a residue code for water. You may have "
                     + "crystallographic waters in your PDB file. Please remove "
-                    + "these before proceeding; they can be added back to the "
-                    + "topology later."
+                    + "these before proceeding, or use Topology.from_pdb."
                 ]
             else:
                 solvent_note = [""]
@@ -465,19 +503,27 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
                     + "identifies residues by matching chemical substructures rather "
                     + "than by residue name, it currently only supports the 20 "
                     + "'canonical' amino acids.",
-                    *(f"    {resname}" for resname in unknown_resnames),
+                    *(f"    {resname}" for resname in sorted(unknown_resnames)),
                     *solvent_note,
                     "",
                 ]
         return []
 
     def multiple_chains_hint(self) -> List[str]:
-        if self.omm_top.getNumChains() > 1:
+        # Only raise this error if we're in Molecule.from_polymer_pdb,
+        # since Topology.from_pdb DOES accept multiple
+        # chains. We can tell the difference because
+        # Topology.from_pdb will have added the
+        # "UNIQUE_MOLECULE" key to the substructure library,
+        if (self.omm_top.getNumChains() > 1) and (
+            "UNIQUE_MOLECULE" not in self.substructure_library
+        ):
             return [
                 "Hint: The input has multiple chain identifiers. The OpenFF "
-                + "Toolkit only supports single-molecule PDB files. Please "
-                + "split the file into individual chains and load each "
-                + "seperately.",
+                + "Toolkit Molecule.from_polymer_pdb method only supports "
+                + "single-molecule PDB files. Please use Topology.from_pdb "
+                + "or split the file into individual chains and load each "
+                + "separately.",
                 "",
             ]
 
@@ -490,20 +536,25 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
             return []
 
         # Construct a map from input residues to assigned resnames
-        residues: Mapping[Tuple[str, str], Set[str]] = defaultdict(set)
+        residues: Mapping[Tuple[str, str, str], Set[str]] = defaultdict(set)
         for atom in self.omm_top.atoms():
             input_resname: str = atom.residue.name
             input_resnum: str = atom.residue.id
+            input_chain: str = atom.residue.chain.id
             matched_resnames = self.matches[atom.index]
             # Only the first match is assigned, so throw out the others
             assigned_resname = next(iter(matched_resnames), "No match")
 
-            residues[(input_resname, input_resnum)].add(assigned_resname)
+            residues[(input_resname, input_resnum, input_chain)].add(assigned_resname)
 
         # Filter out residues where assigned resname doesn't match the input
         residues = {
-            (input_resname, input_resnum): assigned_resnames
-            for (input_resname, input_resnum), assigned_resnames in residues.items()
+            (input_resname, input_resnum, input_chain): assigned_resnames
+            for (
+                input_resname,
+                input_resnum,
+                input_chain,
+            ), assigned_resnames in residues.items()
             if set([input_resname]) != assigned_resnames
         }
 
@@ -518,12 +569,13 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
                 + "state or bond order:",
                 *(
                     (
-                        f"    Input residue {self.fmt_residue(resname, int(resnum))} "
+                        f"    Input residue {self.fmt_residue(resname, int(resnum), chain)} "
                         + f"contains atoms matching substructures {assigned_resnames}"
                     )
                     for (
                         resname,
                         resnum,
+                        chain,
                     ), assigned_resnames in residues.items()
                 ),
                 "",

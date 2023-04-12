@@ -8,15 +8,11 @@ __all__ = (
 )
 
 
-# TODO: Is there a more specific name and reference for the aromaticity model?
-DEFAULT_AROMATICITY_MODEL = "OEAroModel_MDL"
 ALLOWED_AROMATICITY_MODELS = ["OEAroModel_MDL"]
+DEFAULT_AROMATICITY_MODEL = ALLOWED_AROMATICITY_MODELS[0]
 
-# TODO: Is there a more specific name and reference for the fractional bond order models?
-DEFAULT_FRACTIONAL_BOND_ORDER_MODEL = "Wiberg"
 ALLOWED_FRACTIONAL_BOND_ORDER_MODELS = ["Wiberg"]
+DEFAULT_FRACTIONAL_BOND_ORDER_MODEL = ALLOWED_FRACTIONAL_BOND_ORDER_MODELS[0]
 
-# TODO: Should this be `AM1-BCC`, or should we encode BCCs explicitly via AM1-CM2 preprocessing?
-DEFAULT_CHARGE_MODEL = "AM1-BCC"
-# TODO: Which models do we want to support?
 ALLOWED_CHARGE_MODELS = ["AM1-BCC"]
+DEFAULT_CHARGE_MODEL = ALLOWED_CHARGE_MODELS[0]

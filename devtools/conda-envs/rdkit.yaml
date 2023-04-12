@@ -5,7 +5,7 @@ dependencies:
     # Base depends
   - python
   - pip
-  - packaging =21
+  - packaging
   - numpy
   - networkx
   - cachetools
@@ -17,7 +17,8 @@ dependencies:
   - smirnoff99Frosst
   - openff-units >=0.2
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.2
+  - openff-interchange-base >=0.3.0
+  - typing_extensions
     # Toolkit-specific
   - ambertools
   - rdkit
@@ -33,3 +34,5 @@ dependencies:
   - qcelemental
   - qcportal >=0.15
   - qcengine
+  - ipywidgets =7
+

@@ -89,7 +89,6 @@ class StaleForceFieldTests:
     @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
     # TODO: This should check the output of forcefield.to_dict
     def test_serialize(self):
-
         force_field = ForceField(smirnoff99Frosst_offxml_file_path)
         # Serialize/deserialize
         serialized_forcefield = force_field.__getstate__()
