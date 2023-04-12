@@ -1373,14 +1373,12 @@ class ForceField:
             )
 
         return unit.Quantity(
-            numpy.asarray(
-                [
-                    c.m
-                    for c in Interchange.from_smirnoff(
-                        force_field=self, topology=[molecule], **kwargs
-                    )["Electrostatics"].charges.values()
-                ]
-            ),
+            [
+                c.m
+                for c in Interchange.from_smirnoff(
+                    force_field=self, topology=[molecule], **kwargs
+                )["Electrostatics"].charges.values()
+            ],
             unit.elementary_charge,
         )
 
