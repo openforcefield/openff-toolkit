@@ -145,6 +145,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             is passed into this function.
         _cls : class
             Molecule constructor
+        name : str, default=""
+            An optional name to pass to the _cls constructor
 
         Returns
         -------
@@ -164,7 +166,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
             _cls = Molecule
         if isinstance(obj, Chem.rdchem.Mol):
-            return _cls.from_rdkit(obj, allow_undefined_stereo=allow_undefined_stereo)
+            return _cls.from_rdkit(
+                obj,
+                allow_undefined_stereo=allow_undefined_stereo,
+                name=name,
+            )
         raise NotImplementedError(
             "Cannot create Molecule from {} object".format(type(obj))
         )
@@ -200,6 +206,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             If false, raises an exception if SMILES contains undefined stereochemistry.
         _cls : class
             Molecule constructor
+        name : str, default=""
+            An optional name to pass to the _cls constructor
 
         Returns
         --------
@@ -215,7 +223,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # Make the molecule from smiles
         offmol = self.from_smiles(
-            smiles, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
+            smiles,
+            allow_undefined_stereo=allow_undefined_stereo,
+            _cls=_cls,
+            name=name,
         )
 
         # Make another molecule from the PDB. We squelch stereo errors here, since
@@ -501,7 +512,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         file_format: str,
         allow_undefined_stereo: bool = False,
         _cls=None,
-        name: str = "",
     ):
         """
         Create an openff.toolkit.topology.Molecule from a file using this toolkit.
@@ -589,7 +599,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         file_format: str,
         allow_undefined_stereo: bool = False,
         _cls=None,
-        name: str = "",
     ):
         """
         Return an openff.toolkit.topology.Molecule from a file-like object using this toolkit.
@@ -984,6 +993,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             is passed into this function.
         _cls : class
             Molecule constructor
+        name : str, default=""
+            An optional name to pass to the _cls constructor
 
         Returns
         -------
@@ -1047,6 +1058,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             _cls=_cls,
             allow_undefined_stereo=allow_undefined_stereo,
             hydrogens_are_explicit=hydrogens_are_explicit,
+            name=name,
         )
 
         return molecule

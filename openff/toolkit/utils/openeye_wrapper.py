@@ -214,7 +214,11 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         return cls._is_available  # type: ignore[return-value]
 
     def from_object(
-        self, obj, allow_undefined_stereo: bool = False, _cls=None
+        self,
+        obj,
+        allow_undefined_stereo: bool = False,
+        _cls=None,
+        name: str = "",
     ) -> "Molecule":
         """
         Convert an OEMol (or OEMol-derived object) into an openff.toolkit.topology.molecule
@@ -229,6 +233,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             is passed into this function.
         _cls : class
             Molecule constructor
+        name : str, default=""
+            An optional name to pass to the _cls constructor
+
         Returns
         -------
         Molecule
@@ -249,7 +256,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         if isinstance(obj, oechem.OEMolBase):
             return self.from_openeye(
-                oemol=obj, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
+                oemol=obj,
+                allow_undefined_stereo=allow_undefined_stereo,
+                _cls=_cls,
+                name=name,
             )
         raise NotImplementedError(
             "Cannot create Molecule from {} object".format(type(obj))
@@ -1091,6 +1101,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             If false, raises an exception if oemol contains undefined stereochemistry.
         _cls : class
             Molecule constructor
+        name : str, default=""
+            An optional name to pass to the _cls constructor
 
         Returns
         -------
@@ -1974,6 +1986,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             is passed into this function.
         _cls : class
             Molecule constructor
+        name : str, default=""
+            An optional name to pass to the _cls constructor
 
         Returns
         -------
@@ -2030,14 +2044,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         ----------
         inchi : str
             The InChI representation of the molecule.
-
         allow_undefined_stereo : bool, default=False
             Whether to accept InChI with undefined stereochemistry. If False,
             an exception will be raised if a InChI with undefined stereochemistry
             is passed into this function.
-
         _cls : class
             Molecule constructor
+        name : str, default=""
+            An optional name to pass to the _cls constructor
 
         Returns
         -------
@@ -2058,7 +2072,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             )
 
         molecule = self.from_openeye(
-            oemol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
+            oemol,
+            allow_undefined_stereo=allow_undefined_stereo,
+            _cls=_cls,
+            name=name,
         )
 
         return molecule
