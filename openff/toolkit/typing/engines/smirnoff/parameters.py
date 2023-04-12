@@ -192,7 +192,6 @@ def _allow_only(allowed_values):
 
         # Ensure that the new value is in the list of allowed values
         if new_value not in allowed_values:
-
             err_msg = (
                 f"Attempted to set {instance.__class__.__name__}.{attr.name} "
                 f"to {new_value}. Currently, only the following values "
@@ -896,7 +895,6 @@ class _ParameterAttributeHandler:
                 and (index is not None)
                 and attr_name in self._get_indexed_mapped_parameter_attributes()
             ):
-
                 # we start with a dict because have no guarantee of order
                 # in which we will see each kwarg
                 # we'll switch this to a list later
@@ -1815,7 +1813,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         elif isinstance(new_version, (float, int)):
             new_version = Version(str(new_version))
         else:
-            raise Exception(f"Could not convert type {type(new_version)}")
+            raise ValueError(f"Could not convert type {type(new_version)}")
 
         # Use PEP-440 compliant version number comparison, if requested
         if (new_version > self._MAX_SUPPORTED_SECTION_VERSION) or (
@@ -1888,7 +1886,6 @@ class ParameterHandler(_ParameterAttributeHandler):
             # If we're reading the parameter list, iterate through and attach units to
             # each parameter_dict, then use it to initialize a ParameterType
             for param_dict in val:
-
                 new_parameter = self._INFOTYPE(
                     **param_dict, allow_cosmetic_attributes=allow_cosmetic_attributes
                 )
@@ -1965,7 +1962,6 @@ class ParameterHandler(_ParameterAttributeHandler):
         key = key if parameter is None else parameter.smirks
 
         for index, existing_parameter in enumerate(self._parameters):
-
             if existing_parameter.smirks != key:
                 continue
 
@@ -2253,7 +2249,6 @@ class ParameterHandler(_ParameterAttributeHandler):
         reference_molecule = match.environment_match.reference_molecule
 
         for connectivity in expected_connectivity:
-
             atom_i = match.environment_match.reference_atom_indices[connectivity[0]]
             atom_j = match.environment_match.reference_atom_indices[connectivity[1]]
 
@@ -3363,7 +3358,6 @@ class VirtualSiteHandler(_NonbondedHandler):
     """
 
     class VirtualSiteType(vdWHandler.vdWType):
-
         _ELEMENT_NAME = "VirtualSite"
 
         name = ParameterAttribute(default="EP", converter=str)
@@ -3407,7 +3401,6 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         @outOfPlaneAngle.converter
         def outOfPlaneAngle(self, attr, value):
-
             if value == "None":
                 return
 
@@ -3424,7 +3417,6 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         @inPlaneAngle.converter
         def inPlaneAngle(self, attr, value):
-
             if value == "None":
                 return
 
@@ -3440,7 +3432,6 @@ class VirtualSiteHandler(_NonbondedHandler):
             return value
 
         def __init__(self, **kwargs):
-
             self._add_default_init_kwargs(kwargs)
             super().__init__(**kwargs)
 
@@ -3493,7 +3484,6 @@ class VirtualSiteHandler(_NonbondedHandler):
             )
 
             if not cls._supports_match(type_, match, is_in_plane):
-
                 raise SMIRNOFFSpecError(
                     f"match='{match}' not supported with type='{type_}'"
                     + ("" if is_in_plane is None else f" and is_in_plane={is_in_plane}")
@@ -3526,7 +3516,6 @@ class VirtualSiteHandler(_NonbondedHandler):
         def _supports_match(
             cls, type_: _VirtualSiteType, match: str, is_in_plane: Optional[bool] = None
         ) -> bool:
-
             is_in_plane = True if is_in_plane is None else is_in_plane
 
             if match == "once":
@@ -3609,7 +3598,6 @@ class VirtualSiteHandler(_NonbondedHandler):
             )
 
     def check_handler_compatibility(self, other_handler):
-
         self._check_attributes_are_equal(
             other_handler, identical_attrs=["exclusion_policy"]
         )
@@ -3649,13 +3637,11 @@ class VirtualSiteHandler(_NonbondedHandler):
         expected_type, expected_smirks, expected_name = key
 
         for i, existing_parameter in enumerate(self.parameters):
-
             if (
                 existing_parameter.type != expected_type
                 or existing_parameter.smirks != expected_smirks
                 or existing_parameter.name != expected_name
             ):
-
                 continue
 
             return i
@@ -3663,7 +3649,6 @@ class VirtualSiteHandler(_NonbondedHandler):
         return None
 
     def _find_matches_by_parent(self, entity: Topology) -> Dict[int, list]:
-
         from collections import defaultdict
 
         topology_atoms = {
@@ -3676,7 +3661,6 @@ class VirtualSiteHandler(_NonbondedHandler):
         matches_by_parent: Dict = defaultdict(lambda: defaultdict(list))
 
         for parameter in self._parameters:
-
             for match in entity.chemical_environment_matches(parameter.smirks):
                 parent_index = match.topology_atom_indices[parameter.parent_index]
 
@@ -3691,9 +3675,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         assigned_matches_by_parent = defaultdict(list)
 
         for parent_index, matches_by_name in matches_by_parent.items():
-
-            for name, matches in matches_by_name.items():
-
+            for matches in matches_by_name.values():
                 assigned_parameter, _ = matches[-1]  # last match wins
 
                 match_orientations = [
@@ -3732,15 +3714,12 @@ class VirtualSiteHandler(_NonbondedHandler):
         transformed_dict_cls=dict,
         unique=False,
     ) -> Dict[Tuple[int], List[ParameterHandler._Match]]:
-
         assigned_matches_by_parent = self._find_matches_by_parent(entity)
         return_dict = {}
         for parent_index, assigned_parameters in assigned_matches_by_parent.items():
             assigned_matches = []
             for assigned_parameter, match_orientations in assigned_parameters:
-
                 for match in match_orientations:
-
                     assigned_matches.append(
                         ParameterHandler._Match(assigned_parameter, match)
                     )

@@ -17,15 +17,17 @@ from openff.toolkit.utils.utils import (
     temporary_cd,
     unit_to_string,
 )
-from openff.toolkit.utils.toolkits import (
+from openff.toolkit.utils.constants import (
+    DEFAULT_AROMATICITY_MODEL,
     ALLOWED_AROMATICITY_MODELS,
-    ALLOWED_CHARGE_MODELS,
+    DEFAULT_FRACTIONAL_BOND_ORDER_MODEL,
     ALLOWED_FRACTIONAL_BOND_ORDER_MODELS,
+    DEFAULT_CHARGE_MODEL,
+    ALLOWED_CHARGE_MODELS,
+)
+from openff.toolkit.utils.toolkits import (
     AMBERTOOLS_AVAILABLE,
     BASIC_CHEMINFORMATICS_TOOLKITS,
-    DEFAULT_AROMATICITY_MODEL,
-    DEFAULT_CHARGE_MODEL,
-    DEFAULT_FRACTIONAL_BOND_ORDER_MODEL,
     GLOBAL_TOOLKIT_REGISTRY,
     OPENEYE_AVAILABLE,
     RDKIT_AVAILABLE,

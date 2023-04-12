@@ -46,7 +46,7 @@ class _SimpleMolecule:
             atom1_atom = atom1
             atom2_atom = atom2
         else:
-            raise Exception(
+            raise ValueError(
                 "Invalid inputs to molecule._add_bond. Expected ints or Atoms. "
                 "Received {} (type {}) and {} (type {}) ".format(
                     atom1, type(atom1), atom2, type(atom2)
@@ -187,10 +187,10 @@ class _SimpleMolecule:
         # but we need 0-index indices (like molecule indices) to add bonds
         offset = min(subgraph.nodes())
 
-        for (index, node_data) in subgraph.nodes(data=True):
+        for _, node_data in subgraph.nodes(data=True):
             molecule.add_atom(atomic_number=node_data["atomic_number"])
 
-        for (topology_index1, topology_index2, edge_data) in subgraph.edges(data=True):
+        for topology_index1, topology_index2, _edge_data in subgraph.edges(data=True):
             molecule.add_bond(topology_index1 - offset, topology_index2 - offset)
 
         return molecule

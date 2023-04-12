@@ -51,12 +51,14 @@ from openff.toolkit.utils import (
 )
 from openff.toolkit.utils.exceptions import (
     AtomNotInTopologyError,
+    BondNotInTopologyError,
     DuplicateUniqueMoleculeError,
     IncompatibleUnitError,
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
     MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
+    UnassignedChemistryInPDBError,
     WrongShapeError,
 )
 
@@ -204,6 +206,16 @@ class TestTopology:
             topology.box_vectors = good_vectors
             assert (topology.box_vectors == good_vectors * np.eye(3)).all()
 
+    def test_issue_1527(self):
+        """Test the error handling of setting box vectors with an OpenMM quantity."""
+        import numpy
+        import openmm.unit
+
+        topology = Topology()
+        topology.box_vectors = numpy.ones(3) * openmm.unit.nanometer
+
+        assert isinstance(topology.box_vectors, unit.Quantity)
+
     def test_is_periodic(self):
         """Test the getter and setter for is_periodic"""
         vacuum_top = Topology()
@@ -261,8 +273,6 @@ class TestTopology:
         """Test Topology.atom function (atom lookup from index)"""
         topology = Topology()
         topology.add_molecule(ethane_from_smiles())
-        with pytest.raises(Exception):
-            topology.atom(-1)
 
         # Make sure we get 2 carbons and 8 hydrogens
         n_carbons = 0
@@ -275,7 +285,13 @@ class TestTopology:
         assert n_carbons == 2
         assert n_hydrogens == 6
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError, match="must be an int.*'str'"):
+            topology.atom("one")
+
+        with pytest.raises(AtomNotInTopologyError):
+            topology.atom(-1)
+
+        with pytest.raises(AtomNotInTopologyError):
             topology.atom(8)
 
     def test_atom_index(self):
@@ -326,8 +342,6 @@ class TestTopology:
         topology = Topology()
         topology.add_molecule(ethane_from_smiles())
         topology.add_molecule(ethene_from_smiles())
-        with pytest.raises(Exception):
-            topology.bond(-1)
 
         n_single_bonds = 0
         n_double_bonds = 0
@@ -356,7 +370,13 @@ class TestTopology:
         assert n_cc_bonds == 2
         assert n_ch_bonds == 10
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError, match="must be an int.*'str'"):
+            topology_bond = topology.bond("one")
+
+        with pytest.raises(BondNotInTopologyError, match="No bond with index -1"):
+            topology.bond(-1)
+
+        with pytest.raises(BondNotInTopologyError, match="No bond with index 12"):
             topology_bond = topology.bond(12)
 
     def test_angles(self):
@@ -603,8 +623,7 @@ class TestTopology:
             assert atom.atomic_number == atom_copy.atomic_number
 
         # Check bonds.
-        for bond_idx, bond in enumerate(off_topology.bonds):
-            # bond_copy = off_topology_copy.bond(bond_idx)
+        for bond in off_topology.bonds:
             bond_copy = off_topology_copy.get_bond_between(
                 off_topology.atom_index(bond.atoms[0]),
                 off_topology.atom_index(bond.atoms[1]),
@@ -684,6 +703,124 @@ class TestTopology:
                 assert original == roundtrip
             else:
                 assert roundtrip_atom.metadata["chain_id"] == "X"
+
+    @requires_rdkit
+    def test_from_pdb(self):
+        with pytest.raises(UnassignedChemistryInPDBError) as exc_info:
+            Topology.from_pdb(get_data_file_path("proteins/5tbm_complex_solv.pdb"))
+        # Make sure that the error message above doesn't contain the "multiple chains" hint
+        assert "input has multiple chain identifiers" not in exc_info.value.args[
+            0
+        ].join("")
+
+        ligand = Molecule.from_file(get_data_file_path("molecules/PT2385.sdf"))
+        stereoisomer1 = Molecule.from_smiles("[C@H](Cl)(F)/C=C/F")
+        stereoisomer2 = Molecule.from_smiles("[C@@H](Cl)(F)/C=C\F")
+
+        top = Topology.from_pdb(
+            get_data_file_path("proteins/5tbm_complex_solv.pdb"),
+            unique_molecules=[
+                ligand,
+                Molecule.from_smiles("[H]S[H]"),
+                # Unlike bond order and formal charge, the stereo is
+                # assigned by 3D geometry, so providing stereoisomer1 should allow
+                # us to load stereoisomers 1 and 2 correctly
+                stereoisomer1,
+            ],
+        )
+
+        assert top.box_vectors is None
+
+        res_iter = top.hierarchy_iterator("residues")
+        assert len([*res_iter]) == 130
+        chain_iter = top.hierarchy_iterator("chains")
+        assert len([*chain_iter]) == 19
+
+        assert top.molecule(1).is_isomorphic_with(ligand)
+        water = Molecule.from_smiles("O")
+        assert top.molecule(2).is_isomorphic_with(water)
+        assert top.molecule(3).is_isomorphic_with(water)
+        assert top.molecule(4).is_isomorphic_with(water)
+        assert top.molecule(5).is_isomorphic_with(water)
+
+        # Ensure the stereo twins were loaded correctly
+        assert top.molecule(6).is_isomorphic_with(stereoisomer1)
+        assert not (top.molecule(6).is_isomorphic_with(stereoisomer2))
+        assert top.molecule(7).is_isomorphic_with(stereoisomer2)
+        assert not (top.molecule(7).is_isomorphic_with(stereoisomer1))
+
+        # Test loading monoatomic ions added by pdbfixer
+        cl_minus = Molecule.from_smiles("[Cl-]")
+        assert top.molecule(8).is_isomorphic_with(cl_minus)
+        assert top.molecule(9).is_isomorphic_with(cl_minus)
+
+        na_plus = Molecule.from_smiles("[Na+]")
+        assert top.molecule(10).is_isomorphic_with(na_plus)
+        assert top.molecule(11).is_isomorphic_with(na_plus)
+
+        # Test loading monoatomic ions added as SMILES
+        assert top.molecule(12).is_isomorphic_with(Molecule.from_smiles("[Li+]"))
+        assert top.molecule(13).is_isomorphic_with(Molecule.from_smiles("[K+]"))
+        assert top.molecule(14).is_isomorphic_with(Molecule.from_smiles("[Rb+]"))
+        assert top.molecule(15).is_isomorphic_with(Molecule.from_smiles("[Cs+]"))
+        assert top.molecule(16).is_isomorphic_with(Molecule.from_smiles("[F-]"))
+        assert top.molecule(17).is_isomorphic_with(Molecule.from_smiles("[Br-]"))
+        assert top.molecule(18).is_isomorphic_with(Molecule.from_smiles("[I-]"))
+
+    @requires_rdkit
+    def test_from_pdb_two_polymers_metadata(self):
+        """Test that a PDB with two capped polymers is loaded correctly"""
+        top = Topology.from_pdb(get_data_file_path("proteins/TwoMol_SER_CYS.pdb"))
+        assert top.molecule(0).is_isomorphic_with(
+            Molecule.from_smiles(
+                "[H][O][C]([H])([H])[C@@]([H])([C](=[O])[N]([H])[C]([H])([H])[H])[N]([H])[C](=[O])[C]([H])([H])[H]"
+            )
+        )
+        assert top.molecule(1).is_isomorphic_with(
+            Molecule.from_smiles(
+                "[H][S][C]([H])([H])[C@@]([H])([C](=[O])[N]([H])[C]([H])([H])[H])[N]([H])[C](=[O])[C]([H])([H])[H]"
+            )
+        )
+
+        expected_residues = (
+            (6, ("A", "1", " ", "ACE")),
+            (11, ("A", "2", " ", "SER")),
+            (6, ("A", "3", " ", "NME")),
+            (6, ("B", "1", " ", "ACE")),
+            (11, ("B", "2", " ", "CYS")),
+            (6, ("B", "3", " ", "NME")),
+        )
+        res_iter = top.hierarchy_iterator("residues")
+        for (n_atoms, identifier), residue in zip(expected_residues, res_iter):
+            assert residue.n_atoms == n_atoms
+            assert residue.identifier == identifier
+
+        assert (
+            (abs(top.box_vectors - (np.eye(3, 3) * 48 * unit.angstrom)) / unit.angstrom)
+            < 1e-10
+        ).all()
+
+    @requires_rdkit
+    def test_from_pdb_overlapping_unique_mols(self):
+        """Test that even overlapping unique molecules can be loaded using from_pdb"""
+        po4 = Molecule.from_smiles("P(=O)([O-])([O-])([O-])")
+        phenylphosphate = Molecule.from_smiles("c1ccccc1OP(=O)([O-1])([O-1])")
+
+        # Load the topology with po4 listed as the first unique mol
+        top1 = Topology.from_pdb(
+            get_data_file_path("molecules/po4_phenylphosphate.pdb"),
+            unique_molecules=[po4, phenylphosphate],
+        )
+        assert po4.is_isomorphic_with(top1.molecule(0))
+        assert phenylphosphate.is_isomorphic_with(top1.molecule(1))
+
+        # Load the topology with phenylphosphate listed as the first unique mol
+        top2 = Topology.from_pdb(
+            get_data_file_path("molecules/po4_phenylphosphate.pdb"),
+            unique_molecules=[phenylphosphate, po4],
+        )
+        assert po4.is_isomorphic_with(top2.molecule(0))
+        assert phenylphosphate.is_isomorphic_with(top2.molecule(1))
 
     @requires_pkg("mdtraj")
     def test_from_mdtraj(self):
@@ -1606,7 +1743,6 @@ class TestTopologySerialization:
     @pytest.mark.parametrize(("n_molecules"), [1, 2])
     @pytest.mark.parametrize(("format"), ["dict", "json"])
     def test_roundtrip(self, oleic_acid, with_conformers, n_molecules, format):
-
         if with_conformers:
             n_conformers = 2
             oleic_acid.generate_conformers(n_conformers=n_conformers)
@@ -1646,7 +1782,6 @@ def test_nth_degree_neighbors(n_degrees, num_pairs):
 
 
 def _tagsorted_dict_init_ref_key(tsd):
-
     if tsd is None:
         tsd = TagSortedDict()
 

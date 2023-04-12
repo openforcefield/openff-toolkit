@@ -16,6 +16,7 @@ import copy
 import os
 import pathlib
 import pickle
+import re
 from tempfile import NamedTemporaryFile
 
 import numpy as np
@@ -40,8 +41,10 @@ from openff.toolkit.tests.utils import (
 )
 from openff.toolkit.topology.molecule import (
     Atom,
+    BondExistsError,
     FrozenMolecule,
     HierarchyElement,
+    HierarchyScheme,
     HierarchySchemeNotFoundException,
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
     InvalidAtomMetadataError,
@@ -55,8 +58,10 @@ from openff.toolkit.utils.exceptions import (
     IncompatibleUnitError,
     InvalidBondOrderError,
     InvalidConformerError,
+    MissingPartialChargesError,
     MultipleMoleculesInPDBError,
     NotBondedError,
+    RemapIndexError,
     UnassignedChemistryInPDBError,
     UnsupportedFileTypeError,
 )
@@ -368,6 +373,57 @@ class TestAtom:
         with pytest.raises(AssertionError, match="already has an associated molecule"):
             atom.molecule = mol
 
+    @pytest.fixture()
+    def water_without_charges(self):
+        return Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
+
+    @pytest.fixture()
+    def water(self, water_without_charges):
+        water_without_charges.assign_partial_charges("formal_charge")
+        water = water_without_charges
+        return water
+
+    def test_set_partial_charge(self, water):
+        water.atoms[0].partial_charge = 12.0 * unit.elementary_charge
+        water.atoms[1].partial_charge = -4.0
+        water.atoms[2].partial_charge = -8.0
+
+        assert np.allclose(
+            water.partial_charges,
+            unit.Quantity([12, -4, -8], unit.elementary_charge),
+        )
+
+        assert np.allclose(
+            [atom.partial_charge.m for atom in water.atoms],
+            [12, -4, -8],
+        )
+
+    def test_set_partial_charges_no_charges(self, water_without_charges):
+        with pytest.raises(
+            MissingPartialChargesError, match="in a molecule with no partial charges."
+        ):
+            water_without_charges.atoms[2].partial_charge = 0.0 * unit.elementary_charge
+
+    def test_set_partial_charges_int(self, water):
+        with pytest.raises(ValueError, match="Cannot set.*'int'"):
+            water.atoms[2].partial_charge = 4
+
+    def test_set_partial_charges_openmm_quantity(self, water):
+        import openmm.unit
+
+        with pytest.raises(ValueError, match="Cannot set.*openmm.unit"):
+            water.atoms[2].partial_charge = 0.0 * openmm.unit.elementary_charge
+
+    def test_set_partial_charges_array(self, water):
+        with pytest.raises(ValueError, match="unit-wrapped.*numpy.ndarray"):
+            water.atoms[2].partial_charge = unit.Quantity(
+                [0.0, 0.0], unit.elementary_charge
+            )
+
+    def test_set_partial_charges_bogus(self, water):
+        with pytest.raises(ValueError, match="Cannot set.*class 'str'"):
+            water.atoms[2].partial_charge = "the right charge"
+
 
 class TestBond:
     def test_float_bond_order(self):
@@ -645,7 +701,6 @@ class TestMolecule:
                     )
 
             else:
-
                 # make the smiles then do some checks on it
                 output_smiles = mol.to_smiles(
                     isomeric=isomeric,
@@ -777,7 +832,6 @@ class TestMolecule:
     )
     @pytest.mark.parametrize("data", mapped_types)
     def test_partial_mapped_smiles(self, toolkit_class, data):
-
         if toolkit_class.is_available():
             toolkit = toolkit_class()
             mol = create_cis_1_2_dichloroethene()
@@ -945,7 +999,27 @@ class TestMolecule:
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_to_networkx(self, molecule):
         """Test conversion to NetworkX graph."""
-        molecule.to_networkx()
+        graph = molecule.to_networkx()
+
+        assert graph.number_of_nodes() == molecule.n_atoms
+        assert graph.number_of_edges() == molecule.n_bonds
+
+        for bond in molecule.bonds:
+            edge = graph.get_edge_data(bond.atom1_index, bond.atom2_index)
+
+            for attr in ["stereochemistry", "bond_order", "is_aromatic"]:
+                assert edge[attr] == getattr(bond, attr)
+
+        for node_index, node in graph.nodes(data=True):
+            atom = molecule.atom(node_index)
+
+            for attr in [
+                "atomic_number",
+                "is_aromatic",
+                "stereochemistry",
+                "formal_charge",
+            ]:
+                assert node[attr] == getattr(atom, attr)
 
     @requires_rdkit
     @pytest.mark.parametrize("molecule", mini_drug_bank())
@@ -1031,6 +1105,18 @@ class TestMolecule:
 
         assert Molecule.are_isomorphic(
             cholesterol, Molecule.from_iupac(cholesterol_iupac)
+        )
+
+    @requires_openeye
+    def test_to_from_iupac_wrapper(self):
+        """Test that IUPAC methods work if passed just `OpenEyeToolkitWrapper`."""
+        from openff.toolkit.utils import OpenEyeToolkitWrapper
+
+        assert (
+            Molecule.from_iupac(
+                "benzene", toolkit_registry=OpenEyeToolkitWrapper()
+            ).to_iupac(toolkit_registry=OpenEyeToolkitWrapper())
+            == "benzene"
         )
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
@@ -1609,18 +1695,10 @@ class TestMolecule:
             "CCC[N@@](C)CC"
         )
 
-    def test_remap(self):
-        """Test the remap function which should return a new molecule in the requested ordering"""
-        # the order here is CCO
-        ethanol = create_ethanol()
-        # get ethanol in reverse order OCC
-        ethanol_reverse = create_reversed_ethanol()
-        # get the mapping between the molecules
-        mapping = Molecule.are_isomorphic(ethanol, ethanol_reverse, True)[1]
+    class TestRemap:
+        """Tests for the ``Molecule.remap()`` method"""
 
-        new_ethanol = ethanol.remap(mapping, current_to_new=True)
-
-        def assert_molecules_match_after_remap(mol1, mol2):
+        def assert_molecules_match_after_remap(self, mol1, mol2):
             """Check all of the attributes in a molecule match after being remapped"""
             for atoms in zip(mol1.atoms, mol2.atoms):
                 assert atoms[0].to_dict() == atoms[1].to_dict()
@@ -1648,18 +1726,224 @@ class TestMolecule:
             assert mol1.total_charge == mol2.total_charge
             assert mol1.partial_charges.all() == mol2.partial_charges.all()
 
-        # check all of the properties match as well, torsions and impropers will be in a different order
-        # due to the bonds being out of order
-        assert_molecules_match_after_remap(new_ethanol, ethanol_reverse)
+        def test_remap(self):
+            """Test the remap function which should return a new molecule in the requested ordering"""
+            # the order here is CCO
+            ethanol = create_ethanol()
+            # get ethanol in reverse order OCC
+            ethanol_reverse = create_reversed_ethanol()
+            # get the mapping between the molecules
+            mapping = Molecule.are_isomorphic(ethanol, ethanol_reverse, True)[1]
 
-        # test round trip (double remapping a molecule)
-        new_ethanol = ethanol.remap(mapping, current_to_new=True)
-        isomorphic, round_trip_mapping = Molecule.are_isomorphic(
-            new_ethanol, ethanol, return_atom_map=True
+            new_ethanol = ethanol.remap(mapping, current_to_new=True)
+
+            # check all of the properties match as well, torsions and impropers will be in a different order
+            # due to the bonds being out of order
+            self.assert_molecules_match_after_remap(new_ethanol, ethanol_reverse)
+
+            # test round trip (double remapping a molecule)
+            new_ethanol = ethanol.remap(mapping, current_to_new=True)
+            isomorphic, round_trip_mapping = Molecule.are_isomorphic(
+                new_ethanol, ethanol, return_atom_map=True
+            )
+            assert isomorphic is True
+            round_trip_ethanol = new_ethanol.remap(
+                round_trip_mapping, current_to_new=True
+            )
+            self.assert_molecules_match_after_remap(round_trip_ethanol, ethanol)
+
+        @pytest.mark.parametrize("current_to_new", [True, False])
+        @pytest.mark.parametrize("partial", [True, False])
+        def test_remap_fails_with_duplicate_indices(
+            self,
+            current_to_new,
+            partial,
+        ):
+            ethanol = create_ethanol()
+            # get a mapping with duplicate atoms
+            mapping = {i: i for i in range(ethanol.n_atoms)}
+            # Make the first and second maps duplicates
+            mapping[1] = mapping[0]
+
+            with pytest.raises(
+                RemapIndexError,
+                match="There must be no duplicate source or destination indices",
+            ):
+                ethanol.remap(
+                    mapping,
+                    current_to_new=current_to_new,
+                    partial=partial,
+                )
+
+        @pytest.mark.parametrize(
+            "mapping",
+            [
+                {10: 2, 11: 1, 12: 0, 13: 6, 14: 7, 15: 8, 16: 4, 17: 5, 18: 3},
+                {0: 2, 1: 1, 2: 0, 3: 6, 4: 7, 5: 8, 6: 4, 7: 5, 8: 999999},
+                {0: 2, 1: 1, 2: 0, 3: 6, 4: "not an integer", 5: 8, 6: 4, 7: 5, 8: 3},
+            ],
         )
-        assert isomorphic is True
-        round_trip_ethanol = new_ethanol.remap(round_trip_mapping, current_to_new=True)
-        assert_molecules_match_after_remap(round_trip_ethanol, ethanol)
+        @pytest.mark.parametrize("current_to_new", [True, False])
+        @pytest.mark.parametrize("partial", [True, False])
+        def test_remap_fails_with_out_of_range_indices(
+            self, mapping, current_to_new, partial
+        ):
+            """Make sure the remap fails when indices are out of range
+
+            This tests current_to_new in both directions and ensures the
+            same behavior with partial maps (as all total maps should work in
+            partial mode).
+            """
+            ethanol = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
+            mapping = {0: 2, 1: 1, 2: 0, 3: 6, 4: 7, 5: 8, 6: 4, 7: 5, 8: 3}
+            wrong_index_mapping = dict(
+                (i + 10, new_id) for i, new_id in enumerate(mapping.values())
+            )
+            with pytest.raises(
+                RemapIndexError,
+                match=re.escape(
+                    "All indices in a mapping_dict for a molecule with 9 atoms"
+                    + " must be integers between 0 and 8"
+                ),
+            ):
+                ethanol.remap(
+                    wrong_index_mapping, current_to_new=current_to_new, partial=partial
+                )
+
+        def test_remap_fails_with_missing_indices(self):
+            ethanol = create_ethanol()
+            # get a mapping with duplicate atoms
+            mapping = {i: i for i in range(ethanol.n_atoms)}
+            # Remove one of the mappings
+            del mapping[0]
+
+            with pytest.raises(
+                RemapIndexError,
+                match=re.escape(
+                    f"The number of mapping indices ({len(mapping)}) does not "
+                    + f"match the number of atoms in this molecule ({ethanol.n_atoms})"
+                ),
+            ):
+                ethanol.remap(mapping, current_to_new=True)
+
+        def test_remap_updates_atom_map(self):
+            # get ethanol and a reverse mapping
+            ethanol = create_ethanol()
+            ethanol_reverse = create_reversed_ethanol()
+            mapping = Molecule.are_isomorphic(ethanol, ethanol_reverse, True)[1]
+            # Set up an atom_map to update
+            ethanol.properties["atom_map"] = {
+                0: 1,  # Check uncomplicated entries are remapped
+                1: "foo",  # Check non-integer values are remapped
+                2: 2,  # Check duplicate values are remapped
+                3: 2,
+                "hello": 3,  # Check non-integer keys are preserved
+                1000: 1000,  # Check out-of-range keys are preserved
+            }
+            # Name all atoms so we can tell them apart later
+            for atom, name in zip(ethanol.atoms, range(ethanol.n_atoms)):
+                atom.name = "atom_" + str(name)
+            # Run the remap
+            new_ethanol = ethanol.remap(mapping, current_to_new=True)
+
+            def atom_name_or(default, molecule, index):
+                """Get the atom name at the given index, or the default"""
+                try:
+                    return molecule.atom(index).name
+                except (TypeError, IndexError):
+                    return default
+
+            # Check the updated atom map
+            expected_atom_map_with_names = {
+                atom_name_or(k, ethanol, k): v
+                for k, v in ethanol.properties["atom_map"].items()
+            }
+            actual_atom_map_with_names = {
+                atom_name_or(k, new_ethanol, k): v
+                for k, v in new_ethanol.properties["atom_map"].items()
+            }
+            assert expected_atom_map_with_names == actual_atom_map_with_names
+
+        def test_remap_partial(self):
+            """Test the remap function which should return a new molecule in the requested ordering"""
+            # the order here is CCO
+            ethanol = create_ethanol()
+            # Create partial map to swap first two atoms
+            partial_map = {0: 1, 1: 0}
+            # Create equivalent total map
+            total_map = {0: 1, 1: 0, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8}
+
+            remapped_ethanol_partial = ethanol.remap(
+                partial_map,
+                current_to_new=True,
+                partial=True,
+            )
+            remapped_ethanol_total = ethanol.remap(
+                total_map,
+                current_to_new=True,
+                partial=False,
+            )
+
+            # check all of the properties match as well, torsions and impropers will be in a different order
+            # due to the bonds being out of order
+            self.assert_molecules_match_after_remap(
+                remapped_ethanol_partial,
+                remapped_ethanol_total,
+            )
+
+        @pytest.mark.parametrize(
+            "mapping",
+            [
+                {0: 0, 1: 0, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6},
+                {0: 0, 1: 0},
+            ],
+        )
+        @pytest.mark.parametrize("current_to_new", [True, False])
+        def test_remap_partial_fails_with_duplicate_indices(
+            self,
+            mapping,
+            current_to_new,
+        ):
+            ethanol = create_ethanol()
+
+            with pytest.raises(
+                RemapIndexError,
+                match="There must be no duplicate source or destination indices",
+            ):
+                ethanol.remap(
+                    mapping,
+                    current_to_new=current_to_new,
+                    partial=True,
+                )
+
+        @pytest.mark.parametrize(
+            "mapping",
+            [
+                {10: 0, 11: 1, 12: 2, 13: 3, 14: 4, 15: 5, 16: 6},
+                {10: 2, 11: 1, 12: 0, 13: 6, 14: 7, 15: 8, 16: 4},
+                {0: 9999999},
+                {"not_an_integer": 0},
+            ],
+        )
+        @pytest.mark.parametrize("current_to_new", [True, False])
+        def test_remap_partial_fails_with_out_of_range_indices(
+            self, mapping, current_to_new
+        ):
+            """Make sure the remap fails when the indexing starts from the wrong value"""
+            ethanol = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
+
+            with pytest.raises(
+                RemapIndexError,
+                match=re.escape(
+                    "All indices in a mapping_dict for a molecule with 9 atoms"
+                    + " must be integers between 0 and 8"
+                ),
+            ):
+                ethanol.remap(
+                    mapping,
+                    current_to_new=current_to_new,
+                    partial=True,
+                )
 
     @requires_openeye
     def test_canonical_ordering_openeye(self):
@@ -1696,24 +1980,6 @@ class TestMolecule:
             True,
             {0: 2, 1: 0, 2: 1, 3: 8, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7},
         ) == Molecule.are_isomorphic(canonical_ethanol, ethanol, True)
-
-    def test_too_small_remap(self):
-        """Make sure remap fails if we do not supply enough indexes"""
-        ethanol = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
-        # catch mappings that are the wrong size
-        too_small_mapping = {0: 1}
-        with pytest.raises(ValueError):
-            ethanol.remap(too_small_mapping, current_to_new=True)
-
-    def test_wrong_index_mapping(self):
-        """Make sure the remap fails when the indexing starts from the wrong value"""
-        ethanol = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
-        mapping = {0: 2, 1: 1, 2: 0, 3: 6, 4: 7, 5: 8, 6: 4, 7: 5, 8: 3}
-        wrong_index_mapping = dict(
-            (i + 10, new_id) for i, new_id in enumerate(mapping.values())
-        )
-        with pytest.raises(IndexError):
-            ethanol.remap(wrong_index_mapping, current_to_new=True)
 
     tautomer_data = [
         {"molecule": "Oc1c(cccc3)c3nc2ccncc12", "tautomers": 2},
@@ -2845,7 +3111,7 @@ class TestMolecule:
                 fractional_bond_order=bond.fractional_bond_order,
             )
         # Try to add the final bond twice, which should raise an Exception
-        with pytest.raises(Exception):
+        with pytest.raises(BondExistsError):
             molecule_copy.add_bond(
                 bond.atom1_index,
                 bond.atom2_index,
@@ -3872,8 +4138,7 @@ class TestMoleculeFromPDB:
             match=(
                 r"Note: 'HOH' is a residue code for water. You may have "
                 + r"crystallographic waters in your PDB file. Please remove "
-                + r"these before proceeding; they can be added back to the "
-                + r"topology later."
+                + r"these before proceeding, or use Topology.from_pdb\."
             ),
         ):
             Molecule.from_polymer_pdb(
@@ -3906,21 +4171,20 @@ class TestMoleculeFromPDB:
                 + r"in protonation state or bond order\. Try generating "
                 + r"hydrogens with another package and trying again\."
                 + r"\n\n"
-                + r"Hint: The input has multiple chain identifiers\. The "
-                + r"OpenFF Toolkit only supports single-molecule PDB files\. "
-                + r"Please split the file into individual chains and load "
-                + r"each seperately\."
-                + r"\n\n"
+                + r"Hint: The input has multiple chain identifiers\. The OpenFF "
+                + r"Toolkit Molecule.from_polymer_pdb method only supports "
+                + r"single-molecule PDB files\. Please use Topology.from\_pdb "
+                + r"or split the file into individual chains and load each "
+                + r"separately\.\n\n"
                 + r"Hint: The following residue names with unassigned atoms "
                 + r"were not found in the substructure library\. While the "
                 + r"OpenFF Toolkit identifies residues by matching chemical "
                 + r"substructures rather than by residue name, it currently "
                 + r"only supports the 20 'canonical' amino acids\.\n"
-                + r"(    EPE\n    HOH\n)|(    HOH\n    EPE\n)"
+                + r"    EPE\n    HOH\n"
                 + r"Note: 'HOH' is a residue code for water\. You may have "
                 + r"crystallographic waters in your PDB file\. Please remove "
-                + r"these before proceeding; they can be added back to the "
-                + r"topology later\."
+                + r"these before proceeding, or use Topology.from_pdb\."
             ),
         ):
             Molecule.from_polymer_pdb(
@@ -4244,3 +4508,73 @@ class TestHierarchies:
         assert ("A", "1", " ", "ACE") == dipeptide_hierarchy_perceived.residues[
             0
         ].identifier
+
+    def test_hierarchy_element_generation(self):
+        """Ensure that hierarchy elements are generated correctly from atom metadata"""
+        from openff.toolkit.tests.create_molecules import create_ethanol
+
+        ethanol = create_ethanol()
+
+        for atom in ethanol.atoms:
+            atom.metadata["residue_name"] = "AAA"
+            atom.metadata["residue_number"] = 1
+            atom.metadata["chain_id"] = "A"
+
+        ethanol.atoms[1].metadata["chain_id"] = "Z"
+        del ethanol.atoms[2].metadata["chain_id"]
+        ethanol.atoms[3].metadata["chain_id"] = 1
+        ethanol.atoms[4].metadata["residue_number"] = "1"
+        ethanol.atoms[5].metadata["residue_name"] = "ZZZ"
+        del ethanol.atoms[6].metadata["residue_name"]
+        ethanol.atoms[7].metadata["residue_number"] = 2
+        ethanol.add_default_hierarchy_schemes()
+
+        expected_chains = [(("A",), 6), (("None",), 1), (("Z",), 1), ((1,), 1)]
+
+        assert len(ethanol.chains) == len(expected_chains)
+        for chain, exp_chain in zip(ethanol.chains, expected_chains):
+            assert chain.identifier == exp_chain[0]
+            assert len(chain.atom_indices) == exp_chain[1]
+
+        expected_residues = [
+            (("A", 1, "None", "AAA"), 2),
+            (("A", "1", "None", "AAA"), 1),
+            (("A", 1, "None", "None"), 1),
+            (("A", 1, "None", "ZZZ"), 1),
+            (("A", 2, "None", "AAA"), 1),
+            (("None", 1, "None", "AAA"), 1),
+            (("Z", 1, "None", "AAA"), 1),
+            ((1, 1, "None", "AAA"), 1),
+        ]
+
+        assert len(ethanol.residues) == len(expected_residues)
+        for residue, exp_residue in zip(ethanol.residues, expected_residues):
+            assert residue.identifier == exp_residue[0]
+            assert len(residue.atom_indices) == exp_residue[1]
+
+    def test_hierarchy_element_sorting(self):
+        """Ensure that hierarchy elements are sorted correctly"""
+        hs = HierarchyScheme(None, ("foo", "bar"), "foobar")
+        # Atom lists are used here to indicate the positions
+        # that this element may have in the "proper" sorting.
+        hs.add_hierarchy_element(("Z", 10), [13])
+        hs.add_hierarchy_element(("Z", 5), [12])
+        # Switch two values so the list isn't just reversed from the correct sorting
+        hs.add_hierarchy_element(("None", "10"), [10])
+        hs.add_hierarchy_element(("Y", 10), [11])
+        hs.add_hierarchy_element(("A", 10), [8, 9])
+        hs.add_hierarchy_element(("A", "10"), [8, 9])
+        hs.add_hierarchy_element(("A", 1), [5, 6, 7])
+        hs.add_hierarchy_element(("A", "1"), [5, 6, 7])
+        hs.add_hierarchy_element(("A", "  1"), [5, 6, 7])
+        hs.add_hierarchy_element(("A", "None"), [4])
+        hs.add_hierarchy_element(("A", " "), [2, 3])
+        hs.add_hierarchy_element(("A", ""), [2, 3])
+        hs.add_hierarchy_element((" ", "10"), [0, 1])
+        hs.add_hierarchy_element(("", "10"), [0, 1])
+        hs.sort_hierarchy_elements()
+
+        # Compare the sorted hierarchyelements to their expected sortings
+        # (assuming that the atom indices indicate valid positions for the resulting elements in the proper sorting)
+        for idx, ele in enumerate(hs.hierarchy_elements):
+            assert idx in ele.atom_indices

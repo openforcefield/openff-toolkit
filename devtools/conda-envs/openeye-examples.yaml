@@ -1,4 +1,4 @@
-name: test
+name: openeye-examples
 channels:
   - openeye
   - conda-forge
@@ -6,7 +6,7 @@ dependencies:
     # Base depends
   - python
   - pip
-  - packaging =21
+  - packaging
   - numpy
   - networkx
   - cachetools
@@ -18,7 +18,8 @@ dependencies:
   - smirnoff99Frosst
   - openff-units >=0.2
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.2
+  - openff-interchange-base >=0.3.0
+  - typing_extensions
     # Toolkit-specific
   - openeye-toolkits
     # Test-only/optional/dev/typing

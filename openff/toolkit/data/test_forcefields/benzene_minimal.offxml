@@ -22,7 +22,7 @@
     <Improper smirks="[*:1]~[#6X3:2](~[*:3])~[*:4]" id="i1" k1="1.1" periodicity1="2" phase1="180."/>
   </ImproperTorsions>
   <!-- WARNING: AMBER formats typically use r_0/2=r_min/2 to describe the relevant distance parameter, where r0 = 2^(1/6)*sigma. The difference is important, and the two conventions can be used here by specifying sigma or rmin_half. -->
-  <vdW potential="Lennard-Jones-12-6" combining_rules="Loentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch="8.0*angstroms" cutoff="9.0*angstroms" long_range_dispersion="isotropic">
+  <vdW potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" sigma_unit="angstroms" epsilon_unit="kilocalories_per_mole" switch="8.0*angstroms" cutoff="9.0*angstroms" long_range_dispersion="isotropic">
     <Atom smirks="[#1:1]-[#6X3]" epsilon="0.0150" id="n8" rmin_half="1.4590"/>
     <Atom smirks="[#6:1]" epsilon="0.0860" id="n15" rmin_half="1.9080"/>
   </vdW>

@@ -26,14 +26,17 @@ import copy
 import logging
 import os
 import pathlib
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Type, Union
 
 from packaging.version import Version
 
-from openff.toolkit.topology.molecule import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
+from openff.toolkit.utils.constants import (
+    ALLOWED_AROMATICITY_MODELS,
+    DEFAULT_AROMATICITY_MODEL,
+)
 from openff.toolkit.utils.exceptions import (
     ParameterHandlerRegistrationError,
     PartialChargeVirtualSitesError,
@@ -153,10 +156,10 @@ class ForceField:
     Examples
     --------
 
-    Create a new ForceField containing the smirnoff99Frosst parameter set:
+    Create a new ForceField object from the distributed OpenFF 2.0 ("Sage") file:
 
     >>> from openff.toolkit import ForceField
-    >>> force_field = ForceField('test_forcefields/test_forcefield.offxml')
+    >>> force_field = ForceField('openff-2.0.0.offxml')
 
     Create an OpenMM system from a :class:`openff.toolkit.topology.Topology` object:
 
@@ -234,11 +237,12 @@ class ForceField:
             specified, any top-level tags that are repeated will be merged if they are compatible, with files appearing
             later in the sequence resulting in parameters that have higher precedence.  Support for multiple files is
             primarily intended to allow solvent parameters to be specified by listing them last in the sequence.
-        aromaticity_model : string, default='OEAroModel_MDL'
-            The aromaticity model used by the force field. Currently, only 'OEAroModel_MDL' is supported
+        aromaticity_model : str, optional, default="OEAroModel_MDL"
+            The aromaticity model to use. Only OEAroModel_MDL is supported.
         parameter_handler_classes : iterable of ParameterHandler classes, optional, default=None
             If not None, the specified set of ParameterHandler classes will be instantiated to create the parameter
-            object model.  By default, all imported subclasses of ParameterHandler are automatically registered.
+            object model.  By default, all imported subclasses of ParameterHandler not loaded as plugins are
+            automatically registered.
         parameter_io_handler_classes : iterable of ParameterIOHandler classes
             If not None, the specified set of ParameterIOHandler classes will be used to parse/generate serialized
             parameter sets.  By default, all imported subclasses of ParameterIOHandler are automatically registered.
@@ -257,11 +261,12 @@ class ForceField:
         Load one SMIRNOFF parameter set in XML format (searching the package data directory by default, which includes
         some standard parameter sets):
 
-        >>> forcefield = ForceField('test_forcefields/test_forcefield.offxml')
+        >>> forcefield = ForceField('openff-2.0.0.offxml')
 
         Load multiple SMIRNOFF parameter sets:
 
-        >>> forcefield = ForceField('test_forcefields/test_forcefield.offxml', 'test_forcefields/tip3p.offxml')
+        >>> from openff.toolkit.tests.utils import get_data_file_path
+        >>> forcefield = ForceField('openff-2.0.0.offxml', get_data_file_path('test_forcefields/tip3p.offxml'))
 
         Load a parameter set from a string:
 
@@ -282,15 +287,32 @@ class ForceField:
         # otherwise, we can't define two different ParameterHandler subclasses to compare for a new type of energy term
         # since both will try to register themselves for the same XML tag and an Exception will be raised.
         if parameter_handler_classes is None:
-            parameter_handler_classes = all_subclasses(ParameterHandler)
-        if load_plugins:
+            # TODO: What is the point of this argument? The default behavior includes a lot of logic.
+            #       Unaware of cases in which the argument is used.
 
+            internal_module = "openff.toolkit.typing.engines.smirnoff.parameters"
+
+            # Plugins, if already loaded, are also subclasses of ParameterHandler and therefore
+            # show up in all_subclasses, but we don't want them included here. Checking the
+            # module each come from is the safest way to know which are plugins; another
+            # option is explicitly defining a set of default handlers
+
+            default_handlers: List[Type[ParameterHandler]] = [
+                handler
+                for handler in all_subclasses(ParameterHandler)
+                if handler.__module__ == internal_module
+            ]
+
+            # We could also track a list of the plugins that were already loaded, but that's not necessary here
+            # since we're only cleaning out the handlers that were already registered.
+            parameter_handler_classes = default_handlers
+
+        if load_plugins:
             plugin_classes = load_handler_plugins()
 
-            for handler in plugin_classes:
-                if handler not in parameter_handler_classes:
-                    parameter_handler_classes.append(handler)
-                    self._plugin_parameter_handler_classes.append(handler)
+            for plugin_class in plugin_classes:
+                parameter_handler_classes.append(plugin_class)
+                self._plugin_parameter_handler_classes.append(plugin_class)
 
         self._register_parameter_handler_classes(parameter_handler_classes)
 
@@ -312,7 +334,7 @@ class ForceField:
         self._disable_version_check = (
             False  # if True, will disable checking compatibility version
         )
-        self._aromaticity_model = None
+        self._aromaticity_model = DEFAULT_AROMATICITY_MODEL
         # Parameter handler classes that _can_ be initialized if needed
         self._parameter_handler_classes = dict()
         # ParameterHandler classes to be instantiated for each parameter type
@@ -394,9 +416,10 @@ class ForceField:
 
         """
         # Implement better logic here if we ever support another aromaticity model
-        if aromaticity_model != "OEAroModel_MDL":
+        if aromaticity_model not in ALLOWED_AROMATICITY_MODELS:
             raise SMIRNOFFAromaticityError(
-                f"Read aromaticity model {aromaticity_model}. Currently only OEAroModel_MDL is supported."
+                f"Read aromaticity model {aromaticity_model} which is not in the set of allowed aromaticity models: "
+                f"{ALLOWED_AROMATICITY_MODELS}"
             )
 
         self._aromaticity_model = aromaticity_model
@@ -490,7 +513,7 @@ class ForceField:
             tagname = parameter_handler_class._TAGNAME
             if tagname is not None:
                 if tagname in self._parameter_handler_classes:
-                    raise Exception(
+                    raise ParameterHandlerRegistrationError(
                         "Attempting to register ParameterHandler {}, which provides a parser for tag"
                         " '{}', but ParameterHandler {} has already been registered to handle that tag.".format(
                             parameter_handler_class,
@@ -522,7 +545,7 @@ class ForceField:
             serialization_format = parameter_io_handler_class._FORMAT
             if serialization_format is not None:
                 if serialization_format in self._parameter_io_handler_classes.keys():
-                    raise Exception(
+                    raise ParameterHandlerRegistrationError(
                         "Attempting to register ParameterIOHandler {}, which provides a IO parser for format "
                         "'{}', but ParameterIOHandler {} has already been registered to handle that tag.".format(
                             parameter_io_handler_class,
@@ -799,7 +822,7 @@ class ForceField:
         if not (self._date is None):
             l1_dict["Date"] = self._date
 
-        for handler_format, parameter_handler in self._parameter_handlers.items():
+        for parameter_handler in self._parameter_handlers.values():
             handler_tag = parameter_handler._TAGNAME
             l1_dict[handler_tag] = parameter_handler.to_dict(
                 discard_cosmetic_attributes=discard_cosmetic_attributes
@@ -952,20 +975,13 @@ class ForceField:
             A representation of a SMIRNOFF-format data structure. Begins at top-level 'SMIRNOFF' key.
 
         """
-        from openff.toolkit.utils import get_data_file_path
-
-        # Check whether this could be a file path. It could also be a
-        # file handler or a simple XML string.
+        # First, see if a file exists with a name `source` in the current directory or in directories known to the
+        # plugin system. It could also be a raw XML-like string ...
         if isinstance(source, str):
             # Try first the simple path.
-            searched_dirs_paths: List[str] = [""]
+            searched_dirs_paths: List[str] = [os.getcwd()]
             # Then try a relative file path w.r.t. an installed directory.
             searched_dirs_paths.extend(_get_installed_offxml_dir_paths())
-            # Finally, search in openff/toolkit/data/.
-            # TODO: Remove this when smirnoff99Frosst 1.0.9 will be released.
-            searched_dirs_paths.append(get_data_file_path(""))
-            searched_dirs_paths.append(get_data_file_path("test_forcefields"))
-            searched_dirs_paths.append(get_data_file_path("test_forcefields/old"))
 
             # Determine the actual path of the file.
             # TODO: What is desired toolkit behavior if two files with the desired name are available?
@@ -974,6 +990,11 @@ class ForceField:
                     if str(file_path).lower().endswith(source.lower()):
                         source = str(file_path.absolute())
                         break
+
+        else:
+            # ... or a file-like object, in which case we shouldn't look through the plugin system.
+            # if it's raw bytes, no need to search for paths, either.
+            searched_dirs_paths = list()
 
         # Process all SMIRNOFF definition files or objects
         # QUESTION: Allow users to specify force field URLs so they can pull force field definitions from the web too?
@@ -988,23 +1009,41 @@ class ForceField:
                 smirnoff_data = parameter_io_handler.parse_file(source)
                 return smirnoff_data
             except SMIRNOFFParseError as e:
+                exception_type = type(e)
+                exception_context = "while trying to parse source as an object"
                 exception_msg = e.msg
-            except (FileNotFoundError, OSError):
+            except OSError:
                 # If this is not a file path or a file handle, attempt parsing as a string.
+                # TODO: Do we actually support parsing bytes?
                 try:
                     smirnoff_data = parameter_io_handler.parse_string(source)
                     return smirnoff_data
                 except SMIRNOFFParseError as e:
+                    exception_type = type(e)
+                    exception_context = "while trying to parse source as a file"
                     exception_msg = e.args[0]
 
         # If we haven't returned by now, the parsing was unsuccessful
-        valid_formats = [
-            input_format for input_format in self._parameter_io_handlers.keys()
-        ]
-        msg = f"Source {source} could not be read. If this is a file, ensure that the path is correct.\n"
-        msg += "If the file is present, ensure it is in a known SMIRNOFF encoding.\n"
-        msg += f"Valid formats are: {valid_formats}\n"
-        msg += f"Parsing failed with the following error:\n{exception_msg}\n"
+        # There is different parsing behavior for str and file-like objects, so raise errors separately
+        if isinstance(source, str):
+            pretty_searched_paths = "\n    ".join(searched_dirs_paths)
+            msg = (
+                f"Source '{source}' could not be read. If this is a file, ensure that the path is correct.\n"
+                f"Looked in the following paths and found no files named '{source}':"
+                f"\n    {pretty_searched_paths}\n"
+                f"If '{source}' is present as a file, ensure it is in a known SMIRNOFF encoding.\n"
+                f"Valid formats are: {[*self._parameter_io_handler_classes.keys()]}\n"
+                f"Parsing failed {exception_context} with the following exception and "
+                f"message:\n{exception_type}\n{exception_msg}\n"
+            )
+
+        else:
+            msg = (
+                f"Source '{source}' could not be read.\n"
+                f"Parsing failed {exception_context} with the following exception and message:\n"
+                f"{exception_type}\n{exception_msg}\n"
+            )
+
         raise IOError(msg)
 
     def to_string(self, io_format="XML", discard_cosmetic_attributes=False):
@@ -1088,6 +1127,11 @@ class ForceField:
         allow_nonintegral_charges: bool = False,
     ) -> "openmm.System":
         """Create an OpenMM System from this ForceField and a Topology.
+
+        Note that most force fields specify their own partial charges, and any
+        partial charges defined on the ``Molecule`` objects in the topology are
+        ignored. To use custom partial charges, see the
+        ``charge_from_molecules`` argument.
 
         Parameters
         ----------
@@ -1214,7 +1258,7 @@ class ForceField:
         # TODO: This was previously ... enumerate(topology.reference_molecules). It's currently
         # unclear if this should be topology.unique_molecules instead, since that might be faster
         # (if also modifying this to label _all_ duplicates of each unique molecule)
-        for molecule_idx, molecule in enumerate(topology.molecules):
+        for molecule in topology.molecules:
             top_mol = Topology.from_molecules([molecule])
             current_molecule_labels = dict()
             for tag, parameter_handler in self._parameter_handlers.items():
@@ -1297,7 +1341,7 @@ class ForceField:
 
         >>> from openff.toolkit import ForceField, Molecule
         >>> ethanol = Molecule.from_smiles('CCO')
-        >>> force_field = ForceField('test_forcefields/test_forcefield.offxml')
+        >>> force_field = ForceField('openff-2.0.0.offxml')
 
         Assign partial charges to the molecule according to the force field:
 

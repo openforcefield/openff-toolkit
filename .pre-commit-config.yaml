@@ -3,12 +3,12 @@ ci:
 files: ^openff|(^examples/((?!deprecated).)*$)
 repos:
 - repo: https://github.com/psf/black
-  rev: 22.12.0
+  rev: 23.3.0
   hooks:
   - id: black
   - id: black-jupyter
 - repo: https://github.com/PyCQA/isort
-  rev: 5.11.4
+  rev: 5.12.0
   hooks:
   - id: isort
 - repo: https://github.com/PyCQA/flake8
@@ -19,9 +19,10 @@ repos:
     additional_dependencies: [
         'flake8-absolute-import',
         'flake8-no-pep420',
+        'flake8-bugbear',
     ]
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 1.6.0
+  rev: 1.7.0
   hooks:
     - id: nbqa-pyupgrade
       args:
