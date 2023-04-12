@@ -36,7 +36,7 @@ Parameter Type
 These are usually initialized during ``ForceField`` creation, and can be inspected and modified by users via the Python API.
 For more information, see ``examples/forcefield_modification``.
 
-.. currentmodule:: openff.toolkit.typing.engines.smirnoff
+.. currentmodule:: openff.toolkit.typing.engines.smirnoff.parameters
 .. autosummary::
     :nosignatures:
     :toctree: api/generated/

@@ -690,11 +690,21 @@ class Bond(Serializable):
     @classmethod
     def from_dict(cls, molecule, d):
         """Create a Bond from a dict representation."""
-        # TODO
-        d["molecule"] = molecule
+        # TODO: This is not used anywhere (`Molecule._initialize_bonds_from_dict()` just calls grabs
+        #       the two atoms and calls `Molecule._add_bond`). Remove or change that?
+        # TODO: There is no point in feeding in a `molecule` argument since `Bond.__init__` already
+        #       requires (and checks) that the two atoms are part of the same molecule
         d["atom1"] = molecule.atoms[d["atom1"]]
         d["atom2"] = molecule.atoms[d["atom2"]]
-        return cls(*d)
+
+        return cls(
+            atom1=d["atom1"],
+            atom2=d["atom2"],
+            bond_order=d["bond_order"],
+            is_aromatic=d["is_aromatic"],
+            stereochemistry=d["stereochemistry"],
+            fractional_bond_order=d["fractional_bond_order"],
+        )
 
     @property
     def atom1(self):
@@ -758,7 +768,12 @@ class Bond(Serializable):
         """
         Sets the Bond's parent molecule. Can not be changed after assignment
         """
-        assert self._molecule is None
+        # TODO: This is an impossible state (the constructor requires that atom1 and atom2
+        #       are in a molecule, the same molecule, and sets that as self._molecule).
+        #       Should we remove this?
+        assert (
+            self._molecule is None
+        ), "Bond.molecule is already set and can only be set once"
         self._molecule = value
 
     @property
@@ -768,6 +783,7 @@ class Bond(Serializable):
 
         """
         if self._molecule is None:
+            # TODO: This is unreachable; see `Bond.molecule` setter
             raise ValueError("This Atom does not belong to a Molecule object")
         return self._molecule.bonds.index(self)
 
