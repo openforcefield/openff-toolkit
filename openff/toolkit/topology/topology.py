@@ -1695,6 +1695,7 @@ class Topology(Serializable):
             off_atom.metadata["residue_number"] = atom.residue.id
             off_atom.metadata["insertion_code"] = atom.residue.insertionCode
             off_atom.metadata["chain_id"] = atom.residue.chain.id
+            off_atom.name = atom.name
 
         for offmol in topology.molecules:
             offmol.add_default_hierarchy_schemes()
