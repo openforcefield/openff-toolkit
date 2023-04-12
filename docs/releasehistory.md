@@ -7,9 +7,15 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `micro` increments represent bugfix releases or improvements in documentation
 
 ## Current development
+<!-- 
+  Please do not add links to the API documentation to the release 
+  notes; it causes problems if the API point is later moved, renamed, 
+  or removed. This is especially important for changes that remove
+  or rename an API point; do not link to the old name.
+-->
 
 ### New features
-- [PR #1565](https://github.com/openforcefield/openff-toolkit/pull/1565): Adds :py:meth:`Topology.from_pdb`
+- [PR #1565](https://github.com/openforcefield/openff-toolkit/pull/1565): Adds `Topology.from_pdb`
 
 ### Behavior changes
 - [PR #1569](https://github.com/openforcefield/openff-toolkit/pull/1569): Several instances of `Exception` being raised are now replaced with other exceptions being raised.
@@ -56,12 +62,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   `attach_units`, `detach_units`, and `extract_serialized_units_from_dict` have been removed from
   `openff.toolkit.utils.utils`.
 - [PR #1472](https://github.com/openforcefield/openff-toolkit/pull/1472):
-  Removes [`ParameterHandler._VALENCE_TYPE`] and the same attribute of its subclasses, which were
+  Removes `ParameterHandler._VALENCE_TYPE` and the same attribute of its subclasses, which were
   previously not used. Also deprecates `ChemicalEnvironment` and, by extension, the
   `openff.toolkit.typing.chemistry` submodule.
-
-[`ChemicalEnvironment`]: ChemicalEnvironment
-[`ParameterHandler._VALENCE_TYPE`]: ParameterHandler._VALENCE_TYPE
 
 
 ### Bugfixes
@@ -135,8 +138,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ## 0.11.1 Minor release forbidding loading radicals
 
 ### Behavior changes
-- [PR #1398](https://github.com/openforcefield/openff-toolkit/pull/1398): Updates the [`Bond.bond_order`] setter to only accept int values.
-- [PR #1236](https://github.com/openforcefield/openff-toolkit/pull/1236): [`from_rdkit`] and [`from_openeye`] now 
+- [PR #1398](https://github.com/openforcefield/openff-toolkit/pull/1398): Updates the `Bond.bond_order` setter to only accept int values.
+- [PR #1236](https://github.com/openforcefield/openff-toolkit/pull/1236): `from_rdkit` and `from_openeye` now 
   raise an `RadicalsNotSupportedError` when loading radicals. It's not clear that the OpenFF Toolkit was ever safely 
   handling radicals - they appear to be the root cause of many instances of unintended hydrogen addition and other 
   connection table changes. If this change affects a workflow that was previously working correctly, please let us 
@@ -145,10 +148,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Examples changed
 - [PR #1236](https://github.com/openforcefield/openff-toolkit/pull/1236): `examples/check_dataset_parameter_coverage` has
   been deprecated. 
-
-[`Bond.bond_order`]: Bond.bond_order
-[`from_rdkit`]: Molecule.from_rdkit
-[`from_openeye`]: Molecule.from_openeye
 
 ### Bug fixes
 - [PR #1400](https://github.com/openforcefield/openff-toolkit/pull/1400): Fixes a bug where `Molecule.from_pdb_and_smiles` could incorrectly order coordinates.
@@ -313,8 +312,8 @@ If you need access to the modified OpenFF topology for some other reason, create
 ```
 
 [`Interchange`]: openff.interchange.Interchange
-[`ForceField.create_interchange()`]: openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.create_interchange
-[`ForceField.create_openmm_system()`]: openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system
+[`ForceField.create_interchange()`]: openff.toolkit.typing.engines.smirnoff.ForceField.create_interchange
+[`ForceField.create_openmm_system()`]: openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system
 [OpenFF Interchange]: https://docs.openforcefield.org/interchange
 
 ### Breaking change: `Topology` molecule representation
@@ -504,22 +503,19 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 - [PR #1276](https://github.com/openforcefield/openff-toolkit/pull/1276): Removes the
   `use_interchange` argument to
   [`create_openmm_system`](openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system).
-  Deletes the `create_force` and `postprocess_system` methods of `ParameterHandler`
-  [`ParameterHandler.create_force`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler.create_force),
-  [`ParameterHandler.postprocess_system`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler.postprocess_system) and other methods related to creating OpenMM systems and forces. This is now handled in Interchange.
+  Deletes the `create_force` and `postprocess_system` methods of `ParameterHandler` and other methods related to creating OpenMM systems and forces. This is now handled in Interchange.
 - [PR #1303](https://github.com/openforcefield/openff-toolkit/pull/1303): Deprecates `Topology.particles`,
   `Topology.n_particles`, `Topology.particle_index` as `Molecule` objects do not store virtual sites,
   only atoms.
 - [PR #1297](https://github.com/openforcefield/openff-toolkit/pull/1297): Drops support
   for Python 3.7, following [NEP-29](https://numpy.org/neps/nep-0029-deprecation_policy.html).
 - [PR #1194](https://github.com/openforcefield/openforcefield/pull/1194): Adds
-  [`Topology.__add__`](openff.toolkit.topology.Topology.__add__), allowing `Topology` objects to be
+  `Topology.__add__`, allowing `Topology` objects to be
   added together, including added in-place, using the `+` operator.
 - [PR #1277](https://github.com/openforcefield/openff-toolkit/pull/1277): Adds support for version
   0.4 of the `<Electrostatics>` section of the SMIRNOFF specification.
 - [PR #1279](https://github.com/openforcefield/openforcefield/pull/1279):
-  [`ParameterHandler.version`](openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler.version)
-  and the ``.version`` attribute of its subclasses is now a
+  `ParameterHandler.version` and the `.version` attribute of its subclasses is now a
   [``Version``](https://packaging.pypa.io/en/latest/version.html#packaging.version.Version)
   object. Previously it was a string, which is not safe for
   [PEP440](https://www.python.org/dev/peps/pep-0440/#final-releases)-style versioning.
@@ -529,7 +525,7 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 - [PR #964](https://github.com/openforcefield/openff-toolkit/pull/964): Adds initial implementation
   of atom metadata dictionaries.
 - [PR #1097](https://github.com/openforcefield/openff-toolkit/pull/1097): Deprecates TopologyMolecule.
-- [PR #1097](https://github.com/openforcefield/openff-toolkit/pull/1097): Topology.from_openmm
+- [PR #1097](https://github.com/openforcefield/openff-toolkit/pull/1097): `Topology.from_openmm`
   is no longer guaranteed to maintain the ordering of bonds, but now explicitly guarantees that it maintains
   the order of atoms (Neither of these ordering guarantees were explicitly documented before, but this may be a
   change from the previous behavior).
@@ -572,10 +568,10 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 - [PR #1182](https://github.com/openforcefield/openforcefield/pull/1182): Removes `Atom.element`,
   thereby also removing `Atom.element.symbol`, `Atom.element.mass` and `Atom.element.atomic_number`.
   These are replaced with corresponding properties directly on the
-  [`Atom`](openff.toolkit.topology.molecule.Atom) class:
-  [`Atom.symbol`](openff.toolkit.topology.molecule.Atom.symbol),
-  [`Atom.mass`](openff.toolkit.topology.molecule.Atom.mass), and
-  [`Atom.atomic_number`](openff.toolkit.topology.molecule.Atom.atomic_number).
+  [`Atom`](openff.toolkit.topology.Atom) class:
+  [`Atom.symbol`](openff.toolkit.topology.Atom.symbol),
+  [`Atom.mass`](openff.toolkit.topology.Atom.mass), and
+  [`Atom.atomic_number`](openff.toolkit.topology.Atom.atomic_number).
 - [PR #1209](https://github.com/openforcefield/openforcefield/pull/1209): Fixes
   [Issue #1073](https://github.com/openforcefield/openff-toolkit/issues/1073), where the
   `fractional_bondorder_method` kwarg to the 
@@ -671,9 +667,7 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 - [PR #855](https://github.com/openforcefield/openff-toolkit/pull/855): In earlier
   versions of the toolkit, we had mistakenly made the assumption that cheminformatics
   toolkits agreed on the number and membership of rings. However we later learned that this
-  was not true. This PR removes
-  [`Molecule.rings`](openff.toolkit.topology.Molecule.rings) and
-  [`Molecule.n_rings`](openff.toolkit.topology.Molecule.n_rings). To find rings in
+  was not true. This PR removes `Molecule.rings` and `Molecule.n_rings`. To find rings in
   a molecule, directly use a cheminformatics toolkit after using
   [`Molecule.to_rdkit`](openff.toolkit.topology.Molecule.to_rdkit) or
   [`Molecule.to_openeye`](openff.toolkit.topology.Molecule.to_openeye).
@@ -711,8 +705,7 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 
 ### API breaking changes
 - [PR #855](https://github.com/openforcefield/openff-toolkit/pull/855): Removes
-  [`Molecule.rings`](openff.toolkit.topology.Molecule.rings) and
-  [`Molecule.n_rings`](openff.toolkit.topology.Molecule.n_rings). To find rings in
+  `Molecule.rings` and `Molecule.n_rings`. To find rings in
   a molecule, directly use a cheminformatics toolkit after using
   [`Molecule.to_rdkit`](openff.toolkit.topology.Molecule.to_rdkit) or
   [`Molecule.to_openeye`](openff.toolkit.topology.Molecule.to_openeye).
@@ -753,9 +746,7 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
   [`Molecule.assign_fractional_bond_orders`](openff.toolkit.topology.Molecule.assign_fractional_bond_orders)
   with all default arguments would lead to an error as a result of trying to lowercase `None`.
 - [PR #1149](https://github.com/openforcefield/openforcefield/pull/1149):
-  [`TopologyAtom`](openff.toolkit.topology.TopologyAtom),
-  [`TopologyBond`](openff.toolkit.topology.TopologyBond), and
-  [`TopologyVirtualSite`](openff.toolkit.topology.TopologyVirtualSite) now properly reference their
+  `TopologyAtom`, `TopologyBond`, and `TopologyVirtualSite` now properly reference their
   reference molecule from their `.molecule` attribute.
 - [PR #1155](https://github.com/openforcefield/openforcefield/pull/1155): Ensures big-endian
   byte order of NumPy arrays when serialized to dictionaries or files formats except JSON.
@@ -806,9 +797,7 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
   method have the `NoImplicit` property set to `True` on all atoms. This prevents RDKit from
   incorrectly adding hydrogen atoms to to molecule. 
 - [PR #1058](https://github.com/openforcefield/openforcefield/pull/1058): Removes the unimplemented methods
-  [`ForceField.create_parmed_structure`](openff.toolkit.typing.engines.smirnoff.ForceField.create_parmed_structure),
-  [`Topology.to_parmed`](openff.toolkit.topology.Topology.to_parmed), and
-  [`Topology.from_parmed`](openff.toolkit.topology.Topology.from_parmed).
+  `ForceField.create_parmed_structure`, `Topology.to_parmed`, and `Topology.from_parmed`.
 - [PR #1065](https://github.com/openforcefield/openforcefield/pull/1065): The example `conformer_energies.py` script
   now uses the Sage 2.0.0 force field.
 - [PR #1036](https://github.com/openforcefield/openforcefield/pull/1036): SMARTS matching
@@ -822,7 +811,7 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
   backend for more pleasing and idiomatic 2D visualization by default.
 - [PR #1087](https://github.com/openforcefield/openff-toolkit/pull/1087): Fixes
   [Issue #1073](https://github.com/openforcefield/openff-toolkit/issues/1073) in which
-  [`Molecule.__repr__`](openff.toolkit.topology.Molecule.__repr__) fails if the molecule can not be represented as 
+  `Molecule.__repr__` fails if the molecule can not be represented as 
   a SMILES pattern. Now, if SMILES generation fails, the molecule will be described by its Hill formula.
 - [PR #1052](https://github.com/openforcefield/openff-toolkit/pull/1052): Fixes
   [Issue #986](https://github.com/openforcefield/openff-toolkit/issues/986)
@@ -850,11 +839,11 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 ### Behaviors changed
 
 - [PR #1021](https://github.com/openforcefield/openforcefield/pull/1021): Renames
-  [`openff.toolkit.utils.exceptions.ParseError`](openff.toolkit.utils.exceptions.ParseError) to
+  `openff.toolkit.utils.exceptions.ParseError` to
   [`openff.toolkit.utils.exceptions.SMILESParseError`](openff.toolkit.utils.exceptions.SMILESParseError) to
   avoid a conflict with an identically-named exception in the SMIRNOFF XML parsing code.
 - [PR #1021](https://github.com/openforcefield/openforcefield/pull/1021): Renames and moves
-  [`openff.toolkit.typing.engines.smirnoff.forcefield.ParseError`](openff.toolkit.typing.engines.smirnoff.forcefield.ParseError) to
+  `openff.toolkit.typing.engines.smirnoff.forcefield.ParseError` to
   [`openff.toolkit.utils.exceptions.SMIRNOFFParseError`](openff.toolkit.utils.exceptions.SMIRNOFFParseError).
   This `ParseError` is deprecated and will be removed in a future release.
 
@@ -882,13 +871,11 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
   [`LibraryChargeType`](openff.toolkit.typing.engines.smirnoff.parameters.LibraryChargeHandler.LibraryChargeType)
    object that will match the full molecule being parameterized, and assign
   it the same partial charges as are set on the input molecule.
-- [PR #923](https://github.com/openforcefield/openforcefield/pull/923): Adds
-  [`Molecule.nth_degree_neighbors`](openff.toolkit.topology.Molecule.nth_degree_neighbors),
-  [`Topology.nth_degree_neighbors`](openff.toolkit.topology.Topology.nth_degree_neighbors),
-  [`TopologyMolecule.nth_degree_neighbors`](openff.toolkit.topology.TopologyMolecule.nth_degree_neighbors),
-  which returns pairs of atoms that are separated in a molecule or topology by _exactly_ N atoms.
+- [PR #923](https://github.com/openforcefield/openforcefield/pull/923): Adds `Molecule.nth_degree_neighbors`,
+  `Topology.nth_degree_neighbors`, `TopologyMolecule.nth_degree_neighbors`, which returns pairs of atoms that 
+  are separated in a molecule or topology by _exactly_ N atoms.
 - [PR #917](https://github.com/openforcefield/openforcefield/pull/917):
-  [`ForceField.create_openmm_system`](openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system) 
+  [`ForceField.create_openmm_system`](openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system) 
   now ensures that the cutoff of the `NonbondedForce` is set to
   the cutoff of the `vdWHandler` when it and a `Electrostatics` handler are present in the force field.
 - [PR #850](https://github.com/openforcefield/openforcefield/pull/850):
@@ -897,26 +884,25 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
   use of functionality that requires `OEChem` without having an `OEOmega` license.
 - [PR #909](https://github.com/openforcefield/openforcefield/pull/909): Virtual site positions can now
   be computed directly in the toolkit. This functionality is accessed through
-  - [`FrozenMolecule.compute_virtual_site_positions_from_conformer`](openff.toolkit.topology.FrozenMolecule.compute_virtual_site_positions_from_conformer)
-  - [`VirtualSite.compute_positions_from_conformer`](openff.toolkit.topology.VirtualSite.compute_positions_from_conformer)
-  - [`VirtualParticle.compute_position_from_conformer`](openff.toolkit.topology.VirtualParticle.compute_position_from_conformer)
-  - [`FrozenMolecule.compute_virtual_site_positions_from_atom_positions`](openff.toolkit.topology.FrozenMolecule.compute_virtual_site_positions_from_atom_positions)
-  - [`VirtualSite.compute_positions_from_atom_positions`](openff.toolkit.topology.VirtualSite.compute_positions_from_atom_positions)
-  - [`VirtualParticle.compute_position_from_atom_positions`](openff.toolkit.topology.VirtualParticle.compute_position_from_atom_positions)
+  - `FrozenMolecule.compute_virtual_site_positions_from_conformer`
+  - `VirtualSite.compute_positions_from_conformer`
+  - `VirtualParticle.compute_position_from_conformer`
+  - `FrozenMolecule.compute_virtual_site_positions_from_atom_positions`
+  - `VirtualSite.compute_positions_from_atom_positions`
+  - `VirtualParticle.compute_position_from_atom_positions`
     where the positions can be computed from a stored conformer, or an input vector of atom positions.
   - Tests have been added (`TestMolecule.test_*_virtual_site_position`) to check for sane behavior. The tests do
     not directly compare OpenMM position equivalence, but offline tests show that they are equivalent.
-  - The helper method 
-    [`VirtualSiteHandler.create_openff_virtual_sites`](openff.toolkit.typing.engines.smirnoff.parameters.VirtualSiteHandler.create_openff_virtual_sites) 
-    is now public, which returns a modified topology with virtual sites added.
+  - The helper method `VirtualSiteHandler.create_openff_virtual_sites` is now public, which returns a modified
+    topology with virtual sites added.
   - Virtual sites now expose the parameters used to create its local frame via the read-only properties
-    - [`VirtualSite.local_frame_weights`](openff.toolkit.topology.VirtualSite.local_frame_weights)
-    - [`VirtualSite.local_frame_position`](openff.toolkit.topology.VirtualSite.local_frame_position)
+    - `VirtualSite.local_frame_weights`
+    - `VirtualSite.local_frame_position`
   - Adding virtual sites via the `Molecule` API now have defaults for `sigma`, `epsilon`, and `charge_increment`
     set to 0 with appropriate units, rather than `None`
 - [PR #956](https://github.com/openforcefield/openforcefield/pull/956): Added 
-  [`ForceField.get_partial_charges()`](openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.get_partial_charges)
-  to more easily compute the partial charges assigned by a force field for a molecule.
+  `ForceField.get_partial_charges()` to more easily compute the partial charges assigned by a force field for a 
+  molecule.
 - [PR  #1006](https://github.com/openforcefield/openff-toolkit/pull/1006):
   Two behavior changes in the SMILES output for `to_file()` and `to_file_obj()`:
   - The RDKit and OpenEye wrappers now output the same SMILES as `to_smiles()`.
@@ -935,8 +921,7 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 - [PR #1002](https://github.com/openforcefield/openforcefield/pull/1002): Fixes a bug in which OFFXML files could
   inadvertently be loaded from subdirectories.
 - [PR #969](https://github.com/openforcefield/openforcefield/pull/969): Fixes a bug in which the cutoff distance
-  of the `NonbondedForce` generated by
-  [`ForceField.create_openmm_system`](openff.toolkit.typing.engines.smirnoff.forcefield.ForceField.create_openmm_system)
+  of the `NonbondedForce` generated by `ForceField.create_openmm_system`
   was not set to the value specified by the vdW and Electrostatics handlers.
 - [PR #909](https://github.com/openforcefield/openforcefield/pull/909): Fixed several bugs related to creating an
   OpenMM system with virtual sites created via the `Molecule` virtual site API
@@ -1006,8 +991,7 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
   will now load atom maps into the the resulting
   `Molecule's` `offmol.properties['atom_map']` field, even if not all atoms have map indices assigned.
 - [PR #904](https://github.com/openforcefield/openforcefield/pull/904):
-  [`TopologyAtom`](openff.toolkit.topology.TopologyAtom.element) objects now have
-  an element getter [`TopologyAtom.element`](openff.toolkit.topology.TopologyAtom.element).
+  `TopologyAtom` objects now have an element getter `TopologyAtom.element`.
 
 ### Bugfixes
 
