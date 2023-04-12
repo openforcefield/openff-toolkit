@@ -1598,6 +1598,8 @@ class Topology(Serializable):
         ``top.hierarchy_iterator("residues")`` and ``top.hierarchy_iterator
         ("chains")``.
 
+        A CRYST line in the PDB, if present, will be interpreted as periodic
+        box vectors in Angstroms.
 
         Parameters
         ----------

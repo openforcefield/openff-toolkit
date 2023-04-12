@@ -268,6 +268,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     def _polymer_openmm_pdbfile_to_offtop(
         self, topology_class, pdbfile, substructure_dictionary, coords_angstrom
     ):
+        from openff.units.openmm import from_openmm
         from rdkit import Chem, Geometry
 
         omm_top = pdbfile.topology
@@ -313,6 +314,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 offmol = self.from_rdkit(rdmol, allow_undefined_stereo=True)
                 smiles2offmol[mapped_smi] = copy.deepcopy(offmol)
             top._add_molecule_keep_cache(offmol)
+        if pdbfile.topology.getPeriodicBoxVectors() is not None:
+            top.box_vectors = from_openmm(pdbfile.topology.getPeriodicBoxVectors())
+
         return top
 
     def _polymer_openmm_topology_to_rdmol(

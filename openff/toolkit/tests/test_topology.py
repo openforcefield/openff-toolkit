@@ -729,6 +729,8 @@ class TestTopology:
             ],
         )
 
+        assert top.box_vectors is None
+
         res_iter = top.hierarchy_iterator("residues")
         assert len([*res_iter]) == 130
         chain_iter = top.hierarchy_iterator("chains")
@@ -792,6 +794,11 @@ class TestTopology:
         for (n_atoms, identifier), residue in zip(expected_residues, res_iter):
             assert residue.n_atoms == n_atoms
             assert residue.identifier == identifier
+
+        assert (
+            (abs(top.box_vectors - (np.eye(3, 3) * 48 * unit.angstrom)) / unit.angstrom)
+            < 1e-10
+        ).all()
 
     @requires_rdkit
     def test_from_pdb_overlapping_unique_mols(self):
