@@ -107,8 +107,8 @@ def get_available_force_fields(full_paths=False):
     Parameters
     ----------
     full_paths : bool, default=False
-        If False, return the name of each available *.offxml file.
-        If True, return the full path to each available *.offxml file.
+        If False, return the name of each available \*.offxml file.
+        If True, return the full path to each available \*.offxml file.
 
     Returns
     -------
@@ -134,23 +134,30 @@ MAX_SUPPORTED_VERSION = (
 
 
 class ForceField:
-    """A factory that assigns SMIRNOFF parameters to a molecular system
+    """
+    A factory that assigns SMIRNOFF parameters to a molecular system
 
-    :class:`ForceField` is a factory that constructs an OpenMM :class:`openmm.System` object from a
-    :class:`openff.toolkit.topology.Topology` object defining a (bio)molecular system containing one or more molecules.
+    :class:`ForceField` is a factory that constructs an
+    OpenMM :class:`System <openmm.openmm.System>` object from a
+    :class:`Topology <openff.toolkit.topology.Topology>` object defining a
+    (bio)molecular system containing one or more molecules.
 
-    When a :class:`ForceField` object is created from one or more specified SMIRNOFF serialized representations,
-    all :class:`ParameterHandler` subclasses currently imported are identified and registered to handle different
-    sections of the SMIRNOFF force field definition file(s).
+    When a :class:`ForceField` object is created from one or more specified
+    SMIRNOFF serialized representations, all :class:`ParameterHandler
+    <openff.toolkit.typing.engines.smirnoff.parameters.ParameterHandler>`
+    subclasses currently imported are identified and registered to handle
+    different sections of the SMIRNOFF force field definition file(s).
 
-    All :class:`ParameterIOHandler` subclasses currently imported are identified and registered to handle different
-    serialization formats (such as XML).
+    All :class:`ParameterIOHandler` subclasses currently imported are identified
+    and registered to handle different serialization formats (such as XML).
 
-    The force field definition is processed by these handlers to populate the ``ForceField`` object model data
-    structures that can easily be manipulated via the API:
+    The force field definition is processed by these handlers to populate the
+    ``ForceField`` object model data structures that can easily be manipulated
+    via the API:
 
-    Processing a :class:`Topology` object defining a chemical system will then call all :class:`ParameterHandler`
-    objects in an order guaranteed to satisfy the declared processing order constraints of each
+    Processing a :class:`Topology` object defining a chemical system will then
+    call all :class:`ParameterHandler` objects in an order guaranteed to
+    satisfy the declared processing order constraints of each
     :class:`ParameterHandler`.
 
     Examples
@@ -1222,7 +1229,9 @@ class ForceField:
             )
 
     def label_molecules(self, topology):
-        """Return labels for a list of molecules corresponding to parameters from this force field.
+        """
+        Return labels for a list of molecules corresponding to parameters from this force field.
+
         For each molecule, a dictionary of force types is returned, and for each force type,
         each force term is provided with the atoms involved, the parameter id assigned, and the corresponding SMIRKS.
 
@@ -1234,19 +1243,21 @@ class ForceField:
         Returns
         -------
         molecule_labels : list
-            List of labels for unique molecules. Each entry in the list corresponds to
-            one unique molecule in the Topology and is a dictionary keyed by force type,
-            i.e., ``molecule_labels[0]['HarmonicBondForce']`` gives details for the harmonic
-            bond parameters for the first molecule. Each element is a list of the form:
-            ``[ ( [ atom1, ..., atomN], parameter_id, SMIRKS), ... ]``.
+            List of labels for unique molecules. Each entry in the list
+            corresponds to one unique molecule in the Topology and is a
+            dictionary keyed by force type, i.e., ``molecule_labels[0]
+            ['HarmonicBondForce']`` gives details for the harmonic bond
+            parameters for the first molecule. Each element is a list of the
+            form: ``[ ( [ atom1, ..., atomN], parameter_id, SMIRKS), ... ]``.
 
-        .. todo ::
 
+        .. todo::
            What is the most useful API for this method?
-           Should we instead accept :class:`Molecule` objects as input and individually return labels?
-           Should we attach the labels to the :class:`Molecule` object?
-           Or should we label all interactions in a :class:`Topology` instead of just labeling its
-            ``unique_molecules``?
+           - Should we instead accept :class:`Molecule` objects as input and
+             individually return labels?
+           - Should we attach the labels to the :class:`Molecule` object?
+           - Or should we label all interactions in a :class:`Topology` instead
+             of just labeling its ``unique_molecules``?
 
         """
         from openff.toolkit import Topology
