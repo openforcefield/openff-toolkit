@@ -36,7 +36,6 @@ import numpy as np
 from networkx import Graph
 from numpy.typing import NDArray
 from openff.units import Quantity, ensure_quantity, unit
-from openff.utilities import requires_package
 from typing_extensions import TypeAlias
 
 from openff.toolkit.topology import Molecule
@@ -50,6 +49,7 @@ from openff.toolkit.utils.constants import (
 from openff.toolkit.utils.exceptions import (
     AtomNotInTopologyError,
     BondNotInTopologyError,
+    ConstraintExsistsError,
     DuplicateUniqueMoleculeError,
     IncompatibleUnitError,
     InvalidAromaticityModelError,
@@ -62,6 +62,7 @@ from openff.toolkit.utils.exceptions import (
 )
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
+from openff.toolkit.utils.utils import get_data_file_path, requires_package
 
 if TYPE_CHECKING:
     import mdtraj
@@ -545,7 +546,9 @@ class Topology(Serializable):
 
         if not (self.is_bonded(atom1, atom2)):
             # TODO: Raise more specific exception.
-            raise Exception(f"Atoms {atom1} and {atom2} are not bonded in topology")
+            raise NotBondedError(
+                f"Atoms {atom1} and {atom2} are not bonded in topology"
+            )
 
     @property
     def aromaticity_model(self) -> str:
@@ -1521,6 +1524,183 @@ class Topology(Serializable):
             elif not molecule.has_unique_atom_names:
                 molecule.generate_unique_atom_names()
 
+    @classmethod
+    @requires_package("openmm")
+    def from_pdb(
+        cls,
+        file_path: Union[str, TextIO],
+        unique_molecules: Optional[Iterable[Molecule]] = None,
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+    ):
+        """
+        Loads supported or user-specified molecules from a PDB file.
+
+        Currently, canonical proteins, waters, and monoatomic ions are supported
+        without CONECT records via residue and atom names, and molecules
+        specified in the ``unique_molecules`` argument are supported when
+        CONECT records are provided.
+
+        .. warning::
+            Molecules in the resulting Topology will adopt
+            the geometric stereochemistry in the PDB, even if this conflicts
+            with the stereochemistry specified in ``unique_molecules``.
+
+        All molecules in the PDB file have the following requirements:
+
+        * Polymer molecules must use the standard atom names described in the
+          `PDB Chemical Component Dictionary <https://www.wwpdb.org/data/ccd>`_
+          (PDB CCD).
+        * There must be no missing atoms (all hydrogens must be explicit).
+        * All particles must correspond to an atomic nucleus (particles in the
+          PDB representing "virtual sites" or "extra points" are not allowed).
+        * All bonds must be specified by either CONECT records, or for
+          polymers and water by the PDB CCD via the residue and atom name.
+        * CONECT records must correspond only to chemical bonds (CONECT records
+          representing an angle constraints are not allowed).
+        * CONECT records may be redundant with connectivity defined by residue
+          templates.
+
+        Currently, the only supported polymers are proteins made of the 20
+        canonical amino acids. For details on the polymer loading used here,
+        see :py:meth:`Molecule.from_polymer_pdb`.
+
+        Waters can be recognized in either of two ways:
+
+        * By the residue name "HOH" and atom names "H1", "H2", and "O".
+        * By ATOM records which include element information and CONECT records.
+
+        Monoatomic ions supported by Sage are recognized (Na+, Li+, K+, Rb+,
+        Cs+, F-, Cl-, Br-, and I-). To load other monoatomic ions, use the
+        ``unique_molecules`` keyword argument.
+
+        The ``unique_molecules`` keyword argument can be used to load arbitrary
+        molecules from the PDB file. These molecules match a group of atoms in
+        the PDB file when their atomic elements and connectivity are identical;
+        elements and CONECT records must therefore be explicitly specified in
+        the PDB file. Information missing from the PDB format, such as bond
+        orders and formal charges, is then taken from the matching unique
+        molecule. Unique molecule matches will overwrite bond order and formal
+        charge assignments from other sources. Stereochemistry is assigned
+        based on the geometry in the PDB, even if this differs from the
+        stereochemistry in the unique molecule.
+
+        A user-defined molecule in the PDB file must exactly match a unique
+        molecule to successfully load it - substructures and superstructures
+        will raise :py:exc:`UnassignedChemistryInPDBError`. Unique molecules
+        need not be present in the PDB.
+
+        Metadata such as residues, chains, and atom names are recorded in the
+        ``Atom.metadata`` attribute, which is a dictionary mapping from the
+        strings ``"residue_name"``, ``"residue_number"``, ``"insertion_code"``,
+        and ``"chain_id"`` to the appropriate value. The topology returned by
+        this method can expose residue and chain iterators which can be
+        accessed using :py:meth:`Topology.hierarchy_iterator`, such as
+        ``top.hierarchy_iterator("residues")`` and ``top.hierarchy_iterator
+        ("chains")``.
+
+        A CRYST line in the PDB, if present, will be interpreted as periodic
+        box vectors in Angstroms.
+
+        Parameters
+        ----------
+        file_path : str or file object
+            PDB information to be passed to OpenMM PDBFile object for loading
+        unique_molecules : Iterable of Molecule. Default = None
+            OpenFF Molecule objects corresponding to the molecules in the input
+            PDB. See above for details.
+        toolkit_registry : ToolkitRegistry. Default = None
+            The ToolkitRegistry to use as the cheminformatics backend.
+
+        Returns
+        -------
+        topology : openff.toolkit.topology.Topology
+
+        Raises
+        ------
+
+        UnassignedChemistryInPDBError
+            If an atom or bond could not be assigned; the exception will
+            provide a detailed diagnostic of what went wrong.
+
+        Examples
+        --------
+
+        >>> from openff.toolkit import Topology
+        >>> from openff.toolkit.utils import get_data_file_path
+        >>> top = Topology.from_pdb(get_data_file_path("proteins/TwoMol_SER_CYS.pdb"))
+        >>> # The molecules in the loaded topology are full-fledged OpenFF Molecule objects
+        >>> for match in top.chemical_environment_matches('[O:1]=[C:2][N:3][H:4]'): print(match.topology_atom_indices)
+        (1, 0, 6, 13)
+        (9, 8, 17, 19)
+        (24, 23, 29, 36)
+        (32, 31, 40, 42)
+        >>> [*top.hierarchy_iterator("residues")]
+        [HierarchyElement ('A', '1', ' ', 'ACE') of iterator 'residues' containing 6 atom(s),
+         HierarchyElement ('A', '2', ' ', 'SER') of iterator 'residues' containing 11 atom(s),
+         HierarchyElement ('A', '3', ' ', 'NME') of iterator 'residues' containing 6 atom(s),
+         HierarchyElement ('B', '1', ' ', 'ACE') of iterator 'residues' containing 6 atom(s),
+         HierarchyElement ('B', '2', ' ', 'CYS') of iterator 'residues' containing 11 atom(s),
+         HierarchyElement ('B', '3', ' ', 'NME') of iterator 'residues' containing 6 atom(s)]
+
+        """
+        import json
+
+        import openmm.unit as openmm_unit
+        from openmm.app import PDBFile
+
+        pdb = PDBFile(file_path)
+
+        substructure_file_path = get_data_file_path(
+            "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
+        )
+
+        with open(substructure_file_path, "r") as subfile:
+            substructure_dictionary = json.load(subfile)
+        substructure_dictionary["HOH"] = {"[H:1][O:2][H:3]": ["H1", "O", "H2"]}
+        substructure_dictionary["Li"] = {"[Li+1:1]": ["Li"]}
+        substructure_dictionary["Na"] = {"[Na+1:1]": ["Na"]}
+        substructure_dictionary["K"] = {"[K+1:1]": ["K"]}
+        substructure_dictionary["Rb"] = {"[Rb+1:1]": ["Rb"]}
+        substructure_dictionary["Cs"] = {"[Cs+1:1]": ["Cs"]}
+        substructure_dictionary["F"] = {"[F-1:1]": ["F"]}
+        substructure_dictionary["Cl"] = {"[Cl-1:1]": ["Cl"]}
+        substructure_dictionary["Br"] = {"[Br-1:1]": ["Br"]}
+        substructure_dictionary["I"] = {"[I-1:1]": ["I"]}
+
+        if not (unique_molecules):
+            unique_molecules = []
+
+        substructure_dictionary["UNIQUE_MOLECULE"] = {}
+
+        for unique_molecule in unique_molecules:
+            mapped_smiles = unique_molecule.to_smiles(mapped=True)
+            substructure_dictionary["UNIQUE_MOLECULE"][mapped_smiles] = [
+                a.name for a in unique_molecule.atoms
+            ]
+
+        coords_angstrom = np.array(
+            [[*vec3.value_in_unit(openmm_unit.angstrom)] for vec3 in pdb.getPositions()]
+        )
+
+        topology = toolkit_registry.call(
+            "_polymer_openmm_pdbfile_to_offtop",
+            cls,
+            pdb,
+            substructure_dictionary,
+            coords_angstrom,
+        )
+
+        for off_atom, atom in zip([*topology.atoms], pdb.topology.atoms()):
+            off_atom.metadata["residue_name"] = atom.residue.name
+            off_atom.metadata["residue_number"] = atom.residue.id
+            off_atom.metadata["insertion_code"] = atom.residue.insertionCode
+            off_atom.metadata["chain_id"] = atom.residue.chain.id
+
+        for offmol in topology.molecules:
+            offmol.add_default_hierarchy_schemes()
+
+        return topology
+
     @requires_package("openmm")
     def to_openmm(self, ensure_unique_atom_names: Union[str, bool] = "residues"):
         """
@@ -2182,7 +2362,7 @@ class Topology(Serializable):
                     openmm_atom_to_oe_atom[openmm_at] = oe_atom
 
         if self.n_atoms != oe_mol.NumAtoms():
-            raise Exception(
+            raise RuntimeError(
                 "OEMol has an unexpected number of atoms: Topology has {self.n_atoms} atoms while OEMol has "
                 "{oe_mol.NumAtoms()} atoms."
             )
@@ -2244,7 +2424,7 @@ class Topology(Serializable):
             atomi = i
             atomj = j
         else:
-            raise Exception(
+            raise ValueError(
                 "Invalid input passed to is_bonded(). Expected ints or TopologyAtoms, "
                 "got {} and {}".format(i, j)
             )
@@ -2397,12 +2577,12 @@ class Topology(Serializable):
         if (iatom, jatom) in self._constrained_atom_pairs:
             existing_distance = self._constrained_atom_pairs[(iatom, jatom)]
             if isinstance(existing_distance, unit.Quantity) and distance is True:
-                raise Exception(
+                raise ConstraintExsistsError(
                     f"Atoms ({iatom},{jatom}) already constrained with distance {existing_distance} "
                     "but attempting to override with unspecified distance"
                 )
             if (existing_distance is True) and (distance is True):
-                raise Exception(
+                raise ConstraintExsistsError(
                     f"Atoms ({iatom},{jatom}) already constrained with unspecified distance "
                     "but attempting to override with unspecified distance"
                 )

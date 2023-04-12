@@ -28,6 +28,7 @@ from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ConformerGenerationError,
     InvalidAromaticityModelError,
+    MoleculeParseError,
     NotAttachedToMoleculeError,
     RadicalsNotSupportedError,
     SMILESParseError,
@@ -273,12 +274,68 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return new_mol
 
-    def _polymer_openmm_topology_to_offmol(self, omm_top, substructure_dictionary):
+    def _polymer_openmm_topology_to_offmol(
+        self, molecule_class, omm_top, substructure_dictionary
+    ):
         rdkit_mol = self._polymer_openmm_topology_to_rdmol(
             omm_top, substructure_dictionary
         )
-        offmol = self.from_rdkit(rdkit_mol, allow_undefined_stereo=True)
+        offmol = molecule_class.from_rdkit(rdkit_mol, allow_undefined_stereo=True)
         return offmol
+
+    def _polymer_openmm_pdbfile_to_offtop(
+        self, topology_class, pdbfile, substructure_dictionary, coords_angstrom
+    ):
+        from openff.units.openmm import from_openmm
+        from rdkit import Chem, Geometry
+
+        omm_top = pdbfile.topology
+        rdkit_mol = self._polymer_openmm_topology_to_rdmol(
+            omm_top, substructure_dictionary
+        )
+
+        rdmol_conformer = Chem.Conformer()
+        for atom_idx in range(rdkit_mol.GetNumAtoms()):
+            x, y, z = coords_angstrom[atom_idx, :]
+            rdmol_conformer.SetAtomPosition(atom_idx, Geometry.Point3D(x, y, z))
+        rdkit_mol.AddConformer(rdmol_conformer, assignId=True)
+        Chem.SanitizeMol(
+            rdkit_mol,
+            Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS,
+        )
+        Chem.AssignStereochemistryFrom3D(rdkit_mol)
+        Chem.Kekulize(rdkit_mol, clearAromaticFlags=True)
+        Chem.SetAromaticity(rdkit_mol, Chem.AromaticityModel.AROMATICITY_MDL)
+
+        # Don't sanitize or we risk assigning non-MDL aromaticity
+        rdmols = Chem.GetMolFrags(rdkit_mol, asMols=True, sanitizeFrags=False)
+        top = topology_class()
+
+        # Identify unique molecules and only run from_rdkit on them once.
+        # Note that this identity comparison COULD match two chemically equivalent
+        # atoms with different atom names, but that doesn't matter because we do
+        # the metadata assignment and coordinate setting outside this method, so
+        # as long as a chemically equivalent atom is sitting at the right index
+        # in the topology when the metadata is assigned there's no difference.
+        smiles2offmol = dict()
+        for rdmol in rdmols:
+            # Make a copy of the molecule to assign atom maps, since
+            # otherwise the atom maps will mess with stereo assignment.
+            mapped_rdmol = Chem.Mol(rdmol)
+            for atom in mapped_rdmol.GetAtoms():
+                # the mapping must start from 1, as RDKit uses 0 to represent no mapping.
+                atom.SetAtomMapNum(atom.GetIdx() + 1)
+            mapped_smi = Chem.MolToSmiles(mapped_rdmol)
+            if mapped_smi in smiles2offmol.keys():
+                offmol = copy.deepcopy(smiles2offmol[mapped_smi])
+            else:
+                offmol = self.from_rdkit(rdmol, allow_undefined_stereo=True)
+                smiles2offmol[mapped_smi] = copy.deepcopy(offmol)
+            top._add_molecule_keep_cache(offmol)
+        if pdbfile.topology.getPeriodicBoxVectors() is not None:
+            top.box_vectors = from_openmm(pdbfile.topology.getPeriodicBoxVectors())
+
+        return top
 
     def _polymer_openmm_topology_to_rdmol(
         self,
@@ -320,7 +377,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         rdkit_mol = self._get_connectivity_from_openmm_top(omm_top)
         mol = Chem.Mol(rdkit_mol)
-
+        # Get a tuple of tuples of atom indices belonging to separate molecules in this RDMol
+        # (note that this rdmol may actually be a solvated protein-ligand system)
+        sorted_mol_frags = [tuple(sorted(i)) for i in Chem.GetMolFrags(mol)]
         for res_name in substructure_library:
             # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes
             # so it just does the biggest substructures first
@@ -334,16 +393,24 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 # then create a looser definition for pattern matching...
                 # be lax about double bonds and chirality
                 fuzzy = self._fuzzy_query(ref)
-
                 # It's important that we do the substructure search on `rdkit_mol`, but the chemical
                 # info is added to `mol`. If we use the same rdkit molecule for search AND info addition,
                 # then single bonds may no longer be present for subsequent overlapping matches.
                 for match in rdkit_mol.GetSubstructMatches(fuzzy, maxMatches=0):
+                    # Keep track of all residue names that have been assigned to
+                    # each atom, for use in generating a useful error message later
                     for i in match:
                         matches[i].append(res_name)
 
+                    # Unique molecule matches should only apply if they match entire molecule
+                    if res_name == "UNIQUE_MOLECULE":
+                        sorted_match = tuple(sorted(match))
+                        if sorted_match not in sorted_mol_frags:
+                            continue
+
+                    # Some special residues are allowed to overlap/override previous matches
                     if any(m in already_assigned_nodes for m in match) and (
-                        res_name not in ["PEPTIDE_BOND", "DISULFIDE"]
+                        res_name not in ["PEPTIDE_BOND", "DISULFIDE", "UNIQUE_MOLECULE"]
                     ):
                         continue
                     already_assigned_nodes.update(match)
@@ -418,11 +485,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             atom.SetNoImplicit(True)
         for bond in omm_top.bonds():
             rwmol.AddBond(bond[0].index, bond[1].index, Chem.BondType.SINGLE)
-
-        # conf = Chem.Conformer()
-        # for i, pos in enumerate(omm_top.getPositions()):
-        #     conf.SetAtomPosition(i, list(pos.value_in_unit(pos.unit)))
-        # rwmol.AddConformer(conf)
 
         return rwmol
 
@@ -574,7 +636,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 mols.append(mol)
 
         elif file_format == "PDB":
-            raise Exception(
+            raise MoleculeParseError(
                 "RDKit can not safely read PDBs on their own. Information about bond order "
                 "and aromaticity is likely to be lost. To read a PDB using RDKit use "
                 "Molecule.from_pdb_and_smiles()"
@@ -666,7 +728,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 )
 
         elif file_format == "PDB":
-            raise Exception(
+            raise MoleculeParseError(
                 "RDKit can not safely read PDBs on their own. Information about bond order and aromaticity "
                 "is likely to be lost. To read a PDB using RDKit use Molecule.from_pdb_and_smiles()"
             )
