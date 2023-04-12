@@ -4138,8 +4138,7 @@ class TestMoleculeFromPDB:
             match=(
                 r"Note: 'HOH' is a residue code for water. You may have "
                 + r"crystallographic waters in your PDB file. Please remove "
-                + r"these before proceeding; they can be added back to the "
-                + r"topology later."
+                + r"these before proceeding, or use Topology.from_pdb\."
             ),
         ):
             Molecule.from_polymer_pdb(
@@ -4172,21 +4171,20 @@ class TestMoleculeFromPDB:
                 + r"in protonation state or bond order\. Try generating "
                 + r"hydrogens with another package and trying again\."
                 + r"\n\n"
-                + r"Hint: The input has multiple chain identifiers\. The "
-                + r"OpenFF Toolkit only supports single-molecule PDB files\. "
-                + r"Please split the file into individual chains and load "
-                + r"each seperately\."
-                + r"\n\n"
+                + r"Hint: The input has multiple chain identifiers\. The OpenFF "
+                + r"Toolkit Molecule.from_polymer_pdb method only supports "
+                + r"single-molecule PDB files\. Please use Topology.from\_pdb "
+                + r"or split the file into individual chains and load each "
+                + r"separately\.\n\n"
                 + r"Hint: The following residue names with unassigned atoms "
                 + r"were not found in the substructure library\. While the "
                 + r"OpenFF Toolkit identifies residues by matching chemical "
                 + r"substructures rather than by residue name, it currently "
                 + r"only supports the 20 'canonical' amino acids\.\n"
-                + r"(    EPE\n    HOH\n)|(    HOH\n    EPE\n)"
+                + r"    EPE\n    HOH\n"
                 + r"Note: 'HOH' is a residue code for water\. You may have "
                 + r"crystallographic waters in your PDB file\. Please remove "
-                + r"these before proceeding; they can be added back to the "
-                + r"topology later\."
+                + r"these before proceeding, or use Topology.from_pdb\."
             ),
         ):
             Molecule.from_polymer_pdb(

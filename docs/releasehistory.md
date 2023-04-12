@@ -8,6 +8,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### New features
+- [PR #1565](https://github.com/openforcefield/openff-toolkit/pull/1565): Adds :py:meth:`Topology.from_pdb`
+
 ### Behavior changes
 - [PR #1569](https://github.com/openforcefield/openff-toolkit/pull/1569): Several instances of `Exception` being raised are now replaced with other exceptions being raised.
 

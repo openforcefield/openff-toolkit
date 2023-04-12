@@ -3826,6 +3826,9 @@ class FrozenMolecule(Serializable):
         """
         Loads a polymer from a PDB file.
 
+        Also see :py:meth:`Topology.from_multicomponent_pdb`, which can do
+        everything this method can and more.
+
         Currently only supports proteins with canonical amino acids that are
         either uncapped or capped by ACE/NME groups, but may later be extended
         to handle other common polymers, or accept user-defined polymer
@@ -3884,7 +3887,10 @@ class FrozenMolecule(Serializable):
             substructure_dictionary = json.load(subfile)
 
         offmol = toolkit_registry.call(
-            "_polymer_openmm_topology_to_offmol", pdb.topology, substructure_dictionary
+            "_polymer_openmm_topology_to_offmol",
+            cls,
+            pdb.topology,
+            substructure_dictionary,
         )
 
         coords = unit.Quantity(

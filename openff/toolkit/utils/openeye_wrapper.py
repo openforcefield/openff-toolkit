@@ -257,9 +257,11 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             "Cannot create Molecule from {} object".format(type(obj))
         )
 
-    def _polymer_openmm_topology_to_offmol(self, omm_top, substructure_dictionary):
+    def _polymer_openmm_topology_to_offmol(
+        self, mol_class, omm_top, substructure_dictionary
+    ):
         oemol = self._polymer_openmm_topology_to_oemol(omm_top, substructure_dictionary)
-        offmol = self.from_openeye(oemol, allow_undefined_stereo=True)
+        offmol = mol_class.from_openeye(oemol, allow_undefined_stereo=True)
         return offmol
 
     def _polymer_openmm_topology_to_oemol(
