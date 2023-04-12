@@ -1372,9 +1372,10 @@ class ForceField:
                 f"{type(molecule)}"
             )
 
+        # Bad type annotation in Interchange, expect to be fixed in 0.3.1
         return unit.Quantity(
             [
-                c.m
+                c.m  # type: ignore[union-attr]
                 for c in Interchange.from_smirnoff(
                     force_field=self, topology=[molecule], **kwargs
                 )["Electrostatics"].charges.values()
