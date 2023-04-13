@@ -92,7 +92,7 @@ intersphinx_mapping = {
         None,
     ),
     "openff.docs": (
-        "https://docs.openforcefield.org/",
+        "https://docs.openforcefield.org/en/latest/",
         None,
     ),
 }

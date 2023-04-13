@@ -30,7 +30,7 @@ $ conda activate openff-toolkit
 Installation via the Conda package manager is the preferred method since all dependencies are automatically fetched and installed for you.
 :::
 
-[ecosystem installation documentation]: openff.docs:installation
+[ecosystem installation documentation]: openff.docs:install
 
 (installation/platforms)=
 
