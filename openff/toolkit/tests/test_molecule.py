@@ -41,6 +41,7 @@ from openff.toolkit.tests.utils import (
 )
 from openff.toolkit.topology.molecule import (
     Atom,
+    Bond,
     BondExistsError,
     FrozenMolecule,
     HierarchyElement,
@@ -426,11 +427,33 @@ class TestAtom:
 
 
 class TestBond:
-    def test_float_bond_order(self):
+    @pytest.fixture()
+    def bond(self):
+        return create_ethanol().bond(0)
+
+    def test_cannot_change_molecule(self, bond):
+        with pytest.raises(
+            AssertionError,
+            match="Bond.molecule is already set and can only be set once",
+        ):
+            bond.molecule = create_reversed_ethanol()
+
+    def test_initialize_from_dict(self):
         molecule = create_ethanol()
 
+        bond = Bond.from_dict(molecule=molecule, d=molecule.bond(0).to_dict())
+
+        assert bond.atom1_index == 0
+        assert bond.atom2_index == 1
+        assert bond.atom1.atomic_number == 6
+        assert bond.atom2.atomic_number == 6
+
+    def test_set_bond_order(self, bond):
+        bond.bond_order = 2
+
+    def test_float_bond_order(self, bond):
         with pytest.raises(InvalidBondOrderError):
-            molecule.bond(0).bond_order = 1.2
+            bond.bond_order = 1.2
 
 
 class TestMolecule:
@@ -1105,6 +1128,18 @@ class TestMolecule:
 
         assert Molecule.are_isomorphic(
             cholesterol, Molecule.from_iupac(cholesterol_iupac)
+        )
+
+    @requires_openeye
+    def test_to_from_iupac_wrapper(self):
+        """Test that IUPAC methods work if passed just `OpenEyeToolkitWrapper`."""
+        from openff.toolkit.utils import OpenEyeToolkitWrapper
+
+        assert (
+            Molecule.from_iupac(
+                "benzene", toolkit_registry=OpenEyeToolkitWrapper()
+            ).to_iupac(toolkit_registry=OpenEyeToolkitWrapper())
+            == "benzene"
         )
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
@@ -4126,8 +4161,7 @@ class TestMoleculeFromPDB:
             match=(
                 r"Note: 'HOH' is a residue code for water. You may have "
                 + r"crystallographic waters in your PDB file. Please remove "
-                + r"these before proceeding; they can be added back to the "
-                + r"topology later."
+                + r"these before proceeding, or use Topology.from_pdb\."
             ),
         ):
             Molecule.from_polymer_pdb(
@@ -4160,21 +4194,20 @@ class TestMoleculeFromPDB:
                 + r"in protonation state or bond order\. Try generating "
                 + r"hydrogens with another package and trying again\."
                 + r"\n\n"
-                + r"Hint: The input has multiple chain identifiers\. The "
-                + r"OpenFF Toolkit only supports single-molecule PDB files\. "
-                + r"Please split the file into individual chains and load "
-                + r"each seperately\."
-                + r"\n\n"
+                + r"Hint: The input has multiple chain identifiers\. The OpenFF "
+                + r"Toolkit Molecule.from_polymer_pdb method only supports "
+                + r"single-molecule PDB files\. Please use Topology.from\_pdb "
+                + r"or split the file into individual chains and load each "
+                + r"separately\.\n\n"
                 + r"Hint: The following residue names with unassigned atoms "
                 + r"were not found in the substructure library\. While the "
                 + r"OpenFF Toolkit identifies residues by matching chemical "
                 + r"substructures rather than by residue name, it currently "
                 + r"only supports the 20 'canonical' amino acids\.\n"
-                + r"(    EPE\n    HOH\n)|(    HOH\n    EPE\n)"
+                + r"    EPE\n    HOH\n"
                 + r"Note: 'HOH' is a residue code for water\. You may have "
                 + r"crystallographic waters in your PDB file\. Please remove "
-                + r"these before proceeding; they can be added back to the "
-                + r"topology later\."
+                + r"these before proceeding, or use Topology.from_pdb\."
             ),
         ):
             Molecule.from_polymer_pdb(
