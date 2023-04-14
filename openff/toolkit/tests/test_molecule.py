@@ -1718,6 +1718,19 @@ class TestMolecule:
             "CCC[N@@](C)CC"
         )
 
+    def test_short_circuit_heterogeneous_input(self):
+        from openff.toolkit.topology._mm_molecule import _SimpleMolecule
+
+        assert not Molecule.are_isomorphic(
+            create_ethanol(),
+            _SimpleMolecule.from_molecule(create_ethanol()),
+        )[0]
+
+        assert not Molecule.are_isomorphic(
+            _SimpleMolecule.from_molecule(create_ethanol()),
+            create_ethanol(),
+        )[0]
+
     class TestRemap:
         """Tests for the ``Molecule.remap()`` method"""
 

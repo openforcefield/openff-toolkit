@@ -1,70 +1,76 @@
 import numpy as np
 import pytest
 
+from openff.toolkit.tests.create_molecules import create_ethanol
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.toolkit.topology.molecule import Molecule
 
 
+@pytest.fixture()
+def water():
+    water = _SimpleMolecule()
+    water.add_atom(atomic_number=8)
+    water.add_atom(atomic_number=1)
+    water.add_atom(atomic_number=1)
+    water.add_bond(0, 1)
+    water.add_bond(0, 2)
+
+    return water
+
+
+@pytest.fixture()
+def methane():
+    methane = _SimpleMolecule()
+    methane.add_atom(atomic_number=6)
+    methane.add_atom(atomic_number=1)
+    methane.add_atom(atomic_number=1)
+    methane.add_atom(atomic_number=1)
+    methane.add_atom(atomic_number=1)
+    methane.add_bond(0, 1)
+    methane.add_bond(0, 2)
+    methane.add_bond(0, 3)
+    methane.add_bond(0, 4)
+
+    return methane
+
+
+@pytest.fixture()
+def methanol():
+    methanol = _SimpleMolecule()
+    methanol.add_atom(atomic_number=8)
+    methanol.add_atom(atomic_number=6)
+    methanol.add_atom(atomic_number=1)
+    methanol.add_atom(atomic_number=1)
+    methanol.add_atom(atomic_number=1)
+    methanol.add_bond(0, 1)
+    methanol.add_bond(1, 2)
+    methanol.add_bond(1, 3)
+    methanol.add_bond(1, 4)
+
+    return methanol
+
+
+@pytest.fixture()
+def molecule_with_zero_atom():
+    molecule = _SimpleMolecule()
+    molecule.add_atom(atomic_number=6)
+    molecule.add_atom(atomic_number=0)
+    molecule.add_bond(0, 1)
+
+    return molecule
+
+
+@pytest.fixture()
+def molecule_with_bogus_atom():
+    molecule = _SimpleMolecule()
+    molecule.add_atom(atomic_number=6)
+    molecule.add_atom(atomic_number=-1)
+    molecule.add_bond(0, 1)
+
+    return molecule
+
+
 class TestMMMolecule:
-    @pytest.fixture()
-    def water(self):
-        water = _SimpleMolecule()
-        water.add_atom(atomic_number=8)
-        water.add_atom(atomic_number=1)
-        water.add_atom(atomic_number=1)
-        water.add_bond(0, 1)
-        water.add_bond(0, 2)
-
-        return water
-
-    @pytest.fixture()
-    def methane(self):
-        methane = _SimpleMolecule()
-        methane.add_atom(atomic_number=6)
-        methane.add_atom(atomic_number=1)
-        methane.add_atom(atomic_number=1)
-        methane.add_atom(atomic_number=1)
-        methane.add_atom(atomic_number=1)
-        methane.add_bond(0, 1)
-        methane.add_bond(0, 2)
-        methane.add_bond(0, 3)
-        methane.add_bond(0, 4)
-
-        return methane
-
-    @pytest.fixture()
-    def methanol(self):
-        methanol = _SimpleMolecule()
-        methanol.add_atom(atomic_number=8)
-        methanol.add_atom(atomic_number=6)
-        methanol.add_atom(atomic_number=1)
-        methanol.add_atom(atomic_number=1)
-        methanol.add_atom(atomic_number=1)
-        methanol.add_bond(0, 1)
-        methanol.add_bond(1, 2)
-        methanol.add_bond(1, 3)
-        methanol.add_bond(1, 4)
-
-        return methanol
-
-    @pytest.fixture()
-    def molecule_with_zero_atom(self):
-        molecule = _SimpleMolecule()
-        molecule.add_atom(atomic_number=6)
-        molecule.add_atom(atomic_number=0)
-        molecule.add_bond(0, 1)
-
-        return molecule
-
-    @pytest.fixture()
-    def molecule_with_bogus_atom(self):
-        molecule = _SimpleMolecule()
-        molecule.add_atom(atomic_number=6)
-        molecule.add_atom(atomic_number=-1)
-        molecule.add_bond(0, 1)
-
-        return molecule
-
     def test_create_water(self):
         water = _SimpleMolecule()
         water.add_atom(atomic_number=8)
@@ -143,10 +149,31 @@ class TestMMMolecule:
             found = converted.atom(atom_index).atomic_number
             assert found == expected_atomic_numbers[atom_index]
 
+
+class TestIsomorphism:
     def test_are_isomorphic(self, water, methane, methanol):
-        assert Molecule.are_isomorphic(water, water)[0]
-        assert Molecule.are_isomorphic(methane, methane)[0]
-        assert Molecule.are_isomorphic(methanol, methanol)[0]
-        assert not Molecule.are_isomorphic(water, methane)[0]
-        assert not Molecule.are_isomorphic(water, methanol)[0]
-        assert not Molecule.are_isomorphic(methane, methanol)[0]
+        assert _SimpleMolecule.are_isomorphic(water, water)[0]
+        assert _SimpleMolecule.are_isomorphic(methane, methane)[0]
+        assert _SimpleMolecule.are_isomorphic(methanol, methanol)[0]
+        assert not _SimpleMolecule.are_isomorphic(water, methane)[0]
+        assert not _SimpleMolecule.are_isomorphic(water, methanol)[0]
+        assert not _SimpleMolecule.are_isomorphic(methane, methanol)[0]
+
+    def test_is_isomorphic_with(self, water, methane, methanol):
+        assert water.is_isomorphic_with(water)
+        assert methane.is_isomorphic_with(methane)
+        assert methanol.is_isomorphic_with(methanol)
+        assert not water.is_isomorphic_with(methane)
+        assert not water.is_isomorphic_with(methanol)
+        assert not methane.is_isomorphic_with(methanol)
+
+    def test_short_circuit_heterogeneous_input(self):
+        assert not _SimpleMolecule.are_isomorphic(
+            create_ethanol(),
+            _SimpleMolecule.from_molecule(create_ethanol()),
+        )[0]
+
+        assert not _SimpleMolecule.are_isomorphic(
+            _SimpleMolecule.from_molecule(create_ethanol()),
+            create_ethanol(),
+        )[0]

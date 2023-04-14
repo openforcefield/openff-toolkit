@@ -315,7 +315,7 @@ class _SimpleMolecule:
 
     def is_isomorphic_with(
         self, other: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"], **kwargs
-    ):
+    ) -> bool:
         """
         Check for pseudo-isomorphism.
 
@@ -339,19 +339,18 @@ class _SimpleMolecule:
         mol2: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"],
         return_atom_map: bool = False,
     ) -> Tuple[bool, Optional[Dict[int, int]]]:
-        if return_atom_map:
-            raise NotImplementedError(
-                "The _SimpleMolecule does not currently support atom mapping."
-            )
+        import networkx as nx
 
-        # static methods (by definition) know nothing about their class,
-        # so the class to compare to must be hard-coded here
-        if not issubclass(type(mol2), _SimpleMolecule):
-            return False, None
-        if not (
-            isinstance(mol1, _SimpleMolecule) and isinstance(mol2, _SimpleMolecule)
-        ):
-            return False, None
+        if isinstance(mol1, nx.Graph) and isinstance(mol2, nx.Graph):
+            pass
+
+        else:
+            # static methods (by definition) know nothing about their class,
+            # so the class to compare to must be hard-coded here
+            if not (
+                isinstance(mol1, _SimpleMolecule) and isinstance(mol2, _SimpleMolecule)
+            ):
+                return False, None
 
         if mol1.n_atoms != mol2.n_atoms:
             return False, None
@@ -359,11 +358,15 @@ class _SimpleMolecule:
         if mol1.n_bonds != mol2.n_bonds:
             return False, None
 
-        for this_atom, other_atom in zip(mol1.atoms, mol1.atoms):
+        for this_atom, other_atom in zip(mol1.atoms, mol2.atoms, strict=True):
             if this_atom.atomic_number != other_atom.atomic_number:
                 return False, None
 
-        return True, None
+        # These objects don't have well-defined atom indices, so just return 1:1 mapping
+        if return_atom_map:
+            return True, {index: index for index in range(mol1.n_atoms)}
+        else:
+            return True, None
 
     def generate_unique_atom_names(self):
         """Generate unique atom names. See `Molecule.generate_unique_atom_names`."""

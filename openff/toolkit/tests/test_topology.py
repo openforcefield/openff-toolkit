@@ -42,6 +42,7 @@ from openff.toolkit.topology import (
     Topology,
     ValenceDict,
 )
+from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.toolkit.utils import (
     BASIC_CHEMINFORMATICS_TOOLKITS,
     OPENEYE_AVAILABLE,
@@ -105,6 +106,18 @@ def test_cheminformatics_toolkit_is_installed():
         msg = "No supported cheminformatics toolkits are installed. Please install a supported toolkit:\n"
         msg += str(BASIC_CHEMINFORMATICS_TOOLKITS)
         raise Exception(msg)
+
+
+@pytest.fixture()
+def mixed_topology():
+    return Topology.from_molecules(
+        [
+            create_ethanol(),
+            create_ethanol(),
+            _SimpleMolecule.from_molecule(create_ethanol()),
+            _SimpleMolecule.from_molecule(create_ethanol()),
+        ]
+    )
 
 
 # TODO: Refactor this to pytest
@@ -1522,6 +1535,9 @@ class TestTopology:
         assert_reversed_ethanol_is_grouped_correctly(groupings)
         assert_cyclohexane_is_grouped_correctly(groupings)
         assert_last_ethanol_is_grouped_correctly(groupings)
+
+    def test_identical_molecule_groups_mixed_topology(self, mixed_topology):
+        assert len(mixed_topology.identical_molecule_groups) == 2
 
     @requires_openeye
     def test_chemical_environments_matches_OE(self):

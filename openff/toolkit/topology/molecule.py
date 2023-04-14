@@ -1956,16 +1956,21 @@ class FrozenMolecule(Serializable):
             [Dict[int,int]] ordered by mol1 indexing {mol1_index: mol2_index}
             If molecules are not isomorphic given input arguments, will return None instead of dict.
         """
-        # static methods (by definition) know nothing about their class,
-        # so the class to compare to must be hard-coded here
-        if not (isinstance(mol1, FrozenMolecule) and isinstance(mol2, FrozenMolecule)):
-            return False, None
+        import networkx as nx
+
+        if isinstance(mol1, nx.Graph) and isinstance(mol2, nx.Graph):
+            pass
+        else:
+            # static methods (by definition) know nothing about their class,
+            # so the class to compare to must be hard-coded here
+            if not (
+                isinstance(mol1, FrozenMolecule) and isinstance(mol2, FrozenMolecule)
+            ):
+                return False, None
 
         from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 
         def _object_to_n_atoms(obj):
-            import networkx as nx
-
             # if hasattr(obj, "n_atoms") would also work, but possibly be too permissive
             if isinstance(obj, (FrozenMolecule, _SimpleMolecule)):
                 return obj.n_atoms
@@ -2035,8 +2040,6 @@ class FrozenMolecule(Serializable):
         # Here we should work out what data type we have, also deal with lists?
         def to_networkx(data: Union[FrozenMolecule, nx.Graph]) -> nx.Graph:
             """For the given data type, return the networkx graph"""
-            import networkx as nx
-
             if strip_pyrimidal_n_atom_stereo:
                 SMARTS = "[N+0X3:1](-[*])(-[*])(-[*])"
 
@@ -2085,7 +2088,7 @@ class FrozenMolecule(Serializable):
 
     def is_isomorphic_with(
         self, other: Union["FrozenMolecule", "_SimpleMolecule", nx.Graph], **kwargs
-    ):
+    ) -> bool:
         """
         Check if the molecule is isomorphic with the other molecule which can be an openff.toolkit.topology.Molecule
         or nx.Graph(). Full matching is done using the options described bellow.
