@@ -341,15 +341,21 @@ class _SimpleMolecule:
     ) -> Tuple[bool, Optional[Dict[int, int]]]:
         import networkx as nx
 
+        _cls = _SimpleMolecule
+
         if isinstance(mol1, nx.Graph) and isinstance(mol2, nx.Graph):
             pass
+
+        elif isinstance(mol1, nx.Graph):
+            assert isinstance(mol2, _cls)
+
+        elif isinstance(mol2, nx.Graph):
+            assert isinstance(mol1, _cls)
 
         else:
             # static methods (by definition) know nothing about their class,
             # so the class to compare to must be hard-coded here
-            if not (
-                isinstance(mol1, _SimpleMolecule) and isinstance(mol2, _SimpleMolecule)
-            ):
+            if not (isinstance(mol1, _cls) and isinstance(mol2, _cls)):
                 return False, None
 
         if mol1.n_atoms != mol2.n_atoms:
@@ -358,7 +364,7 @@ class _SimpleMolecule:
         if mol1.n_bonds != mol2.n_bonds:
             return False, None
 
-        for this_atom, other_atom in zip(mol1.atoms, mol2.atoms, strict=True):
+        for this_atom, other_atom in zip(mol1.atoms, mol2.atoms):
             if this_atom.atomic_number != other_atom.atomic_number:
                 return False, None
 

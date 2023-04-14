@@ -1958,17 +1958,22 @@ class FrozenMolecule(Serializable):
         """
         import networkx as nx
 
+        _cls = FrozenMolecule
+
         if isinstance(mol1, nx.Graph) and isinstance(mol2, nx.Graph):
             pass
+
+        elif isinstance(mol1, nx.Graph):
+            assert isinstance(mol2, _cls)
+
+        elif isinstance(mol2, nx.Graph):
+            assert isinstance(mol1, _cls)
+
         else:
             # static methods (by definition) know nothing about their class,
             # so the class to compare to must be hard-coded here
-            if not (
-                isinstance(mol1, FrozenMolecule) and isinstance(mol2, FrozenMolecule)
-            ):
+            if not (isinstance(mol1, _cls) and isinstance(mol2, _cls)):
                 return False, None
-
-        from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 
         def _object_to_n_atoms(obj):
             if isinstance(obj, FrozenMolecule):
@@ -3460,15 +3465,11 @@ class FrozenMolecule(Serializable):
         return self._hill_formula
 
     @staticmethod
-    def _object_to_hill_formula(
-        obj: Union["FrozenMolecule", "nx.Graph"]
-    ) -> str:
+    def _object_to_hill_formula(obj: Union["FrozenMolecule", "nx.Graph"]) -> str:
         """Take a Molecule or NetworkX graph and generate its Hill formula.
         This provides a backdoor to the old functionality of Molecule.to_hill_formula, which
         was a static method that duck-typed inputs of Molecule or graph objects."""
         import networkx as nx
-
-        from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 
         if isinstance(obj, FrozenMolecule):
             return obj.to_hill_formula()
