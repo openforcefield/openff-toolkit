@@ -18,6 +18,36 @@ class TestMMMolecule:
         return water
 
     @pytest.fixture()
+    def methane(self):
+        methane = _SimpleMolecule()
+        methane.add_atom(atomic_number=6)
+        methane.add_atom(atomic_number=1)
+        methane.add_atom(atomic_number=1)
+        methane.add_atom(atomic_number=1)
+        methane.add_atom(atomic_number=1)
+        methane.add_bond(0, 1)
+        methane.add_bond(0, 2)
+        methane.add_bond(0, 3)
+        methane.add_bond(0, 4)
+
+        return methane
+
+    @pytest.fixture()
+    def methanol(self):
+        methanol = _SimpleMolecule()
+        methanol.add_atom(atomic_number=8)
+        methanol.add_atom(atomic_number=6)
+        methanol.add_atom(atomic_number=1)
+        methanol.add_atom(atomic_number=1)
+        methanol.add_atom(atomic_number=1)
+        methanol.add_bond(0, 1)
+        methanol.add_bond(1, 2)
+        methanol.add_bond(1, 3)
+        methanol.add_bond(1, 4)
+
+        return methanol
+
+    @pytest.fixture()
     def molecule_with_zero_atom(self):
         molecule = _SimpleMolecule()
         molecule.add_atom(atomic_number=6)
@@ -112,3 +142,19 @@ class TestMMMolecule:
         for atom_index in range(converted.n_atoms):
             found = converted.atom(atom_index).atomic_number
             assert found == expected_atomic_numbers[atom_index]
+
+    def test_are_isomorphic(self, water, methane, methanol):
+        kwargs = {
+            "aromatic_matching": False,
+            "formal_charge_matching": False,
+            "bond_order_matching": False,
+            "atom_stereochemistry_matching": False,
+            "bond_stereochemistry_matching": False,
+        }
+
+        assert Molecule.are_isomorphic(water, water, **kwargs)[0]
+        assert Molecule.are_isomorphic(methane, methane, **kwargs)[0]
+        assert Molecule.are_isomorphic(methanol, methanol, **kwargs)[0]
+        assert not Molecule.are_isomorphic(water, methane, **kwargs)[0]
+        assert not Molecule.are_isomorphic(water, methanol, **kwargs)[0]
+        assert not Molecule.are_isomorphic(methane, methanol, **kwargs)[0]
