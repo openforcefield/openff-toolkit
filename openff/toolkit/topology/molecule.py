@@ -1867,8 +1867,8 @@ class FrozenMolecule(Serializable):
 
     @staticmethod
     def are_isomorphic(
-        mol1: Union["FrozenMolecule", nx.Graph],
-        mol2: Union["FrozenMolecule", nx.Graph],
+        mol1: Union["FrozenMolecule", "_SimpleMolecule", nx.Graph],
+        mol2: Union["FrozenMolecule", "_SimpleMolecule", nx.Graph],
         return_atom_map: bool = False,
         aromatic_matching: bool = True,
         formal_charge_matching: bool = True,
@@ -1990,26 +1990,6 @@ class FrozenMolecule(Serializable):
             if mol1._is_exactly_the_same_as(mol2):
                 return True, {i: i for i in range(mol1.n_atoms)}
 
-        if _SimpleMolecule in (type(mol1), type(mol2)):
-            if (
-                aromatic_matching
-                or formal_charge_matching
-                or bond_order_matching
-                or atom_stereochemistry_matching
-                or atom_stereochemistry_matching
-                or bond_stereochemistry_matching
-            ):
-                # TODO: There should be a better way of handling this case - modifying arguments is bad!
-                # Maybe this case should just be split out into _SimpleMolecule.are_isomorphic?
-                # Would require a change in Topology._identify_chemically_identical_molecules
-                warnings.warn("Doing a simple comparison", stacklevel=2)
-                aromatic_matching = False
-                formal_charge_matching = False
-                bond_order_matching = False
-                atom_stereochemistry_matching = False
-                atom_stereochemistry_matching = False
-                bond_stereochemistry_matching = False
-
         # Build the user defined matching functions
         def node_match_func(x, y):
             # always match by atleast atomic number
@@ -2052,7 +2032,7 @@ class FrozenMolecule(Serializable):
 
         # Here we should work out what data type we have, also deal with lists?
         def to_networkx(
-            data: Union[FrozenMolecule, "_SimpleMolecule", nx.Graph]
+            data: Union[FrozenMolecule, nx.Graph]
         ) -> nx.Graph:
             """For the given data type, return the networkx graph"""
             import networkx as nx
@@ -2068,9 +2048,6 @@ class FrozenMolecule(Serializable):
                     data.strip_atom_stereochemistry(
                         SMARTS, toolkit_registry=toolkit_registry
                     )
-                return data.to_networkx()
-
-            elif isinstance(data, _SimpleMolecule):
                 return data.to_networkx()
 
             elif isinstance(data, nx.Graph):
