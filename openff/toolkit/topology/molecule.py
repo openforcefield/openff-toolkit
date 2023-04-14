@@ -1971,8 +1971,7 @@ class FrozenMolecule(Serializable):
         from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 
         def _object_to_n_atoms(obj):
-            # if hasattr(obj, "n_atoms") would also work, but possibly be too permissive
-            if isinstance(obj, (FrozenMolecule, _SimpleMolecule)):
+            if isinstance(obj, FrozenMolecule):
                 return obj.n_atoms
             elif isinstance(obj, nx.Graph):
                 return obj.number_of_nodes()
@@ -3462,7 +3461,7 @@ class FrozenMolecule(Serializable):
 
     @staticmethod
     def _object_to_hill_formula(
-        obj: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"]
+        obj: Union["FrozenMolecule", "nx.Graph"]
     ) -> str:
         """Take a Molecule or NetworkX graph and generate its Hill formula.
         This provides a backdoor to the old functionality of Molecule.to_hill_formula, which
@@ -3471,8 +3470,7 @@ class FrozenMolecule(Serializable):
 
         from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 
-        # if hasattr(obj, "to_hill_formula") might also work
-        if isinstance(obj, (FrozenMolecule, _SimpleMolecule)):
+        if isinstance(obj, FrozenMolecule):
             return obj.to_hill_formula()
         elif isinstance(obj, nx.Graph):
             return _networkx_graph_to_hill_formula(obj)
