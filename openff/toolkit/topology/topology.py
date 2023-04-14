@@ -1421,12 +1421,12 @@ class Topology(Serializable):
                 )
                 if isomorphic:
                     # Take the first valid atom indexing map
-                    first_topology_atom_index = min(mapping.keys())
+                    first_topology_atom_index = min(mapping.keys())  # type: ignore[union-attr]
                     topology_molecules_to_add.append(
                         (
                             first_topology_atom_index,
                             unq_mol_G,
-                            mapping.items(),
+                            mapping.items(),  # type: ignore[union-attr]
                             omm_mol_G,
                         )
                     )
