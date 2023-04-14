@@ -1957,10 +1957,13 @@ class FrozenMolecule(Serializable):
             If molecules are not isomorphic given input arguments, will return None instead of dict.
         """
 
+        from openff.toolkit.topology._mm_molecule import _SimpleMolecule
+
         def _object_to_n_atoms(obj):
             import networkx as nx
 
-            if isinstance(obj, FrozenMolecule):
+            # if hasattr(obj, "n_atoms") would also work, but possibly be too permissive
+            if isinstance(obj, (FrozenMolecule, _SimpleMolecule)):
                 return obj.n_atoms
             elif isinstance(obj, nx.Graph):
                 return obj.number_of_nodes()
@@ -1984,6 +1987,26 @@ class FrozenMolecule(Serializable):
         if isinstance(mol1, FrozenMolecule) and isinstance(mol2, FrozenMolecule):
             if mol1._is_exactly_the_same_as(mol2):
                 return True, {i: i for i in range(mol1.n_atoms)}
+
+        if _SimpleMolecule in (type(mol1), type(mol2)):
+            if (
+                aromatic_matching
+                or formal_charge_matching
+                or bond_order_matching
+                or atom_stereochemistry_matching
+                or atom_stereochemistry_matching
+                or bond_stereochemistry_matching
+            ):
+                # TODO: There should be a better way of handling this case - modifying arguments is bad!
+                # Maybe this case should just be split out into _SimpleMolecule.are_isomorphic?
+                # Would require a change in Topology._identify_chemically_identical_molecules
+                warnings.warn("Doing a simple comparison", stacklevel=2)
+                aromatic_matching = False
+                formal_charge_matching = False
+                bond_order_matching = False
+                atom_stereochemistry_matching = False
+                atom_stereochemistry_matching = False
+                bond_stereochemistry_matching = False
 
         # Build the user defined matching functions
         def node_match_func(x, y):
@@ -2026,7 +2049,9 @@ class FrozenMolecule(Serializable):
             edge_match_func = None  # type: ignore
 
         # Here we should work out what data type we have, also deal with lists?
-        def to_networkx(data):
+        def to_networkx(
+            data: Union[FrozenMolecule, "_SimpleMolecule", nx.Graph]
+        ) -> nx.Graph:
             """For the given data type, return the networkx graph"""
             import networkx as nx
 
@@ -2043,6 +2068,9 @@ class FrozenMolecule(Serializable):
                     )
                 return data.to_networkx()
 
+            elif isinstance(data, _SimpleMolecule):
+                return data.to_networkx()
+
             elif isinstance(data, nx.Graph):
                 return data
 
@@ -2055,6 +2083,7 @@ class FrozenMolecule(Serializable):
 
         mol1_netx = to_networkx(mol1)
         mol2_netx = to_networkx(mol2)
+
         from networkx.algorithms.isomorphism import GraphMatcher  # type: ignore
 
         GM = GraphMatcher(
@@ -2075,7 +2104,9 @@ class FrozenMolecule(Serializable):
         else:
             return isomorphic, None
 
-    def is_isomorphic_with(self, other: Union["FrozenMolecule", nx.Graph], **kwargs):
+    def is_isomorphic_with(
+        self, other: Union["FrozenMolecule", "_SimpleMolecule", nx.Graph], **kwargs
+    ):
         """
         Check if the molecule is isomorphic with the other molecule which can be an openff.toolkit.topology.Molecule
         or nx.Graph(). Full matching is done using the options described bellow.
@@ -3448,13 +3479,18 @@ class FrozenMolecule(Serializable):
         return self._hill_formula
 
     @staticmethod
-    def _object_to_hill_formula(obj: Union["Molecule", "nx.Graph"]) -> str:
+    def _object_to_hill_formula(
+        obj: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"]
+    ) -> str:
         """Take a Molecule or NetworkX graph and generate its Hill formula.
         This provides a backdoor to the old functionality of Molecule.to_hill_formula, which
         was a static method that duck-typed inputs of Molecule or graph objects."""
         import networkx as nx
 
-        if isinstance(obj, FrozenMolecule):
+        from openff.toolkit.topology._mm_molecule import _SimpleMolecule
+
+        # if hasattr(obj, "to_hill_formula") might also work
+        if isinstance(obj, (FrozenMolecule, _SimpleMolecule)):
             return obj.to_hill_formula()
         elif isinstance(obj, nx.Graph):
             return _networkx_graph_to_hill_formula(obj)
