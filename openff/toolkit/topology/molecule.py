@@ -1956,6 +1956,8 @@ class FrozenMolecule(Serializable):
             [Dict[int,int]] ordered by mol1 indexing {mol1_index: mol2_index}
             If molecules are not isomorphic given input arguments, will return None instead of dict.
         """
+        if not issubclass(type(mol2), Molecule):
+            return False, None
 
         from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 
