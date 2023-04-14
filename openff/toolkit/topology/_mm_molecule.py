@@ -9,7 +9,7 @@ TypedMolecule TODOs
   deserialize a Molecule or a TypedMolecule.
 
 """
-from typing import TYPE_CHECKING, Dict, List, NoReturn, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, NoReturn, Optional, Tuple, Union
 
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
@@ -25,6 +25,8 @@ from openff.toolkit.utils.utils import deserialize_numpy, serialize_numpy
 if TYPE_CHECKING:
     import networkx as nx
     from openff.units.unit import Quantity
+
+    from openff.toolkit.topology.molecule import FrozenMolecule
 
 
 class _SimpleMolecule:
@@ -311,9 +313,11 @@ class _SimpleMolecule:
             "an OpenFF Molecule with sufficiently specified chemistry."
         )
 
-    def _is_isomorphic_with(self, other) -> bool:
+    def is_isomorphic_with(
+        self, other: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"], **kwargs
+    ):
         """
-        Untrustworthy check for pseudo-isomorphism.
+        Check for pseudo-isomorphism.
 
         This currently checks that the two molecules have
         * The same number of atoms
@@ -323,18 +327,43 @@ class _SimpleMolecule:
         This currently does NOT checks that the two molecules have
         * Topologically identical bond graphs
         """
+        return _SimpleMolecule.are_isomorphic(
+            self,
+            other,
+            return_atom_map=False,
+        )[0]
 
-        if self.n_atoms != other.n_atoms:
-            return False
+    @staticmethod
+    def are_isomorphic(
+        mol1: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"],
+        mol2: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"],
+        return_atom_map: bool = False,
+    ) -> Tuple[bool, Optional[Dict[int, int]]]:
+        if return_atom_map:
+            raise NotImplementedError(
+                "The _SimpleMolecule does not currently support atom mapping."
+            )
 
-        if self.n_bonds != other.n_bonds:
-            return False
+        # static methods (by definition) know nothing about their class,
+        # so the class to compare to must be hard-coded here
+        if not issubclass(type(mol2), _SimpleMolecule):
+            return False, None
+        if not (
+            isinstance(mol1, _SimpleMolecule) and isinstance(mol2, _SimpleMolecule)
+        ):
+            return False, None
 
-        for this_atom, other_atom in zip(self.atoms, other.atoms):
+        if mol1.n_atoms != mol2.n_atoms:
+            return False, None
+
+        if mol1.n_bonds != mol2.n_bonds:
+            return False, None
+
+        for this_atom, other_atom in zip(mol1.atoms, mol1.atoms):
             if this_atom.atomic_number != other_atom.atomic_number:
-                return False
+                return False, None
 
-        return True
+        return True, None
 
     def generate_unique_atom_names(self):
         """Generate unique atom names. See `Molecule.generate_unique_atom_names`."""

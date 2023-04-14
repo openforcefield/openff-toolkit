@@ -1877,7 +1877,7 @@ class FrozenMolecule(Serializable):
         bond_stereochemistry_matching: bool = True,
         strip_pyrimidal_n_atom_stereo: bool = True,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
-    ):
+    ) -> Tuple[bool, Optional[Dict[int, int]]]:
         """
         Determine if ``mol1`` is isomorphic to ``mol2``.
 
@@ -1956,7 +1956,9 @@ class FrozenMolecule(Serializable):
             [Dict[int,int]] ordered by mol1 indexing {mol1_index: mol2_index}
             If molecules are not isomorphic given input arguments, will return None instead of dict.
         """
-        if not issubclass(type(mol2), Molecule):
+        # static methods (by definition) know nothing about their class,
+        # so the class to compare to must be hard-coded here
+        if not (isinstance(mol1, FrozenMolecule) and isinstance(mol2, FrozenMolecule)):
             return False, None
 
         from openff.toolkit.topology._mm_molecule import _SimpleMolecule
@@ -2031,9 +2033,7 @@ class FrozenMolecule(Serializable):
             edge_match_func = None  # type: ignore
 
         # Here we should work out what data type we have, also deal with lists?
-        def to_networkx(
-            data: Union[FrozenMolecule, nx.Graph]
-        ) -> nx.Graph:
+        def to_networkx(data: Union[FrozenMolecule, nx.Graph]) -> nx.Graph:
             """For the given data type, return the networkx graph"""
             import networkx as nx
 
