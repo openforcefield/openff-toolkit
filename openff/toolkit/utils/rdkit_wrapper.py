@@ -316,6 +316,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             top._add_molecule_keep_cache(offmol)
         if pdbfile.topology.getPeriodicBoxVectors() is not None:
             top.box_vectors = from_openmm(pdbfile.topology.getPeriodicBoxVectors())
+        top.set_positions(coords_angstrom * unit.angstrom)
 
         return top
 
