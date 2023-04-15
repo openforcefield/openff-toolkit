@@ -1731,6 +1731,13 @@ class TestMolecule:
             create_ethanol(),
         )[0]
 
+    def test_graph_and_molecule_inputs(self):
+        molecule = create_ethanol()
+        graph = molecule.to_networkx()
+
+        assert Molecule.are_isomorphic(molecule, graph)[0]
+        assert Molecule.are_isomorphic(graph, molecule)[0]
+
     class TestRemap:
         """Tests for the ``Molecule.remap()`` method"""
 

@@ -344,13 +344,16 @@ class _SimpleMolecule:
         _cls = _SimpleMolecule
 
         if isinstance(mol1, nx.Graph) and isinstance(mol2, nx.Graph):
-            pass
+            mol1 = _SimpleMolecule._from_subgraph(mol1)
+            mol2 = _SimpleMolecule._from_subgraph(mol2)
 
         elif isinstance(mol1, nx.Graph):
             assert isinstance(mol2, _cls)
+            mol1 = _SimpleMolecule._from_subgraph(mol1)
 
         elif isinstance(mol2, nx.Graph):
             assert isinstance(mol1, _cls)
+            mol2 = _SimpleMolecule._from_subgraph(mol2)
 
         else:
             # static methods (by definition) know nothing about their class,

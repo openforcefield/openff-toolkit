@@ -151,7 +151,13 @@ class TestMMMolecule:
 
 
 class TestIsomorphism:
-    def test_are_isomorphic(self, water, methane, methanol):
+    @pytest.mark.parametrize("as_graphs", [True, False])
+    def test_are_isomorphic(self, water, methane, methanol, as_graphs):
+        if as_graphs:
+            water = water.to_networkx()
+            methane = methane.to_networkx()
+            methanol = methanol.to_networkx()
+
         assert _SimpleMolecule.are_isomorphic(water, water)[0]
         assert _SimpleMolecule.are_isomorphic(methane, methane)[0]
         assert _SimpleMolecule.are_isomorphic(methanol, methanol)[0]
@@ -177,3 +183,9 @@ class TestIsomorphism:
             _SimpleMolecule.from_molecule(create_ethanol()),
             create_ethanol(),
         )[0]
+
+    def test_graph_and_molecule_inputs(self, methanol):
+        graph = methanol.to_networkx()
+
+        assert _SimpleMolecule.are_isomorphic(methanol, graph)[0]
+        assert _SimpleMolecule.are_isomorphic(graph, methanol)[0]
