@@ -859,7 +859,6 @@ class FrozenMolecule(Serializable):
         file_format: Optional[str] = None,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         allow_undefined_stereo: bool = False,
-        name: str = "",
     ):
         r"""
         Create a new FrozenMolecule object
@@ -886,8 +885,6 @@ class FrozenMolecule(Serializable):
             * an ``rdkit.Chem.rdchem.Mol``
             * a serialized :class:`Molecule` object
 
-        name: str, optional, default=''
-            A name for the molecule
         file_format : str, optional, default=None
             If providing a file-like object, you must specify the format
             of the data. If providing a file, the file format will attempt
@@ -1036,8 +1033,6 @@ class FrozenMolecule(Serializable):
                 for value_error in value_errors:
                     msg += str(value_error)
                 raise ValueError(msg)
-
-        self._name = name
 
     @property
     def has_unique_atom_names(self) -> bool:
@@ -1634,6 +1629,8 @@ class FrozenMolecule(Serializable):
             or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for InChI-to-molecule conversion
 
+        name : str, default=""
+            An optional name for the output molecule
 
         Returns
         -------
@@ -1802,6 +1799,9 @@ class FrozenMolecule(Serializable):
             Whether to accept SMILES with undefined stereochemistry. If
             ``False``, an exception will be raised if a SMILES with undefined
             stereochemistry is passed into this function.
+        name : str, default=""
+            An optional name for the output molecule
+
 
         Raises
         ------
@@ -3882,6 +3882,8 @@ class FrozenMolecule(Serializable):
             PDB information to be passed to OpenMM PDBFile object for loading
         toolkit_registry = ToolkitWrapper or ToolkitRegistry. Default = None
             Either a ToolkitRegistry, ToolkitWrapper
+        name : str, default=""
+            An optional name for the output molecule
 
         Returns
         -------
@@ -4208,7 +4210,6 @@ class FrozenMolecule(Serializable):
         rdmol,
         allow_undefined_stereo=False,
         hydrogens_are_explicit=False,
-        name=name,
     ):
         """
         Create a Molecule from an RDKit molecule.
@@ -4290,7 +4291,7 @@ class FrozenMolecule(Serializable):
 
     @classmethod
     @OpenEyeToolkitWrapper.requires_toolkit()
-    def from_openeye(cls, oemol, allow_undefined_stereo=False, name=name):
+    def from_openeye(cls, oemol, allow_undefined_stereo=False):
         """
         Create a ``Molecule`` from an OpenEye molecule.
 

@@ -220,7 +220,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         obj,
         allow_undefined_stereo: bool = False,
         _cls=None,
-        name: str = "",
     ) -> "Molecule":
         """
         Convert an OEMol (or OEMol-derived object) into an openff.toolkit.topology.molecule
@@ -235,8 +234,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             is passed into this function.
         _cls : class
             Molecule constructor
-        name : str, default=""
-            An optional name to pass to the _cls constructor
 
         Returns
         -------
@@ -261,7 +258,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 oemol=obj,
                 allow_undefined_stereo=allow_undefined_stereo,
                 _cls=_cls,
-                name=name,
             )
         raise NotImplementedError(
             "Cannot create Molecule from {} object".format(type(obj))
@@ -1077,7 +1073,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         oemol,
         allow_undefined_stereo: bool = False,
         _cls=None,
-        name: str = "",
     ) -> "Molecule":
         """
         Create a Molecule from an OpenEye molecule. If the OpenEye molecule has
@@ -1105,8 +1100,6 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             If false, raises an exception if oemol contains undefined stereochemistry.
         _cls : class
             Molecule constructor
-        name : str, default=""
-            An optional name to pass to the _cls constructor
 
         Returns
         -------
@@ -1207,7 +1200,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
             _cls = Molecule
 
-        molecule = _cls(name=name)
+        molecule = _cls()
 
         # OEMol.GetTitle() happens to default to an empty string
         if oemol.GetTitle() != "":
@@ -1991,7 +1984,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         _cls : class
             Molecule constructor
         name : str, default=""
-            An optional name to pass to the _cls constructor
+            An optional name for the output molecule
 
         Returns
         -------
@@ -2030,8 +2023,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             oemol,
             _cls=_cls,
             allow_undefined_stereo=allow_undefined_stereo,
-            name=name,
         )
+        molecule.name = name
         return molecule
 
     def from_inchi(
@@ -2055,7 +2048,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         _cls : class
             Molecule constructor
         name : str, default=""
-            An optional name to pass to the _cls constructor
+            An optional name for the output molecule
 
         Returns
         -------
@@ -2079,8 +2072,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             oemol,
             allow_undefined_stereo=allow_undefined_stereo,
             _cls=_cls,
-            name=name,
         )
+        molecule.name = name
 
         return molecule
 

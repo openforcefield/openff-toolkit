@@ -433,16 +433,8 @@ class TestBond:
             molecule.bond(0).bond_order = 1.2
 
 
-class TestFrozenMolecule:
-    def test_name_constructor(self):
-        assert FrozenMolecule(name="123foo").name == "123foo"
-
-
 class TestMolecule:
     """Test Molecule class."""
-
-    def test_name_constructor(self):
-        assert Molecule(name="123foo").name == "123foo"
 
     # TODO: Test getstate/setstate
 

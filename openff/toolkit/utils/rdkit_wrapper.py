@@ -130,7 +130,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         obj,
         allow_undefined_stereo: bool = False,
         _cls=None,
-        name: str = "",
     ):
         """
         If given an rdchem.Mol (or rdchem.Mol-derived object), this function will load it into an
@@ -146,8 +145,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             is passed into this function.
         _cls : class
             Molecule constructor
-        name : str, default=""
-            An optional name to pass to the _cls constructor
 
         Returns
         -------
@@ -170,7 +167,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             return _cls.from_rdkit(
                 obj,
                 allow_undefined_stereo=allow_undefined_stereo,
-                name=name,
             )
         raise NotImplementedError(
             "Cannot create Molecule from {} object".format(type(obj))
@@ -208,7 +204,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         _cls : class
             Molecule constructor
         name : str, default=""
-            An optional name to pass to the _cls constructor
+            An optional name for the output molecule
 
         Returns
         --------
@@ -227,7 +223,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             smiles,
             allow_undefined_stereo=allow_undefined_stereo,
             _cls=_cls,
-            name=name,
         )
 
         # Make another molecule from the PDB. We squelch stereo errors here, since
@@ -272,6 +267,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             newatom.name = pdbatom.name
         new_mol.add_default_hierarchy_schemes()
 
+        new_mol.name = name
         return new_mol
 
     def _polymer_openmm_topology_to_offmol(
@@ -1120,9 +1116,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             _cls=_cls,
             allow_undefined_stereo=allow_undefined_stereo,
             hydrogens_are_explicit=hydrogens_are_explicit,
-            name=name,
         )
-
+        molecule.name = name
         return molecule
 
     def from_inchi(
@@ -1727,7 +1722,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         allow_undefined_stereo: bool = False,
         hydrogens_are_explicit: bool = False,
         _cls=None,
-        name: str = "",
     ):
         """
         Create a Molecule from an RDKit molecule.
@@ -1810,7 +1804,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         )
 
         # Create a new OpenFF Molecule
-        offmol = _cls(name=name)
+        offmol = _cls()
 
         # If RDMol has a title, overwrite whatever `name` is
         if rdmol.HasProp("_Name"):
