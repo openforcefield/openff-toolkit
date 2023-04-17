@@ -1174,6 +1174,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         molecule = self.from_rdkit(
             rdmol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
         )
+        molecule.name = name
 
         return molecule
 
@@ -1806,7 +1807,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Create a new OpenFF Molecule
         offmol = _cls()
 
-        # If RDMol has a title, overwrite whatever `name` is
+        # If RDMol has a title, use it
         if rdmol.HasProp("_Name"):
             offmol.name = rdmol.GetProp("_Name")
 
