@@ -266,7 +266,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return offmol
 
     def _polymer_openmm_pdbfile_to_offtop(
-        self, topology_class, pdbfile, substructure_dictionary, coords_angstrom
+        self, topology_class, pdbfile, substructure_dictionary, coords_angstrom, _ignore_stereo: bool = False
     ):
         from openff.units.openmm import from_openmm
         from rdkit import Chem, Geometry
@@ -276,6 +276,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             omm_top, substructure_dictionary
         )
 
+        # The above method will have set stereo on the atoms directly from the substructures and unique_molecules.
+        # In order to check that the same stereo is perceived from 3D as is assigned from the template, make
+        # a copy here, then assign stereo from 3D, and then raise an error if there's a disagreement.
+        mol_with_stereo_from_substr = Chem.Mol(rdkit_mol)
         rdmol_conformer = Chem.Conformer()
         for atom_idx in range(rdkit_mol.GetNumAtoms()):
             x, y, z = coords_angstrom[atom_idx, :]
@@ -288,6 +292,28 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         Chem.AssignStereochemistryFrom3D(rdkit_mol)
         Chem.Kekulize(rdkit_mol, clearAromaticFlags=True)
         Chem.SetAromaticity(rdkit_mol, Chem.AromaticityModel.AROMATICITY_MDL)
+
+        # Check stereo assigned from 3D against the stereo assigned by substructures.
+
+        # Note that this DOES NOT compare global stereo (R vs. S) because the global stereo
+        # of a substructure may be undefined (it could change depending on which substructures connect to it).
+        # Instead, since we know that the order of atoms and bonds are the same  between
+        # mol_with_stereo_from_substr and rdkit_mol are the same, we compare "local stereo" (CW vs CCW).
+        msg = ""
+        for orig_atom, new_atom in zip(mol_with_stereo_from_substr.GetAtoms(), rdkit_mol.GetAtoms()):
+            if _ignore_stereo:
+                continue
+            orig_chi = orig_atom.GetChiralTag()
+            new_chi = new_atom.GetChiralTag()
+            # If either the original atom or the newly perceived atom isn't a chiral center, skip this check.
+            # This means that users can avoid this check by adding unique molecules with undefined stereo
+            if (orig_chi == Chem.CHI_UNSPECIFIED) or (new_chi == Chem.CHI_UNSPECIFIED):
+                continue
+            if orig_chi != new_chi:
+                msg += f"atom {new_atom.GetIdx()} \n" # TODO Improve this error message with things like atom element and residue and atom name
+        if msg != "":
+            msg = "Some atoms loaded from PDB have a 3D geometry that corresponds to a different " \
+                  "stereochemistry than the substructure template or unique molecule."
 
         # Don't sanitize or we risk assigning non-MDL aromaticity
         rdmols = Chem.GetMolFrags(rdkit_mol, asMols=True, sanitizeFrags=False)
