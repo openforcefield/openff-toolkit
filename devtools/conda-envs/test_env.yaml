@@ -42,7 +42,6 @@ dependencies:
   - mypy
   - typing_extensions
   - pip:
-    - types-pkg_resources
     - types-setuptools
     - types-toml
     - types-PyYAML
