@@ -640,10 +640,10 @@ class TestMolecule:
 
     def test_from_smiles_name(self):
         """Test name kwarg to from_smiles"""
-        mol = Molecule.from_smiles('C')
+        mol = Molecule.from_smiles("C")
         assert mol.name == ""
 
-        mol = Molecule.from_smiles('C', name="bob")
+        mol = Molecule.from_smiles("C", name="bob")
         assert mol.name == "bob"
 
     @pytest.mark.parametrize(
@@ -956,7 +956,6 @@ class TestMolecule:
         assert mol.name == ""
         mol = Molecule.from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3", name="bob")
         assert mol.name == "bob"
-
 
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @requires_openeye
@@ -3909,8 +3908,7 @@ class TestMoleculeFromPDB:
         assert offmol.name == ""
 
         offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ALA.pdb"),
-            name="bob"
+            get_data_file_path("proteins/MainChain_ALA.pdb"), name="bob"
         )
         assert offmol.name == "bob"
 

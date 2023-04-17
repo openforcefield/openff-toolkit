@@ -4676,7 +4676,9 @@ class FrozenMolecule(Serializable):
 
     @classmethod
     @RDKitToolkitWrapper.requires_toolkit()
-    def from_pdb_and_smiles(cls, file_path, smiles, allow_undefined_stereo=False, name=""):
+    def from_pdb_and_smiles(
+        cls, file_path, smiles, allow_undefined_stereo=False, name=""
+    ):
         """
         Create a Molecule from a pdb file and a SMILES string using RDKit.
 

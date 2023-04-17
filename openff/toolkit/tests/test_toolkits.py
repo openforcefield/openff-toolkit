@@ -791,7 +791,9 @@ class TestOpenEyeToolkitWrapper:
         toolkit_wrapper = OpenEyeToolkitWrapper()
         mol = toolkit_wrapper.from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3")
         assert mol.name == ""
-        mol = toolkit_wrapper.from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3", name="bob")
+        mol = toolkit_wrapper.from_inchi(
+            "InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3", name="bob"
+        )
         assert mol.name == "bob"
 
     def test_from_bad_inchi(self):
@@ -2204,7 +2206,9 @@ class TestRDKitToolkitWrapper:
         toolkit_wrapper = RDKitToolkitWrapper()
         mol = toolkit_wrapper.from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3")
         assert mol.name == ""
-        mol = toolkit_wrapper.from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3", name="bob")
+        mol = toolkit_wrapper.from_inchi(
+            "InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3", name="bob"
+        )
         assert mol.name == "bob"
 
     @pytest.mark.parametrize("molecule", get_mini_drug_bank(RDKitToolkitWrapper))
