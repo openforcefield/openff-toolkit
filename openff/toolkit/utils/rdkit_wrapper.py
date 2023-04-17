@@ -266,7 +266,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return offmol
 
     def _polymer_openmm_pdbfile_to_offtop(
-        self, topology_class, pdbfile, substructure_dictionary, coords_angstrom, _ignore_stereo: bool = False
+        self,
+        topology_class,
+        pdbfile,
+        substructure_dictionary,
+        coords_angstrom,
+        _ignore_stereo: bool = False,
     ):
         from openff.units.openmm import from_openmm
         from rdkit import Chem, Geometry
@@ -300,7 +305,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Instead, since we know that the order of atoms and bonds are the same  between
         # mol_with_stereo_from_substr and rdkit_mol are the same, we compare "local stereo" (CW vs CCW).
         msg = ""
-        for orig_atom, new_atom in zip(mol_with_stereo_from_substr.GetAtoms(), rdkit_mol.GetAtoms()):
+        for orig_atom, new_atom in zip(
+            mol_with_stereo_from_substr.GetAtoms(), rdkit_mol.GetAtoms()
+        ):
             if _ignore_stereo:
                 continue
             orig_chi = orig_atom.GetChiralTag()
@@ -310,10 +317,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             if (orig_chi == Chem.CHI_UNSPECIFIED) or (new_chi == Chem.CHI_UNSPECIFIED):
                 continue
             if orig_chi != new_chi:
-                msg += f"atom {new_atom.GetIdx()} \n" # TODO Improve this error message with things like atom element and residue and atom name
+                msg += f"atom {new_atom.GetIdx()} \n"  # TODO Improve this error message with things like atom element and residue and atom name
         if msg != "":
-            msg = "Some atoms loaded from PDB have a 3D geometry that corresponds to a different " \
-                  "stereochemistry than the substructure template or unique molecule."
+            msg = (
+                "Some atoms loaded from PDB have a 3D geometry that corresponds to a different "
+                "stereochemistry than the substructure template or unique molecule."
+            )
 
         # Don't sanitize or we risk assigning non-MDL aromaticity
         rdmols = Chem.GetMolFrags(rdkit_mol, asMols=True, sanitizeFrags=False)

@@ -1531,7 +1531,7 @@ class Topology(Serializable):
         file_path: Union[str, TextIO],
         unique_molecules: Optional[Iterable[Molecule]] = None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-        _ignore_stereo: bool = False
+        _ignore_stereo: bool = False,
     ):
         """
         Loads supported or user-specified molecules from a PDB file.
@@ -1689,7 +1689,7 @@ class Topology(Serializable):
             pdb,
             substructure_dictionary,
             coords_angstrom,
-            _ignore_stereo=_ignore_stereo
+            _ignore_stereo=_ignore_stereo,
         )
 
         for off_atom, atom in zip([*topology.atoms], pdb.topology.atoms()):
