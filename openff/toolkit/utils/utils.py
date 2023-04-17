@@ -97,7 +97,7 @@ def get_data_file_path(relative_path: str) -> str:
         Name of the file to load (with respect to `openff/toolkit/data/`)
 
     """
-    from importlib_resources import files
+    from importlib.resources import files
 
     _DATA_ROOT = files("openff.toolkit") / "data"
 
