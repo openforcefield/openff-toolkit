@@ -266,12 +266,20 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return offmol
 
     def _polymer_openmm_pdbfile_to_offtop(
-        self, topology_class, pdbfile, substructure_dictionary, coords_angstrom
+        self, topology_class, pdbfile, substructure_dictionary, coords_angstrom, _custom_substructures: Dict[str, str] = {}
     ):
         from openff.units.openmm import from_openmm
         from rdkit import Chem, Geometry
 
         omm_top = pdbfile.topology
+
+        # if custom substructures exist, validate them separately from the official substructures
+        # and add them to the substructure_dictionary
+        if _custom_substructures:
+            self._validate_custom_substructures(_custom_substructures, forbidden_keys=substructure_dictionary.keys())
+            custom_substructure_dictionary = self._prepare_custom_substructures(_custom_substructures)
+            substructure_dictionary.update(custom_substructure_dictionary) # concats both dicts, unique keys are enforced in previous function
+        
         rdkit_mol = self._polymer_openmm_topology_to_rdmol(
             omm_top, substructure_dictionary
         )
@@ -320,10 +328,170 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return top
 
+    def _validate_custom_substructures(self, custom_substructures: Dict[str, str], forbidden_keys):
+        """ Validates custom substructures to adhere to monomer specifications
+        Parameters
+        ----------
+        custom_substructures : Dict[str, str]
+            substructures given with unique names as keys and smarts as values
+        forbidden_keys : DictKeys[str]
+            a list of keys that cannot overlap with the custom substructure keys
+
+        Returns
+        -------
+        valid : bool
+            True if ALL substructures are valid and pass all tests
+            TODO: add strict vs. not strict functionality 
+
+        Raises
+        ------
+        NonUniqueSubstructureName
+            Raised when any substructures have nonunique names or names that
+            conflict with toolkit substructure names (such as protein residue names)
+        SubstructureSmartsInvalid
+            Raised when any atom or bond smarts are improperly formatted
+        SubstructureImproperlySpecified
+            Raised when the custom substructure is inadequately specified or 
+            contains conflicting information
+
+        """
+        # ensure no duplicate keys
+        custom_keys = custom_substructures.keys()
+        if set(forbidden_keys).intersection(set(custom_keys)):
+            raise Exception
+        for name, smarts in custom_substructures.items():
+            self._is_valid_substructure_smarts(smarts) # raises error if invalid
+
+        return True # all tests passed without raised exception
+    
+    def _is_valid_substructure_smarts(self, smarts):
+        from rdkit import Chem 
+
+        def is_connected(rdmol):
+            if len(Chem.rdmolops.GetMolFrags(rdmol)) > 1:
+                return False
+            else:
+                return True
+        
+        def is_valid_interior_atom(atom):
+            atom_smarts = atom.GetSmarts()
+            # ensure that no unsupported logical operators exist
+            operators = r"!,;"
+            if any(op in atom_smarts for op in operators):
+                reason = f"{atom_smarts}: found an unsupported logical operator"
+                return False, reason
+            # ensure that no other unsupported atomic primitives are accepted
+            unsupported_prims = r"@xXvrRhH*"
+            if any(prim in atom_smarts for prim in unsupported_prims):
+                reason = f"{atom_smarts}: found unsupported primitive"
+                return False, reason
+            # require that all elements are specified in #<n> format. This removes the H prototype edge case
+            # Also require explicit connecitivity in D<n> format and explicit charge with either a + or -
+            required_prims = r"[]#D:"
+            if not all(prim in atom_smarts for prim in required_prims):
+                reason = f"{atom_smarts}: required primitive not included"
+                return False, reason
+            charge_prims = r"-+"
+            if not any(prim in atom_smarts for prim in charge_prims):
+                reason = f"{atom_smarts}: no charge primitive on at least one atom"
+                return False, reason
+            if not atom.Match(atom):
+                reason = f"{atom_smarts}: query does not match rdchem.Mol reading of the molecule (likely due to connectivity)"
+                return False, reason
+            return True, ""
+
+        def is_valid_neighbor_atom(atom):
+            atom_smarts = atom.GetSmarts()
+            # ensure that no unsupported logical operators exist
+            operators = r"!,;&"
+            if any(op in atom_smarts for op in operators):
+                reason = f"{atom_smarts}: found an unsupported logical operator"
+                return False, reason
+            # ensure that no other unsupported atomic primitives are accepted
+            unsupported_prims = r"@xXDvrRhH"
+            if any(prim in atom_smarts for prim in unsupported_prims):
+                reason = f"{atom_smarts}: found unsupported primitive"
+                return False, reason
+            # require that atoms have a wildtype atom and label
+            required_prims = r"[]*:"
+            if not all(prim in atom_smarts for prim in required_prims):
+                reason = f"{atom_smarts}: required primitive not included"
+                return False, reason
+            return True, ""
+        
+        def is_valid_bond(bond):
+            valid_bond_types = [
+                    Chem.BondType.SINGLE,
+                    # Chem.BondType.AROMATIC, # no current support for aromatic bonds or 1.5 bonds
+                    Chem.BondType.DOUBLE,
+                    Chem.BondType.TRIPLE,
+                    Chem.BondType.QUADRUPLE,
+                    Chem.BondType.QUINTUPLE,
+                    Chem.BondType.HEXTUPLE,
+                ]
+            if bond.GetBondType() in valid_bond_types:
+                return True
+            else:
+                return False
+
+        qmol = Chem.MolFromSmarts(smarts)
+
+        # check if graph is connected
+        if not is_connected(qmol):
+            reason = "not connected"
+            return False, reason
+        
+        # check atom strings for required and unsupported primitives
+        for atom in qmol.GetAtoms():
+            if atom.GetAtomicNum() > 0:
+                is_valid, reason = is_valid_interior_atom(atom)
+                if not is_valid:
+                    return False, reason
+            elif atom.GetAtomicNum() == 0 and "#" not in atom.GetSmarts():
+                is_valid, reason = is_valid_neighbor_atom(atom)
+                if not is_valid:
+                    return False, reason
+            else:
+                reason = "zero atomic number with # primitive (likely due to conditionals"
+                return False, reason
+            
+        # ensure unique atom map numbers for each atom
+        map_nums = [atom.GetAtomMapNum() for atom in qmol.GetAtoms()]
+        unique_map_nums = set(map_nums)
+        if len(map_nums) != len(unique_map_nums):
+            reason = "non-unique atom map numbers"
+            return False, reason
+        
+        # If all checks are passed, the smarts is valid
+        return True, "all checks passed"
+
+    def _prepare_custom_substructures(self, custom_substructures: Dict[str, str]):
+        """
+        Parameters
+        ----------
+        custom_substructures : Dict[str, str]
+            substructures given with unique names as keys and smarts as values
+        Returns
+        -------
+        prepared_dict : Dict[str, Dict[str, List[str]]]
+            a dictionary of the same type and format as the predefined toolkit 
+            substructures (amino acids, etc). Atom names are given the format 
+            "CSTM_{symbol}", including wildtypes which show as "CSTM_*" 
+        """
+        from rdkit import Chem
+
+        prepared_dict = Dict[str, Dict[str, List[str]]]
+        for name, smarts in custom_substructures:
+            rdmol = Chem.MolFromSmarts(smarts, removeHs=False, sanitize=False)
+            atom_list = [f"CSTM_{atom.GetSymbol()}" for atom in rdmol.GetAtoms()]
+            prepared_dict[name] = {smarts: atom_list}
+        return 
+
     def _polymer_openmm_topology_to_rdmol(
         self,
         omm_top,
         substructure_library,
+        _custom_substructures: Dict[str, str] = {}
     ):
         """
         Parameters

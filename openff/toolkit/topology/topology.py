@@ -1531,6 +1531,7 @@ class Topology(Serializable):
         file_path: Union[str, TextIO],
         unique_molecules: Optional[Iterable[Molecule]] = None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        _custom_substructures: Dict[str, str] = {}
     ):
         """
         Loads supported or user-specified molecules from a PDB file.
@@ -1688,6 +1689,7 @@ class Topology(Serializable):
             pdb,
             substructure_dictionary,
             coords_angstrom,
+            _custom_substructures,
         )
 
         for off_atom, atom in zip([*topology.atoms], pdb.topology.atoms()):
