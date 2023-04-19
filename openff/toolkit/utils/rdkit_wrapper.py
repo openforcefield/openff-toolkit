@@ -29,12 +29,17 @@ from openff.toolkit.utils.exceptions import (
     ConformerGenerationError,
     InvalidAromaticityModelError,
     MoleculeParseError,
+    NonUniqueSubstructureName,
     NotAttachedToMoleculeError,
     RadicalsNotSupportedError,
     SMILESParseError,
+    SubstructureImproperlySpecified,
+    SubstructureAtomSmartsInvalid,
+    SubstructureBondSmartsInvalid,
     ToolkitUnavailableException,
     UnassignedChemistryInPDBError,
     UndefinedStereochemistryError,
+
 )
 
 if TYPE_CHECKING:
@@ -357,14 +362,15 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         # ensure no duplicate keys
         custom_keys = custom_substructures.keys()
-        if set(forbidden_keys).intersection(set(custom_keys)):
-            raise Exception
+        same_keys = set(forbidden_keys).intersection(set(custom_keys))
+        if same_keys:
+            raise NonUniqueSubstructureName(list(same_keys))
         for name, smarts in custom_substructures.items():
-            self._is_valid_substructure_smarts(smarts) # raises error if invalid
+            self._is_valid_substructure_smarts(name, smarts) # raises error if invalid
 
         return True # all tests passed without raised exception
     
-    def _is_valid_substructure_smarts(self, smarts):
+    def _is_valid_substructure_smarts(self, name, smarts):
         from rdkit import Chem 
 
         def is_connected(rdmol):
