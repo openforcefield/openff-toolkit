@@ -561,10 +561,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
                     # Some special residues are allowed to overlap/override previous matches
                     if any(m in already_assigned_nodes for m in match) and (
-                        res_name not in ["PEPTIDE_BOND", "DISULFIDE", "UNIQUE_MOLECULE"]
+                        res_name not in ["PEPTIDE_BOND", "DISULFIDE", "UNIQUE_MOLECULE", *_custom_substructures.keys()]
                     ):
                         continue
                     already_assigned_nodes.update(match)
+
+                    # for _custom_substructures only, allow overlaps if no chemical info is changed
 
                     for atom_i, j in zip(ref.GetAtoms(), match):
                         atom_j = mol.GetAtomWithIdx(j)
