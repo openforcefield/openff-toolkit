@@ -1175,9 +1175,13 @@ class Topology(Serializable):
                 if mol2_idx in already_matched_mols:
                     continue
                 mol2 = self.molecule(mol2_idx)
-                are_isomorphic, atom_map = Molecule.are_isomorphic(
-                    mol1, mol2, return_atom_map=True
-                )
+                if isinstance(mol1, type(mol2)) or isinstance(mol2, type(mol1)):
+                    are_isomorphic, atom_map = mol1.are_isomorphic(
+                        mol1, mol2, return_atom_map=True
+                    )
+                else:
+                    are_isomorphic = False
+
                 if are_isomorphic:
                     identity_maps[mol2_idx] = (
                         mol1_idx,
@@ -1417,12 +1421,12 @@ class Topology(Serializable):
                 )
                 if isomorphic:
                     # Take the first valid atom indexing map
-                    first_topology_atom_index = min(mapping.keys())
+                    first_topology_atom_index = min(mapping.keys())  # type: ignore[union-attr]
                     topology_molecules_to_add.append(
                         (
                             first_topology_atom_index,
                             unq_mol_G,
-                            mapping.items(),
+                            mapping.items(),  # type: ignore[union-attr]
                             omm_mol_G,
                         )
                     )

@@ -1893,8 +1893,8 @@ class FrozenMolecule(Serializable):
 
     @staticmethod
     def are_isomorphic(
-        mol1: Union["FrozenMolecule", nx.Graph],
-        mol2: Union["FrozenMolecule", nx.Graph],
+        mol1: Union["FrozenMolecule", "_SimpleMolecule", nx.Graph],
+        mol2: Union["FrozenMolecule", "_SimpleMolecule", nx.Graph],
         return_atom_map: bool = False,
         aromatic_matching: bool = True,
         formal_charge_matching: bool = True,
@@ -1903,7 +1903,7 @@ class FrozenMolecule(Serializable):
         bond_stereochemistry_matching: bool = True,
         strip_pyrimidal_n_atom_stereo: bool = True,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
-    ):
+    ) -> Tuple[bool, Optional[Dict[int, int]]]:
         """
         Determine if ``mol1`` is isomorphic to ``mol2``.
 
@@ -1982,10 +1982,26 @@ class FrozenMolecule(Serializable):
             [Dict[int,int]] ordered by mol1 indexing {mol1_index: mol2_index}
             If molecules are not isomorphic given input arguments, will return None instead of dict.
         """
+        import networkx as nx
+
+        _cls = FrozenMolecule
+
+        if isinstance(mol1, nx.Graph) and isinstance(mol2, nx.Graph):
+            pass
+
+        elif isinstance(mol1, nx.Graph):
+            assert isinstance(mol2, _cls)
+
+        elif isinstance(mol2, nx.Graph):
+            assert isinstance(mol1, _cls)
+
+        else:
+            # static methods (by definition) know nothing about their class,
+            # so the class to compare to must be hard-coded here
+            if not (isinstance(mol1, _cls) and isinstance(mol2, _cls)):
+                return False, None
 
         def _object_to_n_atoms(obj):
-            import networkx as nx
-
             if isinstance(obj, FrozenMolecule):
                 return obj.n_atoms
             elif isinstance(obj, nx.Graph):
@@ -2052,10 +2068,8 @@ class FrozenMolecule(Serializable):
             edge_match_func = None  # type: ignore
 
         # Here we should work out what data type we have, also deal with lists?
-        def to_networkx(data):
+        def to_networkx(data: Union[FrozenMolecule, nx.Graph]) -> nx.Graph:
             """For the given data type, return the networkx graph"""
-            import networkx as nx
-
             if strip_pyrimidal_n_atom_stereo:
                 SMARTS = "[N+0X3:1](-[*])(-[*])(-[*])"
 
@@ -2081,6 +2095,7 @@ class FrozenMolecule(Serializable):
 
         mol1_netx = to_networkx(mol1)
         mol2_netx = to_networkx(mol2)
+
         from networkx.algorithms.isomorphism import GraphMatcher  # type: ignore
 
         GM = GraphMatcher(
@@ -2101,7 +2116,9 @@ class FrozenMolecule(Serializable):
         else:
             return isomorphic, None
 
-    def is_isomorphic_with(self, other: Union["FrozenMolecule", nx.Graph], **kwargs):
+    def is_isomorphic_with(
+        self, other: Union["FrozenMolecule", "_SimpleMolecule", nx.Graph], **kwargs
+    ) -> bool:
         """
         Check if the molecule is isomorphic with the other molecule which can be an openff.toolkit.topology.Molecule
         or nx.Graph(). Full matching is done using the options described bellow.
@@ -3474,7 +3491,7 @@ class FrozenMolecule(Serializable):
         return self._hill_formula
 
     @staticmethod
-    def _object_to_hill_formula(obj: Union["Molecule", "nx.Graph"]) -> str:
+    def _object_to_hill_formula(obj: Union["FrozenMolecule", "nx.Graph"]) -> str:
         """Take a Molecule or NetworkX graph and generate its Hill formula.
         This provides a backdoor to the old functionality of Molecule.to_hill_formula, which
         was a static method that duck-typed inputs of Molecule or graph objects."""
