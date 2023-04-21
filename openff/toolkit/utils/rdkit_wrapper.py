@@ -537,10 +537,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             "CSTM_{symbol}", including wildtypes which show as "CSTM_*" 
         """
         from rdkit import Chem
+        from collections import OrderedDict
 
-        prepared_dict = Dict[str, Dict[str, List[str]]]
-        for name, smarts in custom_substructures:
-            rdmol = Chem.MolFromSmarts(smarts, removeHs=False, sanitize=False)
+        prepared_dict = OrderedDict[str, OrderedDict[str, List[str]]]()
+        for name, smarts in custom_substructures.items():
+            rdmol = Chem.MolFromSmarts(smarts)
             atom_list = [f"CSTM_{atom.GetSymbol()}" for atom in rdmol.GetAtoms()]
             prepared_dict[name] = {smarts: atom_list}
         return prepared_dict
@@ -642,8 +643,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                                     formal charge of previous query ({atom_j.GetFormalCharge()})"
                                 raise AmbiguousAtomChemicalAssignment(res_name, atom_j.GetIdx(), atom_i.GetIdx(), error_reason)
                             elif atom_i.GetChiralTag() != atom_j.GetChiralTag():
-                                error_reason = f"Chiral Tag of new query ({atom_i.GetFormalCharge()}) does not match the\
-                                    chiral tag of previous query ({atom_j.GetFormalCharge()})"
+                                error_reason = f"Chiral Tag of new query ({atom_i.GetChiralTag()}) does not match the\
+                                    chiral tag of previous query ({atom_j.GetChiralTag()})"
                                 raise AmbiguousAtomChemicalAssignment(res_name, atom_j.GetIdx(), atom_i.GetIdx(), error_reason)
                         # copy over chirality
                         if atom_i.GetChiralTag():
@@ -653,15 +654,15 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     already_assigned_nodes.update(match)
 
                     for b in ref.GetBonds():
-                        x = match[b.GetBeginAtomIdx()]
-                        y = match[b.GetEndAtomIdx()]
+                        x = full_match[b.GetBeginAtomIdx()]
+                        y = full_match[b.GetEndAtomIdx()]
                         b2 = mol.GetBondBetweenAtoms(x, y)
                         bond_ids = tuple(sorted([x, y]))
                         # error chacking of overlapping bonds. If substructures with priority disagree on the bond order, raise exception
                         if res_name in priority_substructure_residues and bond_ids in already_assigned_edges: # if overlapping with previous match
-                            if b.GetBondType != b2.GetBondType():
-                                error_reason = f"Chiral Tag of new query ({}) does not match the\
-                                    chiral tag of previous query ({})"
+                            if b.GetBondType() != b2.GetBondType():
+                                error_reason = f"Bond order of new query ({b.GetBondType()}) does not match the\
+                                    bond order of previous query ({b2.GetBondType()})"
                                 query_bond = tuple(sorted([b.GetBeginAtomIdx(), b.GetEndAtomIdx()]))
                                 raise AmbiguousBondChemicalAssignment(res_name, bond_ids, query_bond, error_reason)
                         b2.SetBondType(b.GetBondType())
