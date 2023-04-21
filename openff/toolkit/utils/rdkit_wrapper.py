@@ -672,12 +672,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     # ^^ matches return match ids in the order that they appear in the query. The code above filters neighboring (*) atoms
                     for query_id, mol_id in match_ids:
                         matches[mol_id].append(res_name)
-                        residue_name_ids[mol_id].append(
-                            res_idx
-                        )  # save the minimum amount of information between the res_name and query ids
-                        query_ids[mol_id].append(
-                            query_id
-                        )  # that may allow someone to reproduce or fully investigate the matches
+                        # residue_name_ids[mol_id].append(
+                        #     res_idx
+                        # )  # save the minimum amount of information between the res_name and query ids
+                        # query_ids[mol_id].append(
+                        #     query_id
+                        # )  # that may allow someone to reproduce or fully investigate the matches
 
                     # Unique molecule matches should only apply if they match entire molecule
                     if res_name == "UNIQUE_MOLECULE":
@@ -774,7 +774,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 for smarts, atom_names in smarts_to_atom_names.items():
                     ref = Chem.MolFromSmarts(smarts)
                     symbols = sorted(
-                        [SYMBOLS[atom.GetAtomicNum()] for atom in ref.GetAtoms()]
+                        [SYMBOLS[atom.GetAtomicNum()] for atom in ref.GetAtoms() if atom.GetAtomicNum() > 0]
                     )
                     resname_to_symbols_and_atomnames[resname].append(
                         (symbols, atom_names)
