@@ -280,7 +280,7 @@ class TestTopology:
 
     def test_atom_element_properties(self):
         """
-        Test element-like getters of Atom. In 0.11.0, Atom.element
+        Test element-like getters of `Atom`. In 0.11.0, Atom.element
         was removed and replaced with Atom.atomic_number and Atom.symbol.
         """
         topology = Topology()

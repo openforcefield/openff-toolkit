@@ -828,7 +828,7 @@ class Topology(Serializable):
 
     @property
     def propers(self) -> Generator[Tuple["Atom", ...], None, None]:
-        """Iterate over the proper torsions in this Topology. Returns a Generator of Tuple[Atom]."""
+        """Generator of Tuple[Atom]: iterator over the proper torsions in this Topology."""
         for molecule in self.molecules:
             for proper in molecule.propers:
                 yield proper
@@ -840,7 +840,7 @@ class Topology(Serializable):
 
     @property
     def impropers(self) -> Generator[Tuple["Atom", ...], None, None]:
-        """Iterate over the improper torsions in this Topology. Returns a Generator of Tuple[Atom]."""
+        """Generator of Tuple[Atom]: iterator over the possible improper torsions in this Topology."""
         for molecule in self._molecules:
             for improper in molecule.impropers:
                 yield improper
@@ -1681,6 +1681,7 @@ class Topology(Serializable):
             off_atom.metadata["residue_number"] = atom.residue.id
             off_atom.metadata["insertion_code"] = atom.residue.insertionCode
             off_atom.metadata["chain_id"] = atom.residue.chain.id
+            off_atom.name = atom.name
 
         for offmol in topology.molecules:
             offmol.add_default_hierarchy_schemes()
@@ -2444,7 +2445,7 @@ class Topology(Serializable):
         except NotBondedError:
             return False
 
-    def atom(self, atom_topology_index: int) -> "Atom":  # type: ignore[return]
+    def atom(self, atom_topology_index: int) -> "Atom":
         """
         Get the Atom at a given Topology atom index.
 
@@ -2456,7 +2457,6 @@ class Topology(Serializable):
         Returns
         -------
         An openff.toolkit.topology.Atom
-
         """
         if not isinstance(atom_topology_index, int):
             raise ValueError(
@@ -2479,6 +2479,11 @@ class Topology(Serializable):
                 # NOTE: the index here should still be in the topology index order, NOT the reference molecule's
                 return molecule.atom(atom_molecule_index)
             this_molecule_start_index += molecule.n_atoms
+
+        raise AtomNotInTopologyError(
+            f"No atom with index {atom_topology_index} exists in this topology, "
+            f"which contains {self.n_atoms} atoms."
+        )
 
         # Potentially more computationally efficient lookup ( O(largest_molecule_natoms)? )
         # start_index_2_top_mol is an ordered dict of [starting_atom_index] --> [topology_molecule]
