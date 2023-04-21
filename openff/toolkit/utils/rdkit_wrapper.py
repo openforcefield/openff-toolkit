@@ -335,7 +335,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         if msg != "":
             msg = (
                 "Some atoms loaded from PDB have a 3D geometry that corresponds to a different "
-                "stereochemistry than the substructure template or unique molecule: \n" + msg
+                "stereochemistry than the substructure template or unique molecule: \n"
+                + msg
             )
         warnings.warn(msg)
 
