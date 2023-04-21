@@ -35,13 +35,12 @@ from openff.toolkit.utils.exceptions import (
     NotAttachedToMoleculeError,
     RadicalsNotSupportedError,
     SMILESParseError,
-    SubstructureImproperlySpecified,
     SubstructureAtomSmartsInvalid,
     SubstructureBondSmartsInvalid,
+    SubstructureImproperlySpecified,
     ToolkitUnavailableException,
     UnassignedChemistryInPDBError,
     UndefinedStereochemistryError,
-
 )
 
 if TYPE_CHECKING:
@@ -289,10 +288,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     def _polymer_openmm_pdbfile_to_offtop(
         self, topology_class, pdbfile, substructure_dictionary, coords_angstrom, _custom_substructures: Dict[str, str] = {}
     ):
+        import json
+
         from openff.units.openmm import from_openmm
         from rdkit import Chem, Geometry
         from rdkit.DataStructs.cDataStructs import BitVectToBinaryText
-        import json
 
         omm_top = pdbfile.topology
 
