@@ -167,6 +167,22 @@ class TestIsomorphism:
             )
         )
 
+    @pytest.fixture()
+    def o_dichlorobezene(self):
+        return _SimpleMolecule.from_molecule(
+            Molecule.from_mapped_smiles(
+                "[C:1]=1([Cl:7])[C:2]([H:9])=[C:3]([H:10])[C:4]([H:11])=[C:5]([H:12])[C:6]([Cl:8])=1"
+            )
+        )
+
+    @pytest.fixture()
+    def m_dichlorobezene(self):
+        return _SimpleMolecule.from_molecule(
+            Molecule.from_mapped_smiles(
+                "[C:1]([Cl:7])(=[C:2]1([H:9]))[C:3]([H:10])=[C:4]([H:11])[C:5]([H:12])=[C:6]([Cl:8])1"
+            )
+        )
+
     @pytest.mark.parametrize("as_graphs", [True, False])
     def test_are_isomorphic(self, water, methane, methanol, as_graphs):
         if as_graphs:
@@ -208,3 +224,8 @@ class TestIsomorphism:
 
     def test_propanol_isopropanol_not_isomorphic(self, n_propanol, iso_propanol):
         assert not _SimpleMolecule.are_isomorphic(n_propanol, iso_propanol)[0]
+
+    def test_o_m_dichlorobenzene_not_isomorphic(
+        self, o_dichlorobezene, m_dichlorobezene
+    ):
+        assert not _SimpleMolecule.are_isomorphic(o_dichlorobezene, m_dichlorobezene)[0]
