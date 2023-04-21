@@ -350,9 +350,11 @@ class _SimpleMolecule:
         elif isinstance(mol1, networkx.Graph):
             assert isinstance(mol2, _cls)
             graph1 = _SimpleMolecule._from_subgraph(mol1).to_networkx()
+            graph2 = mol2.to_networkx()
 
         elif isinstance(mol2, networkx.Graph):
             assert isinstance(mol1, _cls)
+            graph1 = mol1.to_networkx()
             graph2 = _SimpleMolecule._from_subgraph(mol2).to_networkx()
 
         else:
@@ -360,6 +362,9 @@ class _SimpleMolecule:
             # so the class to compare to must be hard-coded here
             if not (isinstance(mol1, _cls) and isinstance(mol2, _cls)):
                 return False, None
+
+            graph1 = mol1.to_networkx()
+            graph2 = mol2.to_networkx()
 
         def node_match_func(node1, node2):
             return node1["atomic_number"] == node2["atomic_number"]
