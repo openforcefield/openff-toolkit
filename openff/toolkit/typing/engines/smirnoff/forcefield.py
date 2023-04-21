@@ -1371,7 +1371,6 @@ class ForceField:
         charge calculation to be cached.
 
         """
-        import numpy
         from openff.interchange import Interchange
         from openff.units import unit
 
