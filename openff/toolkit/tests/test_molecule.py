@@ -661,6 +661,14 @@ class TestMolecule:
         smiles2 = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles1 == smiles2
 
+    def test_from_smiles_name(self):
+        """Test name kwarg to from_smiles"""
+        mol = Molecule.from_smiles("C")
+        assert mol.name == ""
+
+        mol = Molecule.from_smiles("C", name="bob")
+        assert mol.name == "bob"
+
     @pytest.mark.parametrize(
         "smiles, expected", [("[Cl:1]Cl", {0: 1}), ("[Cl:1][Cl:2]", {0: 1, 1: 2})]
     )
@@ -964,6 +972,13 @@ class TestMolecule:
         )
 
         compare_mols(ref_mol, nonstandard_inchi_mol)
+
+    def test_from_inchi_name(self):
+        """Test name kwarg to from_inchi"""
+        mol = Molecule.from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3")
+        assert mol.name == ""
+        mol = Molecule.from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3", name="bob")
+        assert mol.name == "bob"
 
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @requires_openeye
@@ -2459,6 +2474,15 @@ class TestMolecule:
 
             assert pdb_mol.is_isomorphic_with(smiles_mol)
 
+        def test_name_kwarg(self, pdb_path, smiles, sdf_path):
+            """Ensure the name kwarg is wired up correctly"""
+            pdb_path = get_data_file_path(pdb_path)
+            pdb_mol = Molecule.from_pdb_and_smiles(pdb_path, smiles)
+            assert pdb_mol.name == ""
+
+            pdb_mol = Molecule.from_pdb_and_smiles(pdb_path, smiles, name="bob")
+            assert pdb_mol.name == "bob"
+
         def test_matches_sdf(self, pdb_path, smiles, sdf_path):
             """The produced Molecule should exactly match the corresponding SDF
 
@@ -3919,6 +3943,17 @@ class TestMoleculeFromPDB:
             offmol2.conformers[0].m_as(unit.angstrom),
             atol=0.01,
         )
+
+    def test_molecule_from_pdb_name(self):
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA.pdb")
+        )
+        assert offmol.name == ""
+
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA.pdb"), name="bob"
+        )
+        assert offmol.name == "bob"
 
     def test_molecule_from_pdb_mainchain_ala_tripeptide(self):
         offmol = Molecule.from_polymer_pdb(
