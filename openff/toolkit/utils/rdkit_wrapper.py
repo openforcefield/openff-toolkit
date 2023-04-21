@@ -776,7 +776,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 for smarts, atom_names in smarts_to_atom_names.items():
                     ref = Chem.MolFromSmarts(smarts)
                     symbols = sorted(
-                        [SYMBOLS[atom.GetAtomicNum()] for atom in ref.GetAtoms() if atom.GetAtomicNum() > 0]
+                        [
+                            SYMBOLS[atom.GetAtomicNum()]
+                            for atom in ref.GetAtoms()
+                            if atom.GetAtomicNum() > 0
+                        ]
                     )
                     resname_to_symbols_and_atomnames[resname].append(
                         (symbols, atom_names)
