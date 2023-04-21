@@ -1175,7 +1175,7 @@ class Topology(Serializable):
                 if mol2_idx in already_matched_mols:
                     continue
                 mol2 = self.molecule(mol2_idx)
-                if isinstance(mol1, type(mol2)) and isinstance(mol2, type(mol1)):
+                if isinstance(mol1, type(mol2)) or isinstance(mol2, type(mol1)):
                     are_isomorphic, atom_map = mol1.are_isomorphic(
                         mol1, mol2, return_atom_map=True
                     )
