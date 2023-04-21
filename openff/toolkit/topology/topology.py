@@ -1535,6 +1535,7 @@ class Topology(Serializable):
         file_path: Union[str, TextIO],
         unique_molecules: Optional[Iterable[Molecule]] = None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        _ignore_stereo: bool = False,
     ):
         """
         Loads supported or user-specified molecules from a PDB file.
@@ -1692,8 +1693,10 @@ class Topology(Serializable):
             pdb,
             substructure_dictionary,
             coords_angstrom,
+            _ignore_stereo=_ignore_stereo,
         )
 
+        # TODO: This is redundant with the RDKit backend - see RDKTKW._get_connectivity_from_openmm_top
         for off_atom, atom in zip([*topology.atoms], pdb.topology.atoms()):
             off_atom.metadata["residue_name"] = atom.residue.name
             off_atom.metadata["residue_number"] = atom.residue.id

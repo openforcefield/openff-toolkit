@@ -11,6 +11,7 @@ import itertools
 import logging
 import pathlib
 import tempfile
+import warnings
 from collections import defaultdict
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
@@ -280,7 +281,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return offmol
 
     def _polymer_openmm_pdbfile_to_offtop(
-        self, topology_class, pdbfile, substructure_dictionary, coords_angstrom
+        self,
+        topology_class,
+        pdbfile,
+        substructure_dictionary,
+        coords_angstrom,
+        _ignore_stereo: bool = False,
     ):
         from openff.units.openmm import from_openmm
         from rdkit import Chem, Geometry
@@ -290,6 +296,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             omm_top, substructure_dictionary
         )
 
+        # The above method will have set stereo on the atoms directly from the substructures and unique_molecules.
+        # In order to check that the same stereo is perceived from 3D as is assigned from the template, make
+        # a copy here, then assign stereo from 3D, and then raise an error if there's a disagreement.
+        mol_with_stereo_from_substr = Chem.Mol(rdkit_mol)
+        Chem.AssignStereochemistry(mol_with_stereo_from_substr)
         rdmol_conformer = Chem.Conformer()
         for atom_idx in range(rdkit_mol.GetNumAtoms()):
             x, y, z = coords_angstrom[atom_idx, :]
@@ -299,9 +310,49 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             rdkit_mol,
             Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS,
         )
-        Chem.AssignStereochemistryFrom3D(rdkit_mol)
         Chem.Kekulize(rdkit_mol, clearAromaticFlags=True)
         Chem.SetAromaticity(rdkit_mol, Chem.AromaticityModel.AROMATICITY_MDL)
+        Chem.AssignStereochemistryFrom3D(rdkit_mol)
+
+        # Check stereo assigned from 3D against the stereo assigned by substructures.
+
+        # Note that this DOES NOT compare global stereo (R vs. S) because the global stereo
+        # of a substructure may be undefined (it could change depending on which substructures connect to it).
+        # Instead, since we know that the order of atoms and bonds are the same  between
+        # mol_with_stereo_from_substr and rdkit_mol are the same, we compare "local stereo" (CW vs CCW).
+        msg = ""
+        for orig_atom, new_atom in zip(
+            mol_with_stereo_from_substr.GetAtoms(), rdkit_mol.GetAtoms()
+        ):
+            if _ignore_stereo:
+                continue
+            orig_chi = orig_atom.GetChiralTag()
+            orig_abs_chi = orig_atom.GetPropsAsDict().get("_CIPCode", "")
+            new_chi = new_atom.GetChiralTag()
+            new_abs_chi = new_atom.GetPropsAsDict().get("_CIPCode", "")
+
+            # If either the original atom or the newly perceived atom isn't a chiral center, skip this check.
+            # This means that users can avoid this check by adding unique molecules with undefined stereo
+            if (orig_chi == Chem.CHI_UNSPECIFIED) or (new_chi == Chem.CHI_UNSPECIFIED):
+                continue
+            if orig_chi != new_chi:
+                print(f"{orig_chi=} {new_chi=} {orig_abs_chi=} {new_abs_chi=}")
+                residue = orig_atom.GetPDBResidueInfo()
+                atom_name = orig_atom.GetPropsAsDict().get("_Name", "")
+                atom_symbol = orig_atom.GetSymbol()
+                atom_index = orig_atom.GetIdx()
+                residue_name = residue.GetResidueName()
+                residue_number = residue.GetResidueNumber()
+                chain_id = residue.GetChainId()
+
+                msg += f"{atom_index=} {atom_symbol=} {atom_name=} {residue_name=} {residue_number=} {chain_id=} \n"
+        if msg != "":
+            msg = (
+                "Some atoms loaded from PDB have a 3D geometry that corresponds to a different "
+                "stereochemistry than the substructure template or unique molecule: \n"
+                + msg
+            )
+        warnings.warn(msg)
 
         # Don't sanitize or we risk assigning non-MDL aromaticity
         rdmols = Chem.GetMolFrags(rdkit_mol, asMols=True, sanitizeFrags=False)
@@ -415,8 +466,16 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     for atom_i, j in zip(ref.GetAtoms(), match):
                         atom_j = mol.GetAtomWithIdx(j)
                         # copy over chirality
+                        # TODO: This is most likely wrong. This will copy over CW/CCW tags but there's no
+                        #  checking that the substituent order in the molecule and substructure are the same,
+                        #  so this is basically random assignment. Thankfully Molecule.from_polymer_pdb and
+                        #  Topology.from_pdb both overwrite this assignment based on 3D coordinates. The only
+                        #  way I can currently think of doing this right would be to arbitrarily assign CW,
+                        #  then try to run a strict substructure match on it, and if that fails then assign
+                        #  CCW. This would be monstrously inefficient and all it would let us do is compare
+                        #  the substructure stereo to 3D stereo, which is of dubious value anyway.
                         if atom_i.GetChiralTag():
-                            mol.GetAtomWithIdx(j).SetChiralTag(atom_i.GetChiralTag())
+                            atom_j.SetChiralTag(atom_i.GetChiralTag())
                         atom_j.SetFormalCharge(atom_i.GetFormalCharge())
 
                     for b in ref.GetBonds():
@@ -477,6 +536,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             res.SetChainId(atom.residue.chain.id)
             rwatom = rwmol.GetAtomWithIdx(idx)
             rwatom.SetPDBResidueInfo(res)
+            rwatom.SetProp("_Name", atom.name)
         # we're fully explicit
         for atom in rwmol.GetAtoms():
             atom.SetNoImplicit(True)
