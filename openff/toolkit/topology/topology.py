@@ -1692,6 +1692,7 @@ class Topology(Serializable):
             _ignore_stereo=_ignore_stereo,
         )
 
+        # TODO: This is redundant with the RDKit backend - see RDKTKW._get_connectivity_from_openmm_top
         for off_atom, atom in zip([*topology.atoms], pdb.topology.atoms()):
             off_atom.metadata["residue_name"] = atom.residue.name
             off_atom.metadata["residue_number"] = atom.residue.id
