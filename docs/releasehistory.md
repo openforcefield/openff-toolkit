@@ -16,6 +16,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 # Current development
 ### New features
+- [PR #1567](https://github.com/openforcefield/openff-toolkit/pull/1567): Allows setting `Molecule.name` in `Molecule.from_smiles`, `from_inchi`, `from_polymer_pdb`, and `from_pdb_and_smiles`.
 - [PR #1565](https://github.com/openforcefield/openff-toolkit/pull/1565): Adds `Topology.from_pdb`
 
 ### Behavior changes
@@ -23,8 +24,12 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Improved documentation and warnings
 
-- [PR #1564] Improve documentation of conformer selection in `Molecule.assign_partial_charges()`
+- [PR #1564](https://github.com/openforcefield/openff-toolkit/pull1564) Improve documentation of conformer selection in `Molecule.assign_partial_charges()`
 - [PR #1574](https://github.com/openforcefield/openff-toolkit/pull/1574) Fix class method signature rendering throughout API docs
+- [PR #1584](https://github.com/openforcefield/openff-toolkit/pull/1584) Update some outdated docstrings and add some annotations.
+
+### Examples updates
+- [PR #1575](https://github.com/openforcefield/openff-toolkit/pull/1575): The Toolkit Showcase example has been simplified via use of `Topology.from_pdb`
 
 ## 0.12.1
 

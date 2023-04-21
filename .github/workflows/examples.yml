@@ -139,6 +139,7 @@ jobs:
             NB_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             NB_ARGS+=" --ignore=examples/conformer_energies"
             NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
+            NB_ARGS+=" --ignore=examples/toolkit_showcase"
           fi
 
           python -m pytest $PYTEST_ARGS $NB_ARGS examples
