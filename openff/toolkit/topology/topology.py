@@ -1648,6 +1648,7 @@ class Topology(Serializable):
 
         import openmm.unit as openmm_unit
         from openmm.app import PDBFile
+        from collections import OrderedDict
 
         pdb = PDBFile(file_path)
 
@@ -1656,7 +1657,7 @@ class Topology(Serializable):
         )
 
         with open(substructure_file_path, "r") as subfile:
-            substructure_dictionary = json.load(subfile)
+            substructure_dictionary = json.load(subfile, object_pairs_hook=OrderedDict) # preserving order is useful later when saving metadata
         substructure_dictionary["HOH"] = {"[H:1][O:2][H:3]": ["H1", "O", "H2"]}
         substructure_dictionary["Li"] = {"[Li+1:1]": ["Li"]}
         substructure_dictionary["Na"] = {"[Na+1:1]": ["Na"]}

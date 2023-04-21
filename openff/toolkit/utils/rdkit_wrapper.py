@@ -25,6 +25,8 @@ from openff.toolkit.utils.constants import (
     DEFAULT_AROMATICITY_MODEL,
 )
 from openff.toolkit.utils.exceptions import (
+    AmbiguousAtomChemicalAssignment,
+    AmbiguousBondChemicalAssignment,
     ChargeMethodUnavailableError,
     ConformerGenerationError,
     InvalidAromaticityModelError,
@@ -275,6 +277,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     ):
         from openff.units.openmm import from_openmm
         from rdkit import Chem, Geometry
+        from rdkit.DataStructs.cDataStructs import BitVectToBinaryText
+        import json
 
         omm_top = pdbfile.topology
 
@@ -286,7 +290,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             substructure_dictionary.update(custom_substructure_dictionary) # concats both dicts, unique keys are enforced in previous function
         
         rdkit_mol = self._polymer_openmm_topology_to_rdmol(
-            omm_top, substructure_dictionary
+            omm_top, substructure_dictionary, list(_custom_substructures.keys())
         )
 
         rdmol_conformer = Chem.Conformer()
@@ -325,6 +329,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 offmol = copy.deepcopy(smiles2offmol[mapped_smi])
             else:
                 offmol = self.from_rdkit(rdmol, allow_undefined_stereo=True)
+                # assign metadata
+                for offatom, rdatom in zip(offmol.atoms, rdmol.GetAtoms()):
+                    res_ids = np.frombuffer(BitVectToBinaryText(rdatom.GetExplicitBitVectProp("res_ids")), dtype=np.uint64)
+                    query_ids = np.frombuffer(BitVectToBinaryText(rdatom.GetExplicitBitVectProp("query_ids")), dtype=np.uint64)
+                    residues = [list(substructure_dictionary.keys())[i] for i in res_ids] # fyi substruct dict is now OrderedDict
+                    query_ids = [int(idx) for idx in list(query_ids)]
+                    match_info = dict(zip(residues, query_ids))
+                    offatom.metadata["match_info"] = json.dumps(match_info)
                 smiles2offmol[mapped_smi] = copy.deepcopy(offmol)
             top._add_molecule_keep_cache(offmol)
         if pdbfile.topology.getPeriodicBoxVectors() is not None:
@@ -517,13 +529,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             rdmol = Chem.MolFromSmarts(smarts, removeHs=False, sanitize=False)
             atom_list = [f"CSTM_{atom.GetSymbol()}" for atom in rdmol.GetAtoms()]
             prepared_dict[name] = {smarts: atom_list}
-        return 
+        return prepared_dict
 
     def _polymer_openmm_topology_to_rdmol(
         self,
         omm_top,
         substructure_library,
-        _custom_substructures: Dict[str, str] = {}
+        priority_substructure_residues = []
     ):
         """
         Parameters
@@ -547,6 +559,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             substructure library
         """
         from rdkit import Chem
+        from rdkit.DataStructs.cDataStructs import CreateFromBinaryText
 
         already_assigned_nodes = set()
         # TODO: We currently assume all single and modify a few
@@ -557,13 +570,15 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Keeping track of which atoms are matched where will help us with error
         # messages
         matches = defaultdict(list)
+        residue_name_ids = defaultdict(list)
+        query_ids = defaultdict(list)
 
         rdkit_mol = self._get_connectivity_from_openmm_top(omm_top)
         mol = Chem.Mol(rdkit_mol)
         # Get a tuple of tuples of atom indices belonging to separate molecules in this RDMol
         # (note that this rdmol may actually be a solvated protein-ligand system)
         sorted_mol_frags = [tuple(sorted(i)) for i in Chem.GetMolFrags(mol)]
-        for res_name in substructure_library:
+        for res_idx, res_name in enumerate(substructure_library):
             # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes
             # so it just does the biggest substructures first
             # NOTE: If this changes, MissingChemistryFromPolymerError needs to be updated too
@@ -575,15 +590,20 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 ref = Chem.MolFromSmarts(substructure_smarts)
                 # then create a looser definition for pattern matching...
                 # be lax about double bonds and chirality
-                fuzzy = self._fuzzy_query(ref)
+                fuzzy, neighbor_idxs = self._fuzzy_query(ref)
                 # It's important that we do the substructure search on `rdkit_mol`, but the chemical
                 # info is added to `mol`. If we use the same rdkit molecule for search AND info addition,
                 # then single bonds may no longer be present for subsequent overlapping matches.
-                for match in rdkit_mol.GetSubstructMatches(fuzzy, maxMatches=0):
+                for full_match in rdkit_mol.GetSubstructMatches(fuzzy, maxMatches=0):
                     # Keep track of all residue names that have been assigned to
                     # each atom, for use in generating a useful error message later
-                    for i in match:
-                        matches[i].append(res_name)
+                    match_ids = [(query_id, mol_id) for query_id, mol_id in enumerate(full_match) if query_id not in neighbor_idxs]
+                    match = list(zip(*match_ids))[1] # get the molecule ids without the corresponding query ids
+                    # ^^ matches return match ids in the order that they appear in the query. The code above filters neighboring (*) atoms
+                    for query_id, mol_id in match_ids:
+                        matches[mol_id].append(res_name)
+                        residue_name_ids[mol_id].append(res_idx) # save the minimum amount of information between the res_name and query ids 
+                        query_ids[mol_id].append(query_id) # that may allow someone to reproduce or fully investigate the matches 
 
                     # Unique molecule matches should only apply if they match entire molecule
                     if res_name == "UNIQUE_MOLECULE":
@@ -593,26 +613,45 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
                     # Some special residues are allowed to overlap/override previous matches
                     if any(m in already_assigned_nodes for m in match) and (
-                        res_name not in ["PEPTIDE_BOND", "DISULFIDE", "UNIQUE_MOLECULE", *_custom_substructures.keys()]
+                        res_name not in ["PEPTIDE_BOND", "DISULFIDE", "UNIQUE_MOLECULE", *priority_substructure_residues]
                     ):
                         continue
-                    already_assigned_nodes.update(match)
 
                     # for _custom_substructures only, allow overlaps if no chemical info is changed
 
                     for atom_i, j in zip(ref.GetAtoms(), match):
                         atom_j = mol.GetAtomWithIdx(j)
+                        # error checking for overlapping substructures with priority. Enforce that no ambiguous chemical assignments are made
+                        if res_name in priority_substructure_residues and j in already_assigned_nodes: # if overlapping with previous match
+                            if atom_i.GetFormalCharge() != atom_j.GetFormalCharge():
+                                error_reason = f"Formal charge of new query ({atom_i.GetFormalCharge()}) does not match the\
+                                    formal charge of previous query ({atom_j.GetFormalCharge()})"
+                                raise AmbiguousAtomChemicalAssignment(res_name, atom_j.GetIdx(), atom_i.GetIdx(), error_reason)
+                            elif atom_i.GetChiralTag() != atom_j.GetChiralTag():
+                                error_reason = f"Chiral Tag of new query ({atom_i.GetFormalCharge()}) does not match the\
+                                    chiral tag of previous query ({atom_j.GetFormalCharge()})"
+                                raise AmbiguousAtomChemicalAssignment(res_name, atom_j.GetIdx(), atom_i.GetIdx(), error_reason)
                         # copy over chirality
                         if atom_i.GetChiralTag():
                             mol.GetAtomWithIdx(j).SetChiralTag(atom_i.GetChiralTag())
                         atom_j.SetFormalCharge(atom_i.GetFormalCharge())
 
+                    already_assigned_nodes.update(match)
+
                     for b in ref.GetBonds():
                         x = match[b.GetBeginAtomIdx()]
                         y = match[b.GetEndAtomIdx()]
                         b2 = mol.GetBondBetweenAtoms(x, y)
+                        bond_ids = tuple(sorted([x, y]))
+                        # error chacking of overlapping bonds. If substructures with priority disagree on the bond order, raise exception
+                        if res_name in priority_substructure_residues and bond_ids in already_assigned_edges: # if overlapping with previous match
+                            if b.GetBondType != b2.GetBondType():
+                                error_reason = f"Chiral Tag of new query ({}) does not match the\
+                                    chiral tag of previous query ({})"
+                                query_bond = tuple(sorted([b.GetBeginAtomIdx(), b.GetEndAtomIdx()]))
+                                raise AmbiguousBondChemicalAssignment(res_name, bond_ids, query_bond, error_reason)
                         b2.SetBondType(b.GetBondType())
-                        already_assigned_edges.add(tuple(sorted([x, y])))
+                        already_assigned_edges.add(bond_ids)
 
         unassigned_atoms = sorted(
             set(range(rdkit_mol.GetNumAtoms())) - already_assigned_nodes
@@ -648,9 +687,17 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 unassigned_bonds=unassigned_bonds,
                 matches=matches,
             )
+        
+        # set some properties to later remember what matches were made
+        for atom in mol.GetAtoms():
+            atom_id = atom.GetIdx()
+            res_ids = residue_name_ids[atom_id]
+            q_ids = query_ids[atom_id]
+            atom.SetExplicitBitVectProp("res_ids", CreateFromBinaryText(np.array(res_ids, dtype=np.uint64).tobytes()))
+            atom.SetExplicitBitVectProp("query_ids", CreateFromBinaryText(np.array(q_ids, dtype=np.uint64).tobytes()))
 
         return mol
-
+        
     def _get_connectivity_from_openmm_top(self, omm_top):
         from rdkit import Chem
 
@@ -689,23 +736,25 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # N.B. This isn't likely to be an active
         generic_mol = (
             Chem.MolFromSmarts(  # TODO: optimisation, create this once somewhere
-                "".join("[#{}]".format(i + 1) for i in range(112))
+                "[*]" + "".join("[#{}]".format(i + 1) for i in range(112))
             )
         )
 
         fuzzy = Chem.Mol(query)
-        for a in fuzzy.GetAtoms():
+        neighbor_idxs = []
+        for idx, a in enumerate(fuzzy.GetAtoms()):
             a.SetFormalCharge(0)
             a.SetQuery(
-                generic_mol.GetAtomWithIdx(a.GetAtomicNum() - 1)
+                generic_mol.GetAtomWithIdx(a.GetAtomicNum())
             )  # i.e. H looks up atom 0 in our generic mol
             a.SetNoImplicit(True)
+            if a.GetAtomicNum() == 0:
+                neighbor_idxs.append(idx)
         for b in fuzzy.GetBonds():
             b.SetIsAromatic(False)
             b.SetBondType(Chem.rdchem.BondType.SINGLE)
             b.SetQuery(generic_bond)
-
-        return fuzzy
+        return fuzzy, neighbor_idxs
 
     def _assign_aromaticity_and_stereo_from_3d(self, offmol):
         from rdkit import Chem
