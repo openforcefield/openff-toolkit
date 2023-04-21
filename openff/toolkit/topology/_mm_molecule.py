@@ -339,21 +339,21 @@ class _SimpleMolecule:
         mol2: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"],
         return_atom_map: bool = False,
     ) -> Tuple[bool, Optional[Dict[int, int]]]:
-        import networkx as nx
+        import networkx
 
         _cls = _SimpleMolecule
 
-        if isinstance(mol1, nx.Graph) and isinstance(mol2, nx.Graph):
-            mol1 = _SimpleMolecule._from_subgraph(mol1)
-            mol2 = _SimpleMolecule._from_subgraph(mol2)
+        if isinstance(mol1, networkx.Graph) and isinstance(mol2, networkx.Graph):
+            graph1 = _SimpleMolecule._from_subgraph(mol1).to_networkx()
+            graph2 = _SimpleMolecule._from_subgraph(mol2).to_networkx()
 
-        elif isinstance(mol1, nx.Graph):
+        elif isinstance(mol1, networkx.Graph):
             assert isinstance(mol2, _cls)
-            mol1 = _SimpleMolecule._from_subgraph(mol1)
+            graph1 = _SimpleMolecule._from_subgraph(mol1).to_networkx()
 
-        elif isinstance(mol2, nx.Graph):
+        elif isinstance(mol2, networkx.Graph):
             assert isinstance(mol1, _cls)
-            mol2 = _SimpleMolecule._from_subgraph(mol2)
+            graph2 = _SimpleMolecule._from_subgraph(mol2).to_networkx()
 
         else:
             # static methods (by definition) know nothing about their class,
@@ -361,30 +361,27 @@ class _SimpleMolecule:
             if not (isinstance(mol1, _cls) and isinstance(mol2, _cls)):
                 return False, None
 
-        if mol1.n_atoms != mol2.n_atoms:
-            return False, None
+        def node_match_func(node1, node2):
+            return node1["atomic_number"] == node2["atomic_number"]
 
-        if mol1.n_bonds != mol2.n_bonds:
-            return False, None
+        edge_match_func = None
 
-        for this_atom, other_atom in zip(mol1.atoms, mol2.atoms):
-            if this_atom.atomic_number != other_atom.atomic_number:
-                return False, None
+        matcher = networkx.algorithms.isomorphism.GraphMatcher(
+            graph1, graph2, node_match=node_match_func, edge_match=edge_match_func
+        )
 
-            # With Python 3.10+, this can be quicker with `strict=True`
-            # (https://peps.python.org/pep-0618/)
-            for this_neighbor, other_neighor in zip(
-                this_atom.bonded_atoms,
-                other_atom.bonded_atoms,
-            ):
-                if this_neighbor.atomic_number != other_neighor.atomic_number:
-                    return False, None
+        if matcher.is_isomorphic():
+            if return_atom_map:
+                topology_atom_map = matcher.mapping
 
-        # These objects don't have well-defined atom indices, so just return 1:1 mapping
-        if return_atom_map:
-            return True, {index: index for index in range(mol1.n_atoms)}
+                return True, {
+                    key: topology_atom_map[key] for key in sorted(topology_atom_map)
+                }
+
+            else:
+                return True, None
         else:
-            return True, None
+            return False, None
 
     def generate_unique_atom_names(self):
         """Generate unique atom names. See `Molecule.generate_unique_atom_names`."""
