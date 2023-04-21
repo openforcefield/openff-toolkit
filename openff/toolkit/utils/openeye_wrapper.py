@@ -216,7 +216,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         return cls._is_available  # type: ignore[return-value]
 
     def from_object(
-        self, obj, allow_undefined_stereo: bool = False, _cls=None
+        self,
+        obj,
+        allow_undefined_stereo: bool = False,
+        _cls=None,
     ) -> "Molecule":
         """
         Convert an OEMol (or OEMol-derived object) into an openff.toolkit.topology.molecule
@@ -231,6 +234,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             is passed into this function.
         _cls : class
             Molecule constructor
+
         Returns
         -------
         Molecule
@@ -251,7 +255,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         if isinstance(obj, oechem.OEMolBase):
             return self.from_openeye(
-                oemol=obj, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
+                oemol=obj,
+                allow_undefined_stereo=allow_undefined_stereo,
+                _cls=_cls,
             )
         raise NotImplementedError(
             "Cannot create Molecule from {} object".format(type(obj))
@@ -1064,7 +1070,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     @staticmethod
     def from_openeye(
-        oemol, allow_undefined_stereo: bool = False, _cls=None
+        oemol,
+        allow_undefined_stereo: bool = False,
+        _cls=None,
     ) -> "Molecule":
         """
         Create a Molecule from an OpenEye molecule. If the OpenEye molecule has
@@ -1193,7 +1201,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             _cls = Molecule
 
         molecule = _cls()
-        molecule.name = oemol.GetTitle()
+
+        # OEMol.GetTitle() happens to default to an empty string
+        if oemol.GetTitle() != "":
+            molecule.name = oemol.GetTitle()
 
         # Copy any attached SD tag information
         for dp in oechem.OEGetSDDataPairs(oemol):
@@ -1953,6 +1964,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         hydrogens_are_explicit: bool = False,
         allow_undefined_stereo: bool = False,
         _cls=None,
+        name: str = "",
     ) -> "Molecule":
         """
         Create a Molecule from a SMILES string using the OpenEye toolkit.
@@ -1971,6 +1983,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             is passed into this function.
         _cls : class
             Molecule constructor
+        name : str, default=""
+            An optional name for the output molecule
 
         Returns
         -------
@@ -2006,12 +2020,19 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             atom.SetPartialCharge(float("nan"))
 
         molecule = self.from_openeye(
-            oemol, _cls=_cls, allow_undefined_stereo=allow_undefined_stereo
+            oemol,
+            _cls=_cls,
+            allow_undefined_stereo=allow_undefined_stereo,
         )
+        molecule.name = name
         return molecule
 
     def from_inchi(
-        self, inchi: str, allow_undefined_stereo: bool = False, _cls=None
+        self,
+        inchi: str,
+        allow_undefined_stereo: bool = False,
+        _cls=None,
+        name: str = "",
     ) -> "Molecule":
         """
         Construct a Molecule from a InChI representation
@@ -2020,14 +2041,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         ----------
         inchi : str
             The InChI representation of the molecule.
-
         allow_undefined_stereo : bool, default=False
             Whether to accept InChI with undefined stereochemistry. If False,
             an exception will be raised if a InChI with undefined stereochemistry
             is passed into this function.
-
         _cls : class
             Molecule constructor
+        name : str, default=""
+            An optional name for the output molecule
 
         Returns
         -------
@@ -2048,8 +2069,11 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             )
 
         molecule = self.from_openeye(
-            oemol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
+            oemol,
+            allow_undefined_stereo=allow_undefined_stereo,
+            _cls=_cls,
         )
+        molecule.name = name
 
         return molecule
 

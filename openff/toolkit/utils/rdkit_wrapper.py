@@ -132,7 +132,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 cls._is_available = True
         return cls._is_available
 
-    def from_object(self, obj, allow_undefined_stereo: bool = False, _cls=None):
+    def from_object(
+        self,
+        obj,
+        allow_undefined_stereo: bool = False,
+        _cls=None,
+    ):
         """
         If given an rdchem.Mol (or rdchem.Mol-derived object), this function will load it into an
         openff.toolkit.topology.molecule. Otherwise, it will return False.
@@ -166,7 +171,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
             _cls = Molecule
         if isinstance(obj, Chem.rdchem.Mol):
-            return _cls.from_rdkit(obj, allow_undefined_stereo=allow_undefined_stereo)
+            return _cls.from_rdkit(
+                obj,
+                allow_undefined_stereo=allow_undefined_stereo,
+            )
         raise NotImplementedError(
             "Cannot create Molecule from {} object".format(type(obj))
         )
@@ -177,6 +185,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         smiles: str,
         allow_undefined_stereo: bool = False,
         _cls=None,
+        name: str = "",
     ):
         """
         Create a Molecule from a pdb file and a SMILES string using RDKit.
@@ -201,6 +210,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             If false, raises an exception if SMILES contains undefined stereochemistry.
         _cls : class
             Molecule constructor
+        name : str, default=""
+            An optional name for the output molecule
 
         Returns
         --------
@@ -216,7 +227,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # Make the molecule from smiles
         offmol = self.from_smiles(
-            smiles, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
+            smiles,
+            allow_undefined_stereo=allow_undefined_stereo,
+            _cls=_cls,
         )
 
         # Make another molecule from the PDB. We squelch stereo errors here, since
@@ -261,6 +274,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             newatom.name = pdbatom.name
         new_mol.add_default_hierarchy_schemes()
 
+        new_mol.name = name
         return new_mol
 
     def _polymer_openmm_topology_to_offmol(
@@ -1270,6 +1284,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         hydrogens_are_explicit: bool = False,
         allow_undefined_stereo: bool = False,
         _cls=None,
+        name: str = "",
     ):
         """
         Create a Molecule from a SMILES string using the RDKit toolkit.
@@ -1288,6 +1303,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             is passed into this function.
         _cls : class
             Molecule constructor
+        name : str, default=""
+            An optional name to pass to the _cls constructor
 
         Returns
         -------
@@ -1352,10 +1369,16 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             allow_undefined_stereo=allow_undefined_stereo,
             hydrogens_are_explicit=hydrogens_are_explicit,
         )
-
+        molecule.name = name
         return molecule
 
-    def from_inchi(self, inchi: str, allow_undefined_stereo: bool = False, _cls=None):
+    def from_inchi(
+        self,
+        inchi: str,
+        allow_undefined_stereo: bool = False,
+        _cls=None,
+        name: str = "",
+    ):
         """
         Construct a Molecule from a InChI representation
 
@@ -1403,6 +1426,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         molecule = self.from_rdkit(
             rdmol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
         )
+        molecule.name = name
 
         return molecule
 
@@ -2035,12 +2059,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Create a new OpenFF Molecule
         offmol = _cls()
 
-        # If RDMol has a title save it
+        # If RDMol has a title, use it
         if rdmol.HasProp("_Name"):
-            # raise Exception('{}'.format(rdmol.GetProp('name')))
             offmol.name = rdmol.GetProp("_Name")
-        else:
-            offmol.name = ""
 
         # Store all properties
         # TODO: Should there be an API point for storing properties?
@@ -2415,7 +2436,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         rdmol = Chem.RWMol(rdmol)
         # Set name
         # TODO: What is the best practice for how this should be named?
-        if not (molecule.name is None):
+        if molecule.name != "":
             rdmol.SetProp("_Name", molecule.name)
 
         # TODO: Set other properties
