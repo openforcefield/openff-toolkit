@@ -151,6 +151,22 @@ class TestMMMolecule:
 
 
 class TestIsomorphism:
+    @pytest.fixture()
+    def n_propanol(self):
+        return _SimpleMolecule.from_molecule(
+            Molecule.from_mapped_smiles(
+                "[H:5][C:1]([H:6])([H:7])[C:2]([H:8])([H:9])[C:3]([H:10])([H:11])[O:4][H:12]"
+            )
+        )
+
+    @pytest.fixture()
+    def iso_propanol(self):
+        return _SimpleMolecule.from_molecule(
+            Molecule.from_mapped_smiles(
+                "[H:5][C:1]([H:6])([H:7])[C:2]([H:8])([C:3]([H:10])([H:11])[H:12])[O:4][H:9]"
+            )
+        )
+
     @pytest.mark.parametrize("as_graphs", [True, False])
     def test_are_isomorphic(self, water, methane, methanol, as_graphs):
         if as_graphs:
@@ -189,3 +205,6 @@ class TestIsomorphism:
 
         assert _SimpleMolecule.are_isomorphic(methanol, graph)[0]
         assert _SimpleMolecule.are_isomorphic(graph, methanol)[0]
+
+    def test_propanol_isopropanol_not_isomorphic(self, n_propanol, iso_propanol):
+        assert not _SimpleMolecule.are_isomorphic(n_propanol, iso_propanol)[0]

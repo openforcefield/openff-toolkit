@@ -371,6 +371,15 @@ class _SimpleMolecule:
             if this_atom.atomic_number != other_atom.atomic_number:
                 return False, None
 
+            # With Python 3.10+, this can be quicker with `strict=True`
+            # (https://peps.python.org/pep-0618/)
+            for this_neighbor, other_neighor in zip(
+                this_atom.bonded_atoms,
+                other_atom.bonded_atoms,
+            ):
+                if this_neighbor.atomic_number != other_neighor.atomic_number:
+                    return False, None
+
         # These objects don't have well-defined atom indices, so just return 1:1 mapping
         if return_atom_map:
             return True, {index: index for index in range(mol1.n_atoms)}
