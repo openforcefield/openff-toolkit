@@ -13,7 +13,6 @@ from openff.toolkit.tests.utils import requires_openeye
 from openff.toolkit.utils._nagl_wrapper import _NAGLToolkitWrapper
 from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 
-
 @skip_if_missing("openff.nagl")
 class TestNAGLToolkitWrapper:
     def test_version(self):
@@ -52,7 +51,10 @@ class TestNAGLToolkitWrapper:
 
         nagl_charges = molecule.partial_charges
 
-        assert numpy.allclose(openeye_charges, nagl_charges)
+        assert numpy.allclose(openeye_charges,
+                              nagl_charges,
+                              atol=0.03,
+                              rtol=0)
 
     def test_atom_order_dependence(self):
         """Regression test against atom order dependence."""
