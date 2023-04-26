@@ -37,5 +37,5 @@ dependencies:
   - qcportal >=0.15
   - qcengine
   - mdtraj
-  - parmed
+  - parmed =4
   - ipywidgets =7
