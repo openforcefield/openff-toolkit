@@ -407,7 +407,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
                     # Some special residues are allowed to overlap/override previous matches
                     if any(m in already_assigned_nodes for m in match) and (
-                        res_name not in ["PEPTIDE_BOND", "DISULFIDE", "UNIQUE_MOLECULE"]
+                        res_name
+                        not in [
+                            "PEPTIDE_BOND",
+                            "DISULFIDE",
+                            "UNIQUE_MOLECULE",
+                            "ADDITIONAL_SUBSTRUCTURE",
+                        ]
                     ):
                         continue
                     already_assigned_nodes.update(match)
