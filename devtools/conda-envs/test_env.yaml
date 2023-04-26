@@ -22,7 +22,7 @@ dependencies:
   - openff-nagl >=0.2.1
   - openff-nagl-models >=0.0.2
     # Toolkit-specific
-  - ambertools
+  - ambertools >=22
   - rdkit
   - openeye-toolkits
     # Test-only/optional/dev/typing
