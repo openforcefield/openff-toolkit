@@ -53,7 +53,7 @@ jobs:
 
       - name: Install package
         run: |
-          conda remove --force openff-toolkit openff-toolkit-base
+          micromamba remove --force openff-toolkit openff-toolkit-base
           python -m pip install .
 
       - name: Install test plugins
