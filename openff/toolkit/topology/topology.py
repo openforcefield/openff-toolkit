@@ -1535,7 +1535,7 @@ class Topology(Serializable):
         cls,
         file_path: Union[str, TextIO],
         unique_molecules: Optional[Iterable[Molecule]] = None,
-        toolkit_registry: ToolkitRegistry = GLOBAL_TOOLKIT_REGISTRY,
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
         _additional_substructures: Optional[Iterable[Molecule]] = None,
     ):
         """

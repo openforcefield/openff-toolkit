@@ -858,6 +858,11 @@ class TestTopology:
             _additional_substructures=[mol],
         )
 
+        expected_mol = Molecule.from_file(
+            get_data_file_path("proteins/ace-ZZZ-gly-nme.sdf")
+        )
+        assert top.molecule(0).is_isomorphic_with(expected_mol)
+
     @requires_pkg("mdtraj")
     def test_from_mdtraj(self):
         """Test construction of an OpenFF Topology from an MDTraj Topology object"""
