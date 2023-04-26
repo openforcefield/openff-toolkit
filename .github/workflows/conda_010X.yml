@@ -79,7 +79,7 @@ jobs:
           fi
           if [[ "$OPENEYE" == false ]]; then
             if [[ $(conda list | grep openeye-toolkits) ]]; then
-              conda remove --force openeye-toolkits --yes
+              micromamba remove --force openeye-toolkits --yes
             fi
             python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert not OPENEYE_AVAILABLE, 'OpenEye unexpectedly found'"
           fi

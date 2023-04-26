@@ -690,11 +690,21 @@ class Bond(Serializable):
     @classmethod
     def from_dict(cls, molecule, d):
         """Create a Bond from a dict representation."""
-        # TODO
-        d["molecule"] = molecule
+        # TODO: This is not used anywhere (`Molecule._initialize_bonds_from_dict()` just calls grabs
+        #       the two atoms and calls `Molecule._add_bond`). Remove or change that?
+        # TODO: There is no point in feeding in a `molecule` argument since `Bond.__init__` already
+        #       requires (and checks) that the two atoms are part of the same molecule
         d["atom1"] = molecule.atoms[d["atom1"]]
         d["atom2"] = molecule.atoms[d["atom2"]]
-        return cls(*d)
+
+        return cls(
+            atom1=d["atom1"],
+            atom2=d["atom2"],
+            bond_order=d["bond_order"],
+            is_aromatic=d["is_aromatic"],
+            stereochemistry=d["stereochemistry"],
+            fractional_bond_order=d["fractional_bond_order"],
+        )
 
     @property
     def atom1(self):
@@ -758,7 +768,12 @@ class Bond(Serializable):
         """
         Sets the Bond's parent molecule. Can not be changed after assignment
         """
-        assert self._molecule is None
+        # TODO: This is an impossible state (the constructor requires that atom1 and atom2
+        #       are in a molecule, the same molecule, and sets that as self._molecule).
+        #       Should we remove this?
+        assert (
+            self._molecule is None
+        ), "Bond.molecule is already set and can only be set once"
         self._molecule = value
 
     @property
@@ -768,6 +783,7 @@ class Bond(Serializable):
 
         """
         if self._molecule is None:
+            # TODO: This is unreachable; see `Bond.molecule` setter
             raise ValueError("This Atom does not belong to a Molecule object")
         return self._molecule.bonds.index(self)
 
@@ -1108,7 +1124,20 @@ class FrozenMolecule(Serializable):
         """
         from openff.toolkit.utils.utils import serialize_numpy
 
-        molecule_dict = dict()
+        # typing.TypedDict might make this cleaner
+        # https://mypy.readthedocs.io/en/latest/typed_dict.html#typeddict
+        molecule_dict: Dict[
+            str,
+            Union[
+                None,
+                str,
+                bytes,
+                Dict[str, Any],
+                List[str],
+                List[bytes],
+                List[HierarchyElement],
+            ],
+        ] = dict()
         molecule_dict["name"] = self._name
 
         molecule_dict["atoms"] = [atom.to_dict() for atom in self._atoms]
@@ -1140,7 +1169,7 @@ class FrozenMolecule(Serializable):
 
         molecule_dict["hierarchy_schemes"] = dict()
         for iter_name, hier_scheme in self._hierarchy_schemes.items():
-            molecule_dict["hierarchy_schemes"][iter_name] = hier_scheme.to_dict()
+            molecule_dict["hierarchy_schemes"][iter_name] = hier_scheme.to_dict()  # type: ignore[index]
 
         return molecule_dict
 
@@ -1597,6 +1626,7 @@ class FrozenMolecule(Serializable):
         inchi: str,
         allow_undefined_stereo: bool = False,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
+        name: str = "",
     ):
         """
         Construct a Molecule from a InChI representation
@@ -1615,6 +1645,8 @@ class FrozenMolecule(Serializable):
             or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for InChI-to-molecule conversion
 
+        name : str, default=""
+            An optional name for the output molecule
 
         Returns
         -------
@@ -1633,11 +1665,15 @@ class FrozenMolecule(Serializable):
                 inchi,
                 _cls=cls,
                 allow_undefined_stereo=allow_undefined_stereo,
+                name=name,
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
             molecule = toolkit.from_inchi(  # type: ignore[attr-defined]
-                inchi, _cls=cls, allow_undefined_stereo=allow_undefined_stereo
+                inchi,
+                _cls=cls,
+                allow_undefined_stereo=allow_undefined_stereo,
+                name=name,
             )
         else:
             raise InvalidToolkitRegistryError(
@@ -1750,6 +1786,7 @@ class FrozenMolecule(Serializable):
         hydrogens_are_explicit: bool = False,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         allow_undefined_stereo: bool = False,
+        name: str = "",
     ) -> "Molecule":
         """
         Construct a ``Molecule`` from a SMILES representation
@@ -1778,6 +1815,9 @@ class FrozenMolecule(Serializable):
             Whether to accept SMILES with undefined stereochemistry. If
             ``False``, an exception will be raised if a SMILES with undefined
             stereochemistry is passed into this function.
+        name : str, default=""
+            An optional name for the output molecule
+
 
         Raises
         ------
@@ -1813,6 +1853,7 @@ class FrozenMolecule(Serializable):
                 hydrogens_are_explicit=hydrogens_are_explicit,
                 allow_undefined_stereo=allow_undefined_stereo,
                 _cls=cls,
+                name=name,
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
@@ -1821,6 +1862,7 @@ class FrozenMolecule(Serializable):
                 hydrogens_are_explicit=hydrogens_are_explicit,
                 allow_undefined_stereo=allow_undefined_stereo,
                 _cls=cls,
+                name=name,
             )
         else:
             raise InvalidToolkitRegistryError(
@@ -1851,8 +1893,8 @@ class FrozenMolecule(Serializable):
 
     @staticmethod
     def are_isomorphic(
-        mol1: Union["FrozenMolecule", nx.Graph],
-        mol2: Union["FrozenMolecule", nx.Graph],
+        mol1: Union["FrozenMolecule", "_SimpleMolecule", nx.Graph],
+        mol2: Union["FrozenMolecule", "_SimpleMolecule", nx.Graph],
         return_atom_map: bool = False,
         aromatic_matching: bool = True,
         formal_charge_matching: bool = True,
@@ -1861,7 +1903,7 @@ class FrozenMolecule(Serializable):
         bond_stereochemistry_matching: bool = True,
         strip_pyrimidal_n_atom_stereo: bool = True,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
-    ):
+    ) -> Tuple[bool, Optional[Dict[int, int]]]:
         """
         Determine if ``mol1`` is isomorphic to ``mol2``.
 
@@ -1940,10 +1982,26 @@ class FrozenMolecule(Serializable):
             [Dict[int,int]] ordered by mol1 indexing {mol1_index: mol2_index}
             If molecules are not isomorphic given input arguments, will return None instead of dict.
         """
+        import networkx as nx
+
+        _cls = FrozenMolecule
+
+        if isinstance(mol1, nx.Graph) and isinstance(mol2, nx.Graph):
+            pass
+
+        elif isinstance(mol1, nx.Graph):
+            assert isinstance(mol2, _cls)
+
+        elif isinstance(mol2, nx.Graph):
+            assert isinstance(mol1, _cls)
+
+        else:
+            # static methods (by definition) know nothing about their class,
+            # so the class to compare to must be hard-coded here
+            if not (isinstance(mol1, _cls) and isinstance(mol2, _cls)):
+                return False, None
 
         def _object_to_n_atoms(obj):
-            import networkx as nx
-
             if isinstance(obj, FrozenMolecule):
                 return obj.n_atoms
             elif isinstance(obj, nx.Graph):
@@ -2010,10 +2068,8 @@ class FrozenMolecule(Serializable):
             edge_match_func = None  # type: ignore
 
         # Here we should work out what data type we have, also deal with lists?
-        def to_networkx(data):
+        def to_networkx(data: Union[FrozenMolecule, nx.Graph]) -> nx.Graph:
             """For the given data type, return the networkx graph"""
-            import networkx as nx
-
             if strip_pyrimidal_n_atom_stereo:
                 SMARTS = "[N+0X3:1](-[*])(-[*])(-[*])"
 
@@ -2039,6 +2095,7 @@ class FrozenMolecule(Serializable):
 
         mol1_netx = to_networkx(mol1)
         mol2_netx = to_networkx(mol2)
+
         from networkx.algorithms.isomorphism import GraphMatcher  # type: ignore
 
         GM = GraphMatcher(
@@ -2059,7 +2116,9 @@ class FrozenMolecule(Serializable):
         else:
             return isomorphic, None
 
-    def is_isomorphic_with(self, other: Union["FrozenMolecule", nx.Graph], **kwargs):
+    def is_isomorphic_with(
+        self, other: Union["FrozenMolecule", "_SimpleMolecule", nx.Graph], **kwargs
+    ) -> bool:
         """
         Check if the molecule is isomorphic with the other molecule which can be an openff.toolkit.topology.Molecule
         or nx.Graph(). Full matching is done using the options described bellow.
@@ -3432,7 +3491,7 @@ class FrozenMolecule(Serializable):
         return self._hill_formula
 
     @staticmethod
-    def _object_to_hill_formula(obj: Union["Molecule", "nx.Graph"]) -> str:
+    def _object_to_hill_formula(obj: Union["FrozenMolecule", "nx.Graph"]) -> str:
         """Take a Molecule or NetworkX graph and generate its Hill formula.
         This provides a backdoor to the old functionality of Molecule.to_hill_formula, which
         was a static method that duck-typed inputs of Molecule or graph objects."""
@@ -3499,6 +3558,7 @@ class FrozenMolecule(Serializable):
                 self,
                 smirks,
                 unique=unique,
+                raise_exception_types=[],
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             matches = toolkit_registry.find_smarts_matches(  # type: ignore[attr-defined]
@@ -3770,6 +3830,7 @@ class FrozenMolecule(Serializable):
                         "is likely to be lost. PDBs can be used along with a valid smiles string with RDKit using "
                         "the constructor Molecule.from_pdb_and_smiles(file_path, smiles)"
                     )
+
                 raise NotImplementedError(msg)
 
         elif isinstance(toolkit_registry, ToolkitWrapper):
@@ -3822,6 +3883,7 @@ class FrozenMolecule(Serializable):
         cls,
         file_path: Union[str, TextIO],
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        name: str = "",
     ):
         """
         Loads a polymer from a PDB file.
@@ -3854,6 +3916,8 @@ class FrozenMolecule(Serializable):
             PDB information to be passed to OpenMM PDBFile object for loading
         toolkit_registry = ToolkitWrapper or ToolkitRegistry. Default = None
             Either a ToolkitRegistry, ToolkitWrapper
+        name : str, default=""
+            An optional name for the output molecule
 
         Returns
         -------
@@ -3919,6 +3983,8 @@ class FrozenMolecule(Serializable):
                 + "each molecule into its own PDB with another tool, and "
                 + "load any small molecules with Molecule.from_pdb_and_smiles."
             )
+
+        offmol.name = name
 
         return offmol
 
@@ -4174,7 +4240,10 @@ class FrozenMolecule(Serializable):
     @classmethod
     @RDKitToolkitWrapper.requires_toolkit()
     def from_rdkit(
-        cls, rdmol, allow_undefined_stereo=False, hydrogens_are_explicit=False
+        cls,
+        rdmol,
+        allow_undefined_stereo=False,
+        hydrogens_are_explicit=False,
     ):
         """
         Create a Molecule from an RDKit molecule.
@@ -4641,7 +4710,9 @@ class FrozenMolecule(Serializable):
 
     @classmethod
     @RDKitToolkitWrapper.requires_toolkit()
-    def from_pdb_and_smiles(cls, file_path, smiles, allow_undefined_stereo=False):
+    def from_pdb_and_smiles(
+        cls, file_path, smiles, allow_undefined_stereo=False, name=""
+    ):
         """
         Create a Molecule from a pdb file and a SMILES string using RDKit.
 
@@ -4665,6 +4736,8 @@ class FrozenMolecule(Serializable):
             a valid smiles string for the pdb, used for stereochemistry, formal charges, and bond order
         allow_undefined_stereo : bool, default=False
             If false, raises an exception if SMILES contains undefined stereochemistry.
+        name : str, default=""
+            An optional name for the output molecule
 
         Returns
         --------
@@ -4679,7 +4752,7 @@ class FrozenMolecule(Serializable):
 
         toolkit = RDKitToolkitWrapper()
         return toolkit.from_pdb_and_smiles(
-            file_path, smiles, allow_undefined_stereo, _cls=cls
+            file_path, smiles, allow_undefined_stereo, _cls=cls, name=name
         )
 
     def canonical_order_atoms(self, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
@@ -5115,63 +5188,7 @@ class Molecule(FrozenMolecule):
 
     def __init__(self, *args, **kwargs):
         """
-        Create a new Molecule object
-
-        Parameters
-        ----------
-        other : optional, default=None
-            If specified, attempt to construct a copy of the molecule from the
-            specified object. This can be any one of the following:
-
-            * a :class:`Molecule` object
-            * a file that can be used to construct a :class:`Molecule` object
-            * an ``openeye.oechem.OEMol``
-            * an ``rdkit.Chem.rdchem.Mol``
-            * a serialized :class:`Molecule` object
-
-        Examples
-        --------
-
-        Create an empty molecule:
-
-        >>> empty_molecule = Molecule()
-
-        Create a molecule from a file that can be used to construct a molecule,
-        using either a filename or file-like object:
-
-        >>> from openff.toolkit.utils import get_data_file_path
-        >>> sdf_filepath = get_data_file_path('molecules/ethanol.sdf')
-        >>> molecule = Molecule(sdf_filepath)
-        >>> molecule = Molecule(open(sdf_filepath, 'r'), file_format='sdf')
-
-        >>> import gzip
-        >>> mol2_gz_filepath = get_data_file_path('molecules/toluene.mol2.gz')
-        >>> molecule = Molecule(gzip.GzipFile(mol2_gz_filepath, 'r'), file_format='mol2')
-
-        Create a molecule from another molecule:
-
-        >>> molecule_copy = Molecule(molecule)
-
-        Convert to OpenEye OEMol object
-
-        >>> oemol = molecule.to_openeye()
-
-        Create a molecule from an OpenEye molecule:
-
-        >>> molecule = Molecule(oemol)
-
-        Convert to RDKit Mol object
-
-        >>> rdmol = molecule.to_rdkit()
-
-        Create a molecule from an RDKit molecule:
-
-        >>> molecule = Molecule(rdmol)
-
-        Convert the molecule into a dictionary and back again:
-
-        >>> serialized_molecule = molecule.to_dict()
-        >>> molecule_copy = Molecule(serialized_molecule)
+        See FrozenMolecule.__init__
 
         .. todo ::
 

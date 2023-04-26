@@ -214,20 +214,20 @@ The OpenMM implementation provided by the OpenFF Toolkit either produces an `ope
 Exceptions are raised when parameters are incompatible with OpenMM (`IncompatibleParameterError`) or otherwise against spec (`SMIRNOFFSpecError`), and also when they are appropriate for the spec but not yet implemented in the toolkit (`SMIRNOFFSpecUnimplementedError`).
 This table describes which [`NonbondedMethod`](http://docs.openmm.org/latest/userguide/application.html?highlight=ljpme#nonbonded-interactions) is used in the produced `NonbondedForce`, or else which exception is raised.
 
-| vdw_method | electrostatics_method | periodic | OpenMM Nonbonded method or exception | Common case |
-|------------|-----------------------|----------|--------------------------------------|---|
-| cutoff     | Coulomb               | True     | raises `IncompatibleParameterError`
-| cutoff     | Coulomb               | False    | `openmm.NonbondedForce.NoCutoff`
-| cutoff     | reaction-field        | True     | raises `SMIRNOFFSpecUnimplementedError`
-| cutoff     | reaction-field        | False    | raises `SMIRNOFFSpecError`
-| cutoff     | PME                   | True     | `openmm.NonbondedForce.PME` | * |
-| cutoff     | PME                   | False    | `openmm.NonbondedForce.NoCutoff`
-| LJPME      | Coulomb               | True     | raises `IncompatibleParameterError`
-| LJPME      | Coulomb               | False    | `openmm.NonbondedForce.NoCutoff`
-| LJPME      | reaction-field        | True     | raises `IncompatibleParameterError`
-| LJPME      | reaction-field        | False    | raises `SMIRNOFFSpecError`
-| LJPME      | PME                   | True     | `openmm.NonbondedForce.LJPME`
-| LJPME      | PME                   | False    | `openmm.NonbondedForce.NoCutoff`
+| vdw_method | electrostatics_method | periodic | OpenMM Nonbonded method or exception    | Common case |
+|------------|-----------------------|----------|-----------------------------------------|-------------|
+| cutoff     | Coulomb               | True     | raises `IncompatibleParameterError`     |             |
+| cutoff     | Coulomb               | False    | `openmm.NonbondedForce.NoCutoff`        |             |
+| cutoff     | reaction-field        | True     | raises `SMIRNOFFSpecUnimplementedError` |             |
+| cutoff     | reaction-field        | False    | raises `SMIRNOFFSpecError`              |             |
+| cutoff     | PME                   | True     | `openmm.NonbondedForce.PME`             | *           |
+| cutoff     | PME                   | False    | `openmm.NonbondedForce.NoCutoff`        |             | 
+| LJPME      | Coulomb               | True     | raises `IncompatibleParameterError`     |             |
+| LJPME      | Coulomb               | False    | `openmm.NonbondedForce.NoCutoff`        |             | 
+| LJPME      | reaction-field        | True     | raises `IncompatibleParameterError`     |             |
+| LJPME      | reaction-field        | False    | raises `SMIRNOFFSpecError`              |             |
+| LJPME      | PME                   | True     | `openmm.NonbondedForce.LJPME`           |             |
+| LJPME      | PME                   | False    | `openmm.NonbondedForce.NoCutoff`        |             | 
 
 Notes:
 * The most commonly-used case (including the Parsley line) is in the fifth row (cutoff vdW, PME electrostatics, periodic topology) and marked with an asterisk.

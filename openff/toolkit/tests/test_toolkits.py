@@ -707,6 +707,16 @@ class TestOpenEyeToolkitWrapper:
         molecule_from_expl = Molecule.from_openeye(oemol_expl)
         assert molecule_from_expl.to_smiles() == molecule_from_impl.to_smiles()
 
+    def test_openeye_from_smiles_name(self):
+        """
+        Test to ensure that the `name` kwarg to from_smiles behaves correctly
+        """
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        mol = toolkit_wrapper.from_smiles("C")
+        assert mol.name == ""
+        mol = toolkit_wrapper.from_smiles("C", name="bob")
+        assert mol.name == "bob"
+
     def test_openeye_from_smiles_hydrogens_are_explicit(self):
         """
         Test to ensure that OpenEyeToolkitWrapper.from_smiles has the proper behavior with
@@ -773,6 +783,18 @@ class TestOpenEyeToolkitWrapper:
         toolkit = OpenEyeToolkitWrapper()
         molecule.to_inchikey(toolkit_registry=toolkit)
         molecule.to_inchikey(True, toolkit_registry=toolkit)
+
+    def test_openeye_from_inchi_name(self):
+        """
+        Test to ensure that the `name` kwarg to from_inchi behaves correctly
+        """
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        mol = toolkit_wrapper.from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3")
+        assert mol.name == ""
+        mol = toolkit_wrapper.from_inchi(
+            "InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3", name="bob"
+        )
+        assert mol.name == "bob"
 
     def test_from_bad_inchi(self):
         """Test building a molecule from a bad InChI string"""
@@ -2043,6 +2065,16 @@ class TestRDKitToolkitWrapper:
         smiles2 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles2 == expected_output_smiles
 
+    def test_rdkit_from_smiles_name(self):
+        """
+        Test to ensure that the `name` kwarg to from_smiles behaves correctly
+        """
+        toolkit_wrapper = RDKitToolkitWrapper()
+        mol = toolkit_wrapper.from_smiles("C")
+        assert mol.name == ""
+        mol = toolkit_wrapper.from_smiles("C", name="bob")
+        assert mol.name == "bob"
+
     def test_rdkit_from_smiles_radical(self):
         """Test that parsing an SMILES with a radical raises RadicalsNotSupportedError."""
         with pytest.raises(RadicalsNotSupportedError):
@@ -2166,6 +2198,18 @@ class TestRDKitToolkitWrapper:
         )
 
         compare_mols(ref_mol, nonstandard_inchi_mol)
+
+    def test_rdkit_from_inchi_name(self):
+        """
+        Test to ensure that the `name` kwarg to from_inchi behaves correctly
+        """
+        toolkit_wrapper = RDKitToolkitWrapper()
+        mol = toolkit_wrapper.from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3")
+        assert mol.name == ""
+        mol = toolkit_wrapper.from_inchi(
+            "InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3", name="bob"
+        )
+        assert mol.name == "bob"
 
     @pytest.mark.parametrize("molecule", get_mini_drug_bank(RDKitToolkitWrapper))
     def test_non_standard_inchi_round_trip(self, molecule):
@@ -2482,6 +2526,15 @@ class TestRDKitToolkitWrapper:
 
         with pytest.raises(RadicalsNotSupportedError):
             RDKitToolkitWrapper().from_rdkit(rdmol)
+
+    def test_from_rdkit_incompatible_aromaticity(self):
+        """Test loading an rdmol where the aromaticity was set by a model that disagrees with MDL"""
+        from rdkit import Chem
+
+        smi = "c2scnc2C"
+        rdmol = Chem.MolFromSmiles(smi)
+        Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_RDKIT)
+        Molecule.from_rdkit(rdmol)
 
     def test_from_rdkit_transition_metal_radical(self):
         """Test that parsing an rdmol with a transition metal radical works."""

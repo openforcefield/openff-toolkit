@@ -12,6 +12,7 @@ Class definitions to represent a molecular system and its chemical components
 
 """
 import itertools
+import re
 import warnings
 from collections import defaultdict
 from collections.abc import MutableMapping
@@ -725,7 +726,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        atoms : Generator of TopologyAtom
+        atoms : Generator of Atom
         """
         for molecule in self._molecules:
             for atom in molecule.atoms:
@@ -842,7 +843,7 @@ class Topology(Serializable):
 
     @property
     def propers(self) -> Generator[Tuple["Atom", ...], None, None]:
-        """Iterable of Tuple[TopologyAtom]: iterator over the proper torsions in this Topology."""
+        """Iterable of Tuple[Atom]: iterator over the proper torsions in this Topology."""
         for molecule in self.molecules:
             for proper in molecule.propers:
                 yield proper
@@ -854,7 +855,7 @@ class Topology(Serializable):
 
     @property
     def impropers(self) -> Generator[Tuple["Atom", ...], None, None]:
-        """Iterable of Tuple[TopologyAtom]: iterator over the possible improper torsions in this Topology."""
+        """Iterable of Tuple[Atom]: iterator over the possible improper torsions in this Topology."""
         for molecule in self._molecules:
             for improper in molecule.impropers:
                 yield improper
@@ -1061,7 +1062,7 @@ class Topology(Serializable):
                 mol_instance = self.molecule(mol_instance_idx)
                 # Loop over matches
                 for match in mol_matches:
-                    # Collect indices of matching TopologyAtoms.
+                    # Collect indices of matching atoms
                     topology_atom_indices = []
                     for molecule_atom_index in match:
                         atom = mol_instance.atom(atom_map[molecule_atom_index])
@@ -1175,9 +1176,13 @@ class Topology(Serializable):
                 if mol2_idx in already_matched_mols:
                     continue
                 mol2 = self.molecule(mol2_idx)
-                are_isomorphic, atom_map = Molecule.are_isomorphic(
-                    mol1, mol2, return_atom_map=True
-                )
+                if isinstance(mol1, type(mol2)) or isinstance(mol2, type(mol1)):
+                    are_isomorphic, atom_map = mol1.are_isomorphic(
+                        mol1, mol2, return_atom_map=True
+                    )
+                else:
+                    are_isomorphic = False
+
                 if are_isomorphic:
                     identity_maps[mol2_idx] = (
                         mol1_idx,
@@ -1417,12 +1422,12 @@ class Topology(Serializable):
                 )
                 if isomorphic:
                     # Take the first valid atom indexing map
-                    first_topology_atom_index = min(mapping.keys())
+                    first_topology_atom_index = min(mapping.keys())  # type: ignore[union-attr]
                     topology_molecules_to_add.append(
                         (
                             first_topology_atom_index,
                             unq_mol_G,
-                            mapping.items(),
+                            mapping.items(),  # type: ignore[union-attr]
                             omm_mol_G,
                         )
                     )
@@ -1531,6 +1536,7 @@ class Topology(Serializable):
         file_path: Union[str, TextIO],
         unique_molecules: Optional[Iterable[Molecule]] = None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        _additional_substructures: Optional[Iterable[Molecule]] = None,
     ):
         """
         Loads supported or user-specified molecules from a PDB file.
@@ -1610,6 +1616,9 @@ class Topology(Serializable):
             PDB. See above for details.
         toolkit_registry : ToolkitRegistry. Default = None
             The ToolkitRegistry to use as the cheminformatics backend.
+        _additional_substructures : Iterable of Molecule, Default = None
+            Experimental and unstable. Molecule with atom.metadata["substructure_atom"] =
+            True or False for all atoms.
 
         Returns
         -------
@@ -1678,6 +1687,28 @@ class Topology(Serializable):
                 a.name for a in unique_molecule.atoms
             ]
 
+        substructure_dictionary["ADDITIONAL_SUBSTRUCTURE"] = {}
+
+        if _additional_substructures:
+            for mol in _additional_substructures:
+                label_mol = Molecule(mol)
+                c = 0
+                label_mol.properties["atom_map"] = {}
+                for atom in label_mol.atoms:
+                    if atom.metadata["substructure_atom"]:
+                        label_mol.properties["atom_map"][atom.molecule_atom_index] = c
+                        c += 1
+                smi = label_mol.to_smiles(mapped=True)
+                # remove unmapped atoms from mapped smiles. This will catch things like
+                # `[H]` and `[Cl]` but not anything with 3 characters like `[H:1]`
+                smi = re.sub("\[[A-Za-z]{1,2}\]", "", smi)
+                # Remove any orphaned () that remain
+                smi = smi.replace("()", "")
+
+                substructure_dictionary["ADDITIONAL_SUBSTRUCTURE"][smi] = []
+
+        substructure_dictionary["ADDITIONAL_SUBSTRUCTURE_OVERLAP"] = {}
+
         coords_angstrom = np.array(
             [[*vec3.value_in_unit(openmm_unit.angstrom)] for vec3 in pdb.getPositions()]
         )
@@ -1695,6 +1726,7 @@ class Topology(Serializable):
             off_atom.metadata["residue_number"] = atom.residue.id
             off_atom.metadata["insertion_code"] = atom.residue.insertionCode
             off_atom.metadata["chain_id"] = atom.residue.chain.id
+            off_atom.name = atom.name
 
         for offmol in topology.molecules:
             offmol.add_default_hierarchy_schemes()
@@ -2401,12 +2433,12 @@ class Topology(Serializable):
 
         return oe_mol
 
-    def get_bond_between(self, i, j):
+    def get_bond_between(self, i: Union[int, "Atom"], j: Union[int, "Atom"]) -> "Bond":
         """Returns the bond between two atoms
 
         Parameters
         ----------
-        i, j : int or TopologyAtom
+        i, j : int or Atom
             Atoms or atom indices to check
 
         Returns
@@ -2425,7 +2457,7 @@ class Topology(Serializable):
             atomj = j
         else:
             raise ValueError(
-                "Invalid input passed to is_bonded(). Expected ints or TopologyAtoms, "
+                "Invalid input passed to is_bonded(). Expected ints or `Atom`s, "
                 "got {} and {}".format(i, j)
             )
 
@@ -2438,12 +2470,12 @@ class Topology(Serializable):
 
         raise NotBondedError("No bond between atom {} and {}".format(i, j))
 
-    def is_bonded(self, i, j):
+    def is_bonded(self, i: Union[int, "Atom"], j: Union[int, "Atom"]) -> bool:
         """Returns True if the two atoms are bonded
 
         Parameters
         ----------
-        i, j : int or TopologyAtom
+        i, j : int or Atom
             Atoms or atom indices to check
 
         Returns
@@ -2458,18 +2490,18 @@ class Topology(Serializable):
         except NotBondedError:
             return False
 
-    def atom(self, atom_topology_index):
+    def atom(self, atom_topology_index: int) -> "Atom":
         """
-        Get the TopologyAtom at a given Topology atom index.
+        Get the Atom at a given Topology atom index.
 
         Parameters
         ----------
         atom_topology_index : int
-             The index of the TopologyAtom in this Topology
+             The index of the Atom in this Topology
 
         Returns
         -------
-        An openff.toolkit.topology.TopologyAtom
+        An openff.toolkit.topology.Atom
         """
         if not isinstance(atom_topology_index, int):
             raise ValueError(
@@ -2492,6 +2524,11 @@ class Topology(Serializable):
                 # NOTE: the index here should still be in the topology index order, NOT the reference molecule's
                 return molecule.atom(atom_molecule_index)
             this_molecule_start_index += molecule.n_atoms
+
+        raise AtomNotInTopologyError(
+            f"No atom with index {atom_topology_index} exists in this topology, "
+            f"which contains {self.n_atoms} atoms."
+        )
 
         # Potentially more computationally efficient lookup ( O(largest_molecule_natoms)? )
         # start_index_2_top_mol is an ordered dict of [starting_atom_index] --> [topology_molecule]

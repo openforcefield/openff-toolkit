@@ -18,9 +18,11 @@ dependencies:
   - openff-units >=0.2
   - openff-utilities >=0.1.5
   - openff-interchange-base >=0.3.0
+  - openff-nagl >=0.2.1
+  - openff-nagl-models >=0.0.2
   - typing_extensions
     # Toolkit-specific
-  - ambertools
+  - ambertools =22
   - rdkit
     # Test-only/optional/dev/typing
   - pytest

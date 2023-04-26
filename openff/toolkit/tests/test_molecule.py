@@ -41,6 +41,7 @@ from openff.toolkit.tests.utils import (
 )
 from openff.toolkit.topology.molecule import (
     Atom,
+    Bond,
     BondExistsError,
     FrozenMolecule,
     HierarchyElement,
@@ -426,11 +427,33 @@ class TestAtom:
 
 
 class TestBond:
-    def test_float_bond_order(self):
+    @pytest.fixture()
+    def bond(self):
+        return create_ethanol().bond(0)
+
+    def test_cannot_change_molecule(self, bond):
+        with pytest.raises(
+            AssertionError,
+            match="Bond.molecule is already set and can only be set once",
+        ):
+            bond.molecule = create_reversed_ethanol()
+
+    def test_initialize_from_dict(self):
         molecule = create_ethanol()
 
+        bond = Bond.from_dict(molecule=molecule, d=molecule.bond(0).to_dict())
+
+        assert bond.atom1_index == 0
+        assert bond.atom2_index == 1
+        assert bond.atom1.atomic_number == 6
+        assert bond.atom2.atomic_number == 6
+
+    def test_set_bond_order(self, bond):
+        bond.bond_order = 2
+
+    def test_float_bond_order(self, bond):
         with pytest.raises(InvalidBondOrderError):
-            molecule.bond(0).bond_order = 1.2
+            bond.bond_order = 1.2
 
 
 class TestMolecule:
@@ -637,6 +660,14 @@ class TestMolecule:
 
         smiles2 = molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
         assert smiles1 == smiles2
+
+    def test_from_smiles_name(self):
+        """Test name kwarg to from_smiles"""
+        mol = Molecule.from_smiles("C")
+        assert mol.name == ""
+
+        mol = Molecule.from_smiles("C", name="bob")
+        assert mol.name == "bob"
 
     @pytest.mark.parametrize(
         "smiles, expected", [("[Cl:1]Cl", {0: 1}), ("[Cl:1][Cl:2]", {0: 1, 1: 2})]
@@ -941,6 +972,13 @@ class TestMolecule:
         )
 
         compare_mols(ref_mol, nonstandard_inchi_mol)
+
+    def test_from_inchi_name(self):
+        """Test name kwarg to from_inchi"""
+        mol = Molecule.from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3")
+        assert mol.name == ""
+        mol = Molecule.from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3", name="bob")
+        assert mol.name == "bob"
 
     # TODO: Should there be an equivalent toolkit test and leave this as an integration test?
     @requires_openeye
@@ -1695,6 +1733,26 @@ class TestMolecule:
             "CCC[N@@](C)CC"
         )
 
+    def test_short_circuit_heterogeneous_input(self):
+        from openff.toolkit.topology._mm_molecule import _SimpleMolecule
+
+        assert not Molecule.are_isomorphic(
+            create_ethanol(),
+            _SimpleMolecule.from_molecule(create_ethanol()),
+        )[0]
+
+        assert not Molecule.are_isomorphic(
+            _SimpleMolecule.from_molecule(create_ethanol()),
+            create_ethanol(),
+        )[0]
+
+    def test_graph_and_molecule_inputs(self):
+        molecule = create_ethanol()
+        graph = molecule.to_networkx()
+
+        assert Molecule.are_isomorphic(molecule, graph)[0]
+        assert Molecule.are_isomorphic(graph, molecule)[0]
+
     class TestRemap:
         """Tests for the ``Molecule.remap()`` method"""
 
@@ -2415,6 +2473,15 @@ class TestMolecule:
             smiles_mol = Molecule.from_smiles(smiles)
 
             assert pdb_mol.is_isomorphic_with(smiles_mol)
+
+        def test_name_kwarg(self, pdb_path, smiles, sdf_path):
+            """Ensure the name kwarg is wired up correctly"""
+            pdb_path = get_data_file_path(pdb_path)
+            pdb_mol = Molecule.from_pdb_and_smiles(pdb_path, smiles)
+            assert pdb_mol.name == ""
+
+            pdb_mol = Molecule.from_pdb_and_smiles(pdb_path, smiles, name="bob")
+            assert pdb_mol.name == "bob"
 
         def test_matches_sdf(self, pdb_path, smiles, sdf_path):
             """The produced Molecule should exactly match the corresponding SDF
@@ -3875,6 +3942,27 @@ class TestMoleculeFromPDB:
             offmol2.conformers[0].m_as(unit.angstrom),
             offmol2.conformers[0].m_as(unit.angstrom),
             atol=0.01,
+        )
+
+    def test_molecule_from_pdb_name(self):
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA.pdb")
+        )
+        assert offmol.name == ""
+
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_ALA.pdb"), name="bob"
+        )
+        assert offmol.name == "bob"
+
+    def test_molecule_from_pdb_ace_ala_nh2(self):
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/ace-ala-nh2.pdb")
+        )
+        assert offmol.n_atoms == 19
+        expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C)C(=O)N")
+        assert offmol.is_isomorphic_with(
+            expected_mol, atom_stereochemistry_matching=False
         )
 
     def test_molecule_from_pdb_mainchain_ala_tripeptide(self):

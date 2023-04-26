@@ -19,6 +19,8 @@ dependencies:
   - openff-units >=0.2
   - openff-utilities >=0.1.5
   - openff-interchange-base >=0.3.0
+  - openff-nagl >=0.2.1
+  - openff-nagl-models >=0.0.2
   - typing_extensions
     # Toolkit-specific
   - openeye-toolkits
@@ -35,7 +37,7 @@ dependencies:
   - qcportal >=0.15
   - qcengine
   - mdtraj
-  - parmed
+  - parmed =3
   - nbval
   - ipywidgets =7
   - pdbfixer
