@@ -1,4 +1,4 @@
-name: test
+name: openff-toolkit-test-openeye
 channels:
   - openeye
   - conda-forge
