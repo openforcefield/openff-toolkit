@@ -3957,7 +3957,7 @@ class TestMoleculeFromPDB:
 
     def test_molecule_from_pdb_ace_ala_nh2(self):
         offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/ace_ala_nh2.pdb")
+            get_data_file_path("proteins/ace-ala-nh2.pdb")
         )
         assert offmol.n_atoms == 19
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C)C(=O)N")

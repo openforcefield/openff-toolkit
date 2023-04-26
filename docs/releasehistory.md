@@ -15,6 +15,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Behavior changes
 - [PR #1569](https://github.com/openforcefield/openff-toolkit/pull/1569): Several instances of `Exception` being raised are now replaced with other exceptions being raised.
 
+### Bugfixes
+- [PR #1589](https://github.com/openforcefield/openff-toolkit/pull/1589): Fixes [Issue #1579](https://github.com/openforcefield/openff-toolkit/issues/1579), where Molecule.from_polymer_pdb could not handle NH2 caps at C termini.  
+
 ### Improved documentation and warnings
 
 - [PR #1564](https://github.com/openforcefield/openff-toolkit/pull1564) Improve documentation of conformer selection in `Molecule.assign_partial_charges()`
