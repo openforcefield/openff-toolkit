@@ -697,11 +697,10 @@ class CifSubstructures:
         """
 
         self.data["PEPTIDE_BOND"] = {
-            "[C:1](=[O:2])[N:3]([C:4])": [
+            "[C:1](=[O:2])[N:3]": [
                 "C",
                 "O",
                 "N",
-                "CA",
             ]
         }
         self.data["DISULFIDE"] = {
