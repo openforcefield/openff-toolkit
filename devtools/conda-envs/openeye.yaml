@@ -1,4 +1,4 @@
-name: test
+name: openff-toolkit-test-openeye
 channels:
   - openeye
   - conda-forge
@@ -37,5 +37,5 @@ dependencies:
   - qcportal >=0.15
   - qcengine
   - mdtraj
-  - parmed
+  - parmed =3
   - ipywidgets =7

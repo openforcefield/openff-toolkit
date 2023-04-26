@@ -22,7 +22,7 @@ dependencies:
   - openff-nagl-models >=0.0.2
   - typing_extensions
     # Toolkit-specific
-  - ambertools
+  - ambertools =22
   - rdkit
     # Test-only/optional/dev/typing
   - pytest
