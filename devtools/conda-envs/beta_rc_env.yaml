@@ -40,7 +40,6 @@ dependencies:
   - qcportal >=0.15
   - qcengine
   - mdtraj
-  - parmed =4
   - nbval
   - mypy
   - pip:
