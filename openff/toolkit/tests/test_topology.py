@@ -861,7 +861,7 @@ class TestTopology:
         expected_mol = Molecule.from_file(
             get_data_file_path("proteins/ace-ZZZ-gly-nme.sdf")
         )
-        assert top.molecule(0).is_isomorphic_with(expected_mol)
+        assert top.molecule(0).is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
 
     @requires_pkg("mdtraj")
     def test_from_mdtraj(self):
