@@ -17,6 +17,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 - [PR #1589](https://github.com/openforcefield/openff-toolkit/pull/1589): Fixes [Issue #1579](https://github.com/openforcefield/openff-toolkit/issues/1579), where Molecule.from_polymer_pdb could not handle NH2 caps at C termini.  
+- [PR #1591](https://github.com/openforcefield/openff-toolkit/pull/1591): Fixes [#1563](https://github.com/openforcefield/openff-toolkit/issues/1563), where `from_rdkit` would sometimes raise an error about radicals if a molecule using a non-MDL aromaticity model was provided. 
 
 ### Improved documentation and warnings
 
