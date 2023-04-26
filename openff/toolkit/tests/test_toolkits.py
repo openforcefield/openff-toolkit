@@ -2527,6 +2527,15 @@ class TestRDKitToolkitWrapper:
         with pytest.raises(RadicalsNotSupportedError):
             RDKitToolkitWrapper().from_rdkit(rdmol)
 
+    def test_from_rdkit_incompatible_aromaticity(self):
+        """Test loading an rdmol where the aromaticity was set by a model that disagrees with MDL"""
+        from rdkit import Chem
+
+        smi = "c2scnc2C"
+        rdmol = Chem.MolFromSmiles(smi)
+        Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_RDKIT)
+        Molecule.from_rdkit(rdmol)
+
     def test_from_rdkit_transition_metal_radical(self):
         """Test that parsing an rdmol with a transition metal radical works."""
         from rdkit import Chem
