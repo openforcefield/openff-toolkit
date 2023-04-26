@@ -12,6 +12,7 @@ Class definitions to represent a molecular system and its chemical components
 
 """
 import itertools
+import re
 import warnings
 from collections import defaultdict
 from collections.abc import MutableMapping
@@ -1535,6 +1536,7 @@ class Topology(Serializable):
         file_path: Union[str, TextIO],
         unique_molecules: Optional[Iterable[Molecule]] = None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        _additional_substructures: Optional[Iterable[Molecule]] = None,
     ):
         """
         Loads supported or user-specified molecules from a PDB file.
@@ -1614,6 +1616,9 @@ class Topology(Serializable):
             PDB. See above for details.
         toolkit_registry : ToolkitRegistry. Default = None
             The ToolkitRegistry to use as the cheminformatics backend.
+        _additional_substructures : Iterable of Molecule, Default = None
+            Experimental and unstable. Molecule with atom.metadata["substructure_atom"] =
+            True or False for all atoms.
 
         Returns
         -------
@@ -1681,6 +1686,28 @@ class Topology(Serializable):
             substructure_dictionary["UNIQUE_MOLECULE"][mapped_smiles] = [
                 a.name for a in unique_molecule.atoms
             ]
+
+        substructure_dictionary["ADDITIONAL_SUBSTRUCTURE"] = {}
+
+        if _additional_substructures:
+            for mol in _additional_substructures:
+                label_mol = Molecule(mol)
+                c = 0
+                label_mol.properties["atom_map"] = {}
+                for atom in label_mol.atoms:
+                    if atom.metadata["substructure_atom"]:
+                        label_mol.properties["atom_map"][atom.molecule_atom_index] = c
+                        c += 1
+                smi = label_mol.to_smiles(mapped=True)
+                # remove unmapped atoms from mapped smiles. This will catch things like
+                # `[H]` and `[Cl]` but not anything with 3 characters like `[H:1]`
+                smi = re.sub("\[[A-Za-z]{1,2}\]", "", smi)
+                # Remove any orphaned () that remain
+                smi = smi.replace("()", "")
+
+                substructure_dictionary["ADDITIONAL_SUBSTRUCTURE"][smi] = []
+
+        substructure_dictionary["ADDITIONAL_SUBSTRUCTURE_OVERLAP"] = {}
 
         coords_angstrom = np.array(
             [[*vec3.value_in_unit(openmm_unit.angstrom)] for vec3 in pdb.getPositions()]

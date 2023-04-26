@@ -10,13 +10,15 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### New features
 - [PR #1567](https://github.com/openforcefield/openff-toolkit/pull/1567): Allows setting `Molecule.name` in `Molecule.from_smiles`, `from_inchi`, `from_polymer_pdb`, and `from_pdb_and_smiles`.
-- [PR #1565](https://github.com/openforcefield/openff-toolkit/pull/1565): Adds `Topology.from_pdb`
+- [PR #1565](https://github.com/openforcefield/openff-toolkit/pull/1565): Adds `Topology.from_pdb`.
 
 ### Behavior changes
 - [PR #1569](https://github.com/openforcefield/openff-toolkit/pull/1569): Several instances of `Exception` being raised are now replaced with other exceptions being raised.
 
-
+### Bugfixes
+- [PR #1589](https://github.com/openforcefield/openff-toolkit/pull/1589): Fixes [Issue #1579](https://github.com/openforcefield/openff-toolkit/issues/1579), where Molecule.from_polymer_pdb could not handle NH2 caps at C termini.  
 - [PR #1591](https://github.com/openforcefield/openff-toolkit/pull/1591): Fixes [#1563](https://github.com/openforcefield/openff-toolkit/issues/1563), where `from_rdkit` would sometimes raise an error about radicals if a molecule using a non-MDL aromaticity model was provided. 
+
 ### Improved documentation and warnings
 
 - [PR #1564](https://github.com/openforcefield/openff-toolkit/pull1564) Improve documentation of conformer selection in `Molecule.assign_partial_charges()`

@@ -835,6 +835,36 @@ class TestTopology:
         assert po4.is_isomorphic_with(top2.molecule(0))
         assert phenylphosphate.is_isomorphic_with(top2.molecule(1))
 
+    @requires_rdkit
+    def test_from_pdb_additional_substructures(self):
+        """Test that the _additional_substructures arg is wired up correctly"""
+        with pytest.raises(UnassignedChemistryInPDBError):
+            Topology.from_pdb(get_data_file_path("proteins/ace-ZZZ-gly-nme.pdb"))
+
+        # Make unnatural AA
+        mol = Molecule.from_smiles("N[C@@H]([C@@H](C)O[P@](=O)(OCNCO)[O-])C(=O)")
+        # Get the indices of an N term and C term hydrogen for removal
+        leaving_atoms = mol.chemical_environment_matches("[H:1]N([H])CC(=O)[H:2]")[0]
+
+        # Label the atoms with whether they're leaving
+        for atom in mol.atoms:
+            if atom.molecule_atom_index not in leaving_atoms:
+                atom.metadata["substructure_atom"] = True
+            else:
+                atom.metadata["substructure_atom"] = False
+
+        top = Topology.from_pdb(
+            get_data_file_path("proteins/ace-ZZZ-gly-nme.pdb"),
+            _additional_substructures=[mol],
+        )
+
+        expected_mol = Molecule.from_file(
+            get_data_file_path("proteins/ace-ZZZ-gly-nme.sdf")
+        )
+        assert top.molecule(0).is_isomorphic_with(
+            expected_mol, atom_stereochemistry_matching=False
+        )
+
     @requires_pkg("mdtraj")
     def test_from_mdtraj(self):
         """Test construction of an OpenFF Topology from an MDTraj Topology object"""

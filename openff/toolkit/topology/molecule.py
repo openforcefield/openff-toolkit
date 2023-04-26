@@ -3558,6 +3558,7 @@ class FrozenMolecule(Serializable):
                 self,
                 smirks,
                 unique=unique,
+                raise_exception_types=[],
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             matches = toolkit_registry.find_smarts_matches(  # type: ignore[attr-defined]
