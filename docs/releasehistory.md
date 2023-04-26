@@ -6,7 +6,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-## Current development
+## 0.13.0
 
 ### New features
 - [PR #1567](https://github.com/openforcefield/openff-toolkit/pull/1567): Allows setting `Molecule.name` in `Molecule.from_smiles`, `from_inchi`, `from_polymer_pdb`, and `from_pdb_and_smiles`.
