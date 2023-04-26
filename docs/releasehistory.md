@@ -10,7 +10,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### New features
 - [PR #1567](https://github.com/openforcefield/openff-toolkit/pull/1567): Allows setting `Molecule.name` in `Molecule.from_smiles`, `from_inchi`, `from_polymer_pdb`, and `from_pdb_and_smiles`.
-- [PR #1565](https://github.com/openforcefield/openff-toolkit/pull/1565): Adds `Topology.from_pdb`
+- [PR #1565](https://github.com/openforcefield/openff-toolkit/pull/1565): Adds `Topology.from_pdb`.
 
 ### Behavior changes
 - [PR #1569](https://github.com/openforcefield/openff-toolkit/pull/1569): Several instances of `Exception` being raised are now replaced with other exceptions being raised.
