@@ -1,5 +1,6 @@
 name: rdkit-examples
 channels:
+  - conda-forge/label/ambertools_rc
   - conda-forge
 dependencies:
     # Base depends
@@ -22,7 +23,7 @@ dependencies:
   - openff-nagl-models >=0.0.2
   - typing_extensions
     # Toolkit-specific
-  - ambertools =22
+  - ambertools =23
   - rdkit
     # Test-only/optional/dev/typing
   - pytest
