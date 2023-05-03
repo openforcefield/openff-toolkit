@@ -404,7 +404,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             conflict with toolkit substructure names (such as protein residue names)
         SubstructureAtomSmartsInvalid
             Raised when any atom smarts are improperly formatted
-        SubstructureAtomSmartsInvalid
+        SubstructureBondSmartsInvalid
             Raised when any bond smarts are improperly formatted
         SubstructureImproperlySpecified
             Raised when the custom substructure is inadequately specified or
@@ -479,7 +479,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 )
             if not atom.Match(atom):
                 error_reason = f"query does not match rdchem.Mol reading of the molecule (likely due to incorrect/ambiguous connectivity)"
-                raise SubstructureImproperlySpecified(name, error_reason)
+                mol_smarts = Chem.MolToSmarts(qmol)
+                raise SubstructureAtomSmartsInvalid(
+                    name, atom.GetSmarts(), mol_smarts, error_reason
+                )
             return True
 
         def is_valid_neighbor_atom(atom, qmol):
@@ -654,7 +657,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 ref = Chem.MolFromSmarts(substructure_smarts)
                 # then create a looser definition for pattern matching...
                 # be lax about double bonds and chirality
-                fuzzy, neighbor_idxs = self._fuzzy_query(ref)
+                customs_exist = bool(priority_substructure_residues) # do we have custom substructures?
+                fuzzy, neighbor_idxs = self._fuzzy_query(ref, strict_degree=customs_exist)
                 # It's important that we do the substructure search on `rdkit_mol`, but the chemical
                 # info is added to `mol`. If we use the same rdkit molecule for search AND info addition,
                 # then single bonds may no longer be present for subsequent overlapping matches.
@@ -707,8 +711,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                             and j in already_assigned_nodes
                         ):  # if overlapping with previous match
                             if atom_i.GetFormalCharge() != atom_j.GetFormalCharge():
-                                error_reason = f"Formal charge of new query ({atom_i.GetFormalCharge()}) does not match the\
-                                    formal charge of previous query ({atom_j.GetFormalCharge()})"
+                                error_reason = f"Formal charge of new query ({atom_i.GetFormalCharge()}) does not match the formal charge of previous query ({atom_j.GetFormalCharge()})"
                                 raise AmbiguousAtomChemicalAssignment(
                                     res_name,
                                     atom_j.GetIdx(),
@@ -716,8 +719,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                                     error_reason,
                                 )
                             elif atom_i.GetChiralTag() != atom_j.GetChiralTag():
-                                error_reason = f"Chiral Tag of new query ({atom_i.GetChiralTag()}) does not match the\
-                                    chiral tag of previous query ({atom_j.GetChiralTag()})"
+                                error_reason = f"Chiral Tag of new query ({atom_i.GetChiralTag()}) does not match the chiral tag of previous query ({atom_j.GetChiralTag()})"
                                 raise AmbiguousAtomChemicalAssignment(
                                     res_name,
                                     atom_j.GetIdx(),
@@ -736,16 +738,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         y = full_match[b.GetEndAtomIdx()]
                         b2 = mol.GetBondBetweenAtoms(x, y)
                         bond_ids = tuple(sorted([x, y]))
-                        if bond_ids == (493, 494):
-                            print("hey")
                         # error chacking of overlapping bonds. If substructures with priority disagree on the bond order, raise exception
                         if (
                             res_name in priority_substructure_residues
                             and bond_ids in already_assigned_edges
                         ):  # if overlapping with previous match
                             if b.GetBondType() != b2.GetBondType():
-                                error_reason = f"Bond order of new query ({b.GetBondType()}) does not match the\
-                                    bond order of previous query ({b2.GetBondType()})"
+                                error_reason = f"Bond order of new query ({b.GetBondType()}) does not match the bond order of previous query ({b2.GetBondType()})"
                                 query_bond = tuple(
                                     sorted([b.GetBeginAtomIdx(), b.GetEndAtomIdx()])
                                 )
@@ -833,7 +832,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return rwmol
 
     @staticmethod
-    def _fuzzy_query(query):
+    def _fuzzy_query(query, strict_degree=False):
         """return a copy of Query which is less specific:
         - ignore aromaticity and hybridization of atoms (i.e. [#6] not C)
         - ignore bond orders
@@ -856,9 +855,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         neighbor_idxs = []
         for idx, a in enumerate(fuzzy.GetAtoms()):
             a.SetFormalCharge(0)
-            a.SetQuery(
-                generic_mol.GetAtomWithIdx(a.GetAtomicNum())
-            )  # i.e. H looks up atom 0 in our generic mol
+            if strict_degree and a.GetAtomicNum() > 0:
+                a.SetQuery(
+                    Chem.AtomFromSmarts(f"[#{a.GetAtomicNum()}D{a.GetDegree()}]")
+                )
+            else:
+                a.SetQuery(
+                    generic_mol.GetAtomWithIdx(a.GetAtomicNum())
+                )  # i.e. H looks up atom 0 in our generic mol
             a.SetNoImplicit(True)
             if a.GetAtomicNum() == 0:
                 neighbor_idxs.append(idx)
