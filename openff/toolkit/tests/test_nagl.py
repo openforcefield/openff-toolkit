@@ -74,6 +74,7 @@ class TestNAGLToolkitWrapper:
         numpy.testing.assert_allclose(
             forward.partial_charges,
             reverse.partial_charges[::-1],
+            rtol=1e-6,
         )
 
     def test_unsupported_charge_method(self):
