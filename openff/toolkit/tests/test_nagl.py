@@ -1,5 +1,6 @@
 import numpy
 import pytest
+from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 
 from openff.toolkit.tests.create_molecules import (
@@ -52,7 +53,12 @@ class TestNAGLToolkitWrapper:
 
         nagl_charges = molecule.partial_charges
 
-        assert numpy.allclose(openeye_charges, nagl_charges, atol=0.03, rtol=0)
+        numpy.testing.assert_allclose(
+            openeye_charges.m_as(unit.elementary_charge),
+            nagl_charges.m_as(unit.elementary_charge),
+            atol=0.03,
+            rtol=0,
+        )
 
     def test_atom_order_dependence(self):
         """Regression test against atom order dependence."""
@@ -65,7 +71,11 @@ class TestNAGLToolkitWrapper:
                 toolkit_registry=_NAGLToolkitWrapper(),
             )
 
-        assert numpy.allclose(forward.partial_charges, reverse.partial_charges[::-1])
+        numpy.testing.assert_allclose(
+            forward.partial_charges,
+            reverse.partial_charges[::-1],
+            rtol=1e-6,
+        )
 
     def test_unsupported_charge_method(self):
         with pytest.raises(ValueError, match="Charge model hartree_fock not supported"):

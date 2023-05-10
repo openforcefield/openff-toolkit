@@ -18,11 +18,11 @@ dependencies:
   - smirnoff99Frosst
   - openff-units >=0.2
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.3.0
-  - openff-nagl >=0.2.1
+  - openff-interchange-base >=0.3.3
+  - openff-nagl >=0.2.2
   - openff-nagl-models >=0.0.2
     # Toolkit-specific
-  - ambertools =22
+  - ambertools >=22
   - rdkit
   - openeye-toolkits
     # Test-only/optional/dev/typing
@@ -38,7 +38,6 @@ dependencies:
   - qcportal >=0.15
   - qcengine
   - mdtraj
-  - ipywidgets =7
   - nbval
   - mypy
   - typing_extensions
