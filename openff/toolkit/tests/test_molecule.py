@@ -1746,6 +1746,37 @@ class TestMolecule:
             create_ethanol(),
         )[0]
 
+    def test_exactly_the_same_short_circuit_return_atom_map(self):
+        SMILES = "c1ncccc1COCC"
+        ISOMORPHIC_SMILES = "CCOCc1cccnc1"
+
+        molecule = Molecule.from_smiles(SMILES)
+        exactly_the_same = Molecule.from_smiles(SMILES)
+        not_exactly_the_same = Molecule.from_smiles(ISOMORPHIC_SMILES)
+
+        atom_map = {index: index for index in range(molecule.n_atoms)}
+
+        # If not returning the map, isomorphic inputs should always return (True, None)
+        assert Molecule.are_isomorphic(
+            molecule, exactly_the_same, return_atom_map=False
+        ) == (True, None)
+        assert Molecule.are_isomorphic(
+            molecule, not_exactly_the_same, return_atom_map=False
+        ) == (True, None)
+
+        # If returning the mapping, isomorphic inputs should always return True and some mapping ...
+        assert Molecule.are_isomorphic(
+            molecule, exactly_the_same, return_atom_map=True
+        ) == (True, atom_map)
+
+        # but the ordering is not guaranteed, so just check that the map is a dict of the right length
+        result, mapping = Molecule.are_isomorphic(
+            molecule, not_exactly_the_same, return_atom_map=True
+        )
+        assert result
+        assert isinstance(mapping, dict)
+        assert len(mapping) == molecule.n_atoms
+
     def test_graph_and_molecule_inputs(self):
         molecule = create_ethanol()
         graph = molecule.to_networkx()
