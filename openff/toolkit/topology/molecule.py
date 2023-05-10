@@ -1941,8 +1941,9 @@ class FrozenMolecule(Serializable):
             The second molecule to test for isomorphism.
 
         return_atom_map: bool, default=False, optional
-            Return a ``dict`` containing the atomic mapping instead of a
-            ``bool``.
+            Return a ``dict`` containing the atomic mapping, otherwise ``None``.
+            Only processed if inputs are isomorphic, will always return ``None`` if
+            inputs are not isomorphic.
 
         aromatic_matching: bool, default=True, optional
             If ``False``, aromaticity of graph nodes and edges are ignored for
@@ -2025,7 +2026,10 @@ class FrozenMolecule(Serializable):
         # Do a quick check to see whether the inputs are totally identical (including being in the same atom order)
         if isinstance(mol1, FrozenMolecule) and isinstance(mol2, FrozenMolecule):
             if mol1._is_exactly_the_same_as(mol2):
-                return True, {i: i for i in range(mol1.n_atoms)}
+                if return_atom_map:
+                    return True, {i: i for i in range(mol1.n_atoms)}
+                else:
+                    return True, None
 
         # Build the user defined matching functions
         def node_match_func(x, y):
