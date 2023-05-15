@@ -3405,13 +3405,10 @@ class TestMolecule:
         # Check total charge
         charges_sum_unitless = initial_charges.sum().m_as(unit.elementary_charge)
         total_charge_unitless = molecule.total_charge.m_as(unit.elementary_charge)
-        # if abs(charges_sum_unitless - total_charge_unitless) > 0.0001:
-        # print(
-        #     "molecule {}    charge_sum {}     molecule.total_charge {}".format(
-        #         molecule.name, charges_sum_unitless, total_charge_unitless
-        #     )
-        # )
-        np.allclose(charges_sum_unitless, total_charge_unitless, atol=0.002)
+
+        np.testing.assert_allclose(
+            charges_sum_unitless, total_charge_unitless, atol=0.002
+        )
 
         # Call should be faster second time due to caching
         # TODO: Implement caching
@@ -3419,7 +3416,7 @@ class TestMolecule:
             partial_charge_method=method, toolkit_registry=toolkit_registry
         )
         recomputed_charges = molecule._partial_charges
-        assert np.allclose(initial_charges, recomputed_charges, atol=0.002)
+        np.testing.assert_allclose(initial_charges, recomputed_charges, atol=0.002)
 
     @pytest.mark.parametrize(
         "toolkit_wrapper", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
