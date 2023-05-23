@@ -585,8 +585,7 @@ class TestOpenEyeToolkitWrapper:
     def test_to_openeye_typed_partial_charges(self):
         ethanol = create_ethanol()
         ethanol.partial_charges = unit.Quantity(
-            np.zeros(ethanol.n_atoms, dtype=int),
-            unit.elementary_charge
+            np.zeros(ethanol.n_atoms, dtype=int), unit.elementary_charge
         )
         oemol = ethanol.to_openeye()
         for oeatom in oemol.GetAtoms():
