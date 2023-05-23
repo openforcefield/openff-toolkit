@@ -52,6 +52,7 @@ class TestNAGLToolkitWrapper:
         assert molecule.partial_charges is not None
 
         nagl_charges = molecule.partial_charges
+        assert nagl_charges.dtype is float
 
         numpy.testing.assert_allclose(
             openeye_charges.m_as(unit.elementary_charge),

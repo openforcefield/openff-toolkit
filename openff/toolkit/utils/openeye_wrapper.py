@@ -1547,9 +1547,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             if off_atom.partial_charge is None:
                 oe_atom.SetPartialCharge(float("nan"))
             else:
-                oe_atom.SetPartialCharge(
-                    off_atom.partial_charge.m_as(unit.elementary_charge)
-                )
+                charge = off_atom.partial_charge.m_as(unit.elementary_charge)
+                oe_atom.SetPartialCharge(float(charge))
             res = oechem.OEAtomGetResidue(oe_atom)
             # If we add residue info without updating the serial number, all of the atom
             # serial numbers in a written PDB will be 0. Note two things:
