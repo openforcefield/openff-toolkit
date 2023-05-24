@@ -3073,25 +3073,47 @@ class FrozenMolecule(Serializable):
         """
         if charges is None:
             self._partial_charges = None
-        elif charges.shape == (self.n_atoms,):
-            if isinstance(charges, unit.Quantity):
-                if charges.units in unit.elementary_charge.compatible_units():
-                    self._partial_charges = charges
-            if hasattr(charges, "unit"):
-                from openmm import unit as openmm_unit
+            return
 
-                if not isinstance(charges, openmm_unit.Quantity):
-                    raise IncompatibleUnitError(
-                        "Unsupported type passed to partial_charges setter. "
-                        "Found object of type {type(charges)}."
-                    )
+        if not hasattr(charges, "shape"):
+            raise TypeError(
+                "Unsupported type passed to partial_charges setter. "
+                f"Found object of type {type(charges)}."
+            )
 
-                elif isinstance(charges, openmm_unit.Quantity):
-                    from openff.units.openmm import from_openmm
+        if not charges.shape == (self.n_atoms,):
+            raise ValueError(
+                "Unsupported shape passed to partial_charges setter. "
+                f"Found shape {charges.shape}, expected {(self.n_atoms,)}"
+            )
 
-                    converted = from_openmm(charges)
-                    if converted.units in unit.elementary_charge.compatible_units():
-                        self._partial_charges = converted
+        if isinstance(charges, unit.Quantity):
+            if charges.units in unit.elementary_charge.compatible_units():
+                self._partial_charges = charges.astype(float)
+                return
+
+        elif hasattr(charges, "unit"):
+            from openmm import unit as openmm_unit
+
+            if not isinstance(charges, openmm_unit.Quantity):
+                raise IncompatibleUnitError(
+                    "Unsupported type passed to partial_charges setter. "
+                    f"Found object of type {type(charges)}."
+                )
+
+            else:
+                from openff.units.openmm import from_openmm
+
+                converted = from_openmm(charges)
+                if converted.units in unit.elementary_charge.compatible_units():
+                    self._partial_charges = converted.astype(float)
+
+        else:
+            raise TypeError(
+                "Unsupported type passed to partial_charges setter. "
+                f"Found object of type {type(charges)}, "
+                "expected openff.units.unit.Quantity"
+            )
 
     @property
     def n_particles(self) -> int:

@@ -3418,6 +3418,22 @@ class TestMolecule:
         recomputed_charges = molecule._partial_charges
         np.testing.assert_allclose(initial_charges, recomputed_charges, atol=0.002)
 
+    def test_partial_charges_setter_type_conversion(self):
+        molecule = Molecule.from_smiles("C")
+        int_charges = np.zeros(molecule.n_atoms, dtype=int)
+        molecule.partial_charges = int_charges
+        assert molecule.partial_charges.dtype == float
+
+    @pytest.mark.parametrize("value, error", [
+        (3, TypeError),
+        (np.zeros(4), TypeError),
+        (np.zeros(2), ValueError),
+    ])
+    def test_partial_charges_errors(self, value, error):
+        molecule = Molecule.from_smiles("C")
+        with pytest.raises(error):
+            molecule.partial_charges = value
+
     @pytest.mark.parametrize(
         "toolkit_wrapper", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
     )
