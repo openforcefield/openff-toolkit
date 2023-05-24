@@ -3421,14 +3421,14 @@ class TestMolecule:
     def test_partial_charges_setter_type_conversion(self):
         molecule = Molecule.from_smiles("C")
         int_charges = np.zeros(molecule.n_atoms, dtype=int)
-        molecule.partial_charges = int_charges
+        molecule.partial_charges = int_charges * unit.elementary_charge
         assert molecule.partial_charges.dtype == float
 
     @pytest.mark.parametrize(
         "value, error",
         [
             (3, TypeError),
-            (np.zeros(4), TypeError),
+            (np.zeros(5), TypeError),
             (np.zeros(2), ValueError),
         ],
     )
