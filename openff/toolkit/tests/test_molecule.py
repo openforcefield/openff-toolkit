@@ -57,6 +57,8 @@ from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import (
     ConformerGenerationError,
     IncompatibleUnitError,
+    IncompatibleShapeError,
+    IncompatibleTypeError,
     InvalidBondOrderError,
     InvalidConformerError,
     MissingPartialChargesError,
@@ -3427,9 +3429,9 @@ class TestMolecule:
     @pytest.mark.parametrize(
         "value, error",
         [
-            (3, TypeError),
-            (np.zeros(5), TypeError),
-            (np.zeros(2), ValueError),
+            (3, IncompatibleTypeError),
+            (np.zeros(5), IncompatibleTypeError),
+            (np.zeros(2), IncompatibleShapeError),
         ],
     )
     def test_partial_charges_errors(self, value, error):

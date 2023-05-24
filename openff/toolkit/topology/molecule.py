@@ -60,6 +60,8 @@ from openff.toolkit.utils.exceptions import (
     HierarchySchemeNotFoundException,
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
     IncompatibleUnitError,
+    IncompatibleShapeError,
+    IncompatibleTypeError,
     InvalidAtomMetadataError,
     InvalidBondOrderError,
     InvalidConformerError,
@@ -3076,13 +3078,13 @@ class FrozenMolecule(Serializable):
             return
 
         if not hasattr(charges, "shape"):
-            raise TypeError(
+            raise IncompatibleTypeError(
                 "Unsupported type passed to partial_charges setter. "
                 f"Found object of type {type(charges)}."
             )
 
         if not charges.shape == (self.n_atoms,):
-            raise ValueError(
+            raise IncompatibleShapeError(
                 "Unsupported shape passed to partial_charges setter. "
                 f"Found shape {charges.shape}, expected {(self.n_atoms,)}"
             )
@@ -3109,7 +3111,7 @@ class FrozenMolecule(Serializable):
                     self._partial_charges = converted.astype(float)
 
         else:
-            raise TypeError(
+            raise IncompatibleTypeError(
                 "Unsupported type passed to partial_charges setter. "
                 f"Found object of type {type(charges)}, "
                 "expected openff.units.unit.Quantity"
