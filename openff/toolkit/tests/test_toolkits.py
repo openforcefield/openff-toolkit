@@ -582,6 +582,15 @@ class TestOpenEyeToolkitWrapper:
         for oeatom in oemol2.GetAtoms():
             assert math.isnan(oeatom.GetPartialCharge())
 
+    def test_to_openeye_typed_partial_charges(self):
+        ethanol = create_ethanol()
+        ethanol.partial_charges = unit.Quantity(
+            np.zeros(ethanol.n_atoms, dtype=int), unit.elementary_charge
+        )
+        oemol = ethanol.to_openeye()
+        for oeatom in oemol.GetAtoms():
+            assert np.isclose(oeatom.GetPartialCharge(), 0)
+
     def test_to_from_openeye_hierarchy_metadata(self):
         """
         Test roundtripping to/from ``OpenEyeToolkitWrapper`` for molecules with PDB hierarchy metadata

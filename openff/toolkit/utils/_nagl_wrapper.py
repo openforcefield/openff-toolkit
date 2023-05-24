@@ -98,9 +98,9 @@ class _NAGLToolkitWrapper(ToolkitWrapper):
                 raise FileNotFoundError(f"Could not find model {_only_model.name}")
 
             model = GNNModel.load(_only_model, eval_mode=True)
-
+            charges = model.compute_property(molecule, as_numpy=True)
             molecule.partial_charges = unit.Quantity(
-                model.compute_property(molecule, as_numpy=True),
+                charges.astype(float),
                 unit.elementary_charge,
             )
 
