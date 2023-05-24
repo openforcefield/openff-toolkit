@@ -56,9 +56,9 @@ from openff.toolkit.topology.molecule import (
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import (
     ConformerGenerationError,
-    IncompatibleUnitError,
     IncompatibleShapeError,
     IncompatibleTypeError,
+    IncompatibleUnitError,
     InvalidBondOrderError,
     InvalidConformerError,
     MissingPartialChargesError,
