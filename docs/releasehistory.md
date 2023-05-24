@@ -16,7 +16,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 
 ### Bugfixes
-
+- [PR #1617](https://github.com/openforcefield/openff-toolkit/pull/1617): Fixes [#1616](https://github.com/openforcefield/openff-toolkit/issues/1616), by converting NAGL charges to float and converting partial_charges to float before converting to_openeye()
 
 ### Improved documentation and warnings
 
