@@ -3424,11 +3424,14 @@ class TestMolecule:
         molecule.partial_charges = int_charges
         assert molecule.partial_charges.dtype == float
 
-    @pytest.mark.parametrize("value, error", [
-        (3, TypeError),
-        (np.zeros(4), TypeError),
-        (np.zeros(2), ValueError),
-    ])
+    @pytest.mark.parametrize(
+        "value, error",
+        [
+            (3, TypeError),
+            (np.zeros(4), TypeError),
+            (np.zeros(2), ValueError),
+        ],
+    )
     def test_partial_charges_errors(self, value, error):
         molecule = Molecule.from_smiles("C")
         with pytest.raises(error):
