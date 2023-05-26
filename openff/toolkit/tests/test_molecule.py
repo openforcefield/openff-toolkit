@@ -20,9 +20,9 @@ import re
 from tempfile import NamedTemporaryFile
 
 import numpy as np
-import pytest
-import openmm
 import openff.units
+import openmm
+import pytest
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
 
