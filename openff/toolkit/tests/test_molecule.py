@@ -18,9 +18,9 @@ import pathlib
 import pickle
 import re
 from tempfile import NamedTemporaryFile
+from unittest.mock import Mock
 
 import numpy as np
-import openff.units
 import openmm
 import pytest
 from openff.units import unit
@@ -3437,7 +3437,7 @@ class TestMolecule:
             (np.zeros(2) * unit.elementary_charge, IncompatibleShapeError),
             (np.zeros(5) * openmm.unit.nanometer, IncompatibleUnitError),
             (np.zeros(5) * unit.angstrom, IncompatibleUnitError),
-            (openff.units, IncompatibleUnitError),
+            (Mock(shape=(5,), unit=None), IncompatibleUnitError),
         ],
     )
     def test_partial_charges_errors(self, value, error):
