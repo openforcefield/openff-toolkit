@@ -21,7 +21,6 @@ from tempfile import NamedTemporaryFile
 from unittest.mock import Mock
 
 import numpy as np
-import openmm
 import pytest
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
@@ -413,6 +412,7 @@ class TestAtom:
         with pytest.raises(ValueError, match="Cannot set.*'int'"):
             water.atoms[2].partial_charge = 4
 
+    @requires_pkg("openmm")
     def test_set_partial_charges_openmm_quantity(self, water):
         import openmm.unit
 
@@ -3045,6 +3045,7 @@ class TestMolecule:
             for j in range(i, min(i + 3, nmolecules)):
                 assert (molecules[i] == molecules[j]) == (i == j)
 
+    @requires_pkg("openmm")
     def test_add_conformers(self):
         """Test addition of conformers to a molecule"""
         from openmm import unit as openmm_unit
@@ -3435,20 +3436,23 @@ class TestMolecule:
             (np.zeros(5), IncompatibleTypeError),
             (np.zeros(2), IncompatibleShapeError),
             (np.zeros(2) * unit.elementary_charge, IncompatibleShapeError),
-            (np.zeros(5) * openmm.unit.nanometer, IncompatibleUnitError),
             (np.zeros(5) * unit.angstrom, IncompatibleUnitError),
             (Mock(shape=(5,), unit=None), IncompatibleUnitError),
         ],
     )
-    def test_partial_charges_errors(self, value, error):
+    def test_partial_charges_setter_errors(self, value, error):
         molecule = Molecule.from_smiles("C")
         with pytest.raises(error):
             molecule.partial_charges = value
 
+    @requires_pkg("openmm")
     def test_partial_charges_set_openmm_units(self):
+        import openmm.unit
         molecule = Molecule.from_smiles("C")
         molecule.partial_charges = np.zeros(5) * openmm.unit.elementary_charge
         assert molecule.partial_charges.units == unit.elementary_charge
+        with pytest.raises(IncompatibleUnitError):
+            molecule.partial_charges = np.zeros(5) * openmm.unit.angstrom
 
     @pytest.mark.parametrize(
         "toolkit_wrapper", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
