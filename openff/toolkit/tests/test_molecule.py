@@ -3448,7 +3448,7 @@ class TestMolecule:
     def test_partial_charges_set_openmm_units(self):
         molecule = Molecule.from_smiles("C")
         molecule.partial_charges = np.zeros(5) * openmm.unit.elementary_charge
-        assert molecule.partial_charges.unit == unit.elementary_charge
+        assert molecule.partial_charges.units == unit.elementary_charge
 
     @pytest.mark.parametrize(
         "toolkit_wrapper", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
