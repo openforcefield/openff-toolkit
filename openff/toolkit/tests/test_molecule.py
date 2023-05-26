@@ -21,6 +21,8 @@ from tempfile import NamedTemporaryFile
 
 import numpy as np
 import pytest
+import openmm
+import openff.units
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
 
@@ -3433,13 +3435,20 @@ class TestMolecule:
             (np.zeros(5), IncompatibleTypeError),
             (np.zeros(2), IncompatibleShapeError),
             (np.zeros(2) * unit.elementary_charge, IncompatibleShapeError),
-
+            (np.zeros(5) * openmm.unit.nanometer, IncompatibleUnitError),
+            (np.zeros(5) * unit.angstrom, IncompatibleUnitError),
+            (openff.units, IncompatibleUnitError),
         ],
     )
     def test_partial_charges_errors(self, value, error):
         molecule = Molecule.from_smiles("C")
         with pytest.raises(error):
             molecule.partial_charges = value
+
+    def test_partial_charges_set_openmm_units(self):
+        molecule = Molecule.from_smiles("C")
+        molecule.partial_charges = np.zeros(5) * openmm.unit.elementary_charge
+        assert molecule.partial_charges.unit == unit.elementary_charge
 
     @pytest.mark.parametrize(
         "toolkit_wrapper", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]

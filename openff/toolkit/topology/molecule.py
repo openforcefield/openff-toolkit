@@ -3080,7 +3080,8 @@ class FrozenMolecule(Serializable):
         if not hasattr(charges, "shape"):
             raise IncompatibleTypeError(
                 "Unsupported type passed to partial_charges setter. "
-                f"Found object of type {type(charges)}."
+                f"Found object of type {type(charges)}. "
+                "Expected openff.units.unit.Quantity"
             )
 
         if not charges.shape == (self.n_atoms,):
@@ -3092,7 +3093,11 @@ class FrozenMolecule(Serializable):
         if isinstance(charges, unit.Quantity):
             if charges.units in unit.elementary_charge.compatible_units():
                 self._partial_charges = charges.astype(float)
-                return
+            else:
+                raise IncompatibleUnitError(
+                    "Unsupported unit passed to partial_charges setter. "
+                    f"Found unit {charges.units}, expected {unit.elementary_charge}"
+                )
 
         elif hasattr(charges, "unit"):
             from openmm import unit as openmm_unit
@@ -3109,6 +3114,11 @@ class FrozenMolecule(Serializable):
                 converted = from_openmm(charges)
                 if converted.units in unit.elementary_charge.compatible_units():
                     self._partial_charges = converted.astype(float)
+                else:
+                    raise IncompatibleUnitError(
+                        "Unsupported unit passed to partial_charges setter. "
+                        f"Found unit {converted.units}, expected {unit.elementary_charge}"
+                    )
 
         else:
             raise IncompatibleTypeError(
