@@ -1021,7 +1021,11 @@ class FrozenMolecule(Serializable):
                     loaded = True
             # TODO: Make this compatible with file-like objects (I couldn't figure out how to make an oemolistream
             # from a fileIO object)
-            if isinstance(other, str) or hasattr(other, "read") and not loaded:
+            if (
+                isinstance(other, (str, pathlib.Path))
+                or hasattr(other, "read")
+                and not loaded
+            ):
                 try:
                     mol = Molecule.from_file(
                         other,
@@ -3733,7 +3737,7 @@ class FrozenMolecule(Serializable):
     @classmethod
     def from_file(
         cls,
-        file_path,
+        file_path: Union[str, pathlib.Path, TextIO],
         file_format=None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
         allow_undefined_stereo=False,
@@ -3748,7 +3752,7 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        file_path : str or file-like object
+        file_path : str, pathlib.Path, or file-like object
             The path to the file or file-like object to stream one or more molecules from.
         file_format : str, optional, default=None
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
@@ -3858,7 +3862,9 @@ class FrozenMolecule(Serializable):
 
         mols = list()
 
-        if isinstance(file_path, str):
+        if isinstance(file_path, (str, pathlib.Path)):
+            if isinstance(file_path, pathlib.Path):
+                file_path = file_path.as_posix()
             mols = toolkit.from_file(
                 file_path,
                 file_format=file_format,
@@ -3885,7 +3891,7 @@ class FrozenMolecule(Serializable):
     @requires_package("openmm")
     def from_polymer_pdb(
         cls,
-        file_path: Union[str, TextIO],
+        file_path: Union[str, pathlib.Path, TextIO],
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
         name: str = "",
     ):
@@ -3939,11 +3945,20 @@ class FrozenMolecule(Serializable):
             multiple chains or molecules.
 
         """
+        import io
+
         import openmm.unit as openmm_unit
         from openmm.app import PDBFile
 
         if isinstance(toolkit_registry, ToolkitWrapper):
             toolkit_registry = ToolkitRegistry([toolkit_registry])
+
+        if isinstance(file_path, (str, io.TextIOWrapper)):
+            pass
+        elif isinstance(file_path, pathlib.Path):
+            file_path = file_path.as_posix()
+        else:
+            raise ValueError(f"Unexpected type {type(file_path)}")
 
         pdb = PDBFile(file_path)
 

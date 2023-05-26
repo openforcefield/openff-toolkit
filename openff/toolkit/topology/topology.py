@@ -1532,7 +1532,7 @@ class Topology(Serializable):
     @requires_package("openmm")
     def from_pdb(
         cls,
-        file_path: Union[str, TextIO],
+        file_path: Union[str, Path, TextIO],
         unique_molecules: Optional[Iterable[Molecule]] = None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
         _additional_substructures: Optional[Iterable[Molecule]] = None,
@@ -1608,7 +1608,7 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        file_path : str or file object
+        file_path : str, Path, or file object
             PDB information to be passed to OpenMM PDBFile object for loading
         unique_molecules : Iterable of Molecule. Default = None
             OpenFF Molecule objects corresponding to the molecules in the input
@@ -1651,10 +1651,18 @@ class Topology(Serializable):
          HierarchyElement ('B', '3', ' ', 'NME') of iterator 'residues' containing 6 atom(s)]
 
         """
+        import io
         import json
 
         import openmm.unit as openmm_unit
         from openmm.app import PDBFile
+
+        if isinstance(file_path, (str, io.TextIOWrapper)):
+            pass
+        elif isinstance(file_path, Path):
+            file_path = file_path.as_posix()
+        else:
+            raise ValueError(f"Unexpected type {type(file_path)}")
 
         pdb = PDBFile(file_path)
 
