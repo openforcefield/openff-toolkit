@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["3.8", "3.9"]
+        python-version: ["3.9", "3.10"]
         openeye: ["true", "false"]
 
     env:
@@ -79,7 +79,7 @@ jobs:
           fi
           if [[ "$OPENEYE" == false ]]; then
             if [[ $(conda list | grep openeye-toolkits) ]]; then
-              conda remove --force openeye-toolkits --yes
+              micromamba remove --force openeye-toolkits --yes
             fi
             python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert not OPENEYE_AVAILABLE, 'OpenEye unexpectedly found'"
           fi

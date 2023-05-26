@@ -9,7 +9,7 @@ TypedMolecule TODOs
   deserialize a Molecule or a TypedMolecule.
 
 """
-from typing import TYPE_CHECKING, Dict, List, NoReturn, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, NoReturn, Optional, Tuple, Union
 
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
@@ -25,6 +25,8 @@ from openff.toolkit.utils.utils import deserialize_numpy, serialize_numpy
 if TYPE_CHECKING:
     import networkx as nx
     from openff.units.unit import Quantity
+
+    from openff.toolkit.topology.molecule import FrozenMolecule
 
 
 class _SimpleMolecule:
@@ -311,9 +313,11 @@ class _SimpleMolecule:
             "an OpenFF Molecule with sufficiently specified chemistry."
         )
 
-    def _is_isomorphic_with(self, other) -> bool:
+    def is_isomorphic_with(
+        self, other: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"], **kwargs
+    ) -> bool:
         """
-        Untrustworthy check for pseudo-isomorphism.
+        Check for pseudo-isomorphism.
 
         This currently checks that the two molecules have
         * The same number of atoms
@@ -323,18 +327,66 @@ class _SimpleMolecule:
         This currently does NOT checks that the two molecules have
         * Topologically identical bond graphs
         """
+        return _SimpleMolecule.are_isomorphic(
+            self,
+            other,
+            return_atom_map=False,
+        )[0]
 
-        if self.n_atoms != other.n_atoms:
-            return False
+    @staticmethod
+    def are_isomorphic(
+        mol1: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"],
+        mol2: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"],
+        return_atom_map: bool = False,
+    ) -> Tuple[bool, Optional[Dict[int, int]]]:
+        import networkx
 
-        if self.n_bonds != other.n_bonds:
-            return False
+        _cls = _SimpleMolecule
 
-        for this_atom, other_atom in zip(self.atoms, other.atoms):
-            if this_atom.atomic_number != other_atom.atomic_number:
-                return False
+        if isinstance(mol1, networkx.Graph) and isinstance(mol2, networkx.Graph):
+            graph1 = _SimpleMolecule._from_subgraph(mol1).to_networkx()
+            graph2 = _SimpleMolecule._from_subgraph(mol2).to_networkx()
 
-        return True
+        elif isinstance(mol1, networkx.Graph):
+            assert isinstance(mol2, _cls)
+            graph1 = _SimpleMolecule._from_subgraph(mol1).to_networkx()
+            graph2 = mol2.to_networkx()
+
+        elif isinstance(mol2, networkx.Graph):
+            assert isinstance(mol1, _cls)
+            graph1 = mol1.to_networkx()
+            graph2 = _SimpleMolecule._from_subgraph(mol2).to_networkx()
+
+        else:
+            # static methods (by definition) know nothing about their class,
+            # so the class to compare to must be hard-coded here
+            if not (isinstance(mol1, _cls) and isinstance(mol2, _cls)):
+                return False, None
+
+            graph1 = mol1.to_networkx()
+            graph2 = mol2.to_networkx()
+
+        def node_match_func(node1, node2):
+            return node1["atomic_number"] == node2["atomic_number"]
+
+        edge_match_func = None
+
+        matcher = networkx.algorithms.isomorphism.GraphMatcher(
+            graph1, graph2, node_match=node_match_func, edge_match=edge_match_func
+        )
+
+        if matcher.is_isomorphic():
+            if return_atom_map:
+                topology_atom_map = matcher.mapping
+
+                return True, {
+                    key: topology_atom_map[key] for key in sorted(topology_atom_map)
+                }
+
+            else:
+                return True, None
+        else:
+            return False, None
 
     def generate_unique_atom_names(self):
         """Generate unique atom names. See `Molecule.generate_unique_atom_names`."""

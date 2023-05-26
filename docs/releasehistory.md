@@ -6,14 +6,38 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-## Current development
+## Current Development
+
+
+### New features
+
+
+### Behavior changes
+- [PR #1619](https://github.com/openforcefield/openff-toolkit/pull/1619): Fixes **silent error** [#1618](https://github.com/openforcefield/openff-toolkit/issues/1618), by making partial_charges.setter more comprehensive in type and shape checking.
+
+
+### Bugfixes
+- [PR #1617](https://github.com/openforcefield/openff-toolkit/pull/1617): Fixes [#1616](https://github.com/openforcefield/openff-toolkit/issues/1616), by converting NAGL charges to float and converting partial_charges to float before converting to_openeye()
+
+### Improved documentation and warnings
+
+
+### Examples updates
+
+
+## 0.13.0
 
 ### New features
 - [PR #1567](https://github.com/openforcefield/openff-toolkit/pull/1567): Allows setting `Molecule.name` in `Molecule.from_smiles`, `from_inchi`, `from_polymer_pdb`, and `from_pdb_and_smiles`.
-- [PR #1565](https://github.com/openforcefield/openff-toolkit/pull/1565): Adds `Topology.from_pdb`
+- [PR #1565](https://github.com/openforcefield/openff-toolkit/pull/1565): Adds `Topology.from_pdb`.
 
 ### Behavior changes
 - [PR #1569](https://github.com/openforcefield/openff-toolkit/pull/1569): Several instances of `Exception` being raised are now replaced with other exceptions being raised.
+- [PR #1577](https://github.com/openforcefield/openff-toolkit/pull/1577): Drops support for Python 3.8, following [NEP-29](https://numpy.org/neps/nep-0029-deprecation_policy.html).
+
+### Bugfixes
+- [PR #1589](https://github.com/openforcefield/openff-toolkit/pull/1589): Fixes [Issue #1579](https://github.com/openforcefield/openff-toolkit/issues/1579), where Molecule.from_polymer_pdb could not handle NH2 caps at C termini.  
+- [PR #1591](https://github.com/openforcefield/openff-toolkit/pull/1591): Fixes [#1563](https://github.com/openforcefield/openff-toolkit/issues/1563), where `from_rdkit` would sometimes raise an error about radicals if a molecule using a non-MDL aromaticity model was provided. 
 
 ### Improved documentation and warnings
 

@@ -705,6 +705,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                             "DISULFIDE",
                             "UNIQUE_MOLECULE",
                             *priority_substructure_residues,
+                            "ADDITIONAL_SUBSTRUCTURE",
                         ]
                     ):
                         continue
@@ -2199,7 +2200,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 ^ Chem.SANITIZE_SETAROMATICITY
                 ^ Chem.SANITIZE_ADJUSTHS
                 ^ Chem.SANITIZE_CLEANUPCHIRALITY
-                ^ Chem.SANITIZE_KEKULIZE
             ),
         )
         Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)

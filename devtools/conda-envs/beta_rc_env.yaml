@@ -21,8 +21,10 @@ dependencies:
   - openff-units >=0.2
   - openff-utilities >=0.1.5
   - openff-interchange-base >=0.2
+  - openff-nagl >=0.2.2
+  - openff-nagl-models >=0.0.2
     # Toolkit-specific
-  - ambertools
+  - ambertools >=22
   - rdkit
   - openeye-toolkits
     # Test-only/optional/dev
@@ -38,7 +40,6 @@ dependencies:
   - qcportal >=0.15
   - qcengine
   - mdtraj
-  - parmed
   - nbval
   - mypy
   - pip:

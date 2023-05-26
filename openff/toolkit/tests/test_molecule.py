@@ -18,6 +18,7 @@ import pathlib
 import pickle
 import re
 from tempfile import NamedTemporaryFile
+from unittest.mock import Mock
 
 import numpy as np
 import pytest
@@ -56,6 +57,8 @@ from openff.toolkit.topology.molecule import (
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import (
     ConformerGenerationError,
+    IncompatibleShapeError,
+    IncompatibleTypeError,
     IncompatibleUnitError,
     InvalidBondOrderError,
     InvalidConformerError,
@@ -409,6 +412,7 @@ class TestAtom:
         with pytest.raises(ValueError, match="Cannot set.*'int'"):
             water.atoms[2].partial_charge = 4
 
+    @requires_pkg("openmm")
     def test_set_partial_charges_openmm_quantity(self, water):
         import openmm.unit
 
@@ -1733,6 +1737,57 @@ class TestMolecule:
             "CCC[N@@](C)CC"
         )
 
+    def test_short_circuit_heterogeneous_input(self):
+        from openff.toolkit.topology._mm_molecule import _SimpleMolecule
+
+        assert not Molecule.are_isomorphic(
+            create_ethanol(),
+            _SimpleMolecule.from_molecule(create_ethanol()),
+        )[0]
+
+        assert not Molecule.are_isomorphic(
+            _SimpleMolecule.from_molecule(create_ethanol()),
+            create_ethanol(),
+        )[0]
+
+    def test_exactly_the_same_short_circuit_return_atom_map(self):
+        SMILES = "c1ncccc1COCC"
+        ISOMORPHIC_SMILES = "CCOCc1cccnc1"
+
+        molecule = Molecule.from_smiles(SMILES)
+        exactly_the_same = Molecule.from_smiles(SMILES)
+        not_exactly_the_same = Molecule.from_smiles(ISOMORPHIC_SMILES)
+
+        atom_map = {index: index for index in range(molecule.n_atoms)}
+
+        # If not returning the map, isomorphic inputs should always return (True, None)
+        assert Molecule.are_isomorphic(
+            molecule, exactly_the_same, return_atom_map=False
+        ) == (True, None)
+        assert Molecule.are_isomorphic(
+            molecule, not_exactly_the_same, return_atom_map=False
+        ) == (True, None)
+
+        # If returning the mapping, isomorphic inputs should always return True and some mapping ...
+        assert Molecule.are_isomorphic(
+            molecule, exactly_the_same, return_atom_map=True
+        ) == (True, atom_map)
+
+        # but the ordering is not guaranteed, so just check that the map is a dict of the right length
+        result, mapping = Molecule.are_isomorphic(
+            molecule, not_exactly_the_same, return_atom_map=True
+        )
+        assert result
+        assert isinstance(mapping, dict)
+        assert len(mapping) == molecule.n_atoms
+
+    def test_graph_and_molecule_inputs(self):
+        molecule = create_ethanol()
+        graph = molecule.to_networkx()
+
+        assert Molecule.are_isomorphic(molecule, graph)[0]
+        assert Molecule.are_isomorphic(graph, molecule)[0]
+
     class TestRemap:
         """Tests for the ``Molecule.remap()`` method"""
 
@@ -2990,6 +3045,7 @@ class TestMolecule:
             for j in range(i, min(i + 3, nmolecules)):
                 assert (molecules[i] == molecules[j]) == (i == j)
 
+    @requires_pkg("openmm")
     def test_add_conformers(self):
         """Test addition of conformers to a molecule"""
         from openmm import unit as openmm_unit
@@ -3354,13 +3410,10 @@ class TestMolecule:
         # Check total charge
         charges_sum_unitless = initial_charges.sum().m_as(unit.elementary_charge)
         total_charge_unitless = molecule.total_charge.m_as(unit.elementary_charge)
-        # if abs(charges_sum_unitless - total_charge_unitless) > 0.0001:
-        # print(
-        #     "molecule {}    charge_sum {}     molecule.total_charge {}".format(
-        #         molecule.name, charges_sum_unitless, total_charge_unitless
-        #     )
-        # )
-        np.allclose(charges_sum_unitless, total_charge_unitless, atol=0.002)
+
+        np.testing.assert_allclose(
+            charges_sum_unitless, total_charge_unitless, atol=0.002
+        )
 
         # Call should be faster second time due to caching
         # TODO: Implement caching
@@ -3368,7 +3421,39 @@ class TestMolecule:
             partial_charge_method=method, toolkit_registry=toolkit_registry
         )
         recomputed_charges = molecule._partial_charges
-        assert np.allclose(initial_charges, recomputed_charges, atol=0.002)
+        np.testing.assert_allclose(initial_charges, recomputed_charges, atol=0.002)
+
+    def test_partial_charges_setter_type_conversion(self):
+        molecule = Molecule.from_smiles("C")
+        int_charges = np.zeros(molecule.n_atoms, dtype=int)
+        molecule.partial_charges = int_charges * unit.elementary_charge
+        assert molecule.partial_charges.dtype == float
+
+    @pytest.mark.parametrize(
+        "value, error",
+        [
+            (3, IncompatibleTypeError),
+            (np.zeros(5), IncompatibleTypeError),
+            (np.zeros(2), IncompatibleShapeError),
+            (np.zeros(2) * unit.elementary_charge, IncompatibleShapeError),
+            (np.zeros(5) * unit.angstrom, IncompatibleUnitError),
+            (Mock(shape=(5,), unit=None), IncompatibleUnitError),
+        ],
+    )
+    def test_partial_charges_setter_errors(self, value, error):
+        molecule = Molecule.from_smiles("C")
+        with pytest.raises(error):
+            molecule.partial_charges = value
+
+    @requires_pkg("openmm")
+    def test_partial_charges_set_openmm_units(self):
+        import openmm.unit
+
+        molecule = Molecule.from_smiles("C")
+        molecule.partial_charges = np.zeros(5) * openmm.unit.elementary_charge
+        assert molecule.partial_charges.units == unit.elementary_charge
+        with pytest.raises(IncompatibleUnitError):
+            molecule.partial_charges = np.zeros(5) * openmm.unit.angstrom
 
     @pytest.mark.parametrize(
         "toolkit_wrapper", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
@@ -3934,6 +4019,16 @@ class TestMoleculeFromPDB:
             get_data_file_path("proteins/MainChain_ALA.pdb"), name="bob"
         )
         assert offmol.name == "bob"
+
+    def test_molecule_from_pdb_ace_ala_nh2(self):
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/ace-ala-nh2.pdb")
+        )
+        assert offmol.n_atoms == 19
+        expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C)C(=O)N")
+        assert offmol.is_isomorphic_with(
+            expected_mol, atom_stereochemistry_matching=False
+        )
 
     def test_molecule_from_pdb_mainchain_ala_tripeptide(self):
         offmol = Molecule.from_polymer_pdb(
