@@ -13,6 +13,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 
 ### Behavior changes
+- [PR #1619](https://github.com/openforcefield/openff-toolkit/pull/1619): Fixes **silent error** [#1618](https://github.com/openforcefield/openff-toolkit/issues/1618), by making partial_charges.setter more comprehensive in type and shape checking.
 
 
 ### Bugfixes
