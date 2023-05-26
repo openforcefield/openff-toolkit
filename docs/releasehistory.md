@@ -13,11 +13,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 
 ### Behavior changes
+- [PR #1619](https://github.com/openforcefield/openff-toolkit/pull/1619): Fixes **silent error** [#1618](https://github.com/openforcefield/openff-toolkit/issues/1618), by making partial_charges.setter more comprehensive in type and shape checking.
 
 
 ### Bugfixes
 - [PR #1617](https://github.com/openforcefield/openff-toolkit/pull/1617): Fixes [#1616](https://github.com/openforcefield/openff-toolkit/issues/1616), by converting NAGL charges to float and converting partial_charges to float before converting to_openeye()
-- [PR #1619](https://github.com/openforcefield/openff-toolkit/pull/1619): Fixes [#1618](https://github.com/openforcefield/openff-toolkit/issues/1618), by making partial_charges.setter more comprehensive in type and shape checking
 
 ### Improved documentation and warnings
 
