@@ -1018,7 +1018,10 @@ class TestMolecule:
             filename = str(outfile.name)
             ethanol.to_file(filename, file_format="sdf")
 
+            # there is different logic when file_format is None, so test both cases
             Molecule.from_file(pathlib.Path(filename))
+
+            Molecule.from_file(pathlib.Path(filename), file_format="sdf")
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_create_from_serialized(self, molecule):

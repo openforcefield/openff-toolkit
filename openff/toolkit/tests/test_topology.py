@@ -781,6 +781,24 @@ class TestTopology:
         assert top.molecule(18).is_isomorphic_with(Molecule.from_smiles("[I-]"))
 
     @requires_rdkit
+    def test_from_pdb_input_types(self):
+        import pathlib
+
+        import openmm.app
+
+        protein_path = get_data_file_path("proteins/ace-ala-nh2.pdb")
+
+        Topology.from_pdb(protein_path)
+
+        Topology.from_pdb(pathlib.Path(protein_path))
+
+        with open(protein_path) as f:
+            Topology.from_pdb(f)
+
+        with pytest.raises(ValueError, match="Unexpected type.*PDBFile"):
+            Topology.from_pdb(openmm.app.PDBFile(protein_path))
+
+    @requires_rdkit
     def test_from_pdb_two_polymers_metadata(self):
         """Test that a PDB with two capped polymers is loaded correctly"""
         top = Topology.from_pdb(get_data_file_path("proteins/TwoMol_SER_CYS.pdb"))
