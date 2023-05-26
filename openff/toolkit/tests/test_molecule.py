@@ -3924,6 +3924,23 @@ class TestMoleculeFromPDB:
     Test creation of cheminformatics-rich openff Molecule from PDB files.
     """
 
+    def test_from_pdb_input_types(self):
+        import pathlib
+
+        import openmm.app
+
+        protein_path = get_data_file_path("proteins/ace-ala-nh2.pdb")
+
+        Molecule.from_polymer_pdb(protein_path)
+
+        Molecule.from_polymer_pdb(pathlib.Path(protein_path))
+
+        with open(protein_path) as f:
+            Molecule.from_polymer_pdb(f)
+
+        with pytest.raises(ValueError, match="Unexpected type.*PDBFile"):
+            Molecule.from_polymer_pdb(openmm.app.PDBFile(protein_path))
+
     # TODO: Implement all the tests
     def test_from_pdb_t4_n_atoms(self):
         """Test off Molecule contains expected number of atoms from T4 pdb."""
