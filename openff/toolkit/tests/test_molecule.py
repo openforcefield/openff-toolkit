@@ -3432,6 +3432,8 @@ class TestMolecule:
             (3, IncompatibleTypeError),
             (np.zeros(5), IncompatibleTypeError),
             (np.zeros(2), IncompatibleShapeError),
+            (np.zeros(2) * unit.elementary_charge, IncompatibleShapeError),
+
         ],
     )
     def test_partial_charges_errors(self, value, error):
