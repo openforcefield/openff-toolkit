@@ -3448,6 +3448,7 @@ class TestMolecule:
     @requires_pkg("openmm")
     def test_partial_charges_set_openmm_units(self):
         import openmm.unit
+
         molecule = Molecule.from_smiles("C")
         molecule.partial_charges = np.zeros(5) * openmm.unit.elementary_charge
         assert molecule.partial_charges.units == unit.elementary_charge
