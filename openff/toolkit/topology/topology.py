@@ -68,8 +68,8 @@ from openff.toolkit.utils.utils import get_data_file_path, requires_package
 if TYPE_CHECKING:
     import mdtraj
     import openmm.app
-    from openmm.unit import Quantity as OMMQuantity
     from nglview import NGLWidget
+    from openmm.unit import Quantity as OMMQuantity
 
     from openff.toolkit.topology.molecule import Atom, Bond
     from openff.toolkit.utils.toolkits import ToolkitRegistry, ToolkitWrapper
@@ -2695,9 +2695,8 @@ class Topology(Serializable):
 
         """
         import nglview
-        from openff.toolkit.utils._viz import (
-            TopologyNGLViewStructure,
-        )
+
+        from openff.toolkit.utils._viz import TopologyNGLViewStructure
 
         widget = nglview.NGLWidget(
             TopologyNGLViewStructure(

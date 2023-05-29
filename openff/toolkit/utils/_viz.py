@@ -1,13 +1,10 @@
-from typing import Union
 import uuid
 from io import StringIO
-
-import numpy as np
+from typing import Union
 
 import nglview
+import numpy as np
 from nglview.base_adaptor import Structure, Trajectory
-
-
 from openff.units import unit
 
 from openff.toolkit import Molecule, Topology
