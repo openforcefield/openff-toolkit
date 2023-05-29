@@ -69,6 +69,7 @@ if TYPE_CHECKING:
     import mdtraj
     import openmm.app
     from openmm.unit import Quantity as OMMQuantity
+    from nglview import NGLWidget
 
     from openff.toolkit.topology.molecule import Atom, Bond
     from openff.toolkit.utils.toolkits import ToolkitRegistry, ToolkitWrapper
@@ -2662,6 +2663,62 @@ class Topology(Serializable):
             return self._constrained_atom_pairs[(iatom, jatom)]
         else:
             return False
+
+    @requires_package("nglview")
+    def visualize(self, ensure_correct_connectivity=False) -> "NGLWidget":
+        """
+        Visualize the trajectory with NGLView.
+
+        NGLView is a 3D molecular visualization library for use in Jupyter
+        notebooks. Note that for performance reasons, by default the
+        visualized connectivity is inferred from positions and may not reflect
+        the connectivity in the ``Topology``.
+
+        Parameters
+        ==========
+
+        ensure_correct_connectivity
+            If ``True``, the visualization will be guaranteed to reflect the
+            connectivity in the ``Topology``. Note that this will severely
+            degrade performance, especially for topologies with many atoms.
+
+        Examples
+        ========
+
+        Visualize a complex PDB file
+
+        >>> from openff.toolkit import Topology
+        >>> from openff.toolkit.utils.utils import get_data_file_path
+        >>> pdb_filename = get_data_file_path("systems/test_systems/T4_lysozyme_water_ions.pdb")
+        >>> topology = Topology.from_pdb(pdb_filename)
+        >>> topology.visualize()
+
+        """
+        import nglview
+        from openff.toolkit.utils._viz import (
+            TopologyNGLViewStructure,
+        )
+
+        widget = nglview.NGLWidget(
+            TopologyNGLViewStructure(
+                self, ext="mol2" if ensure_correct_connectivity else "pdb"
+            ),
+            representations=[
+                dict(type="unitcell", params=dict()),
+            ],
+        )
+
+        widget.add_representation("line", sele="water")
+        widget.add_representation("spacefill", sele="ion")
+        widget.add_representation("cartoon", sele="protein")
+        widget.add_representation(
+            "licorice",
+            sele="not water and not ion and not protein",
+            radius=0.25,
+            multipleBond=bool(ensure_correct_connectivity),
+        )
+
+        return widget
 
     def hierarchy_iterator(
         self,
