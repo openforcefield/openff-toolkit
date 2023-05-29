@@ -3753,14 +3753,14 @@ class TestMoleculeVisualization:
         molecule._ipython_display_()
 
     def test_get_coordinates(self):
-        from openff.toolkit.utils.viz import _OFFTrajectoryNGLView
+        from openff.toolkit.utils._viz import MoleculeNGLViewTrajectory
 
         molecule = Molecule.from_smiles(
             "C1CC2=C3C(=CC=C2)C(=CN3C1)[C@H]4[C@@H](C(=O)NC4=O)C5=CNC6=CC=CC=C65"
         )
         molecule.generate_conformers(n_conformers=3)
 
-        trajectory = _OFFTrajectoryNGLView(molecule)
+        trajectory = MoleculeNGLViewTrajectory(molecule)
 
         np.testing.assert_allclose(trajectory.get_coordinates(), molecule.conformers[0])
         np.testing.assert_allclose(

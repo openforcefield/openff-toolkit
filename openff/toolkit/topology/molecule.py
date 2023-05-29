@@ -5394,21 +5394,24 @@ class Molecule(FrozenMolecule):
             if width is not None or height is not None:
                 # TODO: More specific exception
                 raise ValueError(
-                    "The width, height, and show_all_hydrogens arguments do not apply to the nglview backend."
-                )
-            elif not show_all_hydrogens:
-                # TODO: More specific exception
-                # TODO: Implement this? Should be able to just strip hydrogens from the PDB
-                raise ValueError(
-                    "show_all_hydrogens=False is not supported by the nglview backend"
+                    "The width and height arguments do not apply to the nglview backend."
                 )
 
             if self.conformers:
-                from openff.toolkit.utils.viz import _OFFTrajectoryNGLView
+                from openff.toolkit.utils._viz import MoleculeNGLViewTrajectory
 
-                trajectory_like = _OFFTrajectoryNGLView(self)
-                widget = nv.NGLWidget(trajectory_like)
+                widget = nv.NGLWidget(MoleculeNGLViewTrajectory(self))
+
+                widget.clear_representations()
+                widget.add_representation(
+                    "licorice",
+                    sele="*" if show_all_hydrogens else "NOT hydrogen",
+                    radius=0.25,
+                    multipleBond=True,
+                )
+
                 return widget
+
             else:
                 # TODO: More specific exception
                 raise ValueError(
