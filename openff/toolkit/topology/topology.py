@@ -1901,7 +1901,7 @@ class Topology(Serializable):
         self,
         file: Union[Path, str, TextIO],
         positions: Optional[Union["OMMQuantity", Quantity, NDArray]] = None,
-        file_format: Literal["PDB"] = "PDB",
+        file_format: Literal["PDB", "SDF"] = "PDB",
         keep_ids: bool = False,
         ensure_unique_atom_names: Union[str, bool] = "residues",
     ):
@@ -1936,8 +1936,8 @@ class Topology(Serializable):
               each molecule in the topology will be used.
 
         file_format
-            Output file format. Case insensitive. Currently only supported value
-            is ``"PDB"``.
+            Output file format. Case insensitive. Currently only supported values
+            are ``"PDB"`` and ``"SDF"``.
         keep_ids
             If ``True``, keep the residue and chain IDs specified in the Topology
             rather than generating new ones.
@@ -1958,41 +1958,52 @@ class Topology(Serializable):
             like PDB that truncate long atom names.
 
         """
-        from openff.units.openmm import to_openmm as to_openmm_quantity
-        from openmm import app
-        from openmm import unit as openmm_unit
+        import openmm
 
-        # Convert the topology to OpenMM
-        openmm_top = self.to_openmm(ensure_unique_atom_names=ensure_unique_atom_names)
+        if positions is None:
+            positions = self.get_positions()
 
-        # Get positions in OpenMM format
-        if isinstance(positions, openmm_unit.Quantity):
-            openmm_positions = positions
-        elif isinstance(positions, unit.Quantity):
-            openmm_positions = to_openmm_quantity(positions)
-        elif isinstance(positions, np.ndarray):
-            openmm_positions = openmm_unit.Quantity(positions, openmm_unit.angstroms)
+        if isinstance(positions, np.ndarray):
+            positions = positions * unit.angstrom
         elif positions is None:
-            openmm_positions = to_openmm_quantity(self.get_positions())
-        else:
-            raise ValueError(f"Could not process positions of type {type(positions)}.")
+            raise ValueError(
+                "Positions must be specified in either molecule conformers or"
+                + " the positions argument."
+            )
 
-        # Make sure the desired file format is PDB
-        if file_format.upper() != "PDB":
-            raise NotImplementedError("Topology.to_file supports only PDB format")
+        if file_format.upper() == "PDB":
+            import openmm
 
-        # Write PDB file
-        ctx_manager: Union[nullcontext[TextIO], TextIO]  # MyPy needs some help here
-        if isinstance(file, (str, Path)):
-            ctx_manager = open(file, "w")
+            # Convert the topology to OpenMM
+            openmm_top = self.to_openmm(
+                ensure_unique_atom_names=ensure_unique_atom_names
+            )
+
+            # Write PDB file
+            ctx_manager: Union[nullcontext[TextIO], TextIO]  # MyPy needs some help here
+            if isinstance(file, (str, Path)):
+                ctx_manager = open(file, "w")
+            else:
+                ctx_manager = nullcontext(file)
+            with ctx_manager as outfile:
+                openmm.app.PDBFile.writeFile(
+                    topology=openmm_top,
+                    positions=ensure_quantity(positions, "openmm"),
+                    file=outfile,
+                    keepIds=keep_ids,
+                )
+        elif file_format.upper() in ["SDF", "MOL2"]:
+            from rdkit.Chem import SDWriter
+
+            writer = SDWriter(file)
+
+            temp_top = Topology(self)
+            temp_top.set_positions(ensure_quantity(positions, "openff"))
+            for molecule in temp_top.molecules:
+                writer.write(molecule.to_rdkit())
         else:
-            ctx_manager = nullcontext(file)
-        with ctx_manager as outfile:
-            app.PDBFile.writeFile(
-                topology=openmm_top,
-                positions=openmm_positions,
-                file=outfile,
-                keepIds=keep_ids,
+            raise NotImplementedError(
+                "Topology.to_file supports only PDB and SDF formats"
             )
 
     def get_positions(self) -> Optional[Quantity]:
