@@ -1959,8 +1959,6 @@ class Topology(Serializable):
             like PDB that truncate long atom names.
 
         """
-        import openmm
-
         if positions is None:
             positions = self.get_positions()
 

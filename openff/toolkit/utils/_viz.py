@@ -1,9 +1,6 @@
 import uuid
 from io import StringIO
-from typing import Union
 
-import nglview
-import numpy as np
 from nglview.base_adaptor import Structure, Trajectory
 from openff.units import unit
 
