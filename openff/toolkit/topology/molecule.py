@@ -5068,8 +5068,8 @@ class FrozenMolecule(Serializable):
             self._construct_bonded_atoms_list()
             self._angles = set()
             for atom1 in self._atoms:
-                for atom2 in self._bondedAtoms[atom1]:
-                    for atom3 in self._bondedAtoms[atom2]:
+                for atom2 in self._bonded_atoms[atom1]:
+                    for atom3 in self._bonded_atoms[atom2]:
                         if atom1 == atom3:
                             continue
                         # TODO: Encapsulate this logic into an Angle class.
@@ -5089,11 +5089,11 @@ class FrozenMolecule(Serializable):
             self._propers = set()
             self._impropers = set()
             for atom1 in self._atoms:
-                for atom2 in self._bondedAtoms[atom1]:
-                    for atom3 in self._bondedAtoms[atom2]:
+                for atom2 in self._bonded_atoms[atom1]:
+                    for atom3 in self._bonded_atoms[atom2]:
                         if atom1 == atom3:
                             continue
-                        for atom4 in self._bondedAtoms[atom3]:
+                        for atom4 in self._bonded_atoms[atom3]:
                             if atom4 == atom2:
                                 continue
                             # Exclude i-j-k-i
@@ -5107,7 +5107,7 @@ class FrozenMolecule(Serializable):
 
                             self._propers.add(torsion)
 
-                        for atom3i in self._bondedAtoms[atom2]:
+                        for atom3i in self._bonded_atoms[atom2]:
                             if atom3i == atom3:
                                 continue
                             if atom3i == atom1:
@@ -5124,16 +5124,16 @@ class FrozenMolecule(Serializable):
 
         """
         # TODO: Add this to cached_properties
-        if not hasattr(self, "_bondedAtoms"):
+        if not hasattr(self, "_bonded_atoms"):
             # self._atoms = [ atom for atom in self.atoms() ]
-            self._bondedAtoms = dict()
+            self._bonded_atoms = dict()
             for atom in self._atoms:
-                self._bondedAtoms[atom] = set()
+                self._bonded_atoms[atom] = set()
             for bond in self._bonds:
                 atom1 = self.atoms[bond.atom1_index]
                 atom2 = self.atoms[bond.atom2_index]
-                self._bondedAtoms[atom1].add(atom2)
-                self._bondedAtoms[atom2].add(atom1)
+                self._bonded_atoms[atom1].add(atom2)
+                self._bonded_atoms[atom2].add(atom1)
 
     def _is_bonded(self, atom_index_1, atom_index_2):
         """Return True if atoms are bonded, False if not.
@@ -5154,7 +5154,7 @@ class FrozenMolecule(Serializable):
         self._construct_bonded_atoms_list()
         atom1 = self._atoms[atom_index_1]
         atom2 = self._atoms[atom_index_2]
-        return atom2 in self._bondedAtoms[atom1]
+        return atom2 in self._bonded_atoms[atom1]
 
     def get_bond_between(self, i: Union[int, "Atom"], j: Union[int, "Atom"]) -> "Bond":
         """Returns the bond between two atoms
