@@ -23,6 +23,18 @@ class IncompatibleUnitError(OpenFFToolkitException):
     """
 
 
+class IncompatibleShapeError(OpenFFToolkitException):
+    """
+    Exception for when a value is in the wrong shape
+    """
+
+
+class IncompatibleTypeError(OpenFFToolkitException):
+    """
+    Exception for when a value is in an incompatible type
+    """
+
+
 class MissingPackageError(OpenFFToolkitException):
     """This function requires a package that is not installed."""
 
@@ -657,7 +669,13 @@ class SubstructureAtomSmartsInvalid(OpenFFToolkitException):
 
     def __init__(self, name, atom_smarts, smarts, reason):
         msg = f"Invalid atom smarts found in substructure smarts for {name}:\n"
-        msg += smarts + "\n" + " " * smarts.find(atom_smarts) + "^" * len(atom_smarts) + "\n"
+        msg += (
+            smarts
+            + "\n"
+            + " " * smarts.find(atom_smarts)
+            + "^" * len(atom_smarts)
+            + "\n"
+        )
         msg += "REASON: " + reason
         super().__init__(msg)
         self.msg = msg

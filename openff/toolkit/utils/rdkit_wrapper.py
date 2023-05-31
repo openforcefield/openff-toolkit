@@ -294,11 +294,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         _custom_substructures: Dict[str, str] = {},
     ):
         import json
+        from copy import deepcopy
 
         from openff.units.openmm import from_openmm
         from rdkit import Chem, Geometry
         from rdkit.DataStructs.cDataStructs import BitVectToBinaryText
-        from copy import deepcopy
 
         omm_top = pdbfile.topology
 
@@ -658,14 +658,20 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 ref = Chem.MolFromSmarts(substructure_smarts)
                 # then create a looser definition for pattern matching...
                 # be lax about double bonds and chirality
-                customs_exist = bool(priority_substructure_residues) # do we have custom substructures?
-                fuzzy, neighbor_idxs = self._fuzzy_query(ref, strict_degree=customs_exist)
+                customs_exist = bool(
+                    priority_substructure_residues
+                )  # do we have custom substructures?
+                fuzzy, neighbor_idxs = self._fuzzy_query(
+                    ref, strict_degree=customs_exist
+                )
                 # It's important that we do the substructure search on `rdkit_mol`, but the chemical
                 # info is added to `mol`. If we use the same rdkit molecule for search AND info addition,
                 # then single bonds may no longer be present for subsequent overlapping matches.
                 sym_atoms = []
                 sym_bonds = []
-                if priority_substructure_residues: # experimental resonance/symmetry functionality
+                if (
+                    priority_substructure_residues
+                ):  # experimental resonance/symmetry functionality
                     sym_atoms, sym_bonds = self._get_symmetrical_groups(fuzzy, ref)
 
                 for full_match in rdkit_mol.GetSubstructMatches(fuzzy, maxMatches=0):
@@ -703,6 +709,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                             "DISULFIDE",
                             "UNIQUE_MOLECULE",
                             *priority_substructure_residues,
+                            "ADDITIONAL_SUBSTRUCTURE",
                         ]
                     ):
                         continue
@@ -710,7 +717,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     # for _custom_substructures only, allow overlaps if no chemical info is changed
 
                     for atom_i, j in zip(ref.GetAtoms(), full_match):
-                        if atom_i.GetAtomicNum() == 0: # ignore neighboring atoms
+                        if atom_i.GetAtomicNum() == 0:  # ignore neighboring atoms
                             continue
                         atom_j = mol.GetAtomWithIdx(j)
                         # error checking for overlapping substructures with priority. Enforce that no ambiguous chemical assignments are made
@@ -718,7 +725,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                             res_name in priority_substructure_residues
                             and j in already_assigned_nodes
                         ):  # if overlapping with previous match
-                            if atom_i.GetFormalCharge() != atom_j.GetFormalCharge() and atom_i.GetIdx() not in sym_atoms:
+                            if (
+                                atom_i.GetFormalCharge() != atom_j.GetFormalCharge()
+                                and atom_i.GetIdx() not in sym_atoms
+                            ):
                                 error_reason = f"Formal charge of new query ({atom_i.GetFormalCharge()}) does not match the formal charge of previous query ({atom_j.GetFormalCharge()})"
                                 raise AmbiguousAtomChemicalAssignment(
                                     res_name,
@@ -742,7 +752,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     already_assigned_nodes.update(match)
 
                     for b in ref.GetBonds():
-                        ref_bond_ids = tuple(sorted([b.GetBeginAtomIdx(), b.GetEndAtomIdx()]))
+                        ref_bond_ids = tuple(
+                            sorted([b.GetBeginAtomIdx(), b.GetEndAtomIdx()])
+                        )
                         x = full_match[b.GetBeginAtomIdx()]
                         y = full_match[b.GetEndAtomIdx()]
                         b2 = mol.GetBondBetweenAtoms(x, y)
@@ -752,7 +764,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                             res_name in priority_substructure_residues
                             and bond_ids in already_assigned_edges
                         ):  # if overlapping with previous match
-                            if b.GetBondType() != b2.GetBondType() and ref_bond_ids not in sym_bonds:
+                            if (
+                                b.GetBondType() != b2.GetBondType()
+                                and ref_bond_ids not in sym_bonds
+                            ):
                                 error_reason = f"Bond order of new query ({b.GetBondType()}) does not match the bond order of previous query ({b2.GetBondType()})"
                                 query_bond = tuple(
                                     sorted([b.GetBeginAtomIdx(), b.GetEndAtomIdx()])
@@ -843,25 +858,36 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     def _get_symmetrical_groups(self, fuzzy_query, substruct):
         """Returns those atoms and bonds whose chemical information
         is ambiguous due to resonance forms or symmetrical groups. Conflicts
-        in assignment are ignored for these atoms when two queries have the same 
+        in assignment are ignored for these atoms when two queries have the same
         atoms in resonance/symmetry"""
         from copy import deepcopy
+
         from rdkit import Chem
 
         qmol = deepcopy(fuzzy_query)
-        for atom in qmol.GetAtoms(): # reset queries and map numbers
-            atom.SetAtomMapNum(atom.GetIdx()) # reorder atom map nums to later recover ids
+        for atom in qmol.GetAtoms():  # reset queries and map numbers
+            atom.SetAtomMapNum(
+                atom.GetIdx()
+            )  # reorder atom map nums to later recover ids
         #     atom.SetQuery(           # reset query
         #             Chem.AtomFromSmarts(f"[#{atom.GetAtomicNum()}D{atom.GetDegree()}]")
         #         )
         qmol = Chem.RemoveAllHs(qmol)
-        idx_to_map_num = dict([(a.GetIdx(), a.GetAtomMapNum()) for a in qmol.GetAtoms()])
+        idx_to_map_num = dict(
+            [(a.GetIdx(), a.GetAtomMapNum()) for a in qmol.GetAtoms()]
+        )
         automorphs = fuzzy_query.GetSubstructMatches(qmol, uniquify=0)
         ambiguous_bonds = []
         ambiguous_atoms = []
         for automorph in automorphs:
             # check for conflicting chemical information
-            automorph = dict([(idx_to_map_num[idx], a) for idx, a in enumerate(list(automorph)) if idx_to_map_num[idx] != a]) # only care about cases of different matching
+            automorph = dict(
+                [
+                    (idx_to_map_num[idx], a)
+                    for idx, a in enumerate(list(automorph))
+                    if idx_to_map_num[idx] != a
+                ]
+            )  # only care about cases of different matching
             # substruct_ids = [qmol.GetAtomWithIdx(a_idx).GetAtomMapNum() for a_idx in automorph]
 
             for atom_iso, new_atom_iso in automorph.items():
@@ -873,23 +899,44 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         ambiguous_atoms.append(atom.GetIdx())
 
             for bond in substruct.GetBonds():
-                if bond.GetBeginAtom().GetAtomicNum() == 1 or bond.GetEndAtom().GetAtomicNum() == 1: # we remove Hs for matching so must remove here as well
+                if (
+                    bond.GetBeginAtom().GetAtomicNum() == 1
+                    or bond.GetEndAtom().GetAtomicNum() == 1
+                ):  # we remove Hs for matching so must remove here as well
                     continue
-                if bond.GetBeginAtomIdx() in automorph or bond.GetEndAtomIdx() in automorph:
-                    new_bond_begin_idx = automorph.get(bond.GetBeginAtomIdx(), bond.GetBeginAtomIdx())
-                    new_bond_end_idx = automorph.get(bond.GetEndAtomIdx(), bond.GetEndAtomIdx())
-                    new_bond = substruct.GetBondBetweenAtoms(new_bond_begin_idx, new_bond_end_idx)
+                if (
+                    bond.GetBeginAtomIdx() in automorph
+                    or bond.GetEndAtomIdx() in automorph
+                ):
+                    new_bond_begin_idx = automorph.get(
+                        bond.GetBeginAtomIdx(), bond.GetBeginAtomIdx()
+                    )
+                    new_bond_end_idx = automorph.get(
+                        bond.GetEndAtomIdx(), bond.GetEndAtomIdx()
+                    )
+                    new_bond = substruct.GetBondBetweenAtoms(
+                        new_bond_begin_idx, new_bond_end_idx
+                    )
                     if bond.GetBondType() != new_bond.GetBondType():
-                        sym_bond_entry = tuple(sorted([bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()]))
+                        sym_bond_entry = tuple(
+                            sorted([bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()])
+                        )
                         if sym_bond_entry not in ambiguous_bonds:
-                            ambiguous_bonds.append(tuple(sorted([bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()])))
+                            ambiguous_bonds.append(
+                                tuple(
+                                    sorted(
+                                        [bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()]
+                                    )
+                                )
+                            )
         if not ambiguous_bonds:
-            ambiguous_atoms = [] # if no ambiguous bonds, there cannot be physically valid sets of ambiguous atoms
-            # this is because that would imply that two different simple/graph connectivites can give different 
-            # formal charges, which is not supported in this implementation and likely not possible outside of 
-            # exotic transition metal groups 
+            ambiguous_atoms = (
+                []
+            )  # if no ambiguous bonds, there cannot be physically valid sets of ambiguous atoms
+            # this is because that would imply that two different simple/graph connectivites can give different
+            # formal charges, which is not supported in this implementation and likely not possible outside of
+            # exotic transition metal groups
         return ambiguous_atoms, ambiguous_bonds
-    
 
     @staticmethod
     def _fuzzy_query(query, strict_degree=False):
@@ -2197,7 +2244,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 ^ Chem.SANITIZE_SETAROMATICITY
                 ^ Chem.SANITIZE_ADJUSTHS
                 ^ Chem.SANITIZE_CLEANUPCHIRALITY
-                ^ Chem.SANITIZE_KEKULIZE
             ),
         )
         Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)

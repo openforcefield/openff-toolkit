@@ -16,9 +16,12 @@ dependencies:
   - openmm >=7.6
   - openff-forcefields
   - smirnoff99Frosst
+  - openff-amber-ff-ports >=0.0.3
   - openff-units >=0.2
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.3.0
+  - openff-interchange-base >=0.3.3
+  - openff-nagl >=0.2.2
+  - openff-nagl-models >=0.0.2
   - typing_extensions
     # Toolkit-specific
   - openeye-toolkits
@@ -35,8 +38,7 @@ dependencies:
   - qcportal >=0.15
   - qcengine
   - mdtraj
-  - parmed
+  - parmed =3
   - nbval
-  - ipywidgets =7
   - pdbfixer
   - openmmforcefields >=0.11.2
