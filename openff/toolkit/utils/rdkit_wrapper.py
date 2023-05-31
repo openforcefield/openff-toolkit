@@ -25,13 +25,19 @@ from openff.toolkit.utils.constants import (
     DEFAULT_AROMATICITY_MODEL,
 )
 from openff.toolkit.utils.exceptions import (
+    AmbiguousAtomChemicalAssignment,
+    AmbiguousBondChemicalAssignment,
     ChargeMethodUnavailableError,
     ConformerGenerationError,
     InvalidAromaticityModelError,
     MoleculeParseError,
+    NonUniqueSubstructureName,
     NotAttachedToMoleculeError,
     RadicalsNotSupportedError,
     SMILESParseError,
+    SubstructureAtomSmartsInvalid,
+    SubstructureBondSmartsInvalid,
+    SubstructureImproperlySpecified,
     ToolkitUnavailableException,
     UnassignedChemistryInPDBError,
     UndefinedStereochemistryError,
@@ -280,14 +286,37 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return offmol
 
     def _polymer_openmm_pdbfile_to_offtop(
-        self, topology_class, pdbfile, substructure_dictionary, coords_angstrom
+        self,
+        topology_class,
+        pdbfile,
+        substructure_dictionary,
+        coords_angstrom,
+        _custom_substructures: Dict[str, str] = {},
     ):
+        import json
+        from copy import deepcopy
+
         from openff.units.openmm import from_openmm
         from rdkit import Chem, Geometry
+        from rdkit.DataStructs.cDataStructs import BitVectToBinaryText
 
         omm_top = pdbfile.topology
+
+        # if custom substructures exist, validate them separately from the official substructures
+        # and add them to the substructure_dictionary
+        if _custom_substructures:
+            self._validate_custom_substructures(
+                _custom_substructures, forbidden_keys=substructure_dictionary.keys()
+            )
+            custom_substructure_dictionary = self._prepare_custom_substructures(
+                _custom_substructures
+            )
+            substructure_dictionary.update(
+                custom_substructure_dictionary
+            )  # concats both dicts, unique keys are enforced in previous function
+
         rdkit_mol = self._polymer_openmm_topology_to_rdmol(
-            omm_top, substructure_dictionary
+            omm_top, substructure_dictionary, list(_custom_substructures.keys())
         )
 
         rdmol_conformer = Chem.Conformer()
@@ -326,6 +355,22 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 offmol = copy.deepcopy(smiles2offmol[mapped_smi])
             else:
                 offmol = self.from_rdkit(rdmol, allow_undefined_stereo=True)
+                # assign metadata
+                for offatom, rdatom in zip(offmol.atoms, rdmol.GetAtoms()):
+                    res_ids = np.frombuffer(
+                        BitVectToBinaryText(rdatom.GetExplicitBitVectProp("res_ids")),
+                        dtype=np.uint64,
+                    )
+                    query_ids = np.frombuffer(
+                        BitVectToBinaryText(rdatom.GetExplicitBitVectProp("query_ids")),
+                        dtype=np.uint64,
+                    )
+                    residues = [
+                        list(substructure_dictionary.keys())[i] for i in res_ids
+                    ]  # fyi substruct dict is now OrderedDict
+                    query_ids = [int(idx) for idx in list(query_ids)]
+                    match_info = dict(zip(residues, query_ids))
+                    offatom.metadata["match_info"] = json.dumps(match_info)
                 smiles2offmol[mapped_smi] = copy.deepcopy(offmol)
             top._add_molecule_keep_cache(offmol)
         if pdbfile.topology.getPeriodicBoxVectors() is not None:
@@ -334,10 +379,231 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return top
 
+    def _validate_custom_substructures(
+        self, custom_substructures: Dict[str, str], forbidden_keys
+    ):
+        """Validates custom substructures to adhere to monomer specifications
+        Parameters
+        ----------
+        custom_substructures : Dict[str, str]
+            substructures given with unique names as keys and smarts as values
+        forbidden_keys : DictKeys[str]
+            a list of keys that cannot overlap with the custom substructure keys
+
+        Returns
+        -------
+        valid : bool
+            True if ALL substructures are valid and pass all tests.
+            TODO: for now, the return statement is somewhat useless since the validation
+            is strict and simply errros instead of returning False. However, I am keeping
+            this return structure in the case we ever decide to have looser warnings instead
+            of strict exceptions.
+        Raises
+        ------
+        NonUniqueSubstructureName
+            Raised when any substructures have nonunique names or names that
+            conflict with toolkit substructure names (such as protein residue names)
+        SubstructureAtomSmartsInvalid
+            Raised when any atom smarts are improperly formatted
+        SubstructureBondSmartsInvalid
+            Raised when any bond smarts are improperly formatted
+        SubstructureImproperlySpecified
+            Raised when the custom substructure is inadequately specified or
+            contains conflicting information
+
+        """
+        # ensure no duplicate keys
+        custom_keys = custom_substructures.keys()
+        same_keys = set(forbidden_keys).intersection(set(custom_keys))
+        if same_keys:
+            raise NonUniqueSubstructureName(list(same_keys))
+        for name, smarts in custom_substructures.items():
+            self._is_valid_substructure_smarts(name, smarts)  # raises error if invalid
+
+        return True  # all tests passed without raised exception
+
+    def _is_valid_substructure_smarts(self, name, smarts):
+        from rdkit import Chem
+
+        def is_connected(rdmol):
+            if len(Chem.rdmolops.GetMolFrags(rdmol)) > 1:
+                error_reason = "Multiple fragments detected. Must be a single and connected substructure."
+                raise SubstructureImproperlySpecified(name, error_reason)
+            else:
+                return True
+
+        def is_valid_interior_atom(atom, qmol):
+            atom_smarts = atom.GetSmarts()
+            # ensure that no unsupported logical operators exist
+            operators = r"!,;"
+            found_ops = [op in atom_smarts for op in operators]
+            if any(found_ops):
+                operator_chars = [op for op, b in zip(operators, found_ops) if b]
+                error_reason = (
+                    f"found unsupported logical operator(s): {operator_chars}"
+                )
+                mol_smarts = Chem.MolToSmarts(qmol)
+                raise SubstructureAtomSmartsInvalid(
+                    name, atom.GetSmarts(), mol_smarts, error_reason
+                )
+            # ensure that no other unsupported atomic primitives are accepted
+            unsupported_prims = r"@xXvrRhH*"
+            found_prims = [prim in atom_smarts for prim in unsupported_prims]
+            if any(found_prims):
+                operator_chars = [
+                    prim for prim, b in zip(unsupported_prims, found_prims) if b
+                ]
+                error_reason = f"found unsupported primitive(s): {operator_chars}"
+                mol_smarts = Chem.MolToSmarts(qmol)
+                raise SubstructureAtomSmartsInvalid(
+                    name, atom.GetSmarts(), mol_smarts, error_reason
+                )
+            # require that all elements are specified in #<n> format. This removes the H prototype edge case
+            # Also require explicit connecitivity in D<n> format and explicit charge with either a + or -
+            required_prims = r"[]#D:"
+            missing_prims = [prim not in atom_smarts for prim in required_prims]
+            if any(missing_prims):
+                operator_chars = [
+                    prim for prim, b in zip(required_prims, missing_prims) if b
+                ]
+                error_reason = f"required primitive(s) not included: {operator_chars}"
+                mol_smarts = Chem.MolToSmarts(qmol)
+                raise SubstructureAtomSmartsInvalid(
+                    name, atom.GetSmarts(), mol_smarts, error_reason
+                )
+            charge_prims = r"-+"
+            if not any(prim in atom_smarts for prim in charge_prims):
+                error_reason = f"{atom_smarts}: no charge primitive (+ or -) on atom"
+                mol_smarts = Chem.MolToSmarts(qmol)
+                raise SubstructureAtomSmartsInvalid(
+                    name, atom.GetSmarts(), mol_smarts, error_reason
+                )
+            if not atom.Match(atom):
+                error_reason = f"query does not match rdchem.Mol reading of the molecule (likely due to incorrect/ambiguous connectivity)"
+                mol_smarts = Chem.MolToSmarts(qmol)
+                raise SubstructureAtomSmartsInvalid(
+                    name, atom.GetSmarts(), mol_smarts, error_reason
+                )
+            return True
+
+        def is_valid_neighbor_atom(atom, qmol):
+            atom_smarts = atom.GetSmarts()
+            # ensure that no unsupported logical operators exist
+            operators = r"!,;&"
+            found_ops = [op in atom_smarts for op in operators]
+            if any(found_ops):
+                operator_chars = [op for op, b in zip(operators, found_ops) if b]
+                error_reason = (
+                    f"found unsupported logical operator(s): {operator_chars}"
+                )
+                mol_smarts = Chem.MolToSmarts(qmol)
+                raise SubstructureAtomSmartsInvalid(
+                    name, atom.GetSmarts(), mol_smarts, error_reason
+                )
+            # ensure that no other unsupported atomic primitives are accepted
+            unsupported_prims = r"@xXDvrRhH"
+            found_prims = [prim in atom_smarts for prim in unsupported_prims]
+            if any(found_prims):
+                operator_chars = [
+                    prim for prim, b in zip(unsupported_prims, found_prims) if b
+                ]
+                error_reason = f"found unsupported primitive(s): {operator_chars}"
+                mol_smarts = Chem.MolToSmarts(qmol)
+                raise SubstructureAtomSmartsInvalid(
+                    name, atom.GetSmarts(), mol_smarts, error_reason
+                )
+            # require that atoms have a wildtype atom and label
+            required_prims = r"[]*:"
+            missing_prims = [prim not in atom_smarts for prim in required_prims]
+            if any(missing_prims):
+                operator_chars = [
+                    prim for prim, b in zip(required_prims, missing_prims) if b
+                ]
+                error_reason = f"required primitive(s) not included: {operator_chars}"
+                mol_smarts = Chem.MolToSmarts(qmol)
+                raise SubstructureAtomSmartsInvalid(
+                    name, atom.GetSmarts(), mol_smarts, error_reason
+                )
+            return True
+
+        def is_valid_bond(bond):
+            valid_bond_types = [
+                Chem.BondType.SINGLE,
+                Chem.BondType.AROMATIC,
+                Chem.BondType.DOUBLE,
+                Chem.BondType.TRIPLE,
+                Chem.BondType.QUADRUPLE,
+                Chem.BondType.QUINTUPLE,
+                Chem.BondType.HEXTUPLE,
+            ]
+            if bond.GetBondType() in valid_bond_types:
+                return True
+            else:
+                raise SubstructureBondSmartsInvalid(
+                    name, bond, [str(b) for b in valid_bond_types]
+                )
+
+        qmol = Chem.MolFromSmarts(smarts)
+
+        # check if graph is connected
+        if not is_connected(qmol):
+            return False
+
+        # check atom strings for required and unsupported primitives
+        for atom in qmol.GetAtoms():
+            if atom.GetAtomicNum() > 0:
+                is_valid = is_valid_interior_atom(atom, qmol)
+                if not is_valid:
+                    return False
+            elif atom.GetAtomicNum() == 0 and "#" not in atom.GetSmarts():
+                is_valid = is_valid_neighbor_atom(atom, qmol)
+                if not is_valid:
+                    return False
+            else:
+                mol_smarts = Chem.MolToSmarts(qmol)
+                error_reason = "atomic num = 0 but smarts contains # primitive (likely due to conditionals)"
+                raise SubstructureAtomSmartsInvalid(
+                    name, atom.GetSmarts(), mol_smarts, error_reason
+                )
+        for bond in qmol.GetBonds():
+            if not is_valid_bond(bond):
+                return False
+        # ensure unique atom map numbers for each atom
+        map_nums = [atom.GetAtomMapNum() for atom in qmol.GetAtoms()]
+        unique_map_nums = set(map_nums)
+        if len(map_nums) != len(unique_map_nums):
+            reason = "non-unique atom map numbers detected"
+            SubstructureImproperlySpecified(name, reason)
+
+        # If all checks are passed, the smarts is valid
+        return True
+
+    def _prepare_custom_substructures(self, custom_substructures: Dict[str, str]):
+        """
+        Parameters
+        ----------
+        custom_substructures : Dict[str, str]
+            substructures given with unique names as keys and smarts as values
+        Returns
+        -------
+        prepared_dict : Dict[str, Dict[str, List[str]]]
+            a dictionary of the same type and format as the predefined toolkit
+            substructures (amino acids, etc). Atom names are given the format
+            "CSTM_{symbol}", including wildtypes which show as "CSTM_*"
+        """
+        from collections import OrderedDict
+
+        from rdkit import Chem
+
+        prepared_dict = OrderedDict[str, OrderedDict[str, List[str]]]()
+        for name, smarts in custom_substructures.items():
+            rdmol = Chem.MolFromSmarts(smarts)
+            atom_list = [f"CSTM_{atom.GetSymbol()}" for atom in rdmol.GetAtoms()]
+            prepared_dict[name] = {smarts: atom_list}
+        return prepared_dict
+
     def _polymer_openmm_topology_to_rdmol(
-        self,
-        omm_top,
-        substructure_library,
+        self, omm_top, substructure_library, priority_substructure_residues=[]
     ):
         """
         Parameters
@@ -361,6 +627,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             substructure library
         """
         from rdkit import Chem
+        from rdkit.DataStructs.cDataStructs import CreateFromBinaryText
 
         already_assigned_nodes = set()
         # TODO: We currently assume all single and modify a few
@@ -371,13 +638,15 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Keeping track of which atoms are matched where will help us with error
         # messages
         matches = defaultdict(list)
+        residue_name_ids = defaultdict(list)
+        query_ids = defaultdict(list)
 
         rdkit_mol = self._get_connectivity_from_openmm_top(omm_top)
         mol = Chem.Mol(rdkit_mol)
         # Get a tuple of tuples of atom indices belonging to separate molecules in this RDMol
         # (note that this rdmol may actually be a solvated protein-ligand system)
         sorted_mol_frags = [tuple(sorted(i)) for i in Chem.GetMolFrags(mol)]
-        for res_name in substructure_library:
+        for res_idx, res_name in enumerate(substructure_library):
             # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes
             # so it just does the biggest substructures first
             # NOTE: If this changes, MissingChemistryFromPolymerError needs to be updated too
@@ -389,15 +658,42 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 ref = Chem.MolFromSmarts(substructure_smarts)
                 # then create a looser definition for pattern matching...
                 # be lax about double bonds and chirality
-                fuzzy = self._fuzzy_query(ref)
+                customs_exist = bool(
+                    priority_substructure_residues
+                )  # do we have custom substructures?
+                fuzzy, neighbor_idxs = self._fuzzy_query(
+                    ref, strict_degree=customs_exist
+                )
                 # It's important that we do the substructure search on `rdkit_mol`, but the chemical
                 # info is added to `mol`. If we use the same rdkit molecule for search AND info addition,
                 # then single bonds may no longer be present for subsequent overlapping matches.
-                for match in rdkit_mol.GetSubstructMatches(fuzzy, maxMatches=0):
+                sym_atoms = []
+                sym_bonds = []
+                if (
+                    priority_substructure_residues
+                ):  # experimental resonance/symmetry functionality
+                    sym_atoms, sym_bonds = self._get_symmetrical_groups(fuzzy, ref)
+
+                for full_match in rdkit_mol.GetSubstructMatches(fuzzy, maxMatches=0):
                     # Keep track of all residue names that have been assigned to
                     # each atom, for use in generating a useful error message later
-                    for i in match:
-                        matches[i].append(res_name)
+                    match_ids = [
+                        (query_id, mol_id)
+                        for query_id, mol_id in enumerate(full_match)
+                        if query_id not in neighbor_idxs
+                    ]
+                    match = list(zip(*match_ids))[
+                        1
+                    ]  # get the molecule ids without the corresponding query ids
+                    # ^^ matches return match ids in the order that they appear in the query. The code above filters neighboring (*) atoms
+                    for query_id, mol_id in match_ids:
+                        matches[mol_id].append(res_name)
+                        residue_name_ids[mol_id].append(
+                            res_idx
+                        )  # save the minimum amount of information between the res_name and query ids
+                        query_ids[mol_id].append(
+                            query_id
+                        )  # that may allow someone to reproduce or fully investigate the matches
 
                     # Unique molecule matches should only apply if they match entire molecule
                     if res_name == "UNIQUE_MOLECULE":
@@ -412,25 +708,75 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                             "PEPTIDE_BOND",
                             "DISULFIDE",
                             "UNIQUE_MOLECULE",
+                            *priority_substructure_residues,
                             "ADDITIONAL_SUBSTRUCTURE",
                         ]
                     ):
                         continue
-                    already_assigned_nodes.update(match)
 
-                    for atom_i, j in zip(ref.GetAtoms(), match):
+                    # for _custom_substructures only, allow overlaps if no chemical info is changed
+
+                    for atom_i, j in zip(ref.GetAtoms(), full_match):
+                        if atom_i.GetAtomicNum() == 0:  # ignore neighboring atoms
+                            continue
                         atom_j = mol.GetAtomWithIdx(j)
+                        # error checking for overlapping substructures with priority. Enforce that no ambiguous chemical assignments are made
+                        if (
+                            res_name in priority_substructure_residues
+                            and j in already_assigned_nodes
+                        ):  # if overlapping with previous match
+                            if (
+                                atom_i.GetFormalCharge() != atom_j.GetFormalCharge()
+                                and atom_i.GetIdx() not in sym_atoms
+                            ):
+                                error_reason = f"Formal charge of new query ({atom_i.GetFormalCharge()}) does not match the formal charge of previous query ({atom_j.GetFormalCharge()})"
+                                raise AmbiguousAtomChemicalAssignment(
+                                    res_name,
+                                    atom_j.GetIdx(),
+                                    atom_i.GetIdx(),
+                                    error_reason,
+                                )
+                            elif atom_i.GetChiralTag() != atom_j.GetChiralTag():
+                                error_reason = f"Chiral Tag of new query ({atom_i.GetChiralTag()}) does not match the chiral tag of previous query ({atom_j.GetChiralTag()})"
+                                raise AmbiguousAtomChemicalAssignment(
+                                    res_name,
+                                    atom_j.GetIdx(),
+                                    atom_i.GetIdx(),
+                                    error_reason,
+                                )
                         # copy over chirality
                         if atom_i.GetChiralTag():
                             mol.GetAtomWithIdx(j).SetChiralTag(atom_i.GetChiralTag())
                         atom_j.SetFormalCharge(atom_i.GetFormalCharge())
 
+                    already_assigned_nodes.update(match)
+
                     for b in ref.GetBonds():
-                        x = match[b.GetBeginAtomIdx()]
-                        y = match[b.GetEndAtomIdx()]
+                        ref_bond_ids = tuple(
+                            sorted([b.GetBeginAtomIdx(), b.GetEndAtomIdx()])
+                        )
+                        x = full_match[b.GetBeginAtomIdx()]
+                        y = full_match[b.GetEndAtomIdx()]
                         b2 = mol.GetBondBetweenAtoms(x, y)
+                        bond_ids = tuple(sorted([x, y]))
+                        # error chacking of overlapping bonds. If substructures with priority disagree on the bond order, raise exception
+                        if (
+                            res_name in priority_substructure_residues
+                            and bond_ids in already_assigned_edges
+                        ):  # if overlapping with previous match
+                            if (
+                                b.GetBondType() != b2.GetBondType()
+                                and ref_bond_ids not in sym_bonds
+                            ):
+                                error_reason = f"Bond order of new query ({b.GetBondType()}) does not match the bond order of previous query ({b2.GetBondType()})"
+                                query_bond = tuple(
+                                    sorted([b.GetBeginAtomIdx(), b.GetEndAtomIdx()])
+                                )
+                                raise AmbiguousBondChemicalAssignment(
+                                    res_name, bond_ids, query_bond, error_reason
+                                )
                         b2.SetBondType(b.GetBondType())
-                        already_assigned_edges.add(tuple(sorted([x, y])))
+                        already_assigned_edges.add(bond_ids)
 
         unassigned_atoms = sorted(
             set(range(rdkit_mol.GetNumAtoms())) - already_assigned_nodes
@@ -453,7 +799,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 for smarts, atom_names in smarts_to_atom_names.items():
                     ref = Chem.MolFromSmarts(smarts)
                     symbols = sorted(
-                        [SYMBOLS[atom.GetAtomicNum()] for atom in ref.GetAtoms()]
+                        [
+                            SYMBOLS[atom.GetAtomicNum()]
+                            for atom in ref.GetAtoms()
+                            if atom.GetAtomicNum() > 0
+                        ]
                     )
                     resname_to_symbols_and_atomnames[resname].append(
                         (symbols, atom_names)
@@ -465,6 +815,20 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 unassigned_atoms=unassigned_atoms,
                 unassigned_bonds=unassigned_bonds,
                 matches=matches,
+            )
+
+        # set some properties to later remember what matches were made
+        for atom in mol.GetAtoms():
+            atom_id = atom.GetIdx()
+            res_ids = residue_name_ids[atom_id]
+            q_ids = query_ids[atom_id]
+            atom.SetExplicitBitVectProp(
+                "res_ids",
+                CreateFromBinaryText(np.array(res_ids, dtype=np.uint64).tobytes()),
+            )
+            atom.SetExplicitBitVectProp(
+                "query_ids",
+                CreateFromBinaryText(np.array(q_ids, dtype=np.uint64).tobytes()),
             )
 
         return mol
@@ -491,8 +855,91 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return rwmol
 
+    def _get_symmetrical_groups(self, fuzzy_query, substruct):
+        """Returns those atoms and bonds whose chemical information
+        is ambiguous due to resonance forms or symmetrical groups. Conflicts
+        in assignment are ignored for these atoms when two queries have the same
+        atoms in resonance/symmetry"""
+        from copy import deepcopy
+
+        from rdkit import Chem
+
+        qmol = deepcopy(fuzzy_query)
+        for atom in qmol.GetAtoms():  # reset queries and map numbers
+            atom.SetAtomMapNum(
+                atom.GetIdx()
+            )  # reorder atom map nums to later recover ids
+        #     atom.SetQuery(           # reset query
+        #             Chem.AtomFromSmarts(f"[#{atom.GetAtomicNum()}D{atom.GetDegree()}]")
+        #         )
+        qmol = Chem.RemoveAllHs(qmol)
+        idx_to_map_num = dict(
+            [(a.GetIdx(), a.GetAtomMapNum()) for a in qmol.GetAtoms()]
+        )
+        automorphs = fuzzy_query.GetSubstructMatches(qmol, uniquify=0)
+        ambiguous_bonds = []
+        ambiguous_atoms = []
+        for automorph in automorphs:
+            # check for conflicting chemical information
+            automorph = dict(
+                [
+                    (idx_to_map_num[idx], a)
+                    for idx, a in enumerate(list(automorph))
+                    if idx_to_map_num[idx] != a
+                ]
+            )  # only care about cases of different matching
+            # substruct_ids = [qmol.GetAtomWithIdx(a_idx).GetAtomMapNum() for a_idx in automorph]
+
+            for atom_iso, new_atom_iso in automorph.items():
+                atom = substruct.GetAtomWithIdx(atom_iso)
+                new_atom = substruct.GetAtomWithIdx(new_atom_iso)
+                # new_atom = substruct.GetAtomWithIdx(automorph[atom.GetIdx()])
+                if atom.GetFormalCharge() != new_atom.GetFormalCharge():
+                    if atom.GetIdx() not in ambiguous_atoms:
+                        ambiguous_atoms.append(atom.GetIdx())
+
+            for bond in substruct.GetBonds():
+                if (
+                    bond.GetBeginAtom().GetAtomicNum() == 1
+                    or bond.GetEndAtom().GetAtomicNum() == 1
+                ):  # we remove Hs for matching so must remove here as well
+                    continue
+                if (
+                    bond.GetBeginAtomIdx() in automorph
+                    or bond.GetEndAtomIdx() in automorph
+                ):
+                    new_bond_begin_idx = automorph.get(
+                        bond.GetBeginAtomIdx(), bond.GetBeginAtomIdx()
+                    )
+                    new_bond_end_idx = automorph.get(
+                        bond.GetEndAtomIdx(), bond.GetEndAtomIdx()
+                    )
+                    new_bond = substruct.GetBondBetweenAtoms(
+                        new_bond_begin_idx, new_bond_end_idx
+                    )
+                    if bond.GetBondType() != new_bond.GetBondType():
+                        sym_bond_entry = tuple(
+                            sorted([bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()])
+                        )
+                        if sym_bond_entry not in ambiguous_bonds:
+                            ambiguous_bonds.append(
+                                tuple(
+                                    sorted(
+                                        [bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()]
+                                    )
+                                )
+                            )
+        if not ambiguous_bonds:
+            ambiguous_atoms = (
+                []
+            )  # if no ambiguous bonds, there cannot be physically valid sets of ambiguous atoms
+            # this is because that would imply that two different simple/graph connectivites can give different
+            # formal charges, which is not supported in this implementation and likely not possible outside of
+            # exotic transition metal groups
+        return ambiguous_atoms, ambiguous_bonds
+
     @staticmethod
-    def _fuzzy_query(query):
+    def _fuzzy_query(query, strict_degree=False):
         """return a copy of Query which is less specific:
         - ignore aromaticity and hybridization of atoms (i.e. [#6] not C)
         - ignore bond orders
@@ -507,23 +954,30 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # N.B. This isn't likely to be an active
         generic_mol = (
             Chem.MolFromSmarts(  # TODO: optimisation, create this once somewhere
-                "".join("[#{}]".format(i + 1) for i in range(112))
+                "[*]" + "".join("[#{}]".format(i + 1) for i in range(112))
             )
         )
 
         fuzzy = Chem.Mol(query)
-        for a in fuzzy.GetAtoms():
+        neighbor_idxs = []
+        for idx, a in enumerate(fuzzy.GetAtoms()):
             a.SetFormalCharge(0)
-            a.SetQuery(
-                generic_mol.GetAtomWithIdx(a.GetAtomicNum() - 1)
-            )  # i.e. H looks up atom 0 in our generic mol
+            if strict_degree and a.GetAtomicNum() > 0:
+                a.SetQuery(
+                    Chem.AtomFromSmarts(f"[#{a.GetAtomicNum()}D{a.GetDegree()}]")
+                )
+            else:
+                a.SetQuery(
+                    generic_mol.GetAtomWithIdx(a.GetAtomicNum())
+                )  # i.e. H looks up atom 0 in our generic mol
             a.SetNoImplicit(True)
+            if a.GetAtomicNum() == 0:
+                neighbor_idxs.append(idx)
         for b in fuzzy.GetBonds():
             b.SetIsAromatic(False)
             b.SetBondType(Chem.rdchem.BondType.SINGLE)
             b.SetQuery(generic_bond)
-
-        return fuzzy
+        return fuzzy, neighbor_idxs
 
     def _assign_aromaticity_and_stereo_from_3d(self, offmol):
         from rdkit import Chem

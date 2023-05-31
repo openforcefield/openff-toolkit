@@ -1535,6 +1535,7 @@ class Topology(Serializable):
         file_path: Union[str, Path, TextIO],
         unique_molecules: Optional[Iterable[Molecule]] = None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        _custom_substructures: Dict[str, str] = {},
         _additional_substructures: Optional[Iterable[Molecule]] = None,
     ):
         """
@@ -1653,6 +1654,7 @@ class Topology(Serializable):
         """
         import io
         import json
+        from collections import OrderedDict
 
         import openmm.unit as openmm_unit
         from openmm.app import PDBFile
@@ -1666,12 +1668,19 @@ class Topology(Serializable):
 
         pdb = PDBFile(file_path)
 
-        substructure_file_path = get_data_file_path(
-            "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
-        )
+        if _custom_substructures:
+            substructure_file_path = get_data_file_path(
+                "proteins/aa_residues_substructures_explicit_bond_orders_with_caps_and_explicit_connectivity.json"
+            )
+        else:
+            substructure_file_path = get_data_file_path(
+                "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
+            )
 
         with open(substructure_file_path, "r") as subfile:
-            substructure_dictionary = json.load(subfile)
+            substructure_dictionary = json.load(
+                subfile, object_pairs_hook=OrderedDict
+            )  # preserving order is useful later when saving metadata
         substructure_dictionary["HOH"] = {"[H:1][O:2][H:3]": ["H1", "O", "H2"]}
         substructure_dictionary["Li"] = {"[Li+1:1]": ["Li"]}
         substructure_dictionary["Na"] = {"[Na+1:1]": ["Na"]}
@@ -1726,6 +1735,7 @@ class Topology(Serializable):
             pdb,
             substructure_dictionary,
             coords_angstrom,
+            _custom_substructures,
         )
 
         for off_atom, atom in zip([*topology.atoms], pdb.topology.atoms()):
