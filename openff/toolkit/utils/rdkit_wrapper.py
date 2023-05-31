@@ -653,8 +653,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             sorted_substructure_smarts = sorted(
                 substructure_library[res_name], key=len, reverse=True
             )
-            if res_name == "polythiophene_TERM1":
-                test = 1
             for substructure_smarts in sorted_substructure_smarts:
                 # this is the molecule as defined in template
                 ref = Chem.MolFromSmarts(substructure_smarts)
