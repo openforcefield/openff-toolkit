@@ -3154,7 +3154,7 @@ class FrozenMolecule(Serializable):
         """
         The number of Bond objects in the molecule.
         """
-        return sum([1 for bond in self.bonds])
+        return len(self._bonds)
 
     @property
     def n_angles(self) -> int:
@@ -3347,9 +3347,7 @@ class FrozenMolecule(Serializable):
         smirnoff_impropers, amber_impropers
         """
         self._construct_torsions()
-        assert (
-            self._impropers is not None
-        ), "_construct_torsions always sets _impropers to a set"
+
         return self._impropers
 
     @property
@@ -3387,16 +3385,11 @@ class FrozenMolecule(Serializable):
         impropers, amber_impropers
 
         """
-        # TODO: Replace with non-cheminformatics-toolkit method
-        #       (ie. just looping over all atoms and finding ones that have 3 bonds?)
-
-        smirnoff_improper_smarts = "[*:1]~[X3:2](~[*:3])~[*:4]"
-        improper_idxs = self.chemical_environment_matches(smirnoff_improper_smarts)
-        smirnoff_impropers = {
-            (self.atom(imp[0]), self.atom(imp[1]), self.atom(imp[2]), self.atom(imp[3]))
-            for imp in improper_idxs
+        return {
+            improper
+            for improper in self.impropers
+            if len(self._bonded_atoms[improper[1]]) == 3
         }
-        return smirnoff_impropers
 
     @property
     def amber_impropers(self) -> Set[Tuple[Atom, Atom, Atom, Atom]]:
@@ -3425,15 +3418,12 @@ class FrozenMolecule(Serializable):
         impropers, smirnoff_impropers
 
         """
-        # TODO: Replace with non-cheminformatics-toolkit method
-        #       (ie. just looping over all atoms and finding ones that have 3 bonds?)
-        amber_improper_smarts = "[X3:1](~[*:2])(~[*:3])~[*:4]"
-        improper_idxs = self.chemical_environment_matches(amber_improper_smarts)
-        amber_impropers = {
-            (self.atom(imp[0]), self.atom(imp[1]), self.atom(imp[2]), self.atom(imp[3]))
-            for imp in improper_idxs
+        self._construct_torsions()
+
+        return {
+            (improper[1], improper[0], improper[2], improper[3])
+            for improper in self.smirnoff_impropers
         }
-        return amber_impropers
 
     def nth_degree_neighbors(self, n_degrees):
         """
@@ -5063,16 +5053,14 @@ class FrozenMolecule(Serializable):
         """
         Get an iterator over all i-j-k angles.
         """
-        # TODO: Build Angle objects instead of tuple of atoms.
         if not hasattr(self, "_angles"):
             self._construct_bonded_atoms_list()
             self._angles = set()
             for atom1 in self._atoms:
-                for atom2 in self._bondedAtoms[atom1]:
-                    for atom3 in self._bondedAtoms[atom2]:
+                for atom2 in self._bonded_atoms[atom1]:
+                    for atom3 in self._bonded_atoms[atom2]:
                         if atom1 == atom3:
                             continue
-                        # TODO: Encapsulate this logic into an Angle class.
                         if atom1.molecule_atom_index < atom3.molecule_atom_index:
                             self._angles.add((atom1, atom2, atom3))
                         else:
@@ -5081,19 +5069,20 @@ class FrozenMolecule(Serializable):
     def _construct_torsions(self):
         """
         Construct sets containing the atoms improper and proper torsions
+
+        Impropers are constructed with the central atom listed second
         """
-        # TODO: Build Proper/ImproperTorsion objects instead of tuple of atoms.
         if not hasattr(self, "_torsions"):
             self._construct_bonded_atoms_list()
 
-            self._propers = set()
-            self._impropers = set()
+            self._propers: set[tuple[Atom]] = set()
+            self._impropers: set[tuple[Atom]] = set()
             for atom1 in self._atoms:
-                for atom2 in self._bondedAtoms[atom1]:
-                    for atom3 in self._bondedAtoms[atom2]:
+                for atom2 in self._bonded_atoms[atom1]:
+                    for atom3 in self._bonded_atoms[atom2]:
                         if atom1 == atom3:
                             continue
-                        for atom4 in self._bondedAtoms[atom3]:
+                        for atom4 in self._bonded_atoms[atom3]:
                             if atom4 == atom2:
                                 continue
                             # Exclude i-j-k-i
@@ -5107,7 +5096,7 @@ class FrozenMolecule(Serializable):
 
                             self._propers.add(torsion)
 
-                        for atom3i in self._bondedAtoms[atom2]:
+                        for atom3i in self._bonded_atoms[atom2]:
                             if atom3i == atom3:
                                 continue
                             if atom3i == atom1:
@@ -5124,16 +5113,15 @@ class FrozenMolecule(Serializable):
 
         """
         # TODO: Add this to cached_properties
-        if not hasattr(self, "_bondedAtoms"):
-            # self._atoms = [ atom for atom in self.atoms() ]
-            self._bondedAtoms = dict()
+        if not hasattr(self, "_bonded_atoms"):
+            self._bonded_atoms: dict[Atom, set[Atom]] = dict()
             for atom in self._atoms:
-                self._bondedAtoms[atom] = set()
+                self._bonded_atoms[atom] = set()
             for bond in self._bonds:
                 atom1 = self.atoms[bond.atom1_index]
                 atom2 = self.atoms[bond.atom2_index]
-                self._bondedAtoms[atom1].add(atom2)
-                self._bondedAtoms[atom2].add(atom1)
+                self._bonded_atoms[atom1].add(atom2)
+                self._bonded_atoms[atom2].add(atom1)
 
     def _is_bonded(self, atom_index_1, atom_index_2):
         """Return True if atoms are bonded, False if not.
@@ -5154,7 +5142,7 @@ class FrozenMolecule(Serializable):
         self._construct_bonded_atoms_list()
         atom1 = self._atoms[atom_index_1]
         atom2 = self._atoms[atom_index_2]
-        return atom2 in self._bondedAtoms[atom1]
+        return atom2 in self._bonded_atoms[atom1]
 
     def get_bond_between(self, i: Union[int, "Atom"], j: Union[int, "Atom"]) -> "Bond":
         """Returns the bond between two atoms

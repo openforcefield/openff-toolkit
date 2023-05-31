@@ -39,7 +39,11 @@ from openff.units import Quantity, ensure_quantity, unit
 from typing_extensions import TypeAlias
 
 from openff.toolkit.topology import Molecule
-from openff.toolkit.topology._mm_molecule import _SimpleBond, _SimpleMolecule
+from openff.toolkit.topology._mm_molecule import (
+    _SimpleAtom,
+    _SimpleBond,
+    _SimpleMolecule,
+)
 from openff.toolkit.topology.molecule import FrozenMolecule, HierarchyElement
 from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.constants import (
@@ -841,7 +845,7 @@ class Topology(Serializable):
         return sum(mol.n_propers for mol in self._molecules)
 
     @property
-    def propers(self) -> Generator[Tuple["Atom", ...], None, None]:
+    def propers(self) -> Generator[Tuple[Union["Atom", _SimpleAtom], ...], None, None]:
         """Iterable of Tuple[Atom]: iterator over the proper torsions in this Topology."""
         for molecule in self.molecules:
             for proper in molecule.propers:
@@ -860,7 +864,9 @@ class Topology(Serializable):
                 yield improper
 
     @property
-    def smirnoff_impropers(self) -> Generator[Tuple["Atom", ...], None, None]:
+    def smirnoff_impropers(
+        self,
+    ) -> Generator[Tuple[Union["Atom", _SimpleAtom], ...], None, None]:
         """
         Iterate over improper torsions in the molecule, but only those with
         trivalent centers, reporting the central atom second in each improper.
@@ -899,7 +905,9 @@ class Topology(Serializable):
                 yield smirnoff_improper
 
     @property
-    def amber_impropers(self) -> Generator[Tuple["Atom", ...], None, None]:
+    def amber_impropers(
+        self,
+    ) -> Generator[Tuple[Union["Atom", _SimpleAtom], ...], None, None]:
         """
         Iterate over improper torsions in the molecule, but only those with
         trivalent centers, reporting the central atom first in each improper.

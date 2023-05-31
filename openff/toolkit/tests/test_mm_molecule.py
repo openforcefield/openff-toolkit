@@ -150,6 +150,36 @@ class TestMMMolecule:
             assert found == expected_atomic_numbers[atom_index]
 
 
+class TestImpropers:
+    @pytest.mark.parametrize(
+        ("smiles", "n_impropers", "n_pruned"),
+        [
+            ("C", 24, 0),
+            ("CC", 48, 0),
+            ("N", 6, 6),
+        ],
+    )
+    def test_pruned_impropers(self, smiles, n_impropers, n_pruned):
+        """See equivalent test in TestMolecule."""
+        molecule = _SimpleMolecule.from_molecule(
+            Molecule.from_smiles(smiles),
+        )
+
+        assert molecule.n_impropers == n_impropers
+        assert len(list(molecule.smirnoff_impropers)) == n_pruned
+        assert len(list(molecule.amber_impropers)) == n_pruned
+
+        amber_impropers = {*molecule.amber_impropers}
+
+        for smirnoff_imp in molecule.smirnoff_impropers:
+            assert (
+                smirnoff_imp[1],
+                smirnoff_imp[0],
+                smirnoff_imp[2],
+                smirnoff_imp[3],
+            ) in amber_impropers
+
+
 class TestIsomorphism:
     @pytest.fixture()
     def n_propanol(self):
