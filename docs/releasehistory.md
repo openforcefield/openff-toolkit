@@ -6,11 +6,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-## Current Development
-
-
-### New features
-
+## 0.13.1
 
 ### Behavior changes
 - [PR #1619](https://github.com/openforcefield/openff-toolkit/pull/1619): Fixes **silent error** [#1618](https://github.com/openforcefield/openff-toolkit/issues/1618), by making partial_charges.setter more comprehensive in type and shape checking.
@@ -19,12 +15,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Bugfixes
 - [PR #1617](https://github.com/openforcefield/openff-toolkit/pull/1617): Fixes [#1616](https://github.com/openforcefield/openff-toolkit/issues/1616), by converting NAGL charges to float and converting partial_charges to float before converting to_openeye()
 - [PR #1622](https://github.com/openforcefield/openff-toolkit/pull/1622): Fixes [#1621](https://github.com/openforcefield/openff-toolkit/issues/1621) and [#1346](https://github.com/openforcefield/openff-toolkit/issues/1347) in which some file-loading methods would fail on `pathlib.Path`.
-
-### Improved documentation and warnings
-
-
-### Examples updates
-
 
 ## 0.13.0
 
