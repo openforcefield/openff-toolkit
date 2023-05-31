@@ -3154,7 +3154,7 @@ class FrozenMolecule(Serializable):
         """
         The number of Bond objects in the molecule.
         """
-        return sum([1 for bond in self.bonds])
+        return len(self._bonds)
 
     @property
     def n_angles(self) -> int:

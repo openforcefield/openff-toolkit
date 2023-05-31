@@ -9,7 +9,16 @@ TypedMolecule TODOs
   deserialize a Molecule or a TypedMolecule.
 
 """
-from typing import TYPE_CHECKING, Dict, List, NoReturn, Optional, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Dict,
+    Generator,
+    List,
+    NoReturn,
+    Optional,
+    Tuple,
+    Union,
+)
 
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
@@ -94,7 +103,9 @@ class _SimpleMolecule:
                     return bond
 
     @property
-    def angles(self):
+    def angles(
+        self,
+    ) -> Generator[tuple["_SimpleAtom", "_SimpleAtom", "_SimpleAtom",], None, None,]:
         for atom1 in self.atoms:
             for atom2 in atom1.bonded_atoms:
                 for atom3 in atom2.bonded_atoms:
@@ -107,7 +118,18 @@ class _SimpleMolecule:
                         pass
 
     @property
-    def propers(self):
+    def propers(
+        self,
+    ) -> Generator[
+        tuple[
+            "_SimpleAtom",
+            "_SimpleAtom",
+            "_SimpleAtom",
+            "_SimpleAtom",
+        ],
+        None,
+        None,
+    ]:
         for atom1 in self.atoms:
             for atom2 in atom1.bonded_atoms:
                 for atom3 in atom2.bonded_atoms:
@@ -121,19 +143,78 @@ class _SimpleMolecule:
                             yield (atom1, atom2, atom3, atom4)
                         else:
                             # Do no duplicate
-                            pass  # yield (atom4, atom3, atom2, atom1)
+                            pass
 
     @property
-    def impropers(self):
-        return {}
+    def impropers(
+        self,
+    ) -> Generator[
+        tuple[
+            "_SimpleAtom",
+            "_SimpleAtom",
+            "_SimpleAtom",
+            "_SimpleAtom",
+        ],
+        None,
+        None,
+    ]:
+        for atom1 in self.atoms:
+            for atom2 in atom1.bonded_atoms:
+                for atom3 in atom2.bonded_atoms:
+                    if atom1 is atom3:
+                        continue
+                    for atom3i in atom2.bonded_atoms:
+                        if atom3i == atom3:
+                            continue
+                        if atom3i == atom1:
+                            continue
+
+                        yield (atom1, atom2, atom3, atom3i)
 
     @property
-    def smirnoff_impropers(self):
-        return {}
+    def smirnoff_impropers(
+        self,
+    ) -> Generator[
+        tuple[
+            "_SimpleAtom",
+            "_SimpleAtom",
+            "_SimpleAtom",
+            "_SimpleAtom",
+        ],
+        None,
+        None,
+    ]:
+        for improper in self.impropers:
+            if len(list(improper[1].bonded_atoms)) == 3:
+                yield improper
 
     @property
-    def amber_impropers(self):
-        return {}
+    def amber_impropers(
+        self,
+    ) -> Generator[
+        tuple[
+            "_SimpleAtom",
+            "_SimpleAtom",
+            "_SimpleAtom",
+            "_SimpleAtom",
+        ],
+        None,
+        None,
+    ]:
+        for improper in self.smirnoff_impropers:
+            yield (improper[1], improper[0], improper[2], improper[3])
+
+    @property
+    def n_angles(self) -> int:
+        return len(list(self.angles))
+
+    @property
+    def n_propers(self) -> int:
+        return len(list(self.propers))
+
+    @property
+    def n_impropers(self) -> int:
+        return len(list(self.impropers))
 
     @property
     def hill_formula(self) -> str:
