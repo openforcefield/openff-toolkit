@@ -362,7 +362,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         dtype=np.uint64,
                     )
                     query_nums = np.frombuffer(
-                        BitVectToBinaryText(rdatom.GetExplicitBitVectProp("query_nums")),
+                        BitVectToBinaryText(
+                            rdatom.GetExplicitBitVectProp("query_nums")
+                        ),
                         dtype=np.uint64,
                     )
                     query_ids = np.frombuffer(
@@ -374,7 +376,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     ]  # fyi substruct dict is now OrderedDict
                     # query_ids = [int(idx) for idx in list(query_ids)]
                     match_info = dict()
-                    for res_name, query_idx, query_num in zip(residues, query_ids, query_nums):
+                    for res_name, query_idx, query_num in zip(
+                        residues, query_ids, query_nums
+                    ):
                         match_info[int(query_num)] = (res_name, int(query_idx))
                     offatom.metadata["match_info"] = json.dumps(match_info)
                 smiles2offmol[mapped_smi] = copy.deepcopy(offmol)
@@ -783,9 +787,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         residue_name_ids[mol_id].append(
                             res_idx
                         )  # save the minimum amount of information between the res_name and query ids
-                        query_nums[mol_id].append(
-                            query_number
-                        )
+                        query_nums[mol_id].append(query_number)
                         query_ids[mol_id].append(
                             query_id
                         )  # that may allow someone to reproduce or fully investigate the matches
