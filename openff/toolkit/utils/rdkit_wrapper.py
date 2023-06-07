@@ -361,6 +361,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         BitVectToBinaryText(rdatom.GetExplicitBitVectProp("res_ids")),
                         dtype=np.uint64,
                     )
+                    query_nums = np.frombuffer(
+                        BitVectToBinaryText(rdatom.GetExplicitBitVectProp("query_nums")),
+                        dtype=np.uint64,
+                    )
                     query_ids = np.frombuffer(
                         BitVectToBinaryText(rdatom.GetExplicitBitVectProp("query_ids")),
                         dtype=np.uint64,
@@ -368,8 +372,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     residues = [
                         list(substructure_dictionary.keys())[i] for i in res_ids
                     ]  # fyi substruct dict is now OrderedDict
-                    query_ids = [int(idx) for idx in list(query_ids)]
-                    match_info = dict(zip(residues, query_ids))
+                    # query_ids = [int(idx) for idx in list(query_ids)]
+                    match_info = dict()
+                    for res_name, query_idx, query_num in zip(residues, query_ids, query_nums):
+                        match_info[int(query_num)] = (res_name, int(query_idx))
                     offatom.metadata["match_info"] = json.dumps(match_info)
                 smiles2offmol[mapped_smi] = copy.deepcopy(offmol)
             top._add_molecule_keep_cache(offmol)
@@ -639,6 +645,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # messages
         matches = defaultdict(list)
         residue_name_ids = defaultdict(list)
+        query_nums = defaultdict(list)
         query_ids = defaultdict(list)
 
         rdkit_mol = self._get_connectivity_from_openmm_top(omm_top)
@@ -646,6 +653,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Get a tuple of tuples of atom indices belonging to separate molecules in this RDMol
         # (note that this rdmol may actually be a solvated protein-ligand system)
         sorted_mol_frags = [tuple(sorted(i)) for i in Chem.GetMolFrags(mol)]
+        query_number = 0
         for res_idx, res_name in enumerate(substructure_library):
             # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes
             # so it just does the biggest substructures first
@@ -686,14 +694,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         1
                     ]  # get the molecule ids without the corresponding query ids
                     # ^^ matches return match ids in the order that they appear in the query. The code above filters neighboring (*) atoms
-                    for query_id, mol_id in match_ids:
-                        matches[mol_id].append(res_name)
-                        residue_name_ids[mol_id].append(
-                            res_idx
-                        )  # save the minimum amount of information between the res_name and query ids
-                        query_ids[mol_id].append(
-                            query_id
-                        )  # that may allow someone to reproduce or fully investigate the matches
 
                     # Unique molecule matches should only apply if they match entire molecule
                     if res_name == "UNIQUE_MOLECULE":
@@ -778,6 +778,19 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         b2.SetBondType(b.GetBondType())
                         already_assigned_edges.add(bond_ids)
 
+                    for query_id, mol_id in match_ids:
+                        matches[mol_id].append(res_name)
+                        residue_name_ids[mol_id].append(
+                            res_idx
+                        )  # save the minimum amount of information between the res_name and query ids
+                        query_nums[mol_id].append(
+                            query_number
+                        )
+                        query_ids[mol_id].append(
+                            query_id
+                        )  # that may allow someone to reproduce or fully investigate the matches
+                    query_number += 1
+
         unassigned_atoms = sorted(
             set(range(rdkit_mol.GetNumAtoms())) - already_assigned_nodes
         )
@@ -821,10 +834,15 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         for atom in mol.GetAtoms():
             atom_id = atom.GetIdx()
             res_ids = residue_name_ids[atom_id]
+            q_nums = query_nums[atom_id]
             q_ids = query_ids[atom_id]
             atom.SetExplicitBitVectProp(
                 "res_ids",
                 CreateFromBinaryText(np.array(res_ids, dtype=np.uint64).tobytes()),
+            )
+            atom.SetExplicitBitVectProp(
+                "query_nums",
+                CreateFromBinaryText(np.array(q_nums, dtype=np.uint64).tobytes()),
             )
             atom.SetExplicitBitVectProp(
                 "query_ids",
