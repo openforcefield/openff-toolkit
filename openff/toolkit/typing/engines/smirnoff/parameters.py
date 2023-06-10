@@ -2821,6 +2821,7 @@ class vdWHandler(_NonbondedHandler):
     #       (it'll be easy when we switch to use the attrs library)
     @scale12.converter
     def scale12(self, attrs, new_scale12):
+        new_scale12 = float(new_scale12)
         if new_scale12 != 0.0:
             raise SMIRNOFFSpecError(
                 "Current OFF toolkit is unable to handle scale12 values other than 0.0. "
@@ -2830,6 +2831,7 @@ class vdWHandler(_NonbondedHandler):
 
     @scale13.converter
     def scale13(self, attrs, new_scale13):
+        new_scale13 = float(new_scale13)
         if new_scale13 != 0.0:
             raise SMIRNOFFSpecError(
                 "Current OFF toolkit is unable to handle scale13 values other than 0.0. "
@@ -2839,6 +2841,7 @@ class vdWHandler(_NonbondedHandler):
 
     @scale15.converter
     def scale15(self, attrs, new_scale15):
+        new_scale15 = float(new_scale15)
         if new_scale15 != 1.0:
             raise SMIRNOFFSpecError(
                 "Current OFF toolkit is unable to handle scale15 values other than 1.0. "
@@ -2924,6 +2927,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
     #       (it'll be easy when we switch to use the attrs library)
     @scale12.converter
     def scale12(self, attrs, new_scale12):
+        new_scale12 = float(new_scale12)
         if new_scale12 != 0.0:
             raise SMIRNOFFSpecError(
                 "Current OFF toolkit is unable to handle scale12 values other than 0.0. "
@@ -2933,6 +2937,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
 
     @scale13.converter
     def scale13(self, attrs, new_scale13):
+        new_scale13 = float(new_scale13)
         if new_scale13 != 0.0:
             raise SMIRNOFFSpecError(
                 "Current OFF toolkit is unable to handle scale13 values other than 0.0. "
@@ -2942,6 +2947,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
 
     @scale15.converter
     def scale15(self, attrs, new_scale15):
+        new_scale15 = float(new_scale15)
         if new_scale15 != 1.0:
             raise SMIRNOFFSpecError(
                 "Current OFF toolkit is unable to handle scale15 values other than 1.0. "

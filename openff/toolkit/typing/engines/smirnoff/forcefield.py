@@ -904,12 +904,6 @@ class ForceField:
         if "Date" in smirnoff_data["SMIRNOFF"]:
             self._add_date(smirnoff_data["SMIRNOFF"]["Date"])
 
-        # Go through the whole SMIRNOFF data structure, trying to convert all strings to Quantity
-        smirnoff_data = convert_all_strings_to_quantity(
-            smirnoff_data,
-            ignore_keys=["smirks", "name"],
-        )
-
         # Go through the subsections, delegating each to the proper ParameterHandler
 
         # Define keys which are expected from the spec, but are not parameter sections
@@ -935,14 +929,39 @@ class ForceField:
 
             # Get the parameter types serialization that is not passed to the ParameterHandler constructor.
             ph_class = self._get_parameter_handler_class(parameter_name)
+
+            # special case virtual sites
             try:
                 infotype = ph_class._INFOTYPE
                 parameter_list_tagname = infotype._ELEMENT_NAME
             except AttributeError:
                 # The ParameterHandler doesn't have ParameterTypes (e.g. ToolkitAM1BCCHandler).
                 parameter_list_dict = {}
+                ignore_keys = []
             else:
                 parameter_list_dict = section_dict.pop(parameter_list_tagname, {})
+                attributes = infotype._get_parameter_attributes()
+                ignore_keys = [
+                    attribute_name
+                    for attribute_name, attribute in attributes.items()
+                    if attribute._unit is None
+                ]
+                # for some reason the angle parameters in VirtualSite
+                # do not have `_unit`, despite being defined with
+                # `unit=unit.degrees`
+                if infotype._ELEMENT_NAME == "VirtualSite":
+                    ignore_keys = [
+                        x for x in ignore_keys
+                        if x not in ["outOfPlaneAngle", "inPlaneAngle"]
+                    ]
+
+            # try to convert all parameters to quantities that should be
+            parameter_list_dict = convert_all_strings_to_quantity(
+                parameter_list_dict, ignore_keys=ignore_keys
+            )
+            section_dict = convert_all_strings_to_quantity(
+                section_dict, ignore_keys=ignore_keys
+            )
 
             # Must be wrapped into its own tag.
             # Assumes that parameter_list_dict is always a list
