@@ -930,7 +930,6 @@ class ForceField:
             # Get the parameter types serialization that is not passed to the ParameterHandler constructor.
             ph_class = self._get_parameter_handler_class(parameter_name)
 
-            # special case virtual sites
             try:
                 infotype = ph_class._INFOTYPE
                 parameter_list_tagname = infotype._ELEMENT_NAME
