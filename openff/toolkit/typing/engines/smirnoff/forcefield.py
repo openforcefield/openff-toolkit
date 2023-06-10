@@ -951,7 +951,8 @@ class ForceField:
                 # `unit=unit.degrees`
                 if infotype._ELEMENT_NAME == "VirtualSite":
                     ignore_keys = [
-                        x for x in ignore_keys
+                        x
+                        for x in ignore_keys
                         if x not in ["outOfPlaneAngle", "inPlaneAngle"]
                     ]
 
