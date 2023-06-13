@@ -892,6 +892,7 @@ class TestForceField(_ForceFieldFixtures):
             "openff_unconstrained-1.0.0.offxml",
             "openff-1.3.0.offxml",
             "openff-2.0.0.offxml",
+            "openff-2.1.0.offxml",
             "ff14sb_off_impropers_0.0.3.offxml",
         ]
 
