@@ -1065,6 +1065,11 @@ class TestForceField(_ForceFieldFixtures):
                     assert isinstance(parameter.name, str)
                     assert not isinstance(parameter.name, unit.Quantity)
 
+    def test_load_do_not_convert_id_to_quantities(self):
+        ff = ForceField("openff-2.1.0.offxml")
+        handler = ff.get_parameter_handler("LibraryCharges")
+        assert handler.parameters[2].id == "K+"
+
     def test_pickle(self):
         """
         Test pickling and unpickling a force field
