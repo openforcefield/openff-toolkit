@@ -13,7 +13,7 @@ dependencies:
   - xmltodict
   - python-constraint
   - openmm >=7.6
-  - openff-forcefields
+  - openff-forcefields >=2023.05.1
   - smirnoff99Frosst
   - openff-amber-ff-ports >=0.0.3
   - openff-units >=0.2
