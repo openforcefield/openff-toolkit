@@ -907,7 +907,7 @@ class ForceField:
         # Go through the whole SMIRNOFF data structure, trying to convert all strings to Quantity
         smirnoff_data = convert_all_strings_to_quantity(
             smirnoff_data,
-            ignore_keys=["smirks", "name"],
+            ignore_keys=["smirks", "name", "id", "parent_id"],
         )
 
         # Go through the subsections, delegating each to the proper ParameterHandler
