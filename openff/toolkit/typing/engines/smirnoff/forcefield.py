@@ -56,7 +56,7 @@ from openff.toolkit.utils.utils import (
 
 if TYPE_CHECKING:
     import openmm
-    from openff.units import unit
+    from openff.units import Quantity, unit
 
     from openff.toolkit.topology import Molecule, Topology
     from openff.toolkit.utils.base_wrapper import ToolkitWrapper
@@ -1342,7 +1342,7 @@ class ForceField:
             raise KeyError(msg)
         return ph_class
 
-    def get_partial_charges(self, molecule: "Molecule", **kwargs) -> "unit.Quantity":
+    def get_partial_charges(self, molecule: "Molecule", **kwargs) -> "Quantity":
         """Generate the partial charges for the given molecule in this force field.
 
         Parameters

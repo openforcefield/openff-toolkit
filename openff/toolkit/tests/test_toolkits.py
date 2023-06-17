@@ -12,7 +12,7 @@ from typing import Dict
 import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
-from openff.units import unit
+from openff.units import Quantity, unit
 
 from openff.toolkit.tests.create_molecules import (
     create_acetaldehyde,
@@ -261,9 +261,9 @@ def formic_acid_molecule() -> Molecule:
 
 
 @pytest.fixture()
-def formic_acid_conformers() -> Dict[str, unit.Quantity]:
+def formic_acid_conformers() -> Dict[str, Quantity]:
     return {
-        "cis": unit.Quantity(
+        "cis": Quantity(
             np.array(
                 [
                     [-0.95927322, -0.91789997, 0.36333418],
@@ -275,7 +275,7 @@ def formic_acid_conformers() -> Dict[str, unit.Quantity]:
             ),
             unit.angstrom,
         ),
-        "trans": unit.Quantity(
+        "trans": Quantity(
             np.array(
                 [
                     [-0.95927322, -0.91789997, 0.36333418],
@@ -382,7 +382,7 @@ class TestOpenEyeToolkitWrapper:
 
         # Populate core molecule property fields
         molecule.name = "Alice"
-        partial_charges = unit.Quantity(
+        partial_charges = Quantity(
             np.array(
                 [
                     -0.9,
@@ -408,7 +408,7 @@ class TestOpenEyeToolkitWrapper:
             unit.elementary_charge,
         )
         molecule.partial_charges = partial_charges
-        coords = unit.Quantity(
+        coords = Quantity(
             np.array(
                 [
                     ["0.0", "1.0", "2.0"],
@@ -584,7 +584,7 @@ class TestOpenEyeToolkitWrapper:
 
     def test_to_openeye_typed_partial_charges(self):
         ethanol = create_ethanol()
-        ethanol.partial_charges = unit.Quantity(
+        ethanol.partial_charges = Quantity(
             np.zeros(ethanol.n_atoms, dtype=int), unit.elementary_charge
         )
         oemol = ethanol.to_openeye()
@@ -973,7 +973,7 @@ class TestOpenEyeToolkitWrapper:
         water.add_bond(0, 1, 1, False)
         water.add_bond(1, 2, 1, False)
         water.add_conformer(
-            unit.Quantity(
+            Quantity(
                 np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
                 unit.angstrom,
             )
@@ -1150,7 +1150,7 @@ class TestOpenEyeToolkitWrapper:
         toolkit_wrapper = OpenEyeToolkitWrapper()
         filename = get_data_file_path("molecules/ethanol.sdf")
         ethanol = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
-        ethanol.partial_charges = unit.Quantity(
+        ethanol.partial_charges = Quantity(
             np.array([-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0]),
             unit.elementary_charge,
         )
@@ -1217,7 +1217,7 @@ class TestOpenEyeToolkitWrapper:
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule.conformers) == 1
         assert molecule.conformers[0].shape == (15, 3)
-        target_charges = unit.Quantity(
+        target_charges = Quantity(
             np.array(
                 [
                     -0.1342,
@@ -1349,7 +1349,7 @@ class TestOpenEyeToolkitWrapper:
 
         initial_conformers = [
             # Add a conformer with an internal H-bond.
-            unit.Quantity(
+            Quantity(
                 np.array(
                     [
                         [0.5477, 0.3297, -0.0621],
@@ -1366,7 +1366,7 @@ class TestOpenEyeToolkitWrapper:
                 unit.angstrom,
             ),
             # Add a conformer without an internal H-bond.
-            unit.Quantity(
+            Quantity(
                 np.array(
                     [
                         [0.5477, 0.3297, -0.0621],
@@ -2271,7 +2271,7 @@ class TestRDKitToolkitWrapper:
 
         # Populate core molecule property fields
         molecule.name = "Alice"
-        partial_charges = unit.Quantity(
+        partial_charges = Quantity(
             np.array(
                 [
                     -0.9,
@@ -2297,7 +2297,7 @@ class TestRDKitToolkitWrapper:
             unit.elementary_charge,
         )
         molecule.partial_charges = partial_charges
-        coords = unit.Quantity(
+        coords = Quantity(
             np.array(
                 [
                     ["0.0", "1.0", "2.0"],
@@ -2749,7 +2749,7 @@ class TestRDKitToolkitWrapper:
         toolkit_wrapper = RDKitToolkitWrapper()
         filename = get_data_file_path("molecules/ethanol.sdf")
         ethanol = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
-        ethanol.partial_charges = unit.Quantity(
+        ethanol.partial_charges = Quantity(
             np.array([-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0]),
             unit.elementary_charge,
         )
@@ -3042,7 +3042,7 @@ class TestRDKitToolkitWrapper:
         self,
         formic_acid_molecule: Molecule,
         expected_conformer_map: Dict[int, int],
-        rms_tolerance: unit.Quantity,
+        rms_tolerance: Quantity,
     ):
         """Test the greedy selection of 'diverse' ELF conformers."""
 
@@ -3077,7 +3077,7 @@ class TestRDKitToolkitWrapper:
 
         initial_conformers = [
             # Add a conformer with an internal H-bond.
-            unit.Quantity(
+            Quantity(
                 np.array(
                     [
                         [0.5477, 0.3297, -0.0621],
@@ -3094,7 +3094,7 @@ class TestRDKitToolkitWrapper:
                 unit.angstrom,
             ),
             # Add a conformer without an internal H-bond.
-            unit.Quantity(
+            Quantity(
                 np.array(
                     [
                         [0.5477, 0.3297, -0.0621],
