@@ -1412,8 +1412,7 @@ class ForceField:
             f"Found {len(top_with_charges.n_molecules)} molecules."
         )
 
-        for molecule in top_with_charges.molecules:
-            return molecule.partial_charges
+        return top_with_charges.molecule(0).partial_charges
 
     def __getitem__(self, val):
         """
