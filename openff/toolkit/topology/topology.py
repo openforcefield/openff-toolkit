@@ -389,7 +389,7 @@ class Topology(Serializable):
     Import some utilities
 
     >>> from openmm import app
-    >>> from openff.toolkit.tests.utils import get_data_file_path, get_packmol_pdb_file_path
+    >>> from openff.toolkit._tests.utils import get_data_file_path, get_packmol_pdb_file_path
     >>> pdb_filepath = get_packmol_pdb_file_path('cyclohexane_ethanol_0.4_0.6')
     >>> monomer_names = ('cyclohexane', 'ethanol')
 

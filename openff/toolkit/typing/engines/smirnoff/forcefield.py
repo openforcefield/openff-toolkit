@@ -273,7 +273,7 @@ class ForceField:
 
         Load multiple SMIRNOFF parameter sets:
 
-        >>> from openff.toolkit.tests.utils import get_data_file_path
+        >>> from openff.toolkit._tests.utils import get_data_file_path
         >>> forcefield = ForceField('openff-2.0.0.offxml', get_data_file_path('test_forcefields/tip3p.offxml'))
 
         Load a parameter set from a string:

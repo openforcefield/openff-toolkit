@@ -14,8 +14,8 @@ import pytest
 from numpy.testing import assert_allclose
 from openff.units import Quantity, unit
 
-from openff.toolkit.tests import create_molecules
-from openff.toolkit.tests.utils import requires_openeye, requires_rdkit
+from openff.toolkit._tests import create_molecules
+from openff.toolkit._tests.utils import requires_openeye, requires_rdkit
 from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.utils import OpenEyeToolkitWrapper, RDKitToolkitWrapper
 from openff.toolkit.utils.exceptions import (

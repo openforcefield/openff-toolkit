@@ -5,7 +5,7 @@ This is a list of the molecule files provided here including a brief description
 * `AlkEthOH_tripos.tar.gz`: `*.crd`, `*.top`, and `*.mol2` (with Tripos SYBYL atom types) for all the molecules in
 the AlkEthOH dataset. All molecules were taken from
 https://github.com/openforcefield/open-forcefield-data/blob/master/Model-Systems/AlkEthOH_distrib/inputfiles.tar.gz.
-All the files in the archive can be accessed through `openff.toolkit.tests.utils:get_alkethoh_file_path()`. The archive
+All the files in the archive can be accessed through `openff.toolkit._tests.utils:get_alkethoh_file_path()`. The archive
 has the following structure:
     - `AlkEthOH_rings_filt1`: A collection of cyclic alkanes, alcohols, and ethers.
     - `AlkEthOH_chain_filt1`: Acyclic alkanes, alcohols, and ethers.

@@ -14,7 +14,7 @@ from openff.units.openmm import from_openmm
 from openff.units.units import Quantity
 from openmm import app
 
-from openff.toolkit.tests.create_molecules import (
+from openff.toolkit._tests.create_molecules import (
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
@@ -28,7 +28,7 @@ from openff.toolkit.tests.create_molecules import (
     toluene_from_sdf,
     topology_with_metadata,
 )
-from openff.toolkit.tests.utils import (
+from openff.toolkit._tests.utils import (
     get_data_file_path,
     requires_openeye,
     requires_pkg,

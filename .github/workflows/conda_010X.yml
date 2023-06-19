@@ -119,6 +119,6 @@ jobs:
             python -c "import openeye; print(openeye.oechem.OEChemIsLicensed())"
           fi
 
-          PYTEST_ARGS=" -r fE --tb=short --runslow openff/toolkit/tests/conftest.py"
-          PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
+          PYTEST_ARGS=" -r fE --tb=short --runslow openff/toolkit/_tests/conftest.py"
+          PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_links.py"
           pytest $PYTEST_ARGS openff

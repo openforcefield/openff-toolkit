@@ -14,7 +14,7 @@ import pytest
 from numpy.testing import assert_almost_equal
 from openff.units import Quantity, unit
 
-from openff.toolkit.tests.create_molecules import (
+from openff.toolkit._tests.create_molecules import (
     create_acetaldehyde,
     create_acetate,
     create_cyclic_n3h3,
@@ -23,7 +23,7 @@ from openff.toolkit.tests.create_molecules import (
     create_reversed_ethanol,
     topology_with_metadata,
 )
-from openff.toolkit.tests.utils import (
+from openff.toolkit._tests.utils import (
     requires_ambertools,
     requires_openeye,
     requires_rdkit,
