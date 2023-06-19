@@ -670,7 +670,7 @@ class Topology(Serializable):
             )
 
     @property
-    def constrained_atom_pairs(self) -> Dict[Tuple[int], Union[unit.Quantity, bool]]:
+    def constrained_atom_pairs(self) -> Dict[Tuple[int], Union[Quantity, bool]]:
         """Returns the constrained atom pairs of the Topology
 
         Returns
@@ -1284,7 +1284,7 @@ class Topology(Serializable):
                 (3, 3),
             )
             box_vectors_unit = getattr(unit, topology_dict["box_vectors_unit"])
-            self.box_vectors = unit.Quantity(box_vectors_unitless, box_vectors_unit)
+            self.box_vectors = Quantity(box_vectors_unitless, box_vectors_unit)
 
         for molecule_dict in topology_dict["molecules"]:
             new_mol = Molecule.from_dict(molecule_dict)
@@ -1983,7 +1983,7 @@ class Topology(Serializable):
         # Get positions in OpenMM format
         if isinstance(positions, openmm_unit.Quantity):
             openmm_positions = positions
-        elif isinstance(positions, unit.Quantity):
+        elif isinstance(positions, Quantity):
             openmm_positions = to_openmm_quantity(positions)
         elif isinstance(positions, np.ndarray):
             openmm_positions = openmm_unit.Quantity(positions, openmm_unit.angstroms)
@@ -2333,7 +2333,7 @@ class Topology(Serializable):
         # Check that constraint hasn't already been specified.
         if (iatom, jatom) in self._constrained_atom_pairs:
             existing_distance = self._constrained_atom_pairs[(iatom, jatom)]
-            if isinstance(existing_distance, unit.Quantity) and distance is True:
+            if isinstance(existing_distance, Quantity) and distance is True:
                 raise ConstraintExsistsError(
                     f"Atoms ({iatom},{jatom}) already constrained with distance {existing_distance} "
                     "but attempting to override with unspecified distance"

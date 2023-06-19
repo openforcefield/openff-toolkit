@@ -1227,7 +1227,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         from rdkit.Chem import AllChem
 
         if rms_cutoff is None:
-            rms_cutoff = unit.Quantity(1.0, unit.angstrom)
+            rms_cutoff = Quantity(1.0, unit.angstrom)
         rdmol = self.to_rdkit(molecule)
         # TODO: This generates way more conformations than omega, given the same
         # nConfs and RMS threshold. Is there some way to set an energy cutoff as well?
@@ -1347,9 +1347,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 for rdatom in rdkit_molecule.GetAtoms()
             ]
 
-        molecule.partial_charges = unit.Quantity(
-            np.asarray(charges), unit.elementary_charge
-        )
+        molecule.partial_charges = Quantity(np.asarray(charges), unit.elementary_charge)
 
         if normalize_partial_charges:
             molecule._normalize_partial_charges()
@@ -1358,7 +1356,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     def _elf_is_problematic_conformer(
         cls,
         molecule: "Molecule",
-        conformer: unit.Quantity,
+        conformer: Quantity,
     ) -> Tuple[bool, Optional[str]]:
         """A function which checks if a particular conformer is known to be problematic
         when computing ELF partial charges.
@@ -1404,9 +1402,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return False, None
 
     @classmethod
-    def _elf_prune_problematic_conformers(
-        cls, molecule: "Molecule"
-    ) -> List[unit.Quantity]:
+    def _elf_prune_problematic_conformers(cls, molecule: "Molecule") -> List[Quantity]:
         """A function which attempts to remove conformers which are known to be
         problematic when computing ELF partial charges.
 
@@ -1442,7 +1438,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     def _elf_compute_electrostatic_energy(
         cls,
         molecule: "Molecule",
-        conformer: unit.Quantity,
+        conformer: Quantity,
     ) -> float:
         """Computes the 'electrostatic interaction energy' of a particular conformer
         of a molecule.
@@ -1562,10 +1558,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     def _elf_select_diverse_conformers(
         cls,
         molecule: "Molecule",
-        ranked_conformers: List[unit.Quantity],
+        ranked_conformers: List[Quantity],
         limit: int,
-        rms_tolerance: unit.Quantity,
-    ) -> List[unit.Quantity]:
+        rms_tolerance: Quantity,
+    ) -> List[Quantity]:
         """Attempt to greedily select a specified number conformers which are maximally
         diverse.
 
@@ -1637,7 +1633,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         molecule: "Molecule",
         percentage: float = 2.0,
         limit: int = 10,
-        rms_tolerance: unit.Quantity = 0.05 * unit.angstrom,
+        rms_tolerance: Quantity = 0.05 * unit.angstrom,
     ):
         """Applies the `ELF method
         <https://docs.eyesopen.com/toolkits/python/quacpactk/molchargetheory.html#elf-conformer-selection>`_
@@ -1978,7 +1974,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 for rd_idx, off_idx in map_atoms.items():
                     atom_coords = conf.GetPositions()[rd_idx, :]
                     positions[off_idx, :] = atom_coords
-                offmol._add_conformer(unit.Quantity(positions, unit.angstrom))
+                offmol._add_conformer(Quantity(positions, unit.angstrom))
 
         partial_charges = np.zeros(shape=offmol.n_atoms, dtype=np.float64)
 
@@ -1996,9 +1992,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         "Some atoms in rdmol have partial charges, but others do not."
                     )
         if any_atom_has_partial_charge:
-            offmol.partial_charges = unit.Quantity(
-                partial_charges, unit.elementary_charge
-            )
+            offmol.partial_charges = Quantity(partial_charges, unit.elementary_charge)
         else:
             offmol.partial_charges = None
         return offmol

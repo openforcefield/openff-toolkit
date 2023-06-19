@@ -8,20 +8,30 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### API-breaking changes
+
 ### Behavior changes
+
+### Bugfixes
+
+### New features
+
+### Improved documentation and warnings
+
+### Examples updated
+- [PR #1644](https://github.com/openforcefield/openff-toolkit/pull/1644): Streamlines several examples by using `Interchange.to_openmm_simulation`.
+
+
+## 0.13.2
 
 ### Bugfixes
 
 - [PR #1640](https://github.com/openforcefield/openff-toolkit/pull/1640): Fixes issue [#1633](https://github.com/openforcefield/openff-toolkit/issues/1633) in which some force field attributes were erroneously parsed as `Quantity` objects and  issue [#1635](https://github.com/openforcefield/openff-toolkit/issues/1635) in which OpenFF 2.1.0 ("Sage") could not be loaded with Pint 0.22.
 
-### New features
 
 ### Improved documentation and warnings
-- [PR #1636](https://github.com/openforcefield/openff-toolkit/pull/1636): Make the Molecule Cookbook only pull down QCF records with fully defined stereo.
+- [PR #1636](https://github.com/openforcefield/openff-toolkit/pull/1636) and [PR #1643](https://github.com/openforcefield/openff-toolkit/pull/1643): Make the Molecule Cookbook and `Molecule.from_qcschema` docstring only pull down QCF records with fully defined stereo.
 
-
-### Examples updates
-- [PR #1644](https://github.com/openforcefield/openff-toolkit/pull/1644): Streamlines several examples by using `Interchange.to_openmm_simulation`.
 
 ## 0.13.1
 
