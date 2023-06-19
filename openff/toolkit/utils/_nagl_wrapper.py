@@ -8,8 +8,6 @@ from openff.toolkit.utils.base_wrapper import ToolkitWrapper
 from openff.toolkit.utils.exceptions import ToolkitUnavailableException
 
 if TYPE_CHECKING:
-    from openff.units import Quantity
-
     from openff.toolkit.topology.molecule import FrozenMolecule, Molecule
 
 
