@@ -323,8 +323,8 @@ class Atom(Particle):
         Set the atom's formal charge. Accepts either ints or unit-wrapped ints with units of charge.
         """
         if isinstance(other, int):
-            self._formal_charge = unit.Quantity(other, unit.elementary_charge)
-        elif isinstance(other, unit.Quantity):
+            self._formal_charge = Quantity(other, unit.elementary_charge)
+        elif isinstance(other, Quantity):
             # Faster to check equality than convert, so short-circuit
             if other.units is unit.elementary_charge:
                 self.formal_charge = other
@@ -379,14 +379,14 @@ class Atom(Particle):
                 "please raise an issue describing your use case."
             )
 
-        if not isinstance(charge, (unit.Quantity, float)):
+        if not isinstance(charge, (Quantity, float)):
             raise ValueError(
                 "Cannot set partial charge with an object that is not a openff.unit.Quantity or float. "
                 f"Found object of type {type(charge)}."
             )
 
         if isinstance(charge, float):
-            charge = unit.Quantity(charge, unit.elementary_charge)
+            charge = Quantity(charge, unit.elementary_charge)
 
         if not isinstance(charge.m, float):
             raise ValueError(
@@ -1251,7 +1251,7 @@ class FrozenMolecule(Serializable):
         else:
             from openff.toolkit.utils.utils import deserialize_numpy
 
-            self._partial_charges = unit.Quantity(
+            self._partial_charges = Quantity(
                 deserialize_numpy(molecule_dict["partial_charges"], (self.n_atoms,)),
                 unit.Unit(molecule_dict["partial_charge_unit"]),
             )
@@ -1262,7 +1262,7 @@ class FrozenMolecule(Serializable):
             from openff.toolkit.utils.utils import deserialize_numpy
 
             self._conformers = [
-                unit.Quantity(
+                Quantity(
                     deserialize_numpy(ser_conf, (self.n_atoms, 3)),
                     unit.Unit(molecule_dict["conformers_unit"]),
                 )
@@ -2410,7 +2410,7 @@ class FrozenMolecule(Serializable):
         conformers[:, cooh_indices, :] = cooh_xyz
 
         # Return conformers to original type
-        self._conformers = [unit.Quantity(conf, unit.angstrom) for conf in conformers]
+        self._conformers = [Quantity(conf, unit.angstrom) for conf in conformers]
 
     def apply_elf_conformer_selection(
         self,
@@ -3007,7 +3007,7 @@ class FrozenMolecule(Serializable):
                 f"Given {coordinates.shape}, expected {(self.n_atoms, 3)}"
             )
 
-        if isinstance(coordinates, unit.Quantity):
+        if isinstance(coordinates, Quantity):
             if not coordinates.units.is_compatible_with(unit.angstrom):
                 raise IncompatibleUnitError(
                     "Coordinates passed to Molecule._add_conformer with incompatible units. "
@@ -3039,7 +3039,7 @@ class FrozenMolecule(Serializable):
                 f"openmm.unit.Quantity and openff.units.unit.Quantity, found type {type(coordinates)}."
             )
 
-        tmp_conf = unit.Quantity(
+        tmp_conf = Quantity(
             np.zeros(shape=(self.n_atoms, 3), dtype=float), unit.angstrom
         )
         try:
@@ -3094,7 +3094,7 @@ class FrozenMolecule(Serializable):
                 f"Found shape {charges.shape}, expected {(self.n_atoms,)}"
             )
 
-        if isinstance(charges, unit.Quantity):
+        if isinstance(charges, Quantity):
             if charges.units in unit.elementary_charge.compatible_units():
                 self._partial_charges = charges.astype(float)
             else:
@@ -4000,7 +4000,7 @@ class FrozenMolecule(Serializable):
             substructure_dictionary,
         )
 
-        coords = unit.Quantity(
+        coords = Quantity(
             np.array(
                 [
                     [*vec3.value_in_unit(openmm_unit.angstrom)]
@@ -4055,7 +4055,7 @@ class FrozenMolecule(Serializable):
         # If we do not have a conformer make one with all zeros
         if self.n_conformers == 0:
             conformers = [
-                unit.Quantity(np.zeros((self.n_atoms, 3), dtype=float), unit.angstrom)
+                Quantity(np.zeros((self.n_atoms, 3), dtype=float), unit.angstrom)
             ]
 
         else:
@@ -4731,7 +4731,7 @@ class FrozenMolecule(Serializable):
             else:
                 mol = molecule
 
-            geometry = unit.Quantity(
+            geometry = Quantity(
                 np.array(mol["geometry"], float).reshape(-1, 3), unit.bohr
             )
             try:

@@ -2,14 +2,12 @@ import importlib
 import warnings
 from typing import TYPE_CHECKING, List, Optional, Type
 
-from openff.units import unit
+from openff.units import Quantity, unit
 
 from openff.toolkit.utils.base_wrapper import ToolkitWrapper
 from openff.toolkit.utils.exceptions import ToolkitUnavailableException
 
 if TYPE_CHECKING:
-    from openff.units import Quantity
-
     from openff.toolkit.topology.molecule import FrozenMolecule, Molecule
 
 
@@ -99,7 +97,7 @@ class _NAGLToolkitWrapper(ToolkitWrapper):
 
             model = GNNModel.load(_only_model, eval_mode=True)
             charges = model.compute_property(molecule, as_numpy=True)
-            molecule.partial_charges = unit.Quantity(
+            molecule.partial_charges = Quantity(
                 charges.astype(float),
                 unit.elementary_charge,
             )

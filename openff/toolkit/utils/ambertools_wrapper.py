@@ -274,7 +274,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
                 for index, token in enumerate(text_charges):
                     charges[index] = float(token)
                 # TODO: Ensure that the atoms in charged.mol2 are in the same order as in molecule.sdf
-        charges = unit.Quantity(charges, unit.elementary_charge)
+        charges = Quantity(charges, unit.elementary_charge)
         molecule.partial_charges = charges
 
         if normalize_partial_charges:
