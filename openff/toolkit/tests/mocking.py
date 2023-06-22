@@ -1,5 +1,5 @@
 import numpy
-from openff.units import unit
+from openff.units import Quantity, unit
 
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
@@ -7,8 +7,8 @@ from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
 
 class VirtualSiteMocking:
     @staticmethod
-    def sp1_conformer() -> unit.Quantity:
-        return unit.Quantity(
+    def sp1_conformer() -> Quantity:
+        return Quantity(
             numpy.array(
                 [
                     [-2.0, +0.0, +0.0],
@@ -21,8 +21,8 @@ class VirtualSiteMocking:
         )
 
     @staticmethod
-    def sp2_conformer() -> unit.Quantity:
-        return unit.Quantity(
+    def sp2_conformer() -> Quantity:
+        return Quantity(
             numpy.array(
                 [
                     [+1.0, +0.0, +0.0],
@@ -35,12 +35,12 @@ class VirtualSiteMocking:
         )
 
     @staticmethod
-    def sp3_conformer() -> unit.Quantity:
+    def sp3_conformer() -> Quantity:
         """Returns the conformer of a dummy tetrahedral molecule with the
         first atom positioned at (0, 1, 0), the second atom at (0, 0, 0) and
         the remaining atoms at the corners of the tetrahedron.
         """
-        return unit.Quantity(
+        return Quantity(
             numpy.array(
                 [
                     [+0.0, +1.0, +0.0],
@@ -61,7 +61,7 @@ class VirtualSiteMocking:
             type="BondCharge",
             smirks=smirks,
             name=name,
-            charge_increment=unit.Quantity(
+            charge_increment=Quantity(
                 [0.1 * param_multiple, 0.2 * param_multiple],
                 unit.elementary_charge,
             ),
@@ -93,7 +93,7 @@ class VirtualSiteMocking:
         smirks: str,
         match: str,
         name: str = "EP",
-        angle: unit.Quantity = 0.0 * unit.degree,
+        angle: Quantity = 0.0 * unit.degree,
     ) -> VirtualSiteHandler.VirtualSiteType:
         return VirtualSiteHandler.VirtualSiteType(
             type="DivalentLonePair",

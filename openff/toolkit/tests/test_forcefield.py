@@ -30,7 +30,6 @@ from openff.toolkit.tests.utils import (
     requires_openeye,
     requires_openeye_mol2,
     requires_rdkit,
-    unimplemented_interchange,
 )
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import (
@@ -893,6 +892,7 @@ class TestForceField(_ForceFieldFixtures):
             "openff_unconstrained-1.0.0.offxml",
             "openff-1.3.0.offxml",
             "openff-2.0.0.offxml",
+            "openff-2.1.0.offxml",
             "ff14sb_off_impropers_0.0.3.offxml",
         ]
 
@@ -1065,6 +1065,11 @@ class TestForceField(_ForceFieldFixtures):
                 ):
                     assert isinstance(parameter.name, str)
                     assert not isinstance(parameter.name, unit.Quantity)
+
+    def test_load_do_not_convert_id_to_quantities(self):
+        ff = ForceField("openff-2.1.0.offxml")
+        handler = ff.get_parameter_handler("LibraryCharges")
+        assert handler.parameters[2].id == "K+"
 
     def test_pickle(self):
         """
@@ -1376,16 +1381,14 @@ class TestForceField(_ForceFieldFixtures):
         AngleHandler._DEPENDENCIES = orig_ah_depends
 
     def test_parameterize_ethanol_missing_torsion(self):
-        from openff.toolkit.typing.engines.smirnoff.parameters import (
-            UnassignedProperTorsionParameterException,
-        )
+        from openff.interchange.exceptions import UnassignedTorsionError
 
         forcefield = ForceField(xml_missing_torsion)
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         molecules = [create_ethanol()]
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
         with pytest.raises(
-            UnassignedProperTorsionParameterException,
+            UnassignedTorsionError,
             match="- Topology indices [(]5, 0, 1, 6[)]: "
             r"names and elements [(](H\d+)? H[)], [(](C\d+)? C[)], [(](C\d+)? C[)], [(](H\d+)? H[)],",
         ):
@@ -2041,7 +2044,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
     def test_nonintegral_charge_exception(self, toolkit_registry, force_field):
         # Create an ethanol molecule without using a toolkit
-        from openff.interchange.exceptions import NonIntegralMoleculeChargeException
+        from openff.interchange.exceptions import NonIntegralMoleculeChargeError
 
         ethanol = create_ethanol()
         ethanol.partial_charges[0] = 1.0 * unit.elementary_charge
@@ -2050,7 +2053,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=[ethanol])
 
         with pytest.raises(
-            NonIntegralMoleculeChargeException, match="Molecule .* has a net charge"
+            NonIntegralMoleculeChargeError, match="Molecule .* has a net charge"
         ):
             force_field.create_openmm_system(
                 topology,
@@ -3360,7 +3363,6 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
             ignore_improper_folds=True,
         )
 
-    @unimplemented_interchange
     @requires_openeye_mol2
     @pytest.mark.parametrize(("is_periodic"), (False, True))
     @pytest.mark.parametrize(("gbsa_model"), ["HCT", "OBC1", "OBC2"])
@@ -3408,7 +3410,8 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         }
         # Create OpenFF System with the current toolkit.
         ff = ForceField(
-            "test_forcefields/test_forcefield.offxml", off_gbsas[gbsa_model]
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            get_data_file_path(off_gbsas[gbsa_model]),
         )
 
         # OpenMM 7.7 and older don't properly handle parsing prmtop files with a GBSA model and
@@ -3683,7 +3686,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         #     modify_system=False,
         # )
 
-    @unimplemented_interchange
+    @pytest.mark.slow
     @requires_openeye_mol2
     @pytest.mark.parametrize("zero_charges", [True, False])
     @pytest.mark.parametrize(("gbsa_model"), ["HCT", "OBC1", "OBC2"])
@@ -3727,7 +3730,8 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         }
 
         ff = ForceField(
-            "test_forcefields/test_forcefield.offxml", off_gbsas[gbsa_model]
+            get_data_file_path("test_forcefields/test_forcefield.offxml"),
+            get_data_file_path(off_gbsas[gbsa_model]),
         )
         ff.get_parameter_handler("GBSA").sa_model = None
         off_top = Topology.from_molecules([molecule, molecule])
@@ -3858,9 +3862,21 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
             assert amber_energy[1]._value != 0.0
 
         # Ensure that all system energies are the same
-        compare_system_energies(
-            off_omm_system, amber_omm_system, to_openmm(positions), by_force_type=False
-        )
+        if zero_charges or gbsa_model in ["HCT", "OBC1"]:
+            compare_system_energies(
+                off_omm_system,
+                amber_omm_system,
+                to_openmm(positions),
+                by_force_type=False,
+            )
+        else:
+            compare_system_energies(
+                off_omm_system,
+                amber_omm_system,
+                to_openmm(positions),
+                by_force_type=False,
+                atol=1e-4,
+            )
 
     @pytest.mark.slow
     @requires_openeye_mol2

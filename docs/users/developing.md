@@ -214,20 +214,20 @@ The OpenMM implementation provided by the OpenFF Toolkit either produces an `ope
 Exceptions are raised when parameters are incompatible with OpenMM (`IncompatibleParameterError`) or otherwise against spec (`SMIRNOFFSpecError`), and also when they are appropriate for the spec but not yet implemented in the toolkit (`SMIRNOFFSpecUnimplementedError`).
 This table describes which [`NonbondedMethod`](http://docs.openmm.org/latest/userguide/application.html?highlight=ljpme#nonbonded-interactions) is used in the produced `NonbondedForce`, or else which exception is raised.
 
-| vdw_method | electrostatics_method | periodic | OpenMM Nonbonded method or exception | Common case |
-|------------|-----------------------|----------|--------------------------------------|---|
-| cutoff     | Coulomb               | True     | raises `IncompatibleParameterError`
-| cutoff     | Coulomb               | False    | `openmm.NonbondedForce.NoCutoff`
-| cutoff     | reaction-field        | True     | raises `SMIRNOFFSpecUnimplementedError`
-| cutoff     | reaction-field        | False    | raises `SMIRNOFFSpecError`
-| cutoff     | PME                   | True     | `openmm.NonbondedForce.PME` | * |
-| cutoff     | PME                   | False    | `openmm.NonbondedForce.NoCutoff`
-| LJPME      | Coulomb               | True     | raises `IncompatibleParameterError`
-| LJPME      | Coulomb               | False    | `openmm.NonbondedForce.NoCutoff`
-| LJPME      | reaction-field        | True     | raises `IncompatibleParameterError`
-| LJPME      | reaction-field        | False    | raises `SMIRNOFFSpecError`
-| LJPME      | PME                   | True     | `openmm.NonbondedForce.LJPME`
-| LJPME      | PME                   | False    | `openmm.NonbondedForce.NoCutoff`
+| vdw_method | electrostatics_method | periodic | OpenMM Nonbonded method or exception    | Common case |
+|------------|-----------------------|----------|-----------------------------------------|-------------|
+| cutoff     | Coulomb               | True     | raises `IncompatibleParameterError`     |             |
+| cutoff     | Coulomb               | False    | `openmm.NonbondedForce.NoCutoff`        |             |
+| cutoff     | reaction-field        | True     | raises `SMIRNOFFSpecUnimplementedError` |             |
+| cutoff     | reaction-field        | False    | raises `SMIRNOFFSpecError`              |             |
+| cutoff     | PME                   | True     | `openmm.NonbondedForce.PME`             | *           |
+| cutoff     | PME                   | False    | `openmm.NonbondedForce.NoCutoff`        |             | 
+| LJPME      | Coulomb               | True     | raises `IncompatibleParameterError`     |             |
+| LJPME      | Coulomb               | False    | `openmm.NonbondedForce.NoCutoff`        |             | 
+| LJPME      | reaction-field        | True     | raises `IncompatibleParameterError`     |             |
+| LJPME      | reaction-field        | False    | raises `SMIRNOFFSpecError`              |             |
+| LJPME      | PME                   | True     | `openmm.NonbondedForce.LJPME`           |             |
+| LJPME      | PME                   | False    | `openmm.NonbondedForce.NoCutoff`        |             | 
 
 Notes:
 * The most commonly-used case (including the Parsley line) is in the fifth row (cutoff vdW, PME electrostatics, periodic topology) and marked with an asterisk.
@@ -378,7 +378,7 @@ to see a code coverage report. This uses [Coverage.py](https://coverage.readthed
 ## Supported Python versions
 
 The OpenFF Toolkit roughly follows [NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html).
-As of version 0.11.0 (June 2022) this means Python 3.8-3.9 are officially supported.
+As of April 2023 this means Python 3.9-3.10 are officially supported (3.11 is missing some upstream dependencies).
 We develop, test, and distribute on macOS and Linux-based operating systems.
 We do not currently support Windows.
 Some CI builds run using only RDKit as a backend, some run using only OpenEye Toolkits, and some run using both installed at once.
@@ -391,14 +391,14 @@ The CI matrix is currently as follows:
 +                       +------------+-----------+-------------+------------+-----------+-------------+
 |                       | RDKit      | OpenEye   | RDKit + OE  | RDKit      | OpenEye   | RDKit + OE  |
 +=======================+============+===========+=============+============+===========+=============+
-| Python 3.7 and older  | No support after 0.11.0 (March 2021)                                        |
+| Python 3.8 and older  | No support after April 2023                                                 |
 +-----------------------+------------+-----------+-------------+------------+-----------+-------------+
-| Python 3.8            | **Test**   | **Test**  | **Test**    | **Test**   | **Test**  | **Test**    |
-+-----------------------+------------+-----------+-------------+------------+-----------+-------------+
-| Python 3.9            | **Test**   | Skip      | Skip        | **Test**   | Skip      | Skip        |
+| Python 3.9            | **Test**   | **Test**  | **Test**    | **Test**   | **Test**  | **Test**    |
 +-----------------------+------------+-----------+-------------+------------+-----------+-------------+
 | Python 3.10           | **Test**   | Skip      | Skip        | **Test**   | Skip      | Skip        |
 +-----------------------+------------+-----------+-------------+------------+-----------+-------------+
-| Python 3.11 and newer | Pending official releases and/or upstream support                           |
+| Python 3.11 and newer | Pending upstream support                                                    |
++-----------------------+------------+-----------+-------------+------------+-----------+-------------+
+| Python 3.12 and newer | Pending official releases and upstream support                              | 
 +-----------------------+------------+-----------+-------------+------------+-----------+-------------+
 :::

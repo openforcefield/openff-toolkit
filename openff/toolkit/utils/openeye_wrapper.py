@@ -40,6 +40,8 @@ from openff.toolkit.utils.exceptions import (
     InvalidIUPACNameError,
     LicenseError,
     NotAttachedToMoleculeError,
+    OpenEyeError,
+    OpenEyeImportError,
     RadicalsNotSupportedError,
     SMILESParseError,
     ToolkitUnavailableException,
@@ -214,7 +216,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         return cls._is_available  # type: ignore[return-value]
 
     def from_object(
-        self, obj, allow_undefined_stereo: bool = False, _cls=None
+        self,
+        obj,
+        allow_undefined_stereo: bool = False,
+        _cls=None,
     ) -> "Molecule":
         """
         Convert an OEMol (or OEMol-derived object) into an openff.toolkit.topology.molecule
@@ -229,6 +234,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             is passed into this function.
         _cls : class
             Molecule constructor
+
         Returns
         -------
         Molecule
@@ -249,15 +255,19 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         if isinstance(obj, oechem.OEMolBase):
             return self.from_openeye(
-                oemol=obj, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
+                oemol=obj,
+                allow_undefined_stereo=allow_undefined_stereo,
+                _cls=_cls,
             )
         raise NotImplementedError(
             "Cannot create Molecule from {} object".format(type(obj))
         )
 
-    def _polymer_openmm_topology_to_offmol(self, omm_top, substructure_dictionary):
+    def _polymer_openmm_topology_to_offmol(
+        self, mol_class, omm_top, substructure_dictionary
+    ):
         oemol = self._polymer_openmm_topology_to_oemol(omm_top, substructure_dictionary)
-        offmol = self.from_openeye(oemol, allow_undefined_stereo=True)
+        offmol = mol_class.from_openeye(oemol, allow_undefined_stereo=True)
         return offmol
 
     def _polymer_openmm_topology_to_oemol(
@@ -1060,7 +1070,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     @staticmethod
     def from_openeye(
-        oemol, allow_undefined_stereo: bool = False, _cls=None
+        oemol,
+        allow_undefined_stereo: bool = False,
+        _cls=None,
     ) -> "Molecule":
         """
         Create a Molecule from an OpenEye molecule. If the OpenEye molecule has
@@ -1189,7 +1201,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             _cls = Molecule
 
         molecule = _cls()
-        molecule.name = oemol.GetTitle()
+
+        # OEMol.GetTitle() happens to default to an empty string
+        if oemol.GetTitle() != "":
+            molecule.name = oemol.GetTitle()
 
         # Copy any attached SD tag information
         for dp in oechem.OEGetSDDataPairs(oemol):
@@ -1309,7 +1324,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 all_zeros = not np.any(positions)
                 if all_zeros and n_atoms > 1:
                     continue
-                molecule._add_conformer(unit.Quantity(positions, unit.angstrom))
+                molecule._add_conformer(Quantity(positions, unit.angstrom))
 
         # Store charges with implicit units in this scope
         unitless_charges = np.zeros(shape=molecule.n_atoms, dtype=np.float64)
@@ -1328,7 +1343,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             unitless_charges[off_idx] = unitless_charge
 
         if any_partial_charge_is_not_nan:
-            molecule.partial_charges = unit.Quantity(
+            molecule.partial_charges = Quantity(
                 unitless_charges, unit.elementary_charge
             )
         else:
@@ -1532,9 +1547,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             if off_atom.partial_charge is None:
                 oe_atom.SetPartialCharge(float("nan"))
             else:
-                oe_atom.SetPartialCharge(
-                    off_atom.partial_charge.m_as(unit.elementary_charge)
-                )
+                charge = off_atom.partial_charge.m_as(unit.elementary_charge)
+                oe_atom.SetPartialCharge(float(charge))
             res = oechem.OEAtomGetResidue(oe_atom)
             # If we add residue info without updating the serial number, all of the atom
             # serial numbers in a written PDB will be 0. Note two things:
@@ -1949,6 +1963,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         hydrogens_are_explicit: bool = False,
         allow_undefined_stereo: bool = False,
         _cls=None,
+        name: str = "",
     ) -> "Molecule":
         """
         Create a Molecule from a SMILES string using the OpenEye toolkit.
@@ -1967,6 +1982,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             is passed into this function.
         _cls : class
             Molecule constructor
+        name : str, default=""
+            An optional name for the output molecule
 
         Returns
         -------
@@ -2002,12 +2019,19 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             atom.SetPartialCharge(float("nan"))
 
         molecule = self.from_openeye(
-            oemol, _cls=_cls, allow_undefined_stereo=allow_undefined_stereo
+            oemol,
+            _cls=_cls,
+            allow_undefined_stereo=allow_undefined_stereo,
         )
+        molecule.name = name
         return molecule
 
     def from_inchi(
-        self, inchi: str, allow_undefined_stereo: bool = False, _cls=None
+        self,
+        inchi: str,
+        allow_undefined_stereo: bool = False,
+        _cls=None,
+        name: str = "",
     ) -> "Molecule":
         """
         Construct a Molecule from a InChI representation
@@ -2016,14 +2040,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         ----------
         inchi : str
             The InChI representation of the molecule.
-
         allow_undefined_stereo : bool, default=False
             Whether to accept InChI with undefined stereochemistry. If False,
             an exception will be raised if a InChI with undefined stereochemistry
             is passed into this function.
-
         _cls : class
             Molecule constructor
+        name : str, default=""
+            An optional name for the output molecule
 
         Returns
         -------
@@ -2044,8 +2068,11 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             )
 
         molecule = self.from_openeye(
-            oemol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
+            oemol,
+            allow_undefined_stereo=allow_undefined_stereo,
+            _cls=_cls,
         )
+        molecule.name = name
 
         return molecule
 
@@ -2082,7 +2109,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         oechem.OETriposAtomNames(oemol)
         result = oechem.OEAddExplicitHydrogens(oemol)
         if not result:
-            raise Exception("Addition of explicit hydrogens failed in from_iupac")
+            raise OpenEyeError("Addition of explicit hydrogens failed in from_iupac")
 
         molecule = self.from_openeye(
             oemol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls, **kwargs
@@ -2259,7 +2286,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             for atom_index, coordinates in oe_conformer.GetCoords().items():
                 conformer[atom_index, :] = coordinates
 
-            conformers.append(unit.Quantity(conformer, unit.angstrom))
+            conformers.append(Quantity(conformer, unit.angstrom))
 
         molecule._conformers = conformers
 
@@ -2465,7 +2492,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Extract and return charges
         # TODO: Make sure atom mapping remains constant
         # Extract the list of charges, taking into account possible indexing differences
-        charges = unit.Quantity(
+        charges = Quantity(
             np.zeros(shape=oemol.NumAtoms(), dtype=np.float64), unit.elementary_charge
         )
         for oeatom in oemol.GetAtoms():
@@ -2540,7 +2567,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             for conformer in use_conformers:
                 temp_mol._add_conformer(conformer)
         if temp_mol.n_conformers == 0:
-            raise Exception(
+            raise ValueError(
                 "No conformers present in molecule submitted for fractional bond order calculation. Consider "
                 "loading the molecule from a file with geometry already present or running "
                 "molecule.generate_conformers() before calling molecule.compute_wiberg_bond_orders()"
@@ -2586,7 +2613,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             status = am1.CalcAM1(am1results, oemol)
 
             if status is False:
-                raise Exception(
+                raise OpenEyeError(
                     "Unable to assign charges (in the process of calculating "
                     "fractional bond orders)"
                 )
@@ -2789,13 +2816,11 @@ def requires_openeye_module(module_name):
             try:
                 module = importlib.import_module("openeye." + module_name)
             except ImportError:
-                # TODO: Custom exception
-                raise Exception("openeye." + module_name)
+                raise OpenEyeImportError("openeye." + module_name)
             try:
                 license_func = OpenEyeToolkitWrapper._license_functions[module_name]
             except KeyError:
-                # TODO: Custom exception
-                raise Exception(f"we do not currently use {module_name}")
+                raise OpenEyeImportError(f"we do not currently use {module_name}")
 
             # TODO: Custom exception
             assert getattr(module, license_func)()

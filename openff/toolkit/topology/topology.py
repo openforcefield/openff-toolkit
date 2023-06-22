@@ -11,7 +11,7 @@ Class definitions to represent a molecular system and its chemical components
    * Use `attrs <http://www.attrs.org/>`_ for object setter boilerplate?
 
 """
-import itertools
+import re
 import warnings
 from collections import defaultdict
 from collections.abc import MutableMapping
@@ -36,11 +36,14 @@ import numpy as np
 from networkx import Graph
 from numpy.typing import NDArray
 from openff.units import Quantity, ensure_quantity, unit
-from openff.utilities import requires_package
 from typing_extensions import TypeAlias
 
 from openff.toolkit.topology import Molecule
-from openff.toolkit.topology._mm_molecule import _SimpleBond, _SimpleMolecule
+from openff.toolkit.topology._mm_molecule import (
+    _SimpleAtom,
+    _SimpleBond,
+    _SimpleMolecule,
+)
 from openff.toolkit.topology.molecule import FrozenMolecule, HierarchyElement
 from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.constants import (
@@ -50,6 +53,7 @@ from openff.toolkit.utils.constants import (
 from openff.toolkit.utils.exceptions import (
     AtomNotInTopologyError,
     BondNotInTopologyError,
+    ConstraintExsistsError,
     DuplicateUniqueMoleculeError,
     IncompatibleUnitError,
     InvalidAromaticityModelError,
@@ -62,6 +66,7 @@ from openff.toolkit.utils.exceptions import (
 )
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
+from openff.toolkit.utils.utils import get_data_file_path, requires_package
 
 if TYPE_CHECKING:
     import mdtraj
@@ -545,7 +550,9 @@ class Topology(Serializable):
 
         if not (self.is_bonded(atom1, atom2)):
             # TODO: Raise more specific exception.
-            raise Exception(f"Atoms {atom1} and {atom2} are not bonded in topology")
+            raise NotBondedError(
+                f"Atoms {atom1} and {atom2} are not bonded in topology"
+            )
 
     @property
     def aromaticity_model(self) -> str:
@@ -663,7 +670,7 @@ class Topology(Serializable):
             )
 
     @property
-    def constrained_atom_pairs(self) -> Dict[Tuple[int], Union[unit.Quantity, bool]]:
+    def constrained_atom_pairs(self) -> Dict[Tuple[int], Union[Quantity, bool]]:
         """Returns the constrained atom pairs of the Topology
 
         Returns
@@ -722,7 +729,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        atoms : Generator of TopologyAtom
+        atoms : Generator of Atom
         """
         for molecule in self._molecules:
             for atom in molecule.atoms:
@@ -838,8 +845,8 @@ class Topology(Serializable):
         return sum(mol.n_propers for mol in self._molecules)
 
     @property
-    def propers(self) -> Generator[Tuple["Atom", ...], None, None]:
-        """Iterable of Tuple[TopologyAtom]: iterator over the proper torsions in this Topology."""
+    def propers(self) -> Generator[Tuple[Union["Atom", _SimpleAtom], ...], None, None]:
+        """Iterable of Tuple[Atom]: iterator over the proper torsions in this Topology."""
         for molecule in self.molecules:
             for proper in molecule.propers:
                 yield proper
@@ -851,13 +858,15 @@ class Topology(Serializable):
 
     @property
     def impropers(self) -> Generator[Tuple["Atom", ...], None, None]:
-        """Iterable of Tuple[TopologyAtom]: iterator over the possible improper torsions in this Topology."""
+        """Iterable of Tuple[Atom]: iterator over the possible improper torsions in this Topology."""
         for molecule in self._molecules:
             for improper in molecule.impropers:
                 yield improper
 
     @property
-    def smirnoff_impropers(self) -> Generator[Tuple["Atom", ...], None, None]:
+    def smirnoff_impropers(
+        self,
+    ) -> Generator[Tuple[Union["Atom", _SimpleAtom], ...], None, None]:
         """
         Iterate over improper torsions in the molecule, but only those with
         trivalent centers, reporting the central atom second in each improper.
@@ -896,7 +905,9 @@ class Topology(Serializable):
                 yield smirnoff_improper
 
     @property
-    def amber_impropers(self) -> Generator[Tuple["Atom", ...], None, None]:
+    def amber_impropers(
+        self,
+    ) -> Generator[Tuple[Union["Atom", _SimpleAtom], ...], None, None]:
         """
         Iterate over improper torsions in the molecule, but only those with
         trivalent centers, reporting the central atom first in each improper.
@@ -1058,7 +1069,7 @@ class Topology(Serializable):
                 mol_instance = self.molecule(mol_instance_idx)
                 # Loop over matches
                 for match in mol_matches:
-                    # Collect indices of matching TopologyAtoms.
+                    # Collect indices of matching atoms
                     topology_atom_indices = []
                     for molecule_atom_index in match:
                         atom = mol_instance.atom(atom_map[molecule_atom_index])
@@ -1172,9 +1183,13 @@ class Topology(Serializable):
                 if mol2_idx in already_matched_mols:
                     continue
                 mol2 = self.molecule(mol2_idx)
-                are_isomorphic, atom_map = Molecule.are_isomorphic(
-                    mol1, mol2, return_atom_map=True
-                )
+                if isinstance(mol1, type(mol2)) or isinstance(mol2, type(mol1)):
+                    are_isomorphic, atom_map = mol1.are_isomorphic(
+                        mol1, mol2, return_atom_map=True
+                    )
+                else:
+                    are_isomorphic = False
+
                 if are_isomorphic:
                     identity_maps[mol2_idx] = (
                         mol1_idx,
@@ -1269,7 +1284,7 @@ class Topology(Serializable):
                 (3, 3),
             )
             box_vectors_unit = getattr(unit, topology_dict["box_vectors_unit"])
-            self.box_vectors = unit.Quantity(box_vectors_unitless, box_vectors_unit)
+            self.box_vectors = Quantity(box_vectors_unitless, box_vectors_unit)
 
         for molecule_dict in topology_dict["molecules"]:
             new_mol = Molecule.from_dict(molecule_dict)
@@ -1414,12 +1429,12 @@ class Topology(Serializable):
                 )
                 if isomorphic:
                     # Take the first valid atom indexing map
-                    first_topology_atom_index = min(mapping.keys())
+                    first_topology_atom_index = min(mapping.keys())  # type: ignore[union-attr]
                     topology_molecules_to_add.append(
                         (
                             first_topology_atom_index,
                             unq_mol_G,
-                            mapping.items(),
+                            mapping.items(),  # type: ignore[union-attr]
                             omm_mol_G,
                         )
                     )
@@ -1520,6 +1535,218 @@ class Topology(Serializable):
                         hier_elem.generate_unique_atom_names()
             elif not molecule.has_unique_atom_names:
                 molecule.generate_unique_atom_names()
+
+    @classmethod
+    @requires_package("openmm")
+    def from_pdb(
+        cls,
+        file_path: Union[str, Path, TextIO],
+        unique_molecules: Optional[Iterable[Molecule]] = None,
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        _additional_substructures: Optional[Iterable[Molecule]] = None,
+    ):
+        """
+        Loads supported or user-specified molecules from a PDB file.
+
+        Currently, canonical proteins, waters, and monoatomic ions are supported
+        without CONECT records via residue and atom names, and molecules
+        specified in the ``unique_molecules`` argument are supported when
+        CONECT records are provided.
+
+        .. warning::
+            Molecules in the resulting Topology will adopt
+            the geometric stereochemistry in the PDB, even if this conflicts
+            with the stereochemistry specified in ``unique_molecules``.
+
+        All molecules in the PDB file have the following requirements:
+
+        * Polymer molecules must use the standard atom names described in the
+          `PDB Chemical Component Dictionary <https://www.wwpdb.org/data/ccd>`_
+          (PDB CCD).
+        * There must be no missing atoms (all hydrogens must be explicit).
+        * All particles must correspond to an atomic nucleus (particles in the
+          PDB representing "virtual sites" or "extra points" are not allowed).
+        * All bonds must be specified by either CONECT records, or for
+          polymers and water by the PDB CCD via the residue and atom name.
+        * CONECT records must correspond only to chemical bonds (CONECT records
+          representing an angle constraints are not allowed).
+        * CONECT records may be redundant with connectivity defined by residue
+          templates.
+
+        Currently, the only supported polymers are proteins made of the 20
+        canonical amino acids. For details on the polymer loading used here,
+        see :py:meth:`Molecule.from_polymer_pdb`.
+
+        Waters can be recognized in either of two ways:
+
+        * By the residue name "HOH" and atom names "H1", "H2", and "O".
+        * By ATOM records which include element information and CONECT records.
+
+        Monoatomic ions supported by Sage are recognized (Na+, Li+, K+, Rb+,
+        Cs+, F-, Cl-, Br-, and I-). To load other monoatomic ions, use the
+        ``unique_molecules`` keyword argument.
+
+        The ``unique_molecules`` keyword argument can be used to load arbitrary
+        molecules from the PDB file. These molecules match a group of atoms in
+        the PDB file when their atomic elements and connectivity are identical;
+        elements and CONECT records must therefore be explicitly specified in
+        the PDB file. Information missing from the PDB format, such as bond
+        orders and formal charges, is then taken from the matching unique
+        molecule. Unique molecule matches will overwrite bond order and formal
+        charge assignments from other sources. Stereochemistry is assigned
+        based on the geometry in the PDB, even if this differs from the
+        stereochemistry in the unique molecule.
+
+        A user-defined molecule in the PDB file must exactly match a unique
+        molecule to successfully load it - substructures and superstructures
+        will raise :py:exc:`UnassignedChemistryInPDBError`. Unique molecules
+        need not be present in the PDB.
+
+        Metadata such as residues, chains, and atom names are recorded in the
+        ``Atom.metadata`` attribute, which is a dictionary mapping from the
+        strings ``"residue_name"``, ``"residue_number"``, ``"insertion_code"``,
+        and ``"chain_id"`` to the appropriate value. The topology returned by
+        this method can expose residue and chain iterators which can be
+        accessed using :py:meth:`Topology.hierarchy_iterator`, such as
+        ``top.hierarchy_iterator("residues")`` and ``top.hierarchy_iterator
+        ("chains")``.
+
+        A CRYST line in the PDB, if present, will be interpreted as periodic
+        box vectors in Angstroms.
+
+        Parameters
+        ----------
+        file_path : str, Path, or file object
+            PDB information to be passed to OpenMM PDBFile object for loading
+        unique_molecules : Iterable of Molecule. Default = None
+            OpenFF Molecule objects corresponding to the molecules in the input
+            PDB. See above for details.
+        toolkit_registry : ToolkitRegistry. Default = None
+            The ToolkitRegistry to use as the cheminformatics backend.
+        _additional_substructures : Iterable of Molecule, Default = None
+            Experimental and unstable. Molecule with atom.metadata["substructure_atom"] =
+            True or False for all atoms.
+
+        Returns
+        -------
+        topology : openff.toolkit.topology.Topology
+
+        Raises
+        ------
+
+        UnassignedChemistryInPDBError
+            If an atom or bond could not be assigned; the exception will
+            provide a detailed diagnostic of what went wrong.
+
+        Examples
+        --------
+
+        >>> from openff.toolkit import Topology
+        >>> from openff.toolkit.utils import get_data_file_path
+        >>> top = Topology.from_pdb(get_data_file_path("proteins/TwoMol_SER_CYS.pdb"))
+        >>> # The molecules in the loaded topology are full-fledged OpenFF Molecule objects
+        >>> for match in top.chemical_environment_matches('[O:1]=[C:2][N:3][H:4]'): print(match.topology_atom_indices)
+        (1, 0, 6, 13)
+        (9, 8, 17, 19)
+        (24, 23, 29, 36)
+        (32, 31, 40, 42)
+        >>> [*top.hierarchy_iterator("residues")]
+        [HierarchyElement ('A', '1', ' ', 'ACE') of iterator 'residues' containing 6 atom(s),
+         HierarchyElement ('A', '2', ' ', 'SER') of iterator 'residues' containing 11 atom(s),
+         HierarchyElement ('A', '3', ' ', 'NME') of iterator 'residues' containing 6 atom(s),
+         HierarchyElement ('B', '1', ' ', 'ACE') of iterator 'residues' containing 6 atom(s),
+         HierarchyElement ('B', '2', ' ', 'CYS') of iterator 'residues' containing 11 atom(s),
+         HierarchyElement ('B', '3', ' ', 'NME') of iterator 'residues' containing 6 atom(s)]
+
+        """
+        import io
+        import json
+
+        import openmm.unit as openmm_unit
+        from openmm.app import PDBFile
+
+        if isinstance(file_path, (str, io.TextIOWrapper)):
+            pass
+        elif isinstance(file_path, Path):
+            file_path = file_path.as_posix()
+        else:
+            raise ValueError(f"Unexpected type {type(file_path)}")
+
+        pdb = PDBFile(file_path)
+
+        substructure_file_path = get_data_file_path(
+            "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
+        )
+
+        with open(substructure_file_path, "r") as subfile:
+            substructure_dictionary = json.load(subfile)
+        substructure_dictionary["HOH"] = {"[H:1][O:2][H:3]": ["H1", "O", "H2"]}
+        substructure_dictionary["Li"] = {"[Li+1:1]": ["Li"]}
+        substructure_dictionary["Na"] = {"[Na+1:1]": ["Na"]}
+        substructure_dictionary["K"] = {"[K+1:1]": ["K"]}
+        substructure_dictionary["Rb"] = {"[Rb+1:1]": ["Rb"]}
+        substructure_dictionary["Cs"] = {"[Cs+1:1]": ["Cs"]}
+        substructure_dictionary["F"] = {"[F-1:1]": ["F"]}
+        substructure_dictionary["Cl"] = {"[Cl-1:1]": ["Cl"]}
+        substructure_dictionary["Br"] = {"[Br-1:1]": ["Br"]}
+        substructure_dictionary["I"] = {"[I-1:1]": ["I"]}
+
+        if not (unique_molecules):
+            unique_molecules = []
+
+        substructure_dictionary["UNIQUE_MOLECULE"] = {}
+
+        for unique_molecule in unique_molecules:
+            mapped_smiles = unique_molecule.to_smiles(mapped=True)
+            substructure_dictionary["UNIQUE_MOLECULE"][mapped_smiles] = [
+                a.name for a in unique_molecule.atoms
+            ]
+
+        substructure_dictionary["ADDITIONAL_SUBSTRUCTURE"] = {}
+
+        if _additional_substructures:
+            for mol in _additional_substructures:
+                label_mol = Molecule(mol)
+                c = 0
+                label_mol.properties["atom_map"] = {}
+                for atom in label_mol.atoms:
+                    if atom.metadata["substructure_atom"]:
+                        label_mol.properties["atom_map"][atom.molecule_atom_index] = c
+                        c += 1
+                smi = label_mol.to_smiles(mapped=True)
+                # remove unmapped atoms from mapped smiles. This will catch things like
+                # `[H]` and `[Cl]` but not anything with 3 characters like `[H:1]`
+                smi = re.sub("\[[A-Za-z]{1,2}\]", "", smi)
+                # Remove any orphaned () that remain
+                smi = smi.replace("()", "")
+
+                substructure_dictionary["ADDITIONAL_SUBSTRUCTURE"][smi] = []
+
+        substructure_dictionary["ADDITIONAL_SUBSTRUCTURE_OVERLAP"] = {}
+
+        coords_angstrom = np.array(
+            [[*vec3.value_in_unit(openmm_unit.angstrom)] for vec3 in pdb.getPositions()]
+        )
+
+        topology = toolkit_registry.call(
+            "_polymer_openmm_pdbfile_to_offtop",
+            cls,
+            pdb,
+            substructure_dictionary,
+            coords_angstrom,
+        )
+
+        for off_atom, atom in zip([*topology.atoms], pdb.topology.atoms()):
+            off_atom.metadata["residue_name"] = atom.residue.name
+            off_atom.metadata["residue_number"] = atom.residue.id
+            off_atom.metadata["insertion_code"] = atom.residue.insertionCode
+            off_atom.metadata["chain_id"] = atom.residue.chain.id
+            off_atom.name = atom.name
+
+        for offmol in topology.molecules:
+            offmol.add_default_hierarchy_schemes()
+
+        return topology
 
     @requires_package("openmm")
     def to_openmm(self, ensure_unique_atom_names: Union[str, bool] = "residues"):
@@ -1756,7 +1983,7 @@ class Topology(Serializable):
         # Get positions in OpenMM format
         if isinstance(positions, openmm_unit.Quantity):
             openmm_positions = positions
-        elif isinstance(positions, unit.Quantity):
+        elif isinstance(positions, Quantity):
             openmm_positions = to_openmm_quantity(positions)
         elif isinstance(positions, np.ndarray):
             openmm_positions = openmm_unit.Quantity(positions, openmm_unit.angstroms)
@@ -1926,307 +2153,12 @@ class Topology(Serializable):
 
         return md.Topology.from_openmm(self.to_openmm())
 
-    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API.
-    #       This function is deprecated and expects the OpenEye toolkit. We need to discuss what
-    #       to do with this functionality in light of our move to the ToolkitWrapper architecture.
-    #       Also, as written, this function implies several things about our toolkit's ability to
-    #       handle biopolymers. We need to discuss how much of this functionality we will expose
-    #       and how we can make our toolkit's current scope clear to users.
-    @requires_package("openeye.oechem")
-    @requires_package("openmm")
-    @staticmethod
-    def _from_openeye(oemol):
-        """
-        Create a Molecule from an OpenEye molecule.
-
-        Requires the OpenEye toolkit to be installed.
-
-        Parameters
-        ----------
-        oemol : openeye.oechem.OEMol
-            An OpenEye molecule
-
-        Returns
-        -------
-        molecule : openff.toolkit.topology.Molecule
-            An OpenFF molecule
-
-        """
-        from openeye import oechem
-        from openmm import Vec3, app
-
-        # TODO: Convert this to cls.from_molecules(Molecule.from_openeye())?
-        # OE Hierarchical molecule view
-        hv = oechem.OEHierView(
-            oemol,
-            oechem.OEAssumption_BondedResidue
-            + oechem.OEAssumption_ResPerceived
-            + oechem.OEAssumption_PDBOrder,
-        )
-
-        # Create empty OpenMM Topology
-        topology = app.Topology()
-        # Dictionary used to map oe atoms to openmm atoms
-        oe_atom_to_openmm_at = {}
-
-        for chain in hv.GetChains():
-            # TODO: Fail if hv contains more than one molecule.
-
-            # Create empty OpenMM Chain
-            openmm_chain = topology.addChain(chain.GetChainID())
-
-            for frag in chain.GetFragments():
-                for hres in frag.GetResidues():
-                    # Get OE residue
-                    oe_res = hres.GetOEResidue()
-                    # Create OpenMM residue
-                    openmm_res = topology.addResidue(oe_res.GetName(), openmm_chain)
-
-                    for oe_at in hres.GetAtoms():
-                        # Select atom element based on the atomic number
-                        element = app.element.Element.getByAtomicNumber(
-                            oe_at.GetAtomicNum()
-                        )
-                        # Add atom OpenMM atom to the topology
-                        openmm_at = topology.addAtom(
-                            oe_at.GetName(), element, openmm_res
-                        )
-                        openmm_at.index = oe_at.GetIdx()
-                        # Add atom to the mapping dictionary
-                        oe_atom_to_openmm_at[oe_at] = openmm_at
-
-        if topology.getNumAtoms() != oemol.NumAtoms():
-            oechem.OEThrow.Error(
-                "OpenMM topology and OEMol number of atoms mismatching: "
-                "OpenMM = {} vs OEMol  = {}".format(
-                    topology.getNumAtoms(), oemol.NumAtoms()
-                )
-            )
-
-        # Count the number of bonds in the openmm topology
-        omm_bond_count = 0
-
-        def IsAmideBond(oe_bond):
-            # TODO: Can this be replaced by a SMARTS query?
-
-            # This supporting function checks if the passed bond is an amide bond or not.
-            # Our definition of amide bond C-N between a Carbon and a Nitrogen atom is:
-            #          O
-            #          ║
-            #  CA or O-C-N-
-            #            |
-
-            # The amide bond C-N is a single bond
-            if oe_bond.GetOrder() != 1:
-                return False
-
-            atomB = oe_bond.GetBgn()
-            atomE = oe_bond.GetEnd()
-
-            # The amide bond is made by Carbon and Nitrogen atoms
-            if not (
-                (atomB.IsCarbon() and atomE.IsNitrogen())
-                or ((atomB.IsNitrogen() and atomE.IsCarbon()))
-            ):
-                return False
-
-            # Select Carbon and Nitrogen atoms
-            if atomB.IsCarbon():
-                C_atom = atomB
-                N_atom = atomE
-            else:
-                C_atom = atomE
-                N_atom = atomB
-
-            # Carbon and Nitrogen atoms must have 3 neighbour atoms
-            if not (C_atom.GetDegree() == 3 and N_atom.GetDegree() == 3):
-                return False
-
-            double_bonds = 0
-            single_bonds = 0
-
-            for bond in C_atom.GetBonds():
-                # The C-O bond can be single or double.
-                if (bond.GetBgn() == C_atom and bond.GetEnd().IsOxygen()) or (
-                    bond.GetBgn().IsOxygen() and bond.GetEnd() == C_atom
-                ):
-                    if bond.GetOrder() == 2:
-                        double_bonds += 1
-                    if bond.GetOrder() == 1:
-                        single_bonds += 1
-                # The CA-C bond is single
-                if (bond.GetBgn() == C_atom and bond.GetEnd().IsCarbon()) or (
-                    bond.GetBgn().IsCarbon() and bond.GetEnd() == C_atom
-                ):
-                    if bond.GetOrder() == 1:
-                        single_bonds += 1
-            # Just one double and one single bonds are connected to C
-            # In this case the bond is an amide bond
-            if double_bonds == 1 and single_bonds == 1:
-                return True
-            else:
-                return False
-
-        # Creating bonds
-        for oe_bond in oemol.GetBonds():
-            # Set the bond type
-            if oe_bond.GetType() != "":
-                if oe_bond.GetType() in [
-                    "Single",
-                    "Double",
-                    "Triple",
-                    "Aromatic",
-                    "Amide",
-                ]:
-                    off_bondtype = oe_bond.GetType()
-                else:
-                    off_bondtype = None
-            else:
-                if oe_bond.IsAromatic():
-                    oe_bond.SetType("Aromatic")
-                    off_bondtype = "Aromatic"
-                elif oe_bond.GetOrder() == 2:
-                    oe_bond.SetType("Double")
-                    off_bondtype = "Double"
-                elif oe_bond.GetOrder() == 3:
-                    oe_bond.SetType("Triple")
-                    off_bondtype = "Triple"
-                elif IsAmideBond(oe_bond):
-                    oe_bond.SetType("Amide")
-                    off_bondtype = "Amide"
-                elif oe_bond.GetOrder() == 1:
-                    oe_bond.SetType("Single")
-                    off_bondtype = "Single"
-                else:
-                    off_bondtype = None
-
-            molecule.add_bond(
-                oe_atom_to_openmm_at[oe_bond.GetBgn()],
-                oe_atom_to_openmm_at[oe_bond.GetEnd()],
-                type=off_bondtype,
-                order=oe_bond.GetOrder(),
-            )
-
-        if molecule.n_bondsphe != mol.NumBonds():
-            oechem.OEThrow.Error(
-                "OpenMM topology and OEMol number of bonds mismatching: "
-                "OpenMM = {} vs OEMol  = {}".format(omm_bond_count, mol.NumBonds())
-            )
-
-        dic = mol.GetCoords()
-        positions = [Vec3(v[0], v[1], v[2]) for k, v in dic.items()] * unit.angstrom
-
-        return topology, positions
-
-    # TODO: Jeff prepended an underscore on this before 0.2.0 release to remove it from the API.
-    #       This function is deprecated and expects the OpenEye toolkit. We need to discuss what
-    #       to do with this functionality in light of our move to the ToolkitWrapper architecture.
-    #       It also expects Topology to be organized by chain, which is not currently the case.
-    #       Bringing this function back would require non-trivial engineering and testing, and we
-    #       would want to discuss what "guarantee" of correctness it could offer.
-    @requires_package("openeye.oechem")
-    def _to_openeye(self, positions=None, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
-        """
-        Create an OpenEye OEMol from the topology
-
-        Requires the OpenEye toolkit to be installed.
-
-        Returns
-        -------
-        oemol : openeye.oechem.OEMol
-            An OpenEye molecule
-        positions : unit-wrapped array with shape [nparticles,3], optional, default=None
-            Positions to use in constructing OEMol.
-        aromaticity_model : str, optional, default="OEAroModel_MDL"
-            The aromaticity model to use. Only OEAroModel_MDL is supported.
-
-        NOTE: This comes from https://github.com/oess/oeommtools/blob/master/oeommtools/utils.py
-
-        """
-        from openeye import oechem
-
-        oe_mol = oechem.OEMol()
-
-        # Python set used to identify atoms that are not in protein residues
-        keep = set(proteinResidues).union(dnaResidues).union(rnaResidues)
-
-        for chain in topology.chains():
-            for res in chain.residues():
-                # Create an OEResidue
-                oe_res = oechem.OEResidue()
-                # Set OEResidue name
-                oe_res.SetName(res.name)
-                # If the atom is not a protein atom then set its heteroatom
-                # flag to True
-                if res.name not in keep:
-                    oe_res.SetFragmentNumber(chain.index + 1)
-                    oe_res.SetHetAtom(True)
-                # Set OEResidue Chain ID
-                oe_res.SetChainID(chain.id)
-                # res_idx = int(res.id) - chain.index * len(chain._residues)
-                # Set OEResidue number
-                oe_res.SetResidueNumber(int(res.id))
-
-                for openmm_at in res.atoms():
-                    # Create an OEAtom  based on the atomic number
-                    oe_atom = oe_mol.NewAtom(openmm_at.element._atomic_number)
-                    # Set atom name
-                    oe_atom.SetName(openmm_at.name)
-                    # Set Symbol
-                    oe_atom.SetType(openmm_at.element.symbol)
-                    # Set Atom index
-                    oe_res.SetSerialNumber(openmm_at.index + 1)
-                    # Commit the changes
-                    oechem.OEAtomSetResidue(oe_atom, oe_res)
-                    # Update the dictionary OpenMM to OE
-                    openmm_atom_to_oe_atom[openmm_at] = oe_atom
-
-        if self.n_atoms != oe_mol.NumAtoms():
-            raise Exception(
-                "OEMol has an unexpected number of atoms: Topology has {self.n_atoms} atoms while OEMol has "
-                "{oe_mol.NumAtoms()} atoms."
-            )
-
-        # Create bonds
-        for off_bond in self.bonds():
-            oe_mol.NewBond(oe_atoms[bond.atom1], oe_atoms[bond.atom2], bond.bond_order)
-            if off_bond.type:
-                if off_bond.type == "Aromatic":
-                    oe_atom0.SetAromatic(True)
-                    oe_atom1.SetAromatic(True)
-                    oe_bond.SetAromatic(True)
-                    oe_bond.SetType("Aromatic")
-                elif off_bond.type in ["Single", "Double", "Triple", "Amide"]:
-                    oe_bond.SetType(omm_bond.type)
-                else:
-                    oe_bond.SetType("")
-
-        if self.n_bonds != oe_mol.NumBonds():
-            oechem.OEThrow.Erorr(
-                "OEMol has an unexpected number of bonds:: "
-                "Molecule has {} bonds, while OEMol has {} bonds".format(
-                    self.n_bond, oe_mol.NumBonds()
-                )
-            )
-
-        if positions is not None:
-            # Set the OEMol positions
-            particle_indices = [
-                atom.particle_index for atom in self.atoms
-            ]  # get particle indices
-            pos = positions[particle_indices].m_as(unit.angstrom)
-            pos = list(itertools.chain.from_iterable(pos))
-            oe_mol.SetCoords(pos)
-            oechem.OESetDimensionFromCoords(oe_mol)
-
-        return oe_mol
-
-    def get_bond_between(self, i, j):
+    def get_bond_between(self, i: Union[int, "Atom"], j: Union[int, "Atom"]) -> "Bond":
         """Returns the bond between two atoms
 
         Parameters
         ----------
-        i, j : int or TopologyAtom
+        i, j : int or Atom
             Atoms or atom indices to check
 
         Returns
@@ -2244,8 +2176,8 @@ class Topology(Serializable):
             atomi = i
             atomj = j
         else:
-            raise Exception(
-                "Invalid input passed to is_bonded(). Expected ints or TopologyAtoms, "
+            raise ValueError(
+                "Invalid input passed to is_bonded(). Expected ints or `Atom`s, "
                 "got {} and {}".format(i, j)
             )
 
@@ -2258,12 +2190,12 @@ class Topology(Serializable):
 
         raise NotBondedError("No bond between atom {} and {}".format(i, j))
 
-    def is_bonded(self, i, j):
+    def is_bonded(self, i: Union[int, "Atom"], j: Union[int, "Atom"]) -> bool:
         """Returns True if the two atoms are bonded
 
         Parameters
         ----------
-        i, j : int or TopologyAtom
+        i, j : int or Atom
             Atoms or atom indices to check
 
         Returns
@@ -2278,18 +2210,18 @@ class Topology(Serializable):
         except NotBondedError:
             return False
 
-    def atom(self, atom_topology_index):
+    def atom(self, atom_topology_index: int) -> "Atom":
         """
-        Get the TopologyAtom at a given Topology atom index.
+        Get the Atom at a given Topology atom index.
 
         Parameters
         ----------
         atom_topology_index : int
-             The index of the TopologyAtom in this Topology
+             The index of the Atom in this Topology
 
         Returns
         -------
-        An openff.toolkit.topology.TopologyAtom
+        An openff.toolkit.topology.Atom
         """
         if not isinstance(atom_topology_index, int):
             raise ValueError(
@@ -2312,6 +2244,11 @@ class Topology(Serializable):
                 # NOTE: the index here should still be in the topology index order, NOT the reference molecule's
                 return molecule.atom(atom_molecule_index)
             this_molecule_start_index += molecule.n_atoms
+
+        raise AtomNotInTopologyError(
+            f"No atom with index {atom_topology_index} exists in this topology, "
+            f"which contains {self.n_atoms} atoms."
+        )
 
         # Potentially more computationally efficient lookup ( O(largest_molecule_natoms)? )
         # start_index_2_top_mol is an ordered dict of [starting_atom_index] --> [topology_molecule]
@@ -2396,13 +2333,13 @@ class Topology(Serializable):
         # Check that constraint hasn't already been specified.
         if (iatom, jatom) in self._constrained_atom_pairs:
             existing_distance = self._constrained_atom_pairs[(iatom, jatom)]
-            if isinstance(existing_distance, unit.Quantity) and distance is True:
-                raise Exception(
+            if isinstance(existing_distance, Quantity) and distance is True:
+                raise ConstraintExsistsError(
                     f"Atoms ({iatom},{jatom}) already constrained with distance {existing_distance} "
                     "but attempting to override with unspecified distance"
                 )
             if (existing_distance is True) and (distance is True):
-                raise Exception(
+                raise ConstraintExsistsError(
                     f"Atoms ({iatom},{jatom}) already constrained with unspecified distance "
                     "but attempting to override with unspecified distance"
                 )
