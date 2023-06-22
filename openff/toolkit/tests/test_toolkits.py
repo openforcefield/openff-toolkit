@@ -1329,7 +1329,7 @@ class TestOpenEyeToolkitWrapper:
     def test_generate_conformers_failure(self):
         toolkit = OpenEyeToolkitWrapper()
 
-        molecule = Molecule.from_smiles("F[U](F)(F)(F)(F)F")
+        molecule = Molecule.from_smiles("C(C2)(C3)1CC23C1")
 
         with pytest.raises(ConformerGenerationError, match="Omega conf.*fail"):
             toolkit.generate_conformers(molecule, n_conformers=1)
@@ -2856,7 +2856,7 @@ class TestRDKitToolkitWrapper:
     def test_generate_conformers_failure(self):
         toolkit = RDKitToolkitWrapper()
 
-        molecule = Molecule.from_smiles("F[U](F)(F)(F)(F)F")
+        molecule = Molecule.from_smiles("C(C2)(C3)1CC23C1")
 
         with pytest.raises(ConformerGenerationError, match="RDKit conf.*fail"):
             toolkit.generate_conformers(molecule, n_conformers=1)
