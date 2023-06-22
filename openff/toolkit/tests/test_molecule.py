@@ -3664,22 +3664,6 @@ class TestMolecule:
                 continue
             assert bond.is_in_ring()
 
-    @requires_rdkit
-    @requires_openeye
-    def test_conformer_generation_failure(self):
-        # This test seems possibly redundant, is it needed?
-        molecule = Molecule.from_smiles("F[U](F)(F)(F)(F)F")
-
-        with pytest.raises(ConformerGenerationError, match="Omega conf.*fail"):
-            molecule.generate_conformers(
-                n_conformers=1, toolkit_registry=OpenEyeToolkitWrapper()
-            )
-
-        with pytest.raises(ConformerGenerationError, match="RDKit conf.*fail"):
-            molecule.generate_conformers(
-                n_conformers=1, toolkit_registry=RDKitToolkitWrapper()
-            )
-
     def test_deepcopy_not_shallow(self):
         """
         Check that deep copies don't re-use any mutable data structures
