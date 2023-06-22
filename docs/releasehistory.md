@@ -17,11 +17,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### New features
 
 ### Improved documentation and warnings
+- [PR #1572](https://github.com/openforcefield/openff-toolkit/pull/1572): Improved installation guide in line with ecosystem docs.
 
 ### Examples updated
 - [PR #1644](https://github.com/openforcefield/openff-toolkit/pull/1644): Streamlines several examples by using `Interchange.to_openmm_simulation`.
 - [PR #1651](https://github.com/openforcefield/openff-toolkit/pull/1651): Fix broken links in several examples.
-
 
 ## 0.13.2
 
