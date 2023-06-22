@@ -20,11 +20,13 @@ If you have Mamba installed, it is often faster:
 $ mamba create -n openff-toolkit -c conda-forge openff-toolkit
 ```
 
-If you do not have Mamba or Conda installed, see the [ecosystem installation documentation]. To use the new environment in a shell session, activate it:
+To use the new environment in a shell session, you must first activate it:
 
 ```shell-session
 $ conda activate openff-toolkit
 ```
+
+If you do not have Mamba or Conda installed, see the [ecosystem installation documentation].
 
 :::{note}
 Installation via the Conda package manager is the preferred method since all dependencies are automatically fetched and installed for you.

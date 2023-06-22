@@ -10,6 +10,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Improved documentation and warnings
 
+- [PR #1572](https://github.com/openforcefield/openff-toolkit/pull/1572): Improved installation guide in line with ecosystem docs.
 - [PR #1564] Improve documentation of conformer selection in `Molecule.assign_partial_charges()`
 
 ## 0.12.1
