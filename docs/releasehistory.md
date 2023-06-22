@@ -20,6 +20,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Examples updated
 - [PR #1644](https://github.com/openforcefield/openff-toolkit/pull/1644): Streamlines several examples by using `Interchange.to_openmm_simulation`.
+- [PR #1651](https://github.com/openforcefield/openff-toolkit/pull/1651): Fix broken links in several examples.
 
 
 ## 0.13.2
