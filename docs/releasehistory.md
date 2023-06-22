@@ -11,6 +11,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### API-breaking changes
 
 ### Behavior changes
+- [PR #1652](https://github.com/openforcefield/openff-toolkit/pull/1652): Fixes issue [#1642](https://github.com/openforcefield/openff-toolkit/issues/1642) by making AmberToolsToolkitWrapper thread-safe (previously `AmberToolsToolkitWrapper.assign_partial_charges` and `assign_fractional_bond_orders` were not)
+
 
 ### Bugfixes
 
