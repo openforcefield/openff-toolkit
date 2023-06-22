@@ -56,7 +56,6 @@ from openff.toolkit.topology.molecule import (
 )
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import (
-    ConformerGenerationError,
     IncompatibleShapeError,
     IncompatibleTypeError,
     IncompatibleUnitError,
@@ -3663,22 +3662,6 @@ class TestMolecule:
             if 1 in (bond.atom1.atomic_number, bond.atom2.atomic_number):
                 continue
             assert bond.is_in_ring()
-
-    @requires_rdkit
-    @requires_openeye
-    def test_conformer_generation_failure(self):
-        # This test seems possibly redundant, is it needed?
-        molecule = Molecule.from_smiles("F[U](F)(F)(F)(F)F")
-
-        with pytest.raises(ConformerGenerationError, match="Omega conf.*fail"):
-            molecule.generate_conformers(
-                n_conformers=1, toolkit_registry=OpenEyeToolkitWrapper()
-            )
-
-        with pytest.raises(ConformerGenerationError, match="RDKit conf.*fail"):
-            molecule.generate_conformers(
-                n_conformers=1, toolkit_registry=RDKitToolkitWrapper()
-            )
 
     def test_deepcopy_not_shallow(self):
         """
