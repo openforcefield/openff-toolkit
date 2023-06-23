@@ -13,14 +13,17 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Behavior changes
 
 ### Bugfixes
+- [PR #1654](https://github.com/openforcefield/openff-toolkit/pull/1654): Fixes issue [#1653](https://github.com/openforcefield/openff-toolkit/issues/1653), where a test that expected RDKit to fail began returning an error when RDKit became able to generate conformers for octahedral molecules. 
+
 
 ### New features
 
 ### Improved documentation and warnings
+- [PR #1572](https://github.com/openforcefield/openff-toolkit/pull/1572): Improved installation guide in line with ecosystem docs.
 
 ### Examples updated
 - [PR #1644](https://github.com/openforcefield/openff-toolkit/pull/1644): Streamlines several examples by using `Interchange.to_openmm_simulation`.
-
+- [PR #1651](https://github.com/openforcefield/openff-toolkit/pull/1651): Fix broken links in several examples.
 
 ## 0.13.2
 
