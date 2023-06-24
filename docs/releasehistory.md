@@ -24,6 +24,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Examples updated
 - [PR #1644](https://github.com/openforcefield/openff-toolkit/pull/1644): Streamlines several examples by using `Interchange.to_openmm_simulation`.
 - [PR #1651](https://github.com/openforcefield/openff-toolkit/pull/1651): Fix broken links in several examples.
+- [PR #1648](https://github.com/openforcefield/openff-toolkit/pull/1648): Update examples to use `Topology.from_pdb` and other small cleanups.
 
 ## 0.13.2
 
