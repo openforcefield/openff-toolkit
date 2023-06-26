@@ -10,6 +10,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### API-breaking changes
 
+- [PR #1649](https://github.com/openforcefield/openff-toolkit/pull/1649): Removes tests and associated modules from the public API.
+
 ### Behavior changes
 
 ### Bugfixes
