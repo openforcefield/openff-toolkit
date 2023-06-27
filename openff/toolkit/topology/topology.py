@@ -11,9 +11,7 @@ Class definitions to represent a molecular system and its chemical components
    * Use `attrs <http://www.attrs.org/>`_ for object setter boilerplate?
 
 """
-import itertools
 import re
-import warnings
 from collections import defaultdict
 from collections.abc import MutableMapping
 from contextlib import nullcontext
