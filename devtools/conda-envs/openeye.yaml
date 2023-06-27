@@ -1,4 +1,4 @@
-name: test
+name: openff-toolkit-test-openeye
 channels:
   - openeye
   - conda-forge
@@ -14,11 +14,13 @@ dependencies:
   - xmltodict
   - python-constraint
   - openmm >=7.6
-  - openff-forcefields
+  - openff-forcefields >=2023.05.1
   - smirnoff99Frosst
-  - openff-units >=0.2
+  - openff-units =0.2.0
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.3.0
+  - openff-interchange-base >=0.3.3
+  - openff-nagl >=0.2.2
+  - openff-nagl-models >=0.0.2
   - typing_extensions
     # Toolkit-specific
   - openeye-toolkits
@@ -35,5 +37,4 @@ dependencies:
   - qcportal >=0.15
   - qcengine
   - mdtraj
-  - parmed
-  - ipywidgets =7
+  - parmed =3

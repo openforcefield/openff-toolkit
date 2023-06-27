@@ -11,7 +11,7 @@ dependencies:
     - myst-parser>=0.14
     - docutils
     - sphinx-notfound-page
-    - sphinx>=4.4,<5
+    - sphinx>=5.0,<6
     # conda build dependencies
     - python=3.9
     - setuptools

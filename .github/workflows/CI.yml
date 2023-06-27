@@ -72,10 +72,10 @@ jobs:
           fi
 
       - name: Install environment with ${{ env.JOBNAME }}
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: devtools/conda-envs/${{ env.ENVFILE }}.yaml
-          extra-specs: |
+          create-args: >-
             python=${{ matrix.python-version }}
 
       - name: Additional info about the build
@@ -97,7 +97,7 @@ jobs:
           # Interchange is installed with conda. Un-comment this when testing
           # against a conda build of Interchange. (It may also be pulled down
           # by `openmmforcefields` and should be removed in that case a well.)
-          conda remove --force openff-toolkit openff-toolkit-base
+          micromamba remove --force openff-toolkit openff-toolkit-base
           python -m pip install .
 
       - name: Install test plugins
@@ -108,7 +108,7 @@ jobs:
         run: |
           if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
             for cpkg in ${{ env.PACKAGES_TO_REMOVE }}; do
-              if [[ $(conda list | grep $cpkg) ]]; then conda remove --force $cpkg --yes ; fi
+              if [[ $(conda list | grep $cpkg) ]]; then micromamba remove --force $cpkg --yes ; fi
             done
           fi
 

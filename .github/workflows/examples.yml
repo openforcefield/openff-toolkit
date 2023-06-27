@@ -60,10 +60,10 @@ jobs:
           fi
 
       - name: Install conda environment with ${{ env.ENVFILE }}
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: devtools/conda-envs/${{env.ENVFILE}}-examples.yaml
-          extra-specs: |
+          create-args: >-
             python=${{ matrix.python-version }}
 
       - name: Additional info about the build
@@ -82,7 +82,7 @@ jobs:
         run: |
           # Maybe remove the packaged openff-toolkit, installed as a dependency of openmmforcefields
           # and/or Interchange
-          conda remove --force openff-toolkit-base
+          micromamba remove --force openff-toolkit-base
           python -m pip install .
 
       - name: Remove undesired toolkits
@@ -92,7 +92,7 @@ jobs:
           # so don't remove it.
           if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
             for cpkg in ${{ env.PACKAGES_TO_REMOVE }}; do
-              if [[ $(conda list | grep $cpkg) ]]; then conda remove --force $cpkg --yes ; fi
+              if [[ $(conda list | grep $cpkg) ]]; then micromamba remove --force $cpkg --yes ; fi
             done
           fi
 
@@ -139,6 +139,9 @@ jobs:
             NB_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             NB_ARGS+=" --ignore=examples/conformer_energies"
             NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
+            NB_ARGS+=" --ignore=examples/toolkit_showcase"
+            NB_ARGS+=" --ignore=examples/using_smirnoff_with_amber_protein_forcefield"
+            NB_ARGS+=" --ignore=examples/SMIRNOFF_simulation/run_simulation.ipynb"
           fi
 
           python -m pytest $PYTEST_ARGS $NB_ARGS examples

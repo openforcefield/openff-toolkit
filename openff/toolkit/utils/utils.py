@@ -30,7 +30,7 @@ from typing import Dict, Iterable, List, Tuple, Union
 
 import numpy as np
 import pint
-from openff.units import unit
+from openff.units import Quantity, Unit, unit
 from openff.utilities import requires_package
 
 logger = logging.getLogger(__name__)
@@ -117,7 +117,7 @@ def format_unit_simple(unit, registry, **options):
     return " * ".join(f"{u} ** {p}" for u, p in unit.items())
 
 
-def unit_to_string(input_unit: unit.Unit) -> str:
+def unit_to_string(input_unit: Unit) -> str:
     return f"{input_unit:simple}"
 
 
@@ -133,10 +133,10 @@ def quantity_to_dict(input_quantity):
 
 
 def dict_to_quantity(input_dict):
-    return input_dict["value"] * unit.Unit(input_dict["unit"])
+    return input_dict["value"] * Unit(input_dict["unit"])
 
 
-def quantity_to_string(input_quantity: unit.Quantity) -> str:
+def quantity_to_string(input_quantity: Quantity) -> str:
     """
     Serialize a openff.units.unit.Quantity to a string representation that is backwards-compatible
     with older versions of the OpenFF Toolkit. This includes a " * " between numerical values and
@@ -181,10 +181,10 @@ def string_to_unit(unit_string):
     output_unit: openff.units.unit.Quantity
         The deserialized unit from the string
     """
-    return unit.Unit(unit_string)
+    return Unit(unit_string)
 
 
-def string_to_quantity(quantity_string) -> Union[str, int, float, unit.Quantity]:
+def string_to_quantity(quantity_string) -> Union[str, int, float, Quantity]:
     """Attempt to parse a string into a unit.Quantity.
 
     Note that dimensionless floats and ints are returns as floats or ints, not Quantity objects.
@@ -195,7 +195,7 @@ def string_to_quantity(quantity_string) -> Union[str, int, float, unit.Quantity]
     from pint import UndefinedUnitError
 
     try:
-        quantity = unit.Quantity(quantity_string)
+        quantity = Quantity(quantity_string)
     except (TokenError, UndefinedUnitError):
         return quantity_string
 
@@ -289,7 +289,7 @@ def convert_all_quantities_to_string(smirnoff_data):
         for index, item in enumerate(smirnoff_data):
             smirnoff_data[index] = convert_all_quantities_to_string(item)
         obj_to_return = smirnoff_data
-    elif isinstance(smirnoff_data, unit.Quantity):
+    elif isinstance(smirnoff_data, Quantity):
         obj_to_return = quantity_to_string(smirnoff_data)
     else:
         obj_to_return = smirnoff_data
@@ -319,7 +319,7 @@ def object_to_quantity(object):
     return [object_to_quantity(sub_obj) for sub_obj in object]
 
 
-@object_to_quantity.register(unit.Quantity)
+@object_to_quantity.register(Quantity)
 def _(obj):
     return obj
 
@@ -337,7 +337,7 @@ def _(obj):
 @object_to_quantity.register(int)
 @object_to_quantity.register(float)
 def _(obj):
-    return unit.Quantity(obj)
+    return Quantity(obj)
 
 
 try:

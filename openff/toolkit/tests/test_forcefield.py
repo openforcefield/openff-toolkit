@@ -892,6 +892,7 @@ class TestForceField(_ForceFieldFixtures):
             "openff_unconstrained-1.0.0.offxml",
             "openff-1.3.0.offxml",
             "openff-2.0.0.offxml",
+            "openff-2.1.0.offxml",
             "ff14sb_off_impropers_0.0.3.offxml",
         ]
 
@@ -1064,6 +1065,11 @@ class TestForceField(_ForceFieldFixtures):
                 ):
                     assert isinstance(parameter.name, str)
                     assert not isinstance(parameter.name, unit.Quantity)
+
+    def test_load_do_not_convert_id_to_quantities(self):
+        ff = ForceField("openff-2.1.0.offxml")
+        handler = ff.get_parameter_handler("LibraryCharges")
+        assert handler.parameters[2].id == "K+"
 
     def test_pickle(self):
         """
@@ -3680,6 +3686,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         #     modify_system=False,
         # )
 
+    @pytest.mark.slow
     @requires_openeye_mol2
     @pytest.mark.parametrize("zero_charges", [True, False])
     @pytest.mark.parametrize(("gbsa_model"), ["HCT", "OBC1", "OBC2"])
