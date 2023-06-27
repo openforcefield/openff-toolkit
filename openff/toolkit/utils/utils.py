@@ -84,7 +84,7 @@ def temporary_cd(dir_path):
         os.chdir(prev_dir)
 
 
-def get_data_file_path(relative_path):
+def get_data_file_path(relative_path: str) -> str:
     """Get the full path to one of the reference files in testsystems.
     In the source distribution, these files are in ``openff/toolkit/data/``,
     but on installation, they're moved to somewhere in the user's python
@@ -94,22 +94,22 @@ def get_data_file_path(relative_path):
     ----------
 
     name : str
-        Name of the file to load (with respect to the repex folder).
+        Name of the file to load (with respect to `openff/toolkit/data/`)
 
     """
+    from importlib.resources import files
 
-    import os
+    _DATA_ROOT = files("openff.toolkit") / "data"
 
-    from pkg_resources import resource_filename
+    # mypy unhappy because this might not return a path, might be fixed with 3.10+
+    file_path = _DATA_ROOT / relative_path  # type: ignore[arg-type]
 
-    fn = resource_filename("openff.toolkit", os.path.join("data", relative_path))
-
-    if not os.path.exists(fn):
+    if not file_path.exists():  # type: ignore[attr-defined]
         raise ValueError(
-            f"Sorry! {fn} does not exist. If you just added it, you'll have to re-install"
+            f"Sorry! {file_path} does not exist. If you just added it, you'll have to re-install"
         )
 
-    return fn
+    return str(file_path)
 
 
 @pint.register_unit_format("simple")

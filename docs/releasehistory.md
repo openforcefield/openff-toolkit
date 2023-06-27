@@ -11,14 +11,15 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### API-breaking changes
 
 - [PR #1649](https://github.com/openforcefield/openff-toolkit/pull/1649): Removes tests and associated modules from the public API.
+- [PR #1508](https://github.com/openforcefield/openff-toolkit/pull/1508): Removes the `return_topology` kwawrg from `ForceField.create_openmm_system` which was [deprecated in version 0.11.0](https://docs.openforcefield.org/projects/toolkit/en/stable/releasehistory.html#breaking-change-interchange-now-responsible-for-system-parametrization). To access the `Topology` that results from parametrization, call `ForceField.create_interchange` and access the `.topology` attribute of the returned `Interchange` object.
 
 ### Behavior changes
+
 - [PR #1652](https://github.com/openforcefield/openff-toolkit/pull/1652): Fixes issue [#1642](https://github.com/openforcefield/openff-toolkit/issues/1642) by making AmberToolsToolkitWrapper thread-safe (previously `AmberToolsToolkitWrapper.assign_partial_charges` and `assign_fractional_bond_orders` were not)
 
-
 ### Bugfixes
-- [PR #1654](https://github.com/openforcefield/openff-toolkit/pull/1654): Fixes issue [#1653](https://github.com/openforcefield/openff-toolkit/issues/1653), where a test that expected RDKit to fail began returning an error when RDKit became able to generate conformers for octahedral molecules. 
 
+- [PR #1654](https://github.com/openforcefield/openff-toolkit/pull/1654): Fixes issue [#1653](https://github.com/openforcefield/openff-toolkit/issues/1653), where a test that expected RDKit to fail began returning an error when RDKit became able to generate conformers for octahedral molecules.
 
 ### New features
 
@@ -34,7 +35,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
-- [PR #1640](https://github.com/openforcefield/openff-toolkit/pull/1640): Fixes issue [#1633](https://github.com/openforcefield/openff-toolkit/issues/1633) in which some force field attributes were erroneously parsed as `Quantity` objects and  issue [#1635](https://github.com/openforcefield/openff-toolkit/issues/1635) in which OpenFF 2.1.0 ("Sage") could not be loaded with Pint 0.22.
+- [PR #1640](https://github.com/openforcefield/openff-toolkit/pull/1640): Fixes issue [#1633](https://github.com/openforcefield/openff-toolkit/issues/1633) in which some force field attributes were erroneously parsed as `Quantity` objects and issue [#1635](https://github.com/openforcefield/openff-toolkit/issues/1635) in which OpenFF 2.1.0 ("Sage") could not be loaded with Pint 0.22.
 
 
 ### Improved documentation and warnings
@@ -62,8 +63,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1577](https://github.com/openforcefield/openff-toolkit/pull/1577): Drops support for Python 3.8, following [NEP-29](https://numpy.org/neps/nep-0029-deprecation_policy.html).
 
 ### Bugfixes
-- [PR #1589](https://github.com/openforcefield/openff-toolkit/pull/1589): Fixes [Issue #1579](https://github.com/openforcefield/openff-toolkit/issues/1579), where Molecule.from_polymer_pdb could not handle NH2 caps at C termini.  
-- [PR #1591](https://github.com/openforcefield/openff-toolkit/pull/1591): Fixes [#1563](https://github.com/openforcefield/openff-toolkit/issues/1563), where `from_rdkit` would sometimes raise an error about radicals if a molecule using a non-MDL aromaticity model was provided. 
+- [PR #1589](https://github.com/openforcefield/openff-toolkit/pull/1589): Fixes [Issue #1579](https://github.com/openforcefield/openff-toolkit/issues/1579), where Molecule.from_polymer_pdb could not handle NH2 caps at C termini.
+- [PR #1591](https://github.com/openforcefield/openff-toolkit/pull/1591): Fixes [#1563](https://github.com/openforcefield/openff-toolkit/issues/1563), where `from_rdkit` would sometimes raise an error about radicals if a molecule using a non-MDL aromaticity model was provided.
 
 ### Improved documentation and warnings
 
