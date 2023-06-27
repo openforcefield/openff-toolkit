@@ -3405,6 +3405,27 @@ class TestAmberToolsToolkitWrapper:
         charge_sum = np.sum(molecule.partial_charges)
         assert 1e-10 > abs(charge_sum.m_as(unit.elementary_charge) + 1)
 
+    def test_assign_partial_charges_am1bcc_thread_safe(self):
+        """
+        Test that AmberToolsToolkitWrapper assign_partial_charges() is thread-safe
+        See https://github.com/openforcefield/openff-toolkit/issues/1642
+        """
+        from concurrent.futures import ThreadPoolExecutor
+
+        def charge_func(run_num=-1):
+            from openff.toolkit import AmberToolsToolkitWrapper, Molecule
+
+            AmberToolsToolkitWrapper().assign_partial_charges(
+                Molecule.from_smiles("CCO")
+            )
+
+        futures = list()
+        with ThreadPoolExecutor() as executor:
+            for i in range(5):
+                futures.append(executor.submit(charge_func, i))
+        for future in futures:
+            future.result()
+
     def test_assign_partial_charges_am1bcc_wrong_n_confs(self):
         """
         Test AmberToolsToolkitWrapper assign_partial_charges() with am1bcc when requesting to use an incorrect number
@@ -3816,6 +3837,27 @@ class TestAmberToolsToolkitWrapper:
                 toolkit_registry=AmberToolsToolkitWrapper(),
                 bond_order_model="not a real charge model",
             )
+
+    def test_assign_fractional_bond_orders_thread_safe(self):
+        """
+        Test that AmberToolsToolkitWrapper assign_fractional_bond_orders() is thread-safe
+        See https://github.com/openforcefield/openff-toolkit/issues/1642
+        """
+        from concurrent.futures import ThreadPoolExecutor
+
+        def charge_func(run_num=-1):
+            from openff.toolkit import AmberToolsToolkitWrapper, Molecule
+
+            AmberToolsToolkitWrapper().assign_fractional_bond_orders(
+                Molecule.from_smiles("CCO")
+            )
+
+        futures = list()
+        with ThreadPoolExecutor() as executor:
+            for i in range(5):
+                futures.append(executor.submit(charge_func, i))
+        for future in futures:
+            future.result()
 
     @requires_openeye
     def test_assign_fractional_bond_orders_openeye_installed(self):
