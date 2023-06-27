@@ -20,7 +20,6 @@ from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ToolkitUnavailableException,
 )
-from openff.toolkit.utils.utils import temporary_cd
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import Molecule
