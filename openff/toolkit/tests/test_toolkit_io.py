@@ -12,7 +12,7 @@ from io import BytesIO, StringIO
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
-from openff.units import unit
+from openff.units import Quantity, unit
 
 from openff.toolkit.tests import create_molecules
 from openff.toolkit.tests.utils import requires_openeye, requires_rdkit
@@ -72,7 +72,7 @@ CAFFEINE
 $$$$
 """
 
-CAFFEINE_2D_COORDS = unit.Quantity(
+CAFFEINE_2D_COORDS = Quantity(
     np.array(
         [
             (-1.1875, -9.6542, 0.0000),
@@ -277,7 +277,7 @@ M  END
 $$$$
 """
 
-CAFFEINE_3D_COORDS = unit.Quantity(
+CAFFEINE_3D_COORDS = Quantity(
     np.array(
         [
             (0.4700, 2.5688, 0.0006),

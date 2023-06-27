@@ -56,7 +56,7 @@ from openff.toolkit.utils.utils import (
 
 if TYPE_CHECKING:
     import openmm
-    from openff.units import unit
+    from openff.units import Quantity
 
     from openff.toolkit.topology import Molecule, Topology
     from openff.toolkit.utils.base_wrapper import ToolkitWrapper
@@ -907,7 +907,7 @@ class ForceField:
         # Go through the whole SMIRNOFF data structure, trying to convert all strings to Quantity
         smirnoff_data = convert_all_strings_to_quantity(
             smirnoff_data,
-            ignore_keys=["smirks", "name"],
+            ignore_keys=["smirks", "name", "id", "parent_id"],
         )
 
         # Go through the subsections, delegating each to the proper ParameterHandler
@@ -1342,7 +1342,7 @@ class ForceField:
             raise KeyError(msg)
         return ph_class
 
-    def get_partial_charges(self, molecule: "Molecule", **kwargs) -> "unit.Quantity":
+    def get_partial_charges(self, molecule: "Molecule", **kwargs) -> "Quantity":
         """Generate the partial charges for the given molecule in this force field.
 
         Parameters
@@ -1412,8 +1412,7 @@ class ForceField:
             f"Found {len(top_with_charges.n_molecules)} molecules."
         )
 
-        for molecule in top_with_charges.molecules:
-            return molecule.partial_charges
+        return top_with_charges.molecule(0).partial_charges
 
     def __getitem__(self, val):
         """

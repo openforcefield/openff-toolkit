@@ -33,10 +33,10 @@ jobs:
           fetch-depth: 2
 
       - name: Install environment with ${{ env.JOBNAME }}
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: devtools/conda-envs/beta_rc_env.yaml
-          extra-specs: |
+          create-args: >-
             python=${{ matrix.python-version }}
 
       - name: Additional info about the build
@@ -53,7 +53,7 @@ jobs:
 
       - name: Install package
         run: |
-          conda remove --force openff-toolkit openff-toolkit-base
+          micromamba remove --force openff-toolkit openff-toolkit-base
           python -m pip install .
 
       - name: Install test plugins

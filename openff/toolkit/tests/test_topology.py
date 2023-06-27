@@ -42,6 +42,7 @@ from openff.toolkit.topology import (
     Topology,
     ValenceDict,
 )
+from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.toolkit.utils import (
     BASIC_CHEMINFORMATICS_TOOLKITS,
     OPENEYE_AVAILABLE,
@@ -105,6 +106,18 @@ def test_cheminformatics_toolkit_is_installed():
         msg = "No supported cheminformatics toolkits are installed. Please install a supported toolkit:\n"
         msg += str(BASIC_CHEMINFORMATICS_TOOLKITS)
         raise Exception(msg)
+
+
+@pytest.fixture()
+def mixed_topology():
+    return Topology.from_molecules(
+        [
+            create_ethanol(),
+            create_ethanol(),
+            _SimpleMolecule.from_molecule(create_ethanol()),
+            _SimpleMolecule.from_molecule(create_ethanol()),
+        ]
+    )
 
 
 # TODO: Refactor this to pytest
@@ -726,6 +739,24 @@ class TestTopology:
         assert top.molecule(18).is_isomorphic_with(Molecule.from_smiles("[I-]"))
 
     @requires_rdkit
+    def test_from_pdb_input_types(self):
+        import pathlib
+
+        import openmm.app
+
+        protein_path = get_data_file_path("proteins/ace-ala-nh2.pdb")
+
+        Topology.from_pdb(protein_path)
+
+        Topology.from_pdb(pathlib.Path(protein_path))
+
+        with open(protein_path) as f:
+            Topology.from_pdb(f)
+
+        with pytest.raises(ValueError, match="Unexpected type.*PDBFile"):
+            Topology.from_pdb(openmm.app.PDBFile(protein_path))
+
+    @requires_rdkit
     def test_from_pdb_two_polymers_metadata(self):
         """Test that a PDB with two capped polymers is loaded correctly"""
         top = Topology.from_pdb(get_data_file_path("proteins/TwoMol_SER_CYS.pdb"))
@@ -779,6 +810,36 @@ class TestTopology:
         )
         assert po4.is_isomorphic_with(top2.molecule(0))
         assert phenylphosphate.is_isomorphic_with(top2.molecule(1))
+
+    @requires_rdkit
+    def test_from_pdb_additional_substructures(self):
+        """Test that the _additional_substructures arg is wired up correctly"""
+        with pytest.raises(UnassignedChemistryInPDBError):
+            Topology.from_pdb(get_data_file_path("proteins/ace-ZZZ-gly-nme.pdb"))
+
+        # Make unnatural AA
+        mol = Molecule.from_smiles("N[C@@H]([C@@H](C)O[P@](=O)(OCNCO)[O-])C(=O)")
+        # Get the indices of an N term and C term hydrogen for removal
+        leaving_atoms = mol.chemical_environment_matches("[H:1]N([H])CC(=O)[H:2]")[0]
+
+        # Label the atoms with whether they're leaving
+        for atom in mol.atoms:
+            if atom.molecule_atom_index not in leaving_atoms:
+                atom.metadata["substructure_atom"] = True
+            else:
+                atom.metadata["substructure_atom"] = False
+
+        top = Topology.from_pdb(
+            get_data_file_path("proteins/ace-ZZZ-gly-nme.pdb"),
+            _additional_substructures=[mol],
+        )
+
+        expected_mol = Molecule.from_file(
+            get_data_file_path("proteins/ace-ZZZ-gly-nme.sdf")
+        )
+        assert top.molecule(0).is_isomorphic_with(
+            expected_mol, atom_stereochemistry_matching=False
+        )
 
     @requires_pkg("mdtraj")
     def test_from_mdtraj(self):
@@ -1480,6 +1541,9 @@ class TestTopology:
         assert_reversed_ethanol_is_grouped_correctly(groupings)
         assert_cyclohexane_is_grouped_correctly(groupings)
         assert_last_ethanol_is_grouped_correctly(groupings)
+
+    def test_identical_molecule_groups_mixed_topology(self, mixed_topology):
+        assert len(mixed_topology.identical_molecule_groups) == 2
 
     @requires_openeye
     def test_chemical_environments_matches_OE(self):

@@ -1,0 +1,78 @@
+REMARK   1 CREATED WITH OPENMM 8.0, 2023-04-25
+ATOM      1  C   ACE A   1      -2.066  -2.592   0.175  1.00  0.00           C
+ATOM      2  CH3 ACE A   1      -2.551  -3.997   0.367  1.00  0.00           C
+ATOM      3  O   ACE A   1      -2.742  -1.857  -0.621  1.00  0.00           O
+ATOM      4  H1  ACE A   1      -3.605  -4.130   0.022  1.00  0.00           H
+ATOM      5  H2  ACE A   1      -1.889  -4.674  -0.185  1.00  0.00           H
+ATOM      6  H3  ACE A   1      -2.443  -4.229   1.460  1.00  0.00           H
+HETATM    7  C3x ZZZ A   2       0.958  -0.804   0.130  1.00  0.00           C  
+HETATM    8  O2x ZZZ A   2       1.422   0.410  -0.180  1.00  0.00           O  
+HETATM    9  P1x ZZZ A   2       2.782   0.984   0.562  1.00  0.00           P  
+HETATM   10  O3x ZZZ A   2       3.223   2.281  -0.117  1.00  0.00           O  
+HETATM   11  O4x ZZZ A   2       4.036  -0.203   0.428  1.00  0.00           O  
+HETATM   12  C4x ZZZ A   2       5.229   0.481   0.703  1.00  0.00           C  
+HETATM   13  N1x ZZZ A   2       5.451   1.459  -0.299  1.00  0.00           N  
+HETATM   14  C5x ZZZ A   2       6.447   2.391   0.081  1.00  0.00           C  
+HETATM   15  O5x ZZZ A   2       7.549   2.337  -0.776  1.00  0.00           O  
+HETATM   16  O6x ZZZ A   2       2.467   1.269   2.209  1.00  0.00           O  
+HETATM   17  C6x ZZZ A   2      -0.465  -0.731   0.692  1.00  0.00           C  
+HETATM   18  H4x ZZZ A   2       1.563  -1.211   0.974  1.00  0.00           H  
+HETATM   19  C7x ZZZ A   2       0.969  -1.745  -1.031  1.00  0.00           C  
+HETATM   20  N2x ZZZ A   2      -0.925  -2.088   0.827  1.00  0.00           N  
+HETATM   21  H5x ZZZ A   2      -0.519  -0.217   1.646  1.00  0.00           H  
+HETATM   22  C8x ZZZ A   2      -1.233   0.066  -0.254  1.00  0.00           C  
+HETATM   23  H6x ZZZ A   2       2.010  -1.912  -1.357  1.00  0.00           H  
+HETATM   24  H7x ZZZ A   2       0.425  -1.369  -1.907  1.00  0.00           H  
+HETATM   25  H8x ZZZ A   2       0.577  -2.754  -0.739  1.00  0.00           H  
+HETATM   26  H9x ZZZ A   2      -0.386  -2.741   1.455  1.00  0.00           H  
+HETATM   27  O7x ZZZ A   2      -0.724   0.367  -1.381  1.00  0.00           O  
+HETATM   28 H10x ZZZ A   2       5.158   0.829   1.726  1.00  0.00           H  
+HETATM   29 H11x ZZZ A   2       6.021  -0.306   0.563  1.00  0.00           H  
+HETATM   30 H12x ZZZ A   2       5.170   1.366  -1.230  1.00  0.00           H  
+HETATM   31 H13x ZZZ A   2       6.754   2.406   1.128  1.00  0.00           H  
+HETATM   32 H14x ZZZ A   2       5.983   3.478  -0.107  1.00  0.00           H  
+HETATM   33 H15x ZZZ A   2       8.354   2.068  -0.209  1.00  0.00           H  
+ATOM     34  N   GLY A   3      -2.558   0.532  -0.002  1.00  0.00           N
+ATOM     35  CA  GLY A   3      -3.219   1.371  -0.989  1.00  0.00           C
+ATOM     36  H   GLY A   3      -3.047   0.271   0.916  1.00  0.00           H
+ATOM     37  C   GLY A   3      -4.631   1.568  -0.767  1.00  0.00           C
+ATOM     38  HA1 GLY A   3      -2.631   2.367  -0.989  1.00  0.00           H
+ATOM     39  HA2 GLY A   3      -3.015   0.934  -1.970  1.00  0.00           H
+ATOM     40  O   GLY A   3      -5.267   2.435  -1.509  1.00  0.00           O
+ATOM     41  N   NME A   4      -5.391   0.878   0.228  1.00  0.00           N
+ATOM     42  C   NME A   4      -6.816   1.155   0.367  1.00  0.00           C
+ATOM     43  H   NME A   4      -5.003   0.147   0.835  1.00  0.00           H
+ATOM     44 HH31 NME A   4      -7.186   1.620  -0.590  1.00  0.00           H
+ATOM     45 HH32 NME A   4      -6.902   1.861   1.199  1.00  0.00           H
+ATOM     46 HH33 NME A   4      -7.332   0.226   0.536  1.00  0.00           H
+TER      47      NME A   4
+CONECT    6    2
+CONECT    7    8   17   18   19
+CONECT    8    7    9
+CONECT    9    8   10   11   16
+CONECT   10    9
+CONECT   11    9   12
+CONECT   12   11   13   28   29
+CONECT   13   12   14   30
+CONECT   14   13   15   31   32
+CONECT   15   14   33
+CONECT   16    9
+CONECT   17    7   20   21   22
+CONECT   18    7
+CONECT   19    7   23   24   25
+CONECT   20    1   17   26
+CONECT   21   17
+CONECT   22   17   27   34
+CONECT   23   19
+CONECT   24   19
+CONECT   25   19
+CONECT   26   20
+CONECT   27   22
+CONECT   28   12
+CONECT   29   12
+CONECT   30   13
+CONECT   31   14
+CONECT   32   14
+CONECT   33   15
+CONECT   34   22
+END
