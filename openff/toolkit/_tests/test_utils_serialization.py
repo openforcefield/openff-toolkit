@@ -5,8 +5,8 @@ Tests for utility methods for serialization
 
 import numpy as np
 import pytest
+from openff.utilities import requires_package as requires_pkg
 
-from openff.toolkit.tests.utils import requires_pkg
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.utils import deserialize_numpy, serialize_numpy
 

@@ -13,8 +13,8 @@ from openff.units import unit
 from packaging.version import Version
 
 import openff.toolkit.typing.engines.smirnoff.parameters
-from openff.toolkit.tests.mocking import VirtualSiteMocking
-from openff.toolkit.tests.utils import does_not_raise
+from openff.toolkit._tests.mocking import VirtualSiteMocking
+from openff.toolkit._tests.utils import does_not_raise
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (

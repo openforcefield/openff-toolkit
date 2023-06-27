@@ -1,6 +1,6 @@
 import pytest
+from openff.utilities import requires_package as requires_pkg
 
-from openff.toolkit.tests.utils import requires_pkg
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff.forcefield import ForceField
 
