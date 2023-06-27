@@ -59,6 +59,8 @@ from openff.toolkit.utils.exceptions import (
     BondExistsError,
     HierarchySchemeNotFoundException,
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
+    IncompatibleShapeError,
+    IncompatibleTypeError,
     IncompatibleUnitError,
     InvalidAtomMetadataError,
     InvalidBondOrderError,
@@ -321,8 +323,8 @@ class Atom(Particle):
         Set the atom's formal charge. Accepts either ints or unit-wrapped ints with units of charge.
         """
         if isinstance(other, int):
-            self._formal_charge = unit.Quantity(other, unit.elementary_charge)
-        elif isinstance(other, unit.Quantity):
+            self._formal_charge = Quantity(other, unit.elementary_charge)
+        elif isinstance(other, Quantity):
             # Faster to check equality than convert, so short-circuit
             if other.units is unit.elementary_charge:
                 self.formal_charge = other
@@ -377,14 +379,14 @@ class Atom(Particle):
                 "please raise an issue describing your use case."
             )
 
-        if not isinstance(charge, (unit.Quantity, float)):
+        if not isinstance(charge, (Quantity, float)):
             raise ValueError(
                 "Cannot set partial charge with an object that is not a openff.unit.Quantity or float. "
                 f"Found object of type {type(charge)}."
             )
 
         if isinstance(charge, float):
-            charge = unit.Quantity(charge, unit.elementary_charge)
+            charge = Quantity(charge, unit.elementary_charge)
 
         if not isinstance(charge.m, float):
             raise ValueError(
@@ -1021,7 +1023,11 @@ class FrozenMolecule(Serializable):
                     loaded = True
             # TODO: Make this compatible with file-like objects (I couldn't figure out how to make an oemolistream
             # from a fileIO object)
-            if isinstance(other, str) or hasattr(other, "read") and not loaded:
+            if (
+                isinstance(other, (str, pathlib.Path))
+                or hasattr(other, "read")
+                and not loaded
+            ):
                 try:
                     mol = Molecule.from_file(
                         other,
@@ -1245,7 +1251,7 @@ class FrozenMolecule(Serializable):
         else:
             from openff.toolkit.utils.utils import deserialize_numpy
 
-            self._partial_charges = unit.Quantity(
+            self._partial_charges = Quantity(
                 deserialize_numpy(molecule_dict["partial_charges"], (self.n_atoms,)),
                 unit.Unit(molecule_dict["partial_charge_unit"]),
             )
@@ -1256,7 +1262,7 @@ class FrozenMolecule(Serializable):
             from openff.toolkit.utils.utils import deserialize_numpy
 
             self._conformers = [
-                unit.Quantity(
+                Quantity(
                     deserialize_numpy(ser_conf, (self.n_atoms, 3)),
                     unit.Unit(molecule_dict["conformers_unit"]),
                 )
@@ -1893,8 +1899,8 @@ class FrozenMolecule(Serializable):
 
     @staticmethod
     def are_isomorphic(
-        mol1: Union["FrozenMolecule", nx.Graph],
-        mol2: Union["FrozenMolecule", nx.Graph],
+        mol1: Union["FrozenMolecule", "_SimpleMolecule", nx.Graph],
+        mol2: Union["FrozenMolecule", "_SimpleMolecule", nx.Graph],
         return_atom_map: bool = False,
         aromatic_matching: bool = True,
         formal_charge_matching: bool = True,
@@ -1903,7 +1909,7 @@ class FrozenMolecule(Serializable):
         bond_stereochemistry_matching: bool = True,
         strip_pyrimidal_n_atom_stereo: bool = True,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
-    ):
+    ) -> Tuple[bool, Optional[Dict[int, int]]]:
         """
         Determine if ``mol1`` is isomorphic to ``mol2``.
 
@@ -1941,8 +1947,9 @@ class FrozenMolecule(Serializable):
             The second molecule to test for isomorphism.
 
         return_atom_map: bool, default=False, optional
-            Return a ``dict`` containing the atomic mapping instead of a
-            ``bool``.
+            Return a ``dict`` containing the atomic mapping, otherwise ``None``.
+            Only processed if inputs are isomorphic, will always return ``None`` if
+            inputs are not isomorphic.
 
         aromatic_matching: bool, default=True, optional
             If ``False``, aromaticity of graph nodes and edges are ignored for
@@ -1982,10 +1989,26 @@ class FrozenMolecule(Serializable):
             [Dict[int,int]] ordered by mol1 indexing {mol1_index: mol2_index}
             If molecules are not isomorphic given input arguments, will return None instead of dict.
         """
+        import networkx as nx
+
+        _cls = FrozenMolecule
+
+        if isinstance(mol1, nx.Graph) and isinstance(mol2, nx.Graph):
+            pass
+
+        elif isinstance(mol1, nx.Graph):
+            assert isinstance(mol2, _cls)
+
+        elif isinstance(mol2, nx.Graph):
+            assert isinstance(mol1, _cls)
+
+        else:
+            # static methods (by definition) know nothing about their class,
+            # so the class to compare to must be hard-coded here
+            if not (isinstance(mol1, _cls) and isinstance(mol2, _cls)):
+                return False, None
 
         def _object_to_n_atoms(obj):
-            import networkx as nx
-
             if isinstance(obj, FrozenMolecule):
                 return obj.n_atoms
             elif isinstance(obj, nx.Graph):
@@ -2009,7 +2032,10 @@ class FrozenMolecule(Serializable):
         # Do a quick check to see whether the inputs are totally identical (including being in the same atom order)
         if isinstance(mol1, FrozenMolecule) and isinstance(mol2, FrozenMolecule):
             if mol1._is_exactly_the_same_as(mol2):
-                return True, {i: i for i in range(mol1.n_atoms)}
+                if return_atom_map:
+                    return True, {i: i for i in range(mol1.n_atoms)}
+                else:
+                    return True, None
 
         # Build the user defined matching functions
         def node_match_func(x, y):
@@ -2052,10 +2078,8 @@ class FrozenMolecule(Serializable):
             edge_match_func = None  # type: ignore
 
         # Here we should work out what data type we have, also deal with lists?
-        def to_networkx(data):
+        def to_networkx(data: Union[FrozenMolecule, nx.Graph]) -> nx.Graph:
             """For the given data type, return the networkx graph"""
-            import networkx as nx
-
             if strip_pyrimidal_n_atom_stereo:
                 SMARTS = "[N+0X3:1](-[*])(-[*])(-[*])"
 
@@ -2081,6 +2105,7 @@ class FrozenMolecule(Serializable):
 
         mol1_netx = to_networkx(mol1)
         mol2_netx = to_networkx(mol2)
+
         from networkx.algorithms.isomorphism import GraphMatcher  # type: ignore
 
         GM = GraphMatcher(
@@ -2101,7 +2126,9 @@ class FrozenMolecule(Serializable):
         else:
             return isomorphic, None
 
-    def is_isomorphic_with(self, other: Union["FrozenMolecule", nx.Graph], **kwargs):
+    def is_isomorphic_with(
+        self, other: Union["FrozenMolecule", "_SimpleMolecule", nx.Graph], **kwargs
+    ) -> bool:
         """
         Check if the molecule is isomorphic with the other molecule which can be an openff.toolkit.topology.Molecule
         or nx.Graph(). Full matching is done using the options described bellow.
@@ -2383,7 +2410,7 @@ class FrozenMolecule(Serializable):
         conformers[:, cooh_indices, :] = cooh_xyz
 
         # Return conformers to original type
-        self._conformers = [unit.Quantity(conf, unit.angstrom) for conf in conformers]
+        self._conformers = [Quantity(conf, unit.angstrom) for conf in conformers]
 
     def apply_elf_conformer_selection(
         self,
@@ -2980,7 +3007,7 @@ class FrozenMolecule(Serializable):
                 f"Given {coordinates.shape}, expected {(self.n_atoms, 3)}"
             )
 
-        if isinstance(coordinates, unit.Quantity):
+        if isinstance(coordinates, Quantity):
             if not coordinates.units.is_compatible_with(unit.angstrom):
                 raise IncompatibleUnitError(
                     "Coordinates passed to Molecule._add_conformer with incompatible units. "
@@ -3012,7 +3039,7 @@ class FrozenMolecule(Serializable):
                 f"openmm.unit.Quantity and openff.units.unit.Quantity, found type {type(coordinates)}."
             )
 
-        tmp_conf = unit.Quantity(
+        tmp_conf = Quantity(
             np.zeros(shape=(self.n_atoms, 3), dtype=float), unit.angstrom
         )
         try:
@@ -3052,25 +3079,57 @@ class FrozenMolecule(Serializable):
         """
         if charges is None:
             self._partial_charges = None
-        elif charges.shape == (self.n_atoms,):
-            if isinstance(charges, unit.Quantity):
-                if charges.units in unit.elementary_charge.compatible_units():
-                    self._partial_charges = charges
-            if hasattr(charges, "unit"):
-                from openmm import unit as openmm_unit
+            return
 
-                if not isinstance(charges, openmm_unit.Quantity):
+        if not hasattr(charges, "shape"):
+            raise IncompatibleTypeError(
+                "Unsupported type passed to partial_charges setter. "
+                f"Found object of type {type(charges)}. "
+                "Expected openff.units.unit.Quantity"
+            )
+
+        if not charges.shape == (self.n_atoms,):
+            raise IncompatibleShapeError(
+                "Unsupported shape passed to partial_charges setter. "
+                f"Found shape {charges.shape}, expected {(self.n_atoms,)}"
+            )
+
+        if isinstance(charges, Quantity):
+            if charges.units in unit.elementary_charge.compatible_units():
+                self._partial_charges = charges.astype(float)
+            else:
+                raise IncompatibleUnitError(
+                    "Unsupported unit passed to partial_charges setter. "
+                    f"Found unit {charges.units}, expected {unit.elementary_charge}"
+                )
+
+        elif hasattr(charges, "unit"):
+            from openmm import unit as openmm_unit
+
+            if not isinstance(charges, openmm_unit.Quantity):
+                raise IncompatibleUnitError(
+                    "Unsupported type passed to partial_charges setter. "
+                    f"Found object of type {type(charges)}."
+                )
+
+            else:
+                from openff.units.openmm import from_openmm
+
+                converted = from_openmm(charges)
+                if converted.units in unit.elementary_charge.compatible_units():
+                    self._partial_charges = converted.astype(float)
+                else:
                     raise IncompatibleUnitError(
-                        "Unsupported type passed to partial_charges setter. "
-                        "Found object of type {type(charges)}."
+                        "Unsupported unit passed to partial_charges setter. "
+                        f"Found unit {converted.units}, expected {unit.elementary_charge}"
                     )
 
-                elif isinstance(charges, openmm_unit.Quantity):
-                    from openff.units.openmm import from_openmm
-
-                    converted = from_openmm(charges)
-                    if converted.units in unit.elementary_charge.compatible_units():
-                        self._partial_charges = converted
+        else:
+            raise IncompatibleTypeError(
+                "Unsupported type passed to partial_charges setter. "
+                f"Found object of type {type(charges)}, "
+                "expected openff.units.unit.Quantity"
+            )
 
     @property
     def n_particles(self) -> int:
@@ -3095,7 +3154,7 @@ class FrozenMolecule(Serializable):
         """
         The number of Bond objects in the molecule.
         """
-        return sum([1 for bond in self.bonds])
+        return len(self._bonds)
 
     @property
     def n_angles(self) -> int:
@@ -3288,9 +3347,7 @@ class FrozenMolecule(Serializable):
         smirnoff_impropers, amber_impropers
         """
         self._construct_torsions()
-        assert (
-            self._impropers is not None
-        ), "_construct_torsions always sets _impropers to a set"
+
         return self._impropers
 
     @property
@@ -3328,16 +3385,11 @@ class FrozenMolecule(Serializable):
         impropers, amber_impropers
 
         """
-        # TODO: Replace with non-cheminformatics-toolkit method
-        #       (ie. just looping over all atoms and finding ones that have 3 bonds?)
-
-        smirnoff_improper_smarts = "[*:1]~[X3:2](~[*:3])~[*:4]"
-        improper_idxs = self.chemical_environment_matches(smirnoff_improper_smarts)
-        smirnoff_impropers = {
-            (self.atom(imp[0]), self.atom(imp[1]), self.atom(imp[2]), self.atom(imp[3]))
-            for imp in improper_idxs
+        return {
+            improper
+            for improper in self.impropers
+            if len(self._bonded_atoms[improper[1]]) == 3
         }
-        return smirnoff_impropers
 
     @property
     def amber_impropers(self) -> Set[Tuple[Atom, Atom, Atom, Atom]]:
@@ -3366,15 +3418,12 @@ class FrozenMolecule(Serializable):
         impropers, smirnoff_impropers
 
         """
-        # TODO: Replace with non-cheminformatics-toolkit method
-        #       (ie. just looping over all atoms and finding ones that have 3 bonds?)
-        amber_improper_smarts = "[X3:1](~[*:2])(~[*:3])~[*:4]"
-        improper_idxs = self.chemical_environment_matches(amber_improper_smarts)
-        amber_impropers = {
-            (self.atom(imp[0]), self.atom(imp[1]), self.atom(imp[2]), self.atom(imp[3]))
-            for imp in improper_idxs
+        self._construct_torsions()
+
+        return {
+            (improper[1], improper[0], improper[2], improper[3])
+            for improper in self.smirnoff_impropers
         }
-        return amber_impropers
 
     def nth_degree_neighbors(self, n_degrees):
         """
@@ -3474,7 +3523,7 @@ class FrozenMolecule(Serializable):
         return self._hill_formula
 
     @staticmethod
-    def _object_to_hill_formula(obj: Union["Molecule", "nx.Graph"]) -> str:
+    def _object_to_hill_formula(obj: Union["FrozenMolecule", "nx.Graph"]) -> str:
         """Take a Molecule or NetworkX graph and generate its Hill formula.
         This provides a backdoor to the old functionality of Molecule.to_hill_formula, which
         was a static method that duck-typed inputs of Molecule or graph objects."""
@@ -3541,6 +3590,7 @@ class FrozenMolecule(Serializable):
                 self,
                 smirks,
                 unique=unique,
+                raise_exception_types=[],
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             matches = toolkit_registry.find_smarts_matches(  # type: ignore[attr-defined]
@@ -3711,7 +3761,7 @@ class FrozenMolecule(Serializable):
     @classmethod
     def from_file(
         cls,
-        file_path,
+        file_path: Union[str, pathlib.Path, TextIO],
         file_format=None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
         allow_undefined_stereo=False,
@@ -3726,7 +3776,7 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        file_path : str or file-like object
+        file_path : str, pathlib.Path, or file-like object
             The path to the file or file-like object to stream one or more molecules from.
         file_format : str, optional, default=None
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
@@ -3836,7 +3886,9 @@ class FrozenMolecule(Serializable):
 
         mols = list()
 
-        if isinstance(file_path, str):
+        if isinstance(file_path, (str, pathlib.Path)):
+            if isinstance(file_path, pathlib.Path):
+                file_path = file_path.as_posix()
             mols = toolkit.from_file(
                 file_path,
                 file_format=file_format,
@@ -3863,7 +3915,7 @@ class FrozenMolecule(Serializable):
     @requires_package("openmm")
     def from_polymer_pdb(
         cls,
-        file_path: Union[str, TextIO],
+        file_path: Union[str, pathlib.Path, TextIO],
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
         name: str = "",
     ):
@@ -3917,11 +3969,20 @@ class FrozenMolecule(Serializable):
             multiple chains or molecules.
 
         """
+        import io
+
         import openmm.unit as openmm_unit
         from openmm.app import PDBFile
 
         if isinstance(toolkit_registry, ToolkitWrapper):
             toolkit_registry = ToolkitRegistry([toolkit_registry])
+
+        if isinstance(file_path, (str, io.TextIOWrapper)):
+            pass
+        elif isinstance(file_path, pathlib.Path):
+            file_path = file_path.as_posix()
+        else:
+            raise ValueError(f"Unexpected type {type(file_path)}")
 
         pdb = PDBFile(file_path)
 
@@ -3939,7 +4000,7 @@ class FrozenMolecule(Serializable):
             substructure_dictionary,
         )
 
-        coords = unit.Quantity(
+        coords = Quantity(
             np.array(
                 [
                     [*vec3.value_in_unit(openmm_unit.angstrom)]
@@ -3994,7 +4055,7 @@ class FrozenMolecule(Serializable):
         # If we do not have a conformer make one with all zeros
         if self.n_conformers == 0:
             conformers = [
-                unit.Quantity(np.zeros((self.n_atoms, 3), dtype=float), unit.angstrom)
+                Quantity(np.zeros((self.n_atoms, 3), dtype=float), unit.angstrom)
             ]
 
         else:
@@ -4575,7 +4636,7 @@ class FrozenMolecule(Serializable):
         >>> from qcportal import FractalClient
         >>> client = FractalClient()
         >>> offmol = Molecule.from_qcschema(
-        ...     client.query_molecules(molecular_formula="C16H20N3O5")[0]
+        ...     client.query_molecules(molecular_formula="C7H12N2O4")[0]
         ... )
 
         Get Molecule from a QCArchive optimization entry:
@@ -4670,7 +4731,7 @@ class FrozenMolecule(Serializable):
             else:
                 mol = molecule
 
-            geometry = unit.Quantity(
+            geometry = Quantity(
                 np.array(mol["geometry"], float).reshape(-1, 3), unit.bohr
             )
             try:
@@ -4992,16 +5053,14 @@ class FrozenMolecule(Serializable):
         """
         Get an iterator over all i-j-k angles.
         """
-        # TODO: Build Angle objects instead of tuple of atoms.
         if not hasattr(self, "_angles"):
             self._construct_bonded_atoms_list()
             self._angles = set()
             for atom1 in self._atoms:
-                for atom2 in self._bondedAtoms[atom1]:
-                    for atom3 in self._bondedAtoms[atom2]:
+                for atom2 in self._bonded_atoms[atom1]:
+                    for atom3 in self._bonded_atoms[atom2]:
                         if atom1 == atom3:
                             continue
-                        # TODO: Encapsulate this logic into an Angle class.
                         if atom1.molecule_atom_index < atom3.molecule_atom_index:
                             self._angles.add((atom1, atom2, atom3))
                         else:
@@ -5010,19 +5069,20 @@ class FrozenMolecule(Serializable):
     def _construct_torsions(self):
         """
         Construct sets containing the atoms improper and proper torsions
+
+        Impropers are constructed with the central atom listed second
         """
-        # TODO: Build Proper/ImproperTorsion objects instead of tuple of atoms.
         if not hasattr(self, "_torsions"):
             self._construct_bonded_atoms_list()
 
-            self._propers = set()
-            self._impropers = set()
+            self._propers: set[tuple[Atom]] = set()
+            self._impropers: set[tuple[Atom]] = set()
             for atom1 in self._atoms:
-                for atom2 in self._bondedAtoms[atom1]:
-                    for atom3 in self._bondedAtoms[atom2]:
+                for atom2 in self._bonded_atoms[atom1]:
+                    for atom3 in self._bonded_atoms[atom2]:
                         if atom1 == atom3:
                             continue
-                        for atom4 in self._bondedAtoms[atom3]:
+                        for atom4 in self._bonded_atoms[atom3]:
                             if atom4 == atom2:
                                 continue
                             # Exclude i-j-k-i
@@ -5036,7 +5096,7 @@ class FrozenMolecule(Serializable):
 
                             self._propers.add(torsion)
 
-                        for atom3i in self._bondedAtoms[atom2]:
+                        for atom3i in self._bonded_atoms[atom2]:
                             if atom3i == atom3:
                                 continue
                             if atom3i == atom1:
@@ -5053,16 +5113,15 @@ class FrozenMolecule(Serializable):
 
         """
         # TODO: Add this to cached_properties
-        if not hasattr(self, "_bondedAtoms"):
-            # self._atoms = [ atom for atom in self.atoms() ]
-            self._bondedAtoms = dict()
+        if not hasattr(self, "_bonded_atoms"):
+            self._bonded_atoms: dict[Atom, set[Atom]] = dict()
             for atom in self._atoms:
-                self._bondedAtoms[atom] = set()
+                self._bonded_atoms[atom] = set()
             for bond in self._bonds:
                 atom1 = self.atoms[bond.atom1_index]
                 atom2 = self.atoms[bond.atom2_index]
-                self._bondedAtoms[atom1].add(atom2)
-                self._bondedAtoms[atom2].add(atom1)
+                self._bonded_atoms[atom1].add(atom2)
+                self._bonded_atoms[atom2].add(atom1)
 
     def _is_bonded(self, atom_index_1, atom_index_2):
         """Return True if atoms are bonded, False if not.
@@ -5083,7 +5142,7 @@ class FrozenMolecule(Serializable):
         self._construct_bonded_atoms_list()
         atom1 = self._atoms[atom_index_1]
         atom2 = self._atoms[atom_index_2]
-        return atom2 in self._bondedAtoms[atom1]
+        return atom2 in self._bonded_atoms[atom1]
 
     def get_bond_between(self, i: Union[int, "Atom"], j: Union[int, "Atom"]) -> "Bond":
         """Returns the bond between two atoms
