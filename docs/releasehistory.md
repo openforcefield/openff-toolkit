@@ -11,6 +11,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### API-breaking changes
 
 ### Behavior changes
+- [PR #1652](https://github.com/openforcefield/openff-toolkit/pull/1652): Fixes issue [#1642](https://github.com/openforcefield/openff-toolkit/issues/1642) by making AmberToolsToolkitWrapper thread-safe (previously `AmberToolsToolkitWrapper.assign_partial_charges` and `assign_fractional_bond_orders` were not)
+
 
 ### Bugfixes
 - [PR #1654](https://github.com/openforcefield/openff-toolkit/pull/1654): Fixes issue [#1653](https://github.com/openforcefield/openff-toolkit/issues/1653), where a test that expected RDKit to fail began returning an error when RDKit became able to generate conformers for octahedral molecules. 

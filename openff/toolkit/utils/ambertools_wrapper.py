@@ -20,7 +20,6 @@ from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ToolkitUnavailableException,
 )
-from openff.toolkit.utils.utils import temporary_cd
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import Molecule
@@ -204,76 +203,77 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # Compute charges
         with tempfile.TemporaryDirectory() as tmpdir:
-            with temporary_cd(tmpdir):
-                net_charge = mol_copy.total_charge.m_as(unit.elementary_charge)
-                # Write out molecule in SDF format
-                # TODO: How should we handle multiple conformers?
-                self._rdkit_toolkit_wrapper.to_file(
-                    mol_copy, "molecule.sdf", file_format="sdf"
-                )
-                # Compute desired charges
-                # TODO: Add error handling if antechamber chokes
-                short_charge_method = charge_method["antechamber_keyword"]
-                subprocess.check_output(
-                    [
-                        "antechamber",
-                        "-i",
-                        "molecule.sdf",
-                        "-fi",
-                        "sdf",
-                        "-o",
-                        "charged.mol2",
-                        "-fo",
-                        "mol2",
-                        "-pf",
-                        "yes",
-                        "-dr",
-                        "n",
-                        "-c",
-                        str(short_charge_method),
-                        "-nc",
-                        str(net_charge),
-                    ]
-                )
-                # Write out just charges
-                subprocess.check_output(
-                    [
-                        "antechamber",
-                        "-dr",
-                        "n",
-                        "-i",
-                        "charged.mol2",
-                        "-fi",
-                        "mol2",
-                        "-o",
-                        "charges2.mol2",
-                        "-fo",
-                        "mol2",
-                        "-c",
-                        "wc",
-                        "-cf",
-                        "charges.txt",
-                        "-pf",
-                        "yes",
-                    ]
-                )
-                # Check to ensure charges were actually produced
-                if not os.path.exists("charges.txt"):
-                    # TODO: copy files into local directory to aid debugging?
-                    raise ChargeCalculationError(
-                        "Antechamber/sqm partial charge calculation failed on "
-                        "molecule {} (SMILES {})".format(
-                            molecule.name, molecule.to_smiles()
-                        )
+            net_charge = mol_copy.total_charge.m_as(unit.elementary_charge)
+            # Write out molecule in SDF format
+            # TODO: How should we handle multiple conformers?
+            self._rdkit_toolkit_wrapper.to_file(
+                mol_copy, f"{tmpdir}/molecule.sdf", file_format="sdf"
+            )
+            # Compute desired charges
+            # TODO: Add error handling if antechamber chokes
+            short_charge_method = charge_method["antechamber_keyword"]
+            subprocess.check_output(
+                [
+                    "antechamber",
+                    "-i",
+                    "molecule.sdf",
+                    "-fi",
+                    "sdf",
+                    "-o",
+                    "charged.mol2",
+                    "-fo",
+                    "mol2",
+                    "-pf",
+                    "yes",
+                    "-dr",
+                    "n",
+                    "-c",
+                    str(short_charge_method),
+                    "-nc",
+                    str(net_charge),
+                ],
+                cwd=tmpdir,
+            )
+            # Write out just charges
+            subprocess.check_output(
+                [
+                    "antechamber",
+                    "-dr",
+                    "n",
+                    "-i",
+                    "charged.mol2",
+                    "-fi",
+                    "mol2",
+                    "-o",
+                    "charges2.mol2",
+                    "-fo",
+                    "mol2",
+                    "-c",
+                    "wc",
+                    "-cf",
+                    "charges.txt",
+                    "-pf",
+                    "yes",
+                ],
+                cwd=tmpdir,
+            )
+            # Check to ensure charges were actually produced
+            if not os.path.exists(f"{tmpdir}/charges.txt"):
+                # TODO: copy files into local directory to aid debugging?
+                raise ChargeCalculationError(
+                    "Antechamber/sqm partial charge calculation failed on "
+                    "molecule {} (SMILES {})".format(
+                        molecule.name, molecule.to_smiles()
                     )
-                # Read the charges
-                with open("charges.txt", "r") as infile:
-                    contents = infile.read()
-                text_charges = contents.split()
-                charges = np.zeros([molecule.n_atoms], np.float64)
-                for index, token in enumerate(text_charges):
-                    charges[index] = float(token)
-                # TODO: Ensure that the atoms in charged.mol2 are in the same order as in molecule.sdf
+                )
+            # Read the charges
+            with open(f"{tmpdir}/charges.txt", "r") as infile:
+                contents = infile.read()
+            text_charges = contents.split()
+            charges = np.zeros([molecule.n_atoms], np.float64)
+            for index, token in enumerate(text_charges):
+                charges[index] = float(token)
+            # TODO: Ensure that the atoms in charged.mol2 are in the same order as in molecule.sdf
         charges = Quantity(charges, unit.elementary_charge)
         molecule.partial_charges = charges
 
@@ -470,51 +470,49 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         for conformer in [*temp_mol.conformers]:
             with tempfile.TemporaryDirectory() as tmpdir:
-                with temporary_cd(tmpdir):
-                    net_charge = temp_mol.total_charge
-                    # Write out molecule in SDF format
-                    temp_mol._conformers = [conformer]
-                    self._rdkit_toolkit_wrapper.to_file(
-                        temp_mol, "molecule.sdf", file_format="sdf"
-                    )
-                    # Prepare sqm.in file as if we were going to run charge calc
-                    # TODO: Add error handling if antechamber chokes
-                    subprocess.check_output(
-                        [
-                            "antechamber",
-                            "-i",
-                            "molecule.sdf",
-                            "-fi",
-                            "sdf",
-                            "-o",
-                            "sqm.in",
-                            "-fo",
-                            "sqmcrt",
-                            "-pf",
-                            "yes",
-                            "-c",
-                            ac_charge_keyword,
-                            "-nc",
-                            str(net_charge),
-                        ]
-                    )
-                    # Modify sqm.in to request bond order calculation
-                    self._modify_sqm_in_to_request_bond_orders("sqm.in")
-                    # Run sqm to get bond orders
-                    subprocess.check_output(
-                        ["sqm", "-i", "sqm.in", "-o", "sqm.out", "-O"]
-                    )
-                    # Ensure that antechamber/sqm did not change the indexing by checking against
-                    # an ordered list of element symbols for this molecule
-                    expected_elements = [atom.symbol for atom in molecule.atoms]
-                    conformer_bond_orders = (
-                        self._get_fractional_bond_orders_from_sqm_out(
-                            "sqm.out", validate_elements=expected_elements
-                        )
-                    )
+                net_charge = temp_mol.total_charge
+                # Write out molecule in SDF format
+                temp_mol._conformers = [conformer]
+                self._rdkit_toolkit_wrapper.to_file(
+                    temp_mol, f"{tmpdir}/molecule.sdf", file_format="sdf"
+                )
+                # Prepare sqm.in file as if we were going to run charge calc
+                # TODO: Add error handling if antechamber chokes
+                subprocess.check_output(
+                    [
+                        "antechamber",
+                        "-i",
+                        "molecule.sdf",
+                        "-fi",
+                        "sdf",
+                        "-o",
+                        "sqm.in",
+                        "-fo",
+                        "sqmcrt",
+                        "-pf",
+                        "yes",
+                        "-c",
+                        ac_charge_keyword,
+                        "-nc",
+                        str(net_charge),
+                    ],
+                    cwd=tmpdir,
+                )
+                # Modify sqm.in to request bond order calculation
+                self._modify_sqm_in_to_request_bond_orders(f"{tmpdir}/sqm.in")
+                # Run sqm to get bond orders
+                subprocess.check_output(
+                    ["sqm", "-i", "sqm.in", "-o", "sqm.out", "-O"], cwd=tmpdir
+                )
+                # Ensure that antechamber/sqm did not change the indexing by checking against
+                # an ordered list of element symbols for this molecule
+                expected_elements = [atom.symbol for atom in molecule.atoms]
+                conformer_bond_orders = self._get_fractional_bond_orders_from_sqm_out(
+                    f"{tmpdir}/sqm.out", validate_elements=expected_elements
+                )
 
-                    for bond_indices, value in conformer_bond_orders.items():
-                        bond_orders[bond_indices].append(value)
+                for bond_indices, value in conformer_bond_orders.items():
+                    bond_orders[bond_indices].append(value)
 
         # Note that sqm calculate WBOs for ALL PAIRS of atoms, not just those that have
         # bonds defined in the original molecule. So here we iterate over the bonds in
