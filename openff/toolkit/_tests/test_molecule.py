@@ -25,7 +25,7 @@ import pytest
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
 
-from openff.toolkit.tests.create_molecules import (
+from openff.toolkit._tests.create_molecules import (
     create_acetaldehyde,
     create_benzene_no_aromatic,
     create_cis_1_2_dichloroethene,
@@ -33,7 +33,7 @@ from openff.toolkit.tests.create_molecules import (
     create_ethanol,
     create_reversed_ethanol,
 )
-from openff.toolkit.tests.utils import (
+from openff.toolkit._tests.utils import (
     has_pkg,
     requires_ambertools,
     requires_openeye,
@@ -4457,7 +4457,7 @@ class TestMoleculeSubclass:
 class TestHierarchies:
     def test_nothing_perceived_dipeptide(self):
         """Test that loading a "vanilla" molecule from SDF does not assign atom metadata"""
-        from openff.toolkit.tests.create_molecules import dipeptide as create_dipeptide
+        from openff.toolkit._tests.create_molecules import dipeptide as create_dipeptide
 
         dipeptide = create_dipeptide()
 
@@ -4474,7 +4474,7 @@ class TestHierarchies:
 
     def test_residues_perceived_dipeptide(self):
         """Test that perceiving residues on a residue-containing molecule correctly populates atom metadata"""
-        from openff.toolkit.tests.create_molecules import (
+        from openff.toolkit._tests.create_molecules import (
             dipeptide_residues_perceived as create_dipeptide,
         )
 
@@ -4494,7 +4494,7 @@ class TestHierarchies:
 
     def test_add_delete_hierarchy_scheme(self):
         """Test adding and removing HierarchySchemes to/from molecules"""
-        from openff.toolkit.tests.create_molecules import (
+        from openff.toolkit._tests.create_molecules import (
             dipeptide_residues_perceived as create_dipeptide,
         )
 
@@ -4611,7 +4611,7 @@ class TestHierarchies:
 
     def test_hierarchy_perceived_dipeptide(self):
         """Test populating and accessing HierarchyElements"""
-        from openff.toolkit.tests.create_molecules import (
+        from openff.toolkit._tests.create_molecules import (
             dipeptide_hierarchy_added as create_dipeptide,
         )
 
@@ -4649,7 +4649,7 @@ class TestHierarchies:
 
     def test_hierarchy_perceived_information_propagation(self):
         """Ensure that updating atom metadata doesn't update the iterators until the hierarchy is re-perceived"""
-        from openff.toolkit.tests.create_molecules import (
+        from openff.toolkit._tests.create_molecules import (
             dipeptide_hierarchy_added as create_dipeptide,
         )
 
@@ -4667,7 +4667,7 @@ class TestHierarchies:
 
     def test_hierarchy_element_generation(self):
         """Ensure that hierarchy elements are generated correctly from atom metadata"""
-        from openff.toolkit.tests.create_molecules import create_ethanol
+        from openff.toolkit._tests.create_molecules import create_ethanol
 
         ethanol = create_ethanol()
 

@@ -1112,7 +1112,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         Create a Molecule from an OpenEye OEMol
 
         >>> from openeye import oechem
-        >>> from openff.toolkit.tests.utils import get_data_file_path
+        >>> from openff.toolkit._tests.utils import get_data_file_path
         >>> ifs = oechem.oemolistream(get_data_file_path('systems/monomers/ethanol.mol2'))
         >>> oemols = list(ifs.GetOEGraphMols())
 

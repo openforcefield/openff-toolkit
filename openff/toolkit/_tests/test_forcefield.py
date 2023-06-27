@@ -17,14 +17,14 @@ from openmm import NonbondedForce, Platform, XmlSerializer, app
 from openmm import unit as openmm_unit
 from pydantic import ValidationError
 
-from openff.toolkit.tests.create_molecules import (
+from openff.toolkit._tests.create_molecules import (
     create_acetate,
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
     create_water,
 )
-from openff.toolkit.tests.utils import (
+from openff.toolkit._tests.utils import (
     compare_partial_charges,
     get_14_scaling_factors,
     requires_openeye,
@@ -3161,7 +3161,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         does the job.
 
         """
-        from openff.toolkit.tests.utils import (
+        from openff.toolkit._tests.utils import (
             compare_amber_smirnoff,
             get_alkethoh_file_path,
         )
@@ -3200,7 +3200,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         """
         import parmed
 
-        from openff.toolkit.tests.utils import (
+        from openff.toolkit._tests.utils import (
             compare_system_energies,
             compare_system_parameters,
             get_alkethoh_file_path,
@@ -3278,7 +3278,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         and improper torsions.
 
         """
-        from openff.toolkit.tests.utils import (
+        from openff.toolkit._tests.utils import (
             compare_system_parameters,
             get_freesolv_file_path,
         )
@@ -3338,7 +3338,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         """
         import parmed as pmd
 
-        from openff.toolkit.tests.utils import (
+        from openff.toolkit._tests.utils import (
             compare_system_energies,
             create_system_from_amber,
             get_context_potential_energy,
@@ -3545,7 +3545,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
     def test_tip5p_dimer_energy(self):
         pytest.skip("fails until migration to openff-interchange")
 
-        from openff.toolkit.tests.utils import evaluate_molecules_off
+        from openff.toolkit._tests.utils import evaluate_molecules_off
 
         off_ff = ForceField("test_forcefields/test_forcefield.offxml", xml_tip5p)
 
@@ -3649,7 +3649,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         against the same system made using OpenMM's AMBER GBSA functionality"""
         import parmed as pmd
 
-        from openff.toolkit.tests.utils import (
+        from openff.toolkit._tests.utils import (
             compare_system_energies,
             create_system_from_amber,
             get_context_potential_energy,
@@ -4173,7 +4173,7 @@ class TestSmirnoffVersionConverter:
         tested separately. Currently, test_freesolv_parameters_assignment
         does the job.
         """
-        from openff.toolkit.tests.utils import (
+        from openff.toolkit._tests.utils import (
             compare_system_parameters,
             get_freesolv_file_path,
         )

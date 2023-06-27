@@ -1756,7 +1756,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         Create a molecule from an RDKit molecule
 
         >>> from rdkit import Chem
-        >>> from openff.toolkit.tests.utils import get_data_file_path
+        >>> from openff.toolkit._tests.utils import get_data_file_path
         >>> rdmol = Chem.MolFromMolFile(get_data_file_path('systems/monomers/ethanol.sdf'))
 
         >>> toolkit_wrapper = RDKitToolkitWrapper()

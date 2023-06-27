@@ -8,7 +8,7 @@ These are common to several test modules.
 import numpy as np
 from openff.units import unit
 
-from openff.toolkit.tests.utils import requires_openeye
+from openff.toolkit._tests.utils import requires_openeye
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.utils import get_data_file_path
 

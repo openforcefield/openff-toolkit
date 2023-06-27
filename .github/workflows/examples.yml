@@ -130,7 +130,7 @@ jobs:
             PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
           fi
-          pytest $PYTEST_ARGS openff/toolkit/tests/test_examples.py
+          pytest $PYTEST_ARGS openff/toolkit/_tests/test_examples.py
 
       - name: Run example notebooks
         run: |
