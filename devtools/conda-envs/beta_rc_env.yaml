@@ -43,7 +43,6 @@ dependencies:
   - nbval
   - mypy
   - pip:
-    - types-pkg_resources
     - types-setuptools
     - types-toml
     - types-PyYAML
