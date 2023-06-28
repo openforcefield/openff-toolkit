@@ -411,13 +411,6 @@ class TestAtom:
         with pytest.raises(ValueError, match="Cannot set.*'int'"):
             water.atoms[2].partial_charge = 4
 
-    @requires_pkg("openmm")
-    def test_set_partial_charges_openmm_quantity(self, water):
-        import openmm.unit
-
-        with pytest.raises(ValueError, match="Cannot set.*openmm.unit"):
-            water.atoms[2].partial_charge = 0.0 * openmm.unit.elementary_charge
-
     def test_set_partial_charges_array(self, water):
         with pytest.raises(ValueError, match="unit-wrapped.*numpy.ndarray"):
             water.atoms[2].partial_charge = unit.Quantity(
@@ -622,6 +615,18 @@ class TestMolecule:
 
         expected_repr = "Molecule with name '' with bad SMILES and Hill formula 'Cl3'"
         assert molecule.__repr__() == expected_repr
+
+    def test_set_partial_charges_bad_shape(self):
+        molecule = create_ethanol()
+
+        with pytest.raises(
+            ValueError,
+            match="incompatible shape.*4.*9",
+        ):
+            molecule.partial_charges = unit.Quantity(
+                np.zeros((4,)),
+                unit.elementary_charge,
+            )
 
     @pytest.mark.parametrize("toolkit", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     @pytest.mark.parametrize("molecule", mini_drug_bank())

@@ -82,7 +82,12 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1584](https://github.com/openforcefield/openff-toolkit/pull/1584): Update some outdated docstrings and add some annotations.
 
 ### Examples updates
+
 - [PR #1575](https://github.com/openforcefield/openff-toolkit/pull/1575): The Toolkit Showcase example has been simplified via use of `Topology.from_pdb`
+
+### Miscellaneous
+
+- [PR #1570](https://github.com/openforcefield/openff-toolkit/pull/1570) Simplify unit handling in some setters.
 
 ## 0.12.1
 

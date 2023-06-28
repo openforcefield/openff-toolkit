@@ -59,8 +59,6 @@ from openff.toolkit.utils.exceptions import (
     BondExistsError,
     HierarchySchemeNotFoundException,
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
-    IncompatibleShapeError,
-    IncompatibleTypeError,
     IncompatibleUnitError,
     InvalidAtomMetadataError,
     InvalidBondOrderError,
@@ -207,7 +205,7 @@ class Atom(Particle):
         ----------
         atomic_number : int
             Atomic number of the atom. Must be non-negative and non-zero.
-        formal_charge : int or openff.units.unit.Quantity-wrapped int with dimension "charge"
+        formal_charge : int or openff.units.Quantity-wrapped int with dimension "charge"
             Formal charge of the atom
         is_aromatic : bool
             If True, atom is aromatic; if False, not aromatic
@@ -341,7 +339,9 @@ class Atom(Particle):
                     f"Cannot set formal charge with a quantity with units {converted.units}"
                 )
         else:
-            raise ValueError
+            from openff.units.openmm import ensure_quantity
+
+            self._formal_charge = ensure_quantity(other, "openff")
 
     @property
     def partial_charge(self):
@@ -375,6 +375,11 @@ class Atom(Particle):
 
         if isinstance(charge, float):
             charge = Quantity(charge, unit.elementary_charge)
+
+        else:
+            from openff.units.openmm import ensure_quantity
+
+            charge = ensure_quantity(charge, "openff")
 
         if not isinstance(charge.m, float):
             raise ValueError(
@@ -2989,6 +2994,12 @@ class FrozenMolecule(Serializable):
         index: int
             The index of this conformer
         """
+        # Handle OpenMM case before shape/dimensionality checks
+        if hasattr(coordinates, "unit"):
+            from openff.units.openmm import ensure_quantity
+
+            coordinates = ensure_quantity(coordinates, "openff")
+
         if coordinates.shape != (self.n_atoms, 3):
             raise InvalidConformerError(
                 "molecule.add_conformer given input of the wrong shape: "
@@ -3001,30 +3012,10 @@ class FrozenMolecule(Serializable):
                     "Coordinates passed to Molecule._add_conformer with incompatible units. "
                     "Ensure that units are dimension of length."
                 )
-
-        elif hasattr(coordinates, "unit"):
-            from openff.units.openmm import from_openmm
-            from openmm import unit as openmm_unit
-
-            if not isinstance(coordinates, openmm_unit.Quantity):
-                raise IncompatibleUnitError(
-                    "Unsupported type passed to Molecule._add_conformer setter. "
-                    "Found object of type {type(other)}."
-                )
-
-            if not coordinates.unit.is_compatible(openmm_unit.meter):
-                raise IncompatibleUnitError(
-                    "Coordinates passed to Molecule._add_conformer with units of incompatible dimensionality. "
-                    f"Adding conformers with OpenMM-style units is supported, by found units of {coordinates.unit}. "
-                    "Ensure that units are dimension of length."
-                )
-
-            coordinates = from_openmm(coordinates)
-
         else:
             raise IncompatibleUnitError(
                 "Unknown object passed to Molecule._add_conformer. Expected types include "
-                f"openmm.unit.Quantity and openff.units.unit.Quantity, found type {type(coordinates)}."
+                f"openmm.unit.Quantity and openff.units.Quantity, found type {type(coordinates)}."
             )
 
         tmp_conf = Quantity(
@@ -3060,7 +3051,7 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        charges : None or a openff.unit.Quantity - wrapped numpy array [1 x n_atoms]
+        charges : None or a openff.units.Quantity or openmm.unit.Quantity - wrapped numpy array [1 x n_atoms]
             The partial charges to assign to the molecule. If not None, must be in units compatible with
             openff.unit.elementary_charge
 

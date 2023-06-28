@@ -138,13 +138,13 @@ def dict_to_quantity(input_dict):
 
 def quantity_to_string(input_quantity: Quantity) -> str:
     """
-    Serialize a openff.units.unit.Quantity to a string representation that is backwards-compatible
+    Serialize a openff.units.Quantity to a string representation that is backwards-compatible
     with older versions of the OpenFF Toolkit. This includes a " * " between numerical values and
     their units and "A" being used in place of the unicode Å ("\N{ANGSTROM SIGN}").
 
     Parameters
     ----------
-    input_quantity : openff.units.unit.Quantity
+    input_quantity : openff.units.Quantity
         The quantity to serialize
 
     Returns
@@ -162,23 +162,21 @@ def quantity_to_string(input_quantity: Quantity) -> str:
     output_string = "{} * {}".format(unitless_value, unit_string)
     return output_string
 
-    return str(input_quantity)
-
 
 def string_to_unit(unit_string):
     """
-    Deserializes a openff.units.unit.Quantity from a string representation, for
+    Deserializes a openff.units.Quantity from a string representation, for
     example: "kilocalories_per_mole / angstrom ** 2"
 
 
     Parameters
     ----------
     unit_string : dict
-        Serialized representation of a openff.units.unit.Quantity.
+        Serialized representation of a openff.units.Quantity.
 
     Returns
     -------
-    output_unit: openff.units.unit.Quantity
+    output_unit: openff.units.Quantity
         The deserialized unit from the string
     """
     return Unit(unit_string)
@@ -213,10 +211,10 @@ def convert_all_strings_to_quantity(
 ):
     """
     Traverses a SMIRNOFF data structure, attempting to convert all
-    quantity-defining strings into openff.units.unit.Quantity objects.
+    quantity-defining strings into openff.units.Quantity objects.
 
     Integers and floats are ignored and not converted into a dimensionless
-    ``openff.units.unit.Quantity`` object.
+    ``openff.units.Quantity`` object.
 
     Parameters
     ----------
@@ -229,7 +227,7 @@ def convert_all_strings_to_quantity(
     -------
     converted_smirnoff_data : dict
         A hierarchical dict structured in compliance with the SMIRNOFF spec,
-        with quantity-defining strings converted to openff.units.unit.Quantity objects
+        with quantity-defining strings converted to openff.units.Quantity objects
     """
     from pint import DefinitionSyntaxError
 
@@ -278,7 +276,7 @@ def convert_all_quantities_to_string(smirnoff_data):
     -------
     converted_smirnoff_data : dict
         A hierarchical dict structured in compliance with the SMIRNOFF spec,
-        with openff.units.unit.Quantitys converted to string
+        with openff.units.Quantitys converted to string
     """
 
     if isinstance(smirnoff_data, dict):

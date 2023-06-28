@@ -1929,7 +1929,7 @@ class Topology(Serializable):
 
             - ``openmm.unit.Quantity`` object which has atomic positions as a
               list of unit-tagged ``Vec3`` objects
-            - ``openff.units.unit.Quantity`` object which wraps a
+            - ``openff.units.Quantity`` object which wraps a
               ``numpy.ndarray`` with dimensions of length
             - (unitless) 2D ``numpy.ndarray``, in which it is assumed that the
               positions are in units of Angstroms.
