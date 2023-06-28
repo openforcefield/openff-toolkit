@@ -12,6 +12,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 - [PR #1649](https://github.com/openforcefield/openff-toolkit/pull/1649): Removes tests and associated modules from the public API.
 - [PR #1508](https://github.com/openforcefield/openff-toolkit/pull/1508): Removes the `return_topology` kwawrg from `ForceField.create_openmm_system` which was [deprecated in version 0.11.0](https://docs.openforcefield.org/projects/toolkit/en/stable/releasehistory.html#breaking-change-interchange-now-responsible-for-system-parametrization). To access the `Topology` that results from parametrization, call `ForceField.create_interchange` and access the `.topology` attribute of the returned `Interchange` object.
+- [PR #1506](https://github.com/openforcefield/openff-toolkit/pull/1506):
+  Removes several classes and properties in the `topology` submodule that were [deprecated in version 0.11.0](https://docs.openforcefield.org/projects/toolkit/en/stable/releasehistory.html#breaking-change-topology-molecule-representation).
+
 
 ### Behavior changes
 

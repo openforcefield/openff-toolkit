@@ -97,18 +97,6 @@ if TYPE_CHECKING:
 TKR: TypeAlias = Union[ToolkitRegistry, ToolkitWrapper]
 
 
-def _molecule_deprecation(old_method, new_method):
-    warnings.warn(
-        f"Molecule.{old_method} is deprecated. Use Molecule.{new_method} instead.",
-        MoleculeDeprecationWarning,
-        stacklevel=2,
-    )
-
-
-class MoleculeDeprecationWarning(UserWarning):
-    """Warning for deprecated portions of the Molecule API."""
-
-
 class Particle(Serializable):
     """
     Base class for all particles in a molecule.
@@ -147,7 +135,7 @@ class Particle(Serializable):
         """
         Returns the index of this particle in its molecule
         """
-        return self._molecule.particles.index(self)
+        return self._molecule.atoms.index(self)
 
     @property
     def name(self):
@@ -3132,17 +3120,6 @@ class FrozenMolecule(Serializable):
             )
 
     @property
-    def n_particles(self) -> int:
-        """
-        .. deprecated:: 0.11.0
-            This property has been deprecated and will soon be removed. Use
-            :meth:`Molecule.n_atoms` instead.
-        ..
-        """
-        _molecule_deprecation("n_particles", "n_atoms")
-        return self.n_atoms
-
-    @property
     def n_atoms(self) -> int:
         """
         The number of Atom objects.
@@ -3179,35 +3156,6 @@ class FrozenMolecule(Serializable):
             self._impropers is not None
         ), "_construct_torsions always sets _impropers to a set"
         return len(self._impropers)
-
-    @property
-    def particles(self) -> List[Atom]:
-        """
-        .. deprecated:: 0.11.0
-            This property has been deprecated and will soon be removed. Use
-            :meth:`Molecule.atoms` instead.
-        ..
-        """
-        _molecule_deprecation("particles", "atoms")
-        return self.atoms
-
-    def particle(self, index: int) -> Atom:
-        """
-        .. deprecated:: 0.11.0
-            This method has been deprecated and will soon be removed. Use
-            :meth:`Molecule.atom` instead.
-        """
-        _molecule_deprecation("particle", "atom")
-        return self.atom(index)
-
-    def particle_index(self, particle: Atom) -> int:
-        """
-        .. deprecated:: 0.11.0
-            This method has been deprecated and will soon be removed. Use
-            :meth:`Molecule.atom_index` instead.
-        """
-        _molecule_deprecation("particle_index", "atom_index")
-        return self.atom_index(particle)
 
     @property
     def atoms(self):

@@ -2541,10 +2541,12 @@ class TestMolecule:
             }, "SDF and PDB must have same atom ordering"
 
             # Check that the coordinates are identical
-            assert np.all(
-                np.abs(np.asarray(sdf_mol.conformers) - np.asarray(pdb_mol.conformers))
-                < 1e-4
-            ), "SDF and PDB must have identical conformers"
+            np.testing.assert_allclose(
+                np.asarray(sdf_mol.conformers[0].m),
+                np.asarray(pdb_mol.conformers[0].m),
+                atol=1e-4,
+                err_msg="SDF and PDB must have identical conformers",
+            )
 
             # Not sure that the following are necessary given are_isomorphic,
             # but keeping them from previous test implementations
@@ -2870,30 +2872,6 @@ class TestMolecule:
             match="The mapped smiles does not contain enough indexes",
         ):
             Molecule.from_mapped_smiles("[Cl:1][Cl]", toolkit_registry=toolkit_class())
-
-    def test_deprecated_api_points(self):
-        """Ensure that some of the API deprecated circa v0.11.0 still exist."""
-        from openff.toolkit.topology.molecule import MoleculeDeprecationWarning
-
-        molecule = Molecule.from_smiles("O")
-
-        with pytest.warns(
-            MoleculeDeprecationWarning,
-            match="Molecule.particles is deprecated. Use Molecule.atoms instead.",
-        ):
-            assert len(molecule.particles) == 3
-
-        with pytest.warns(
-            MoleculeDeprecationWarning,
-            match="Molecule.n_particles is deprecated. Use Molecule.n_atoms instead.",
-        ):
-            assert molecule.n_particles == 3
-
-        with pytest.warns(
-            MoleculeDeprecationWarning,
-            match="Molecule.particle_index is deprecated. Use Molecule.atom_index instead.",
-        ):
-            assert molecule.particle_index(molecule.atom(0)) == 0
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_n_atoms(self, molecule):
@@ -3563,8 +3541,12 @@ class TestMolecule:
 
         offmol._make_carboxylic_acids_cis()
 
-        diffs = np.asarray(offmol.conformers) - np.asarray(expected_conformers)
-        assert np.all(np.abs(diffs)) < 1e-5
+        for index in [0, 1]:
+            np.testing.assert_allclose(
+                offmol.conformers[index].m_as(unit.angstrom),
+                expected_conformers[index].m_as(unit.angstrom),
+                atol=1e-5,
+            )
 
     @requires_openeye
     def test_assign_fractional_bond_orders(self):
@@ -3782,12 +3764,15 @@ class TestMoleculeVisualization:
 
         trajectory = _OFFTrajectoryNGLView(molecule)
 
-        np.testing.assert_allclose(trajectory.get_coordinates(), molecule.conformers[0])
+        # _OFFTrajectoryNGLView.get_coordinates returns a unitless array implicitly in Angstroms
         np.testing.assert_allclose(
-            trajectory.get_coordinates(0), molecule.conformers[0]
+            trajectory.get_coordinates(), molecule.conformers[0].m
         )
         np.testing.assert_allclose(
-            trajectory.get_coordinates(1), molecule.conformers[1]
+            trajectory.get_coordinates(0), molecule.conformers[0].m
+        )
+        np.testing.assert_allclose(
+            trajectory.get_coordinates(1), molecule.conformers[1].m
         )
 
         with pytest.raises(IndexError, match="too high"):
