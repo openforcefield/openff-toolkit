@@ -59,6 +59,8 @@ from openff.toolkit.utils.exceptions import (
     BondExistsError,
     HierarchySchemeNotFoundException,
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
+    IncompatibleShapeError,
+    IncompatibleTypeError,
     IncompatibleUnitError,
     InvalidAtomMetadataError,
     InvalidBondOrderError,
