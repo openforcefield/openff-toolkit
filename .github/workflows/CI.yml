@@ -150,7 +150,7 @@ jobs:
 
           PYTEST_ARGS+=" --runslow"
 
-          python -m pytest $PYTEST_ARGS $COV openff/toolkit/
+          python -m pytest $PYTEST_ARGS $COV
 
       - name: Run code snippets in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
