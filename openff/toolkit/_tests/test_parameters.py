@@ -820,25 +820,6 @@ class TestParameterList:
         p2 = ParameterType(smirks="[#1:1]")
         ParameterList([p1, p2])
 
-    @pytest.mark.wip(
-        reason="Until ChemicalEnvironment won't be refactored to use the ToolkitRegistry "
-        "API, the smirks assignment will fail with RDKit."
-    )
-    def test_getitem(self):
-        """Test ParameterList __getitem__ overloading."""
-        p1 = ParameterType(smirks="[*:1]")
-        p2 = ParameterType(smirks="[#1:1]")
-        parameters = ParameterList([p1, p2])
-        assert parameters[0] == p1
-        assert parameters[1] == p2
-        assert parameters[p1.smirks] == p1
-        assert parameters[p2.smirks] == p2
-
-        # Note that this call access __getitem__, not __setitem__.
-        parameters["[*:1]"].smirks = "[*X4:1]"
-        assert parameters[0].smirks == "[*X4:1]"
-        assert p1.smirks == "[*X4:1]"
-
     def test_index(self):
         """
         Tests the ParameterList.index() function by attempting lookups by SMIRKS and by ParameterType equivalence.
