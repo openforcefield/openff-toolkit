@@ -147,6 +147,9 @@ jobs:
           if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
             PYTEST_ARGS+=" --runslow"
           fi
+
+          PYTEST_ARGS+=" --runslow"
+
           python -m pytest $PYTEST_ARGS $COV openff/toolkit/
 
       - name: Run code snippets in docs
