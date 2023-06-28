@@ -16,13 +16,15 @@ dependencies:
   - xmltodict
   - python-constraint
   - openmm >=7.6
-  - openff-forcefields
+  - openff-forcefields >=2023.05.1
   - smirnoff99Frosst
-  - openff-units >=0.2
+  - openff-units =0.2.0
   - openff-utilities >=0.1.5
   - openff-interchange-base >=0.2
+  - openff-nagl >=0.2.2
+  - openff-nagl-models >=0.0.2
     # Toolkit-specific
-  - ambertools
+  - ambertools >=22
   - rdkit
   - openeye-toolkits
     # Test-only/optional/dev
@@ -38,11 +40,9 @@ dependencies:
   - qcportal >=0.15
   - qcengine
   - mdtraj
-  - parmed
   - nbval
   - mypy
   - pip:
-    - types-pkg_resources
     - types-setuptools
     - types-toml
     - types-PyYAML

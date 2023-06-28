@@ -13,8 +13,8 @@ from openff.units import unit
 from packaging.version import Version
 
 import openff.toolkit.typing.engines.smirnoff.parameters
-from openff.toolkit.tests.mocking import VirtualSiteMocking
-from openff.toolkit.tests.utils import does_not_raise
+from openff.toolkit._tests.mocking import VirtualSiteMocking
+from openff.toolkit._tests.utils import does_not_raise
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
@@ -2128,14 +2128,10 @@ class TestVirtualSiteHandler:
         molecule = Molecule.from_smiles(smiles, allow_undefined_stereo=True)
         topology: Topology = molecule.to_topology()
 
-        topology_atoms = {
-            i: topology_atom for i, topology_atom in enumerate(topology.topology_atoms)
-        }
+        atoms = {i: atom for i, atom in enumerate(topology.atoms)}
 
         with expected_raises:
-            VirtualSiteHandler._validate_found_match(
-                topology_atoms, matched_indices, parameter
-            )
+            VirtualSiteHandler._validate_found_match(atoms, matched_indices, parameter)
 
     @pytest.mark.parametrize(
         "handler_a, handler_b, expected_raises",

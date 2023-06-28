@@ -23,6 +23,18 @@ class IncompatibleUnitError(OpenFFToolkitException):
     """
 
 
+class IncompatibleShapeError(OpenFFToolkitException):
+    """
+    Exception for when a value is in the wrong shape
+    """
+
+
+class IncompatibleTypeError(OpenFFToolkitException):
+    """
+    Exception for when a value is in an incompatible type
+    """
+
+
 class MissingPackageError(OpenFFToolkitException):
     """This function requires a package that is not installed."""
 

@@ -125,7 +125,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 cls._is_available = True
         return cls._is_available
 
-    def from_object(self, obj, allow_undefined_stereo: bool = False, _cls=None):
+    def from_object(
+        self,
+        obj,
+        allow_undefined_stereo: bool = False,
+        _cls=None,
+    ):
         """
         If given an rdchem.Mol (or rdchem.Mol-derived object), this function will load it into an
         openff.toolkit.topology.molecule. Otherwise, it will return False.
@@ -159,7 +164,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
             _cls = Molecule
         if isinstance(obj, Chem.rdchem.Mol):
-            return _cls.from_rdkit(obj, allow_undefined_stereo=allow_undefined_stereo)
+            return _cls.from_rdkit(
+                obj,
+                allow_undefined_stereo=allow_undefined_stereo,
+            )
         raise NotImplementedError(
             "Cannot create Molecule from {} object".format(type(obj))
         )
@@ -170,6 +178,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         smiles: str,
         allow_undefined_stereo: bool = False,
         _cls=None,
+        name: str = "",
     ):
         """
         Create a Molecule from a pdb file and a SMILES string using RDKit.
@@ -194,6 +203,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             If false, raises an exception if SMILES contains undefined stereochemistry.
         _cls : class
             Molecule constructor
+        name : str, default=""
+            An optional name for the output molecule
 
         Returns
         --------
@@ -209,7 +220,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # Make the molecule from smiles
         offmol = self.from_smiles(
-            smiles, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
+            smiles,
+            allow_undefined_stereo=allow_undefined_stereo,
+            _cls=_cls,
         )
 
         # Make another molecule from the PDB. We squelch stereo errors here, since
@@ -254,6 +267,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             newatom.name = pdbatom.name
         new_mol.add_default_hierarchy_schemes()
 
+        new_mol.name = name
         return new_mol
 
     def _polymer_openmm_topology_to_offmol(
@@ -316,6 +330,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             top._add_molecule_keep_cache(offmol)
         if pdbfile.topology.getPeriodicBoxVectors() is not None:
             top.box_vectors = from_openmm(pdbfile.topology.getPeriodicBoxVectors())
+        top.set_positions(coords_angstrom * unit.angstrom)
 
         return top
 
@@ -392,7 +407,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
                     # Some special residues are allowed to overlap/override previous matches
                     if any(m in already_assigned_nodes for m in match) and (
-                        res_name not in ["PEPTIDE_BOND", "DISULFIDE", "UNIQUE_MOLECULE"]
+                        res_name
+                        not in [
+                            "PEPTIDE_BOND",
+                            "DISULFIDE",
+                            "UNIQUE_MOLECULE",
+                            "ADDITIONAL_SUBSTRUCTURE",
+                        ]
                     ):
                         continue
                     already_assigned_nodes.update(match)
@@ -1018,6 +1039,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         hydrogens_are_explicit: bool = False,
         allow_undefined_stereo: bool = False,
         _cls=None,
+        name: str = "",
     ):
         """
         Create a Molecule from a SMILES string using the RDKit toolkit.
@@ -1036,6 +1058,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             is passed into this function.
         _cls : class
             Molecule constructor
+        name : str, default=""
+            An optional name to pass to the _cls constructor
 
         Returns
         -------
@@ -1100,10 +1124,16 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             allow_undefined_stereo=allow_undefined_stereo,
             hydrogens_are_explicit=hydrogens_are_explicit,
         )
-
+        molecule.name = name
         return molecule
 
-    def from_inchi(self, inchi: str, allow_undefined_stereo: bool = False, _cls=None):
+    def from_inchi(
+        self,
+        inchi: str,
+        allow_undefined_stereo: bool = False,
+        _cls=None,
+        name: str = "",
+    ):
         """
         Construct a Molecule from a InChI representation
 
@@ -1151,6 +1181,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         molecule = self.from_rdkit(
             rdmol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
         )
+        molecule.name = name
 
         return molecule
 
@@ -1196,7 +1227,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         from rdkit.Chem import AllChem
 
         if rms_cutoff is None:
-            rms_cutoff = unit.Quantity(1.0, unit.angstrom)
+            rms_cutoff = Quantity(1.0, unit.angstrom)
         rdmol = self.to_rdkit(molecule)
         # TODO: This generates way more conformations than omega, given the same
         # nConfs and RMS threshold. Is there some way to set an energy cutoff as well?
@@ -1316,9 +1347,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 for rdatom in rdkit_molecule.GetAtoms()
             ]
 
-        molecule.partial_charges = unit.Quantity(
-            np.asarray(charges), unit.elementary_charge
-        )
+        molecule.partial_charges = Quantity(np.asarray(charges), unit.elementary_charge)
 
         if normalize_partial_charges:
             molecule._normalize_partial_charges()
@@ -1327,7 +1356,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     def _elf_is_problematic_conformer(
         cls,
         molecule: "Molecule",
-        conformer: unit.Quantity,
+        conformer: Quantity,
     ) -> Tuple[bool, Optional[str]]:
         """A function which checks if a particular conformer is known to be problematic
         when computing ELF partial charges.
@@ -1373,9 +1402,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return False, None
 
     @classmethod
-    def _elf_prune_problematic_conformers(
-        cls, molecule: "Molecule"
-    ) -> List[unit.Quantity]:
+    def _elf_prune_problematic_conformers(cls, molecule: "Molecule") -> List[Quantity]:
         """A function which attempts to remove conformers which are known to be
         problematic when computing ELF partial charges.
 
@@ -1411,7 +1438,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     def _elf_compute_electrostatic_energy(
         cls,
         molecule: "Molecule",
-        conformer: unit.Quantity,
+        conformer: Quantity,
     ) -> float:
         """Computes the 'electrostatic interaction energy' of a particular conformer
         of a molecule.
@@ -1531,10 +1558,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     def _elf_select_diverse_conformers(
         cls,
         molecule: "Molecule",
-        ranked_conformers: List[unit.Quantity],
+        ranked_conformers: List[Quantity],
         limit: int,
-        rms_tolerance: unit.Quantity,
-    ) -> List[unit.Quantity]:
+        rms_tolerance: Quantity,
+    ) -> List[Quantity]:
         """Attempt to greedily select a specified number conformers which are maximally
         diverse.
 
@@ -1606,7 +1633,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         molecule: "Molecule",
         percentage: float = 2.0,
         limit: int = 10,
-        rms_tolerance: unit.Quantity = 0.05 * unit.angstrom,
+        rms_tolerance: Quantity = 0.05 * unit.angstrom,
     ):
         """Applies the `ELF method
         <https://docs.eyesopen.com/toolkits/python/quacpactk/molchargetheory.html#elf-conformer-selection>`_
@@ -1729,7 +1756,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         Create a molecule from an RDKit molecule
 
         >>> from rdkit import Chem
-        >>> from openff.toolkit.tests.utils import get_data_file_path
+        >>> from openff.toolkit._tests.utils import get_data_file_path
         >>> rdmol = Chem.MolFromMolFile(get_data_file_path('systems/monomers/ethanol.sdf'))
 
         >>> toolkit_wrapper = RDKitToolkitWrapper()
@@ -1759,7 +1786,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 ^ Chem.SANITIZE_SETAROMATICITY
                 ^ Chem.SANITIZE_ADJUSTHS
                 ^ Chem.SANITIZE_CLEANUPCHIRALITY
-                ^ Chem.SANITIZE_KEKULIZE
             ),
         )
         Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
@@ -1783,12 +1809,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Create a new OpenFF Molecule
         offmol = _cls()
 
-        # If RDMol has a title save it
+        # If RDMol has a title, use it
         if rdmol.HasProp("_Name"):
-            # raise Exception('{}'.format(rdmol.GetProp('name')))
             offmol.name = rdmol.GetProp("_Name")
-        else:
-            offmol.name = ""
 
         # Store all properties
         # TODO: Should there be an API point for storing properties?
@@ -1951,7 +1974,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 for rd_idx, off_idx in map_atoms.items():
                     atom_coords = conf.GetPositions()[rd_idx, :]
                     positions[off_idx, :] = atom_coords
-                offmol._add_conformer(unit.Quantity(positions, unit.angstrom))
+                offmol._add_conformer(Quantity(positions, unit.angstrom))
 
         partial_charges = np.zeros(shape=offmol.n_atoms, dtype=np.float64)
 
@@ -1969,9 +1992,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         "Some atoms in rdmol have partial charges, but others do not."
                     )
         if any_atom_has_partial_charge:
-            offmol.partial_charges = unit.Quantity(
-                partial_charges, unit.elementary_charge
-            )
+            offmol.partial_charges = Quantity(partial_charges, unit.elementary_charge)
         else:
             offmol.partial_charges = None
         return offmol
@@ -2163,7 +2184,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         rdmol = Chem.RWMol(rdmol)
         # Set name
         # TODO: What is the best practice for how this should be named?
-        if not (molecule.name is None):
+        if molecule.name != "":
             rdmol.SetProp("_Name", molecule.name)
 
         # TODO: Set other properties

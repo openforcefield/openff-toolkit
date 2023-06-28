@@ -14,7 +14,7 @@ from openff.units.openmm import from_openmm
 from openff.units.units import Quantity
 from openmm import app
 
-from openff.toolkit.tests.create_molecules import (
+from openff.toolkit._tests.create_molecules import (
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
@@ -28,7 +28,7 @@ from openff.toolkit.tests.create_molecules import (
     toluene_from_sdf,
     topology_with_metadata,
 )
-from openff.toolkit.tests.utils import (
+from openff.toolkit._tests.utils import (
     get_data_file_path,
     requires_openeye,
     requires_pkg,
@@ -42,6 +42,7 @@ from openff.toolkit.topology import (
     Topology,
     ValenceDict,
 )
+from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 from openff.toolkit.utils import (
     BASIC_CHEMINFORMATICS_TOOLKITS,
     OPENEYE_AVAILABLE,
@@ -107,6 +108,18 @@ def test_cheminformatics_toolkit_is_installed():
         raise Exception(msg)
 
 
+@pytest.fixture()
+def mixed_topology():
+    return Topology.from_molecules(
+        [
+            create_ethanol(),
+            create_ethanol(),
+            _SimpleMolecule.from_molecule(create_ethanol()),
+            _SimpleMolecule.from_molecule(create_ethanol()),
+        ]
+    )
+
+
 # TODO: Refactor this to pytest
 class TestTopology:
     def test_empty(self):
@@ -119,48 +132,6 @@ class TestTopology:
         assert topology.box_vectors is None
         assert not topology.is_periodic
         assert len(topology.constrained_atom_pairs.items()) == 0
-
-    def test_deprecated_api_points(self):
-        """Ensure that some of the API deprecated circa v0.11.0 still exist."""
-        from openff.toolkit.topology.topology import TopologyDeprecationWarning
-
-        topology = Topology()
-
-        for key in ["molecules", "atoms", "bonds", "particles"]:
-            old_iterator = "topology_" + key
-            old_counter = "n_topology_" + key
-            with pytest.warns(
-                TopologyDeprecationWarning,
-                match=f"Topology.{old_counter} is deprecated. Use Topology.n_{key} instead.",
-            ):
-                assert getattr(topology, old_counter) == 0
-            with pytest.warns(
-                TopologyDeprecationWarning,
-                match=f"Topology.{old_iterator} is deprecated. Use Topology.{key} instead.",
-            ):
-                assert len([*getattr(topology, old_iterator)]) == 0
-
-        # Some particle-related methods are deprecated for reasons other than the `TopologyX` deprecation
-        with pytest.warns(
-            TopologyDeprecationWarning,
-            match="Topology.n_particles is deprecated. Use Topology.n_atoms instead.",
-        ):
-            assert topology.n_particles == 0
-
-        with pytest.warns(
-            TopologyDeprecationWarning,
-            match="Topology.particles is deprecated. Use Topology.atoms instead.",
-        ):
-            assert len([*topology.particles]) == 0
-
-        topology = Molecule.from_smiles("O").to_topology()
-        first_atom = [*topology.atoms][0]
-
-        with pytest.warns(
-            TopologyDeprecationWarning,
-            match="Topology.particle_index is deprecated. Use Topology.atom_index instead.",
-        ):
-            assert topology.particle_index(first_atom) == 0
 
     def test_reinitialization_box_vectors(self):
         topology = Topology()
@@ -322,7 +293,7 @@ class TestTopology:
 
     def test_atom_element_properties(self):
         """
-        Test element-like getters of TopologyAtom atomic number. In 0.11.0, Atom.element
+        Test element-like getters of `Atom`. In 0.11.0, Atom.element
         was removed and replaced with Atom.atomic_number and Atom.symbol.
         """
         topology = Topology()
@@ -348,14 +319,14 @@ class TestTopology:
         n_ch_bonds = 0
         n_cc_bonds = 0
         for index in range(12):  # 7 from ethane, 5 from ethene
-            topology_bond = topology.bond(index)
-            if topology_bond.bond_order == 1:
+            bond = topology.bond(index)
+            if bond.bond_order == 1:
                 n_single_bonds += 1
-            if topology_bond.bond_order == 2:
+            if bond.bond_order == 2:
                 n_double_bonds += 1
             n_bond_carbons = 0
             n_bond_hydrogens = 0
-            for atom in topology_bond.atoms:
+            for atom in bond.atoms:
                 if atom.atomic_number == 6:
                     n_bond_carbons += 1
                 if atom.atomic_number == 1:
@@ -371,13 +342,13 @@ class TestTopology:
         assert n_ch_bonds == 10
 
         with pytest.raises(ValueError, match="must be an int.*'str'"):
-            topology_bond = topology.bond("one")
+            topology.bond("one")
 
         with pytest.raises(BondNotInTopologyError, match="No bond with index -1"):
             topology.bond(-1)
 
         with pytest.raises(BondNotInTopologyError, match="No bond with index 12"):
-            topology_bond = topology.bond(12)
+            topology.bond(12)
 
     def test_angles(self):
         """Topology.angles should return image angles of all topology molecules."""
@@ -768,6 +739,24 @@ class TestTopology:
         assert top.molecule(18).is_isomorphic_with(Molecule.from_smiles("[I-]"))
 
     @requires_rdkit
+    def test_from_pdb_input_types(self):
+        import pathlib
+
+        import openmm.app
+
+        protein_path = get_data_file_path("proteins/ace-ala-nh2.pdb")
+
+        Topology.from_pdb(protein_path)
+
+        Topology.from_pdb(pathlib.Path(protein_path))
+
+        with open(protein_path) as f:
+            Topology.from_pdb(f)
+
+        with pytest.raises(ValueError, match="Unexpected type.*PDBFile"):
+            Topology.from_pdb(openmm.app.PDBFile(protein_path))
+
+    @requires_rdkit
     def test_from_pdb_two_polymers_metadata(self):
         """Test that a PDB with two capped polymers is loaded correctly"""
         top = Topology.from_pdb(get_data_file_path("proteins/TwoMol_SER_CYS.pdb"))
@@ -821,6 +810,36 @@ class TestTopology:
         )
         assert po4.is_isomorphic_with(top2.molecule(0))
         assert phenylphosphate.is_isomorphic_with(top2.molecule(1))
+
+    @requires_rdkit
+    def test_from_pdb_additional_substructures(self):
+        """Test that the _additional_substructures arg is wired up correctly"""
+        with pytest.raises(UnassignedChemistryInPDBError):
+            Topology.from_pdb(get_data_file_path("proteins/ace-ZZZ-gly-nme.pdb"))
+
+        # Make unnatural AA
+        mol = Molecule.from_smiles("N[C@@H]([C@@H](C)O[P@](=O)(OCNCO)[O-])C(=O)")
+        # Get the indices of an N term and C term hydrogen for removal
+        leaving_atoms = mol.chemical_environment_matches("[H:1]N([H])CC(=O)[H:2]")[0]
+
+        # Label the atoms with whether they're leaving
+        for atom in mol.atoms:
+            if atom.molecule_atom_index not in leaving_atoms:
+                atom.metadata["substructure_atom"] = True
+            else:
+                atom.metadata["substructure_atom"] = False
+
+        top = Topology.from_pdb(
+            get_data_file_path("proteins/ace-ZZZ-gly-nme.pdb"),
+            _additional_substructures=[mol],
+        )
+
+        expected_mol = Molecule.from_file(
+            get_data_file_path("proteins/ace-ZZZ-gly-nme.sdf")
+        )
+        assert top.molecule(0).is_isomorphic_with(
+            expected_mol, atom_stereochemistry_matching=False
+        )
 
     @requires_pkg("mdtraj")
     def test_from_mdtraj(self):
@@ -1522,6 +1541,9 @@ class TestTopology:
         assert_reversed_ethanol_is_grouped_correctly(groupings)
         assert_cyclohexane_is_grouped_correctly(groupings)
         assert_last_ethanol_is_grouped_correctly(groupings)
+
+    def test_identical_molecule_groups_mixed_topology(self, mixed_topology):
+        assert len(mixed_topology.identical_molecule_groups) == 2
 
     @requires_openeye
     def test_chemical_environments_matches_OE(self):
