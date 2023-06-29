@@ -1,13 +1,11 @@
 import argparse
 
 import openmm
-from openff.units.openmm import from_openmm, to_openmm
-from openmm import app
-from openmm import unit as openmm_unit
+from openff.interchange import Interchange
+from openff.units.openmm import from_openmm
 from rdkit.Chem import rdMolAlign
 
-from openff.toolkit import ForceField, Molecule, Topology
-from openff.toolkit.utils import RDKitToolkitWrapper
+from openff.toolkit import ForceField, Molecule, RDKitToolkitWrapper
 
 
 def compute_conformer_energies_from_file(filename):
@@ -19,112 +17,129 @@ def compute_conformer_energies_from_file(filename):
     loaded_molecules = Molecule.from_file(filename, toolkit_registry=rdktkw)
     # The logic below only works for lists of molecules, so if a
     # single molecule was loaded, cast it to list
-    if type(loaded_molecules) is not list:
+    try:
+        loaded_molecules = [*loaded_molecules]
+    except TypeError:
         loaded_molecules = [loaded_molecules]
+
     # Collatate all conformers of the same molecule
     # NOTE: This isn't necessary if you have already loaded or created multi-conformer molecules;
     # it is just needed because our SDF reader does not automatically collapse conformers.
-    molecules = [loaded_molecules[0]]
-    for molecule in loaded_molecules[1:]:
-        if molecule == molecules[-1]:
-            for conformer in molecule.conformers:
-                molecules[-1].add_conformer(conformer)
+    molecule = loaded_molecules.pop(0)
+    for next_molecule in loaded_molecules:
+        if next_molecule == molecule:
+            for conformer in next_molecule.conformers:
+                molecule.add_conformer(conformer)
         else:
-            molecules.append(molecule)
+            # We're assuming the SDF just has multiple conformers of the
+            # same molecule, so raise an error if that's not the case
+            raise ValueError("Multiple chemical species loaded")
 
-    n_molecules = len(molecules)
-    n_conformers = sum([mol.n_conformers for mol in molecules])
+    # Make sure the molecule has a name
+    if not molecule.name:
+        molecule.name = molecule.to_hill_formula()
+
     print(
-        f"{n_molecules} unique molecule(s) loaded, with {n_conformers} total conformers"
+        f"Loaded {molecule.n_conformers} conformers"
+        + f" of {molecule.to_smiles(explicit_hydrogens=False)!r}"
+        + f" ({molecule.name})"
     )
 
-    # Load the openff-2.0.0 force field appropriate for vacuum calculations (without constraints)
-    forcefield_str = "openff_unconstrained-2.0.0.offxml"
-    forcefield = ForceField(forcefield_str)
-    # Loop over molecules and minimize each conformer
-    for molecule in molecules:
-        # If the molecule doesn't have a name, set mol.name to be the hill formula
-        if molecule.name == "":
-            molecule.name = Topology._networkx_to_hill_formula(molecule.to_networkx())
-            print("%s : %d conformers" % (molecule.name, molecule.n_conformers))
-            # Make a temporary copy of the molecule that we can update for each minimization
-        mol_copy = Molecule(molecule)
-        # Make an OpenFF Topology so we can parameterize the system
-        off_top = molecule.to_topology()
-        print(f"Parametrizing {molecule.name} (may take a moment to calculate charges)")
-        system = forcefield.create_openmm_system(off_top)
-        # Use OpenMM to compute initial and minimized energy for all conformers
-        integrator = openmm.VerletIntegrator(1 * openmm_unit.femtoseconds)
-        platform = openmm.Platform.getPlatformByName("Reference")
-        omm_top = off_top.to_openmm()
-        simulation = app.Simulation(omm_top, system, integrator, platform)
+    # Load the openff-2.1.0 force field appropriate for vacuum calculations (without constraints)
+    forcefield = ForceField("openff_unconstrained-2.1.0.offxml")
+    print(f"Parametrizing {molecule.name} (may take a moment to calculate charges)...")
+    interchange = Interchange.from_smirnoff(forcefield, [molecule])
+    print("Done.")
+    integrator = openmm.VerletIntegrator(1 * openmm.unit.femtoseconds)
+    simulation = interchange.to_openmm_simulation(integrator)
 
-        # Print text header
-        print(
-            "Using force field",
-            forcefield_str,
-            "\nConformer         Initial PE         Minimized PE       RMS between initial and minimized conformer",
+    # We'll store energies in two lists
+    initial_energies = []
+    minimized_energies = []
+
+    # And minimized conformers in a second molecule
+    minimized_molecule = Molecule(molecule)
+    minimized_molecule.conformers.clear()
+
+    for conformer in molecule.conformers:
+        # Tell the OpenMM Simulation the positions of this conformer
+        simulation.context.setPositions(conformer.to_openmm())
+
+        # Keep a record of the initial energy
+        initial_energies.append(
+            simulation.context.getState(getEnergy=True).getPotentialEnergy()
         )
-        output = [
-            [
-                "Conformer",
-                "Initial PE (kcal/mol)",
-                "Minimized PE (kcal/mol)",
-                "RMS between initial and minimized conformer (Angstrom)",
-            ]
+
+        # Perform the minimization
+        simulation.minimizeEnergy()
+
+        # Record minimized energy and positions
+        min_state = simulation.context.getState(getEnergy=True, getPositions=True)
+
+        minimized_energies.append(min_state.getPotentialEnergy())
+        minimized_molecule.add_conformer(from_openmm(min_state.getPositions()))
+
+    n_confs = molecule.n_conformers
+    print(f"{molecule.name}: {n_confs} conformers")
+
+    # Create a copy of the molecule so we can work on it
+    working_mol = Molecule(molecule)
+
+    # Print text header
+    print("Conformer         Initial PE        Minimized PE        RMSD")
+    output = [
+        [
+            "Conformer",
+            "Initial PE (kcal/mol)",
+            "Minimized PE (kcal/mol)",
+            "RMSD between initial and minimized conformer (Angstrom)",
         ]
-        for conformer_index, conformer in enumerate(molecule.conformers):
-            simulation.context.setPositions(to_openmm(conformer))
-            orig_potential = simulation.context.getState(
-                getEnergy=True
-            ).getPotentialEnergy()
-            simulation.minimizeEnergy()
-            min_state = simulation.context.getState(getEnergy=True, getPositions=True)
-            min_potential = min_state.getPotentialEnergy()
+    ]
 
-            # Calculate the RMSD between the initial and minimized conformer
-            min_coords = min_state.getPositions()
-            min_coords = from_openmm(min_coords)
+    for i, (init_energy, init_coords, min_energy, min_coords) in enumerate(
+        zip(
+            initial_energies,
+            molecule.conformers,
+            minimized_energies,
+            minimized_molecule.conformers,
+        )
+    ):
+        # Clear the conformers from the working molecule
+        working_mol.conformers.clear()
+        # Save the minimized conformer to file
+        working_mol.add_conformer(min_coords)
+        working_mol.to_file(
+            f"{molecule.name}_conf{i+1}_minimized.sdf",
+            file_format="sdf",
+        )
 
-            mol_copy._conformers = None
-            mol_copy.add_conformer(conformer)
-            mol_copy.add_conformer(min_coords)
-            rdmol = mol_copy.to_rdkit()
-            rmslist = []
-            rdMolAlign.AlignMolConformers(rdmol, RMSlist=rmslist)
-            minimization_rms = rmslist[0]
+        # Calculate the RMSD between the initial and minimized conformer
+        working_mol.add_conformer(init_coords)
+        rdmol = working_mol.to_rdkit()
+        rmslist = []
+        rdMolAlign.AlignMolConformers(rdmol, RMSlist=rmslist)
+        minimization_rms = rmslist[0]
 
-            # Save the minimized conformer to file
-            mol_copy._conformers = None
-            mol_copy.add_conformer(min_coords)
-            mol_copy.to_file(
-                f"{molecule.name}_conf{conformer_index+1}_minimized.sdf",
-                file_format="sdf",
+        # Record the results
+        output.append(
+            [
+                i + 1,
+                init_energy.value_in_unit(openmm.unit.kilocalories_per_mole),
+                min_energy.value_in_unit(openmm.unit.kilocalories_per_mole),
+                minimization_rms,
+            ]
+        )
+        print(
+            f"{{:5d}} / {n_confs:5d} :  {{:8.3f}} kcal/mol {{:8.3f}} kcal/mol {{:8.3f}} Å".format(
+                *output[-1]
             )
-            print(
-                "%5d / %5d : %8.3f kcal/mol %8.3f kcal/mol  %8.3f Angstroms"
-                % (
-                    conformer_index + 1,
-                    molecule.n_conformers,
-                    orig_potential.value_in_unit(openmm_unit.kilocalories_per_mole),
-                    min_potential.value_in_unit(openmm_unit.kilocalories_per_mole),
-                    minimization_rms,
-                )
-            )
-            output.append(
-                [
-                    str(conformer_index + 1),
-                    f"{orig_potential/openmm_unit.kilocalories_per_mole:.3f}",
-                    f"{min_potential/openmm_unit.kilocalories_per_mole:.3f}",
-                    f"{minimization_rms:.3f}",
-                ]
-            )
-            # Write the results out to CSV
-        with open(f"{molecule.name}.csv", "w") as of:
-            for line in output:
-                of.write(",".join(line) + "\n")
-                # Clean up OpenMM Simulation
-        del simulation, integrator
+        )
+
+    # Write the results out to CSV
+    with open(f"{molecule.name}.csv", "w") as of:
+        of.write(", ".join(output.pop(0)) + "\n")
+        for line in output:
+            of.write("{}, {:.3f}, {:.3f}, {:.3f}".format(*line) + "\n")
 
 
 if __name__ == "__main__":
