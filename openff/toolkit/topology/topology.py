@@ -2396,7 +2396,7 @@ class Topology(Serializable):
 
         try:
             return [
-                residue for molecule in self.molecules for residue in molecule.residues
+                element for molecule in self.molecules for element in getattr(molecule, name)
             ]
         except AttributeError as error:
             raise AttributeError(
