@@ -620,8 +620,8 @@ class TestMolecule:
         molecule = create_ethanol()
 
         with pytest.raises(
-            ValueError,
-            match="incompatible shape.*4.*9",
+            IncompatibleShapeError,
+            match="Unsupported shape.*4.*9",
         ):
             molecule.partial_charges = unit.Quantity(
                 np.zeros((4,)),
