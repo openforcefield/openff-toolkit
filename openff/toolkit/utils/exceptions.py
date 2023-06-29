@@ -321,6 +321,11 @@ class HierarchySchemeNotFoundException(OpenFFToolkitException):
     that doesn't have one with the given iterator name"""
 
 
+class HierarchyIteratorNameConflictError(OpenFFToolkitException):
+    """Exception raised when trying to access a hierarchy scheme with a name that
+    already exists as a `Topology` or `Molecule` attribute."""
+
+
 class MissingIndexedAttributeError(
     OpenFFToolkitException, IndexError, KeyError, AttributeError
 ):

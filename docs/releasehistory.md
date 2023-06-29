@@ -30,6 +30,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 - [PR #1654](https://github.com/openforcefield/openff-toolkit/pull/1654): Fixes issue [#1653](https://github.com/openforcefield/openff-toolkit/issues/1653), where a test that expected RDKit to fail began returning an error when RDKit became able to generate conformers for octahedral molecules.
 
+- [PR #1662](https://github.com/openforcefield/openff-toolkit/pull/1662): Fixes issue [#1660](https://github.com/openforcefield/openff-toolkit/issues/1660) by forbidding the registration of `HierarchyScheme`s with iterator names that conflict with existing `Molecule` attributes.
+
 ### New features
 
 ### Improved documentation and warnings

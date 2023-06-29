@@ -57,6 +57,7 @@ from typing_extensions import TypeAlias
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
     BondExistsError,
+    HierarchyIteratorNameConflictError,
     HierarchySchemeNotFoundException,
     HierarchySchemeWithIteratorNameAlreadyRegisteredException,
     IncompatibleShapeError,
@@ -1440,9 +1441,14 @@ class FrozenMolecule(Serializable):
         Molecule.delete_hierarchy_scheme,  Molecule.update_hierarchy_schemes,
         HierarchyScheme,
         """
-        if iterator_name in self._hierarchy_schemes:
+        if iterator_name in dir(self):
+            raise HierarchyIteratorNameConflictError(
+                f"Can not add iterator with name {iterator_name} to this molecule as an "
+                "attribute with that name already exists."
+            )
+        elif iterator_name in self._hierarchy_schemes:
             msg = (
-                f'Can not add iterator with name "{iterator_name}" to this topology, as iterator '
+                f'Can not add iterator with name "{iterator_name}" to this molecule, as iterator '
                 f"name is already used by {self._hierarchy_schemes[iterator_name]}"
             )
             raise HierarchySchemeWithIteratorNameAlreadyRegisteredException(msg)
