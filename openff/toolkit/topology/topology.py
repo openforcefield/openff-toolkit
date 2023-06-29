@@ -54,6 +54,7 @@ from openff.toolkit.utils.exceptions import (
     BondNotInTopologyError,
     ConstraintExsistsError,
     DuplicateUniqueMoleculeError,
+    HierarchyIteratorNameConflictError,
     IncompatibleUnitError,
     InvalidAromaticityModelError,
     InvalidBoxVectorsError,
@@ -2385,3 +2386,19 @@ class Topology(Serializable):
             if hasattr(molecule, iter_name):
                 for item in getattr(molecule, iter_name):
                     yield item
+
+    def __getattr__(self, name: str) -> List["HierarchyElement"]:
+        """If a requested attribute is not found, check the hierarchy schemes"""
+        if name in dir(self):
+            raise HierarchyIteratorNameConflictError(
+                f"Name {name} is already defined as an attribute/method of `Topology`."
+            )
+
+        try:
+            return [
+                residue for molecule in self.molecules for residue in molecule.residues
+            ]
+        except AttributeError as error:
+            raise AttributeError(
+                f"'{self.__class__.__name__}' object has no attribute {name!r}"
+            ) from error
