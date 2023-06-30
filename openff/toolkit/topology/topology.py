@@ -2389,6 +2389,10 @@ class Topology(Serializable):
 
     def __getattr__(self, name: str) -> List["HierarchyElement"]:
         """If a requested attribute is not found, check the hierarchy schemes"""
+        # Avoid attempting to process dunder methods as hierarchy scheme iterator names
+        if name.startswith("__"):
+            raise AttributeError
+
         if name in dir(self):
             raise HierarchyIteratorNameConflictError(
                 f"Name {name} is already defined as an attribute/method of `Topology`."
