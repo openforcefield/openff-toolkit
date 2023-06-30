@@ -3,14 +3,14 @@ import pytest
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 
-from openff.toolkit.tests.create_molecules import (
+from openff.toolkit._tests.create_molecules import (
     create_acetaldehyde,
     create_cis_1_2_dichloroethene,
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
 )
-from openff.toolkit.tests.utils import requires_openeye
+from openff.toolkit._tests.utils import requires_openeye
 from openff.toolkit.utils._nagl_wrapper import _NAGLToolkitWrapper
 from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 
@@ -51,11 +51,12 @@ class TestNAGLToolkitWrapper:
 
         assert molecule.partial_charges is not None
 
-        nagl_charges = molecule.partial_charges
+        nagl_charges = molecule.partial_charges.m_as(unit.elementary_charge)
+        assert nagl_charges.dtype == float
 
         numpy.testing.assert_allclose(
             openeye_charges.m_as(unit.elementary_charge),
-            nagl_charges.m_as(unit.elementary_charge),
+            nagl_charges,
             atol=0.03,
             rtol=0,
         )

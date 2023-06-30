@@ -33,10 +33,10 @@ jobs:
           fetch-depth: 2
 
       - name: Install environment with ${{ env.JOBNAME }}
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: devtools/conda-envs/beta_rc_env.yaml
-          extra-specs: |
+          create-args: >-
             python=${{ matrix.python-version }}
 
       - name: Additional info about the build
@@ -67,7 +67,7 @@ jobs:
 
       - name: Check links
         run: |
-          pytest -r fE --tb=short openff/toolkit/tests/test_links.py
+          pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
 
       - name: Run mypy
         run: |
@@ -75,10 +75,10 @@ jobs:
 
       - name: Run unit tests
         run: |
-          PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_examples.py"
-          PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
+          PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_examples.py"
+          PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_links.py"
           PYTEST_ARGS+=" --runslow"
-          pytest $PYTEST_ARGS $COV openff/toolkit/tests/
+          pytest $PYTEST_ARGS $COV
 
       - name: Run code snippets in docs
         run: |

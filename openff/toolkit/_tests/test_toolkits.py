@@ -12,9 +12,9 @@ from typing import Dict
 import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
-from openff.units import unit
+from openff.units import Quantity, unit
 
-from openff.toolkit.tests.create_molecules import (
+from openff.toolkit._tests.create_molecules import (
     create_acetaldehyde,
     create_acetate,
     create_cyclic_n3h3,
@@ -23,7 +23,7 @@ from openff.toolkit.tests.create_molecules import (
     create_reversed_ethanol,
     topology_with_metadata,
 )
-from openff.toolkit.tests.utils import (
+from openff.toolkit._tests.utils import (
     requires_ambertools,
     requires_openeye,
     requires_rdkit,
@@ -261,9 +261,9 @@ def formic_acid_molecule() -> Molecule:
 
 
 @pytest.fixture()
-def formic_acid_conformers() -> Dict[str, unit.Quantity]:
+def formic_acid_conformers() -> Dict[str, Quantity]:
     return {
-        "cis": unit.Quantity(
+        "cis": Quantity(
             np.array(
                 [
                     [-0.95927322, -0.91789997, 0.36333418],
@@ -275,7 +275,7 @@ def formic_acid_conformers() -> Dict[str, unit.Quantity]:
             ),
             unit.angstrom,
         ),
-        "trans": unit.Quantity(
+        "trans": Quantity(
             np.array(
                 [
                     [-0.95927322, -0.91789997, 0.36333418],
@@ -382,7 +382,7 @@ class TestOpenEyeToolkitWrapper:
 
         # Populate core molecule property fields
         molecule.name = "Alice"
-        partial_charges = unit.Quantity(
+        partial_charges = Quantity(
             np.array(
                 [
                     -0.9,
@@ -408,7 +408,7 @@ class TestOpenEyeToolkitWrapper:
             unit.elementary_charge,
         )
         molecule.partial_charges = partial_charges
-        coords = unit.Quantity(
+        coords = Quantity(
             np.array(
                 [
                     ["0.0", "1.0", "2.0"],
@@ -581,6 +581,15 @@ class TestOpenEyeToolkitWrapper:
         oemol2 = eth_from_oe.to_openeye()
         for oeatom in oemol2.GetAtoms():
             assert math.isnan(oeatom.GetPartialCharge())
+
+    def test_to_openeye_typed_partial_charges(self):
+        ethanol = create_ethanol()
+        ethanol.partial_charges = Quantity(
+            np.zeros(ethanol.n_atoms, dtype=int), unit.elementary_charge
+        )
+        oemol = ethanol.to_openeye()
+        for oeatom in oemol.GetAtoms():
+            assert np.isclose(oeatom.GetPartialCharge(), 0)
 
     def test_to_from_openeye_hierarchy_metadata(self):
         """
@@ -964,7 +973,7 @@ class TestOpenEyeToolkitWrapper:
         water.add_bond(0, 1, 1, False)
         water.add_bond(1, 2, 1, False)
         water.add_conformer(
-            unit.Quantity(
+            Quantity(
                 np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
                 unit.angstrom,
             )
@@ -1141,7 +1150,7 @@ class TestOpenEyeToolkitWrapper:
         toolkit_wrapper = OpenEyeToolkitWrapper()
         filename = get_data_file_path("molecules/ethanol.sdf")
         ethanol = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
-        ethanol.partial_charges = unit.Quantity(
+        ethanol.partial_charges = Quantity(
             np.array([-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0]),
             unit.elementary_charge,
         )
@@ -1208,7 +1217,7 @@ class TestOpenEyeToolkitWrapper:
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule.conformers) == 1
         assert molecule.conformers[0].shape == (15, 3)
-        target_charges = unit.Quantity(
+        target_charges = Quantity(
             np.array(
                 [
                     -0.1342,
@@ -1320,7 +1329,7 @@ class TestOpenEyeToolkitWrapper:
     def test_generate_conformers_failure(self):
         toolkit = OpenEyeToolkitWrapper()
 
-        molecule = Molecule.from_smiles("F[U](F)(F)(F)(F)F")
+        molecule = Molecule.from_smiles("C(C2)(C3)1CC23C1")
 
         with pytest.raises(ConformerGenerationError, match="Omega conf.*fail"):
             toolkit.generate_conformers(molecule, n_conformers=1)
@@ -1340,7 +1349,7 @@ class TestOpenEyeToolkitWrapper:
 
         initial_conformers = [
             # Add a conformer with an internal H-bond.
-            unit.Quantity(
+            Quantity(
                 np.array(
                     [
                         [0.5477, 0.3297, -0.0621],
@@ -1357,7 +1366,7 @@ class TestOpenEyeToolkitWrapper:
                 unit.angstrom,
             ),
             # Add a conformer without an internal H-bond.
-            unit.Quantity(
+            Quantity(
                 np.array(
                     [
                         [0.5477, 0.3297, -0.0621],
@@ -2262,7 +2271,7 @@ class TestRDKitToolkitWrapper:
 
         # Populate core molecule property fields
         molecule.name = "Alice"
-        partial_charges = unit.Quantity(
+        partial_charges = Quantity(
             np.array(
                 [
                     -0.9,
@@ -2288,7 +2297,7 @@ class TestRDKitToolkitWrapper:
             unit.elementary_charge,
         )
         molecule.partial_charges = partial_charges
-        coords = unit.Quantity(
+        coords = Quantity(
             np.array(
                 [
                     ["0.0", "1.0", "2.0"],
@@ -2740,7 +2749,7 @@ class TestRDKitToolkitWrapper:
         toolkit_wrapper = RDKitToolkitWrapper()
         filename = get_data_file_path("molecules/ethanol.sdf")
         ethanol = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
-        ethanol.partial_charges = unit.Quantity(
+        ethanol.partial_charges = Quantity(
             np.array([-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0]),
             unit.elementary_charge,
         )
@@ -2847,7 +2856,7 @@ class TestRDKitToolkitWrapper:
     def test_generate_conformers_failure(self):
         toolkit = RDKitToolkitWrapper()
 
-        molecule = Molecule.from_smiles("F[U](F)(F)(F)(F)F")
+        molecule = Molecule.from_smiles("C(C2)(C3)1CC23C1")
 
         with pytest.raises(ConformerGenerationError, match="RDKit conf.*fail"):
             toolkit.generate_conformers(molecule, n_conformers=1)
@@ -3033,7 +3042,7 @@ class TestRDKitToolkitWrapper:
         self,
         formic_acid_molecule: Molecule,
         expected_conformer_map: Dict[int, int],
-        rms_tolerance: unit.Quantity,
+        rms_tolerance: Quantity,
     ):
         """Test the greedy selection of 'diverse' ELF conformers."""
 
@@ -3068,7 +3077,7 @@ class TestRDKitToolkitWrapper:
 
         initial_conformers = [
             # Add a conformer with an internal H-bond.
-            unit.Quantity(
+            Quantity(
                 np.array(
                     [
                         [0.5477, 0.3297, -0.0621],
@@ -3085,7 +3094,7 @@ class TestRDKitToolkitWrapper:
                 unit.angstrom,
             ),
             # Add a conformer without an internal H-bond.
-            unit.Quantity(
+            Quantity(
                 np.array(
                     [
                         [0.5477, 0.3297, -0.0621],
@@ -3395,6 +3404,27 @@ class TestAmberToolsToolkitWrapper:
         )
         charge_sum = np.sum(molecule.partial_charges)
         assert 1e-10 > abs(charge_sum.m_as(unit.elementary_charge) + 1)
+
+    def test_assign_partial_charges_am1bcc_thread_safe(self):
+        """
+        Test that AmberToolsToolkitWrapper assign_partial_charges() is thread-safe
+        See https://github.com/openforcefield/openff-toolkit/issues/1642
+        """
+        from concurrent.futures import ThreadPoolExecutor
+
+        def charge_func(run_num=-1):
+            from openff.toolkit import AmberToolsToolkitWrapper, Molecule
+
+            AmberToolsToolkitWrapper().assign_partial_charges(
+                Molecule.from_smiles("CCO")
+            )
+
+        futures = list()
+        with ThreadPoolExecutor() as executor:
+            for i in range(5):
+                futures.append(executor.submit(charge_func, i))
+        for future in futures:
+            future.result()
 
     def test_assign_partial_charges_am1bcc_wrong_n_confs(self):
         """
@@ -3807,6 +3837,27 @@ class TestAmberToolsToolkitWrapper:
                 toolkit_registry=AmberToolsToolkitWrapper(),
                 bond_order_model="not a real charge model",
             )
+
+    def test_assign_fractional_bond_orders_thread_safe(self):
+        """
+        Test that AmberToolsToolkitWrapper assign_fractional_bond_orders() is thread-safe
+        See https://github.com/openforcefield/openff-toolkit/issues/1642
+        """
+        from concurrent.futures import ThreadPoolExecutor
+
+        def charge_func(run_num=-1):
+            from openff.toolkit import AmberToolsToolkitWrapper, Molecule
+
+            AmberToolsToolkitWrapper().assign_fractional_bond_orders(
+                Molecule.from_smiles("CCO")
+            )
+
+        futures = list()
+        with ThreadPoolExecutor() as executor:
+            for i in range(5):
+                futures.append(executor.submit(charge_func, i))
+        for future in futures:
+            future.result()
 
     @requires_openeye
     def test_assign_fractional_bond_orders_openeye_installed(self):

@@ -1112,7 +1112,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         Create a Molecule from an OpenEye OEMol
 
         >>> from openeye import oechem
-        >>> from openff.toolkit.tests.utils import get_data_file_path
+        >>> from openff.toolkit._tests.utils import get_data_file_path
         >>> ifs = oechem.oemolistream(get_data_file_path('systems/monomers/ethanol.mol2'))
         >>> oemols = list(ifs.GetOEGraphMols())
 
@@ -1324,7 +1324,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 all_zeros = not np.any(positions)
                 if all_zeros and n_atoms > 1:
                     continue
-                molecule._add_conformer(unit.Quantity(positions, unit.angstrom))
+                molecule._add_conformer(Quantity(positions, unit.angstrom))
 
         # Store charges with implicit units in this scope
         unitless_charges = np.zeros(shape=molecule.n_atoms, dtype=np.float64)
@@ -1343,7 +1343,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             unitless_charges[off_idx] = unitless_charge
 
         if any_partial_charge_is_not_nan:
-            molecule.partial_charges = unit.Quantity(
+            molecule.partial_charges = Quantity(
                 unitless_charges, unit.elementary_charge
             )
         else:
@@ -1547,9 +1547,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             if off_atom.partial_charge is None:
                 oe_atom.SetPartialCharge(float("nan"))
             else:
-                oe_atom.SetPartialCharge(
-                    off_atom.partial_charge.m_as(unit.elementary_charge)
-                )
+                charge = off_atom.partial_charge.m_as(unit.elementary_charge)
+                oe_atom.SetPartialCharge(float(charge))
             res = oechem.OEAtomGetResidue(oe_atom)
             # If we add residue info without updating the serial number, all of the atom
             # serial numbers in a written PDB will be 0. Note two things:
@@ -2287,7 +2286,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             for atom_index, coordinates in oe_conformer.GetCoords().items():
                 conformer[atom_index, :] = coordinates
 
-            conformers.append(unit.Quantity(conformer, unit.angstrom))
+            conformers.append(Quantity(conformer, unit.angstrom))
 
         molecule._conformers = conformers
 
@@ -2493,7 +2492,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Extract and return charges
         # TODO: Make sure atom mapping remains constant
         # Extract the list of charges, taking into account possible indexing differences
-        charges = unit.Quantity(
+        charges = Quantity(
             np.zeros(shape=oemol.NumAtoms(), dtype=np.float64), unit.elementary_charge
         )
         for oeatom in oemol.GetAtoms():

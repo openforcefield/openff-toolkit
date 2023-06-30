@@ -5,6 +5,7 @@ Tests for utility methods
 
 import os
 
+import pytest
 from openff.units import unit
 
 
@@ -48,6 +49,13 @@ def test_get_data_file_path():
 
     filename = get_data_file_path("test_forcefields/tip3p.offxml")
     assert os.path.exists(filename)
+
+
+def test_get_data_file_path_does_not_exist():
+    from openff.toolkit.utils import get_data_file_path
+
+    with pytest.raises(ValueError, match="does not exist"):
+        get_data_file_path("bogus.offxml")
 
 
 def test_dimensionless_units():
