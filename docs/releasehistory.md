@@ -6,25 +6,19 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-## Current development
+## 0.14.0
 
 ### API-breaking changes
-
 - [PR #1649](https://github.com/openforcefield/openff-toolkit/pull/1649): Removes tests and associated modules from the public API.
 - [PR #1508](https://github.com/openforcefield/openff-toolkit/pull/1508): Removes the `return_topology` kwawrg from `ForceField.create_openmm_system` which was [deprecated in version 0.11.0](https://docs.openforcefield.org/projects/toolkit/en/stable/releasehistory.html#breaking-change-interchange-now-responsible-for-system-parametrization). To access the `Topology` that results from parametrization, call `ForceField.create_interchange` and access the `.topology` attribute of the returned `Interchange` object.
-- [PR #1506](https://github.com/openforcefield/openff-toolkit/pull/1506):
-  Removes several classes and properties in the `topology` submodule that were [deprecated in version 0.11.0](https://docs.openforcefield.org/projects/toolkit/en/stable/releasehistory.html#breaking-change-topology-molecule-representation).
+- [PR #1506](https://github.com/openforcefield/openff-toolkit/pull/1506): Removes several classes and properties in the `topology` submodule that were [deprecated in version 0.11.0](https://docs.openforcefield.org/projects/toolkit/en/stable/releasehistory.html#breaking-change-topology-molecule-representation).
 
 
 ### Behavior changes
-
 - [PR #1652](https://github.com/openforcefield/openff-toolkit/pull/1652): Fixes issue [#1642](https://github.com/openforcefield/openff-toolkit/issues/1642) by making AmberToolsToolkitWrapper thread-safe (previously `AmberToolsToolkitWrapper.assign_partial_charges` and `assign_fractional_bond_orders` were not)
 
 ### Bugfixes
-
 - [PR #1654](https://github.com/openforcefield/openff-toolkit/pull/1654): Fixes issue [#1653](https://github.com/openforcefield/openff-toolkit/issues/1653), where a test that expected RDKit to fail began returning an error when RDKit became able to generate conformers for octahedral molecules.
-
-### New features
 
 ### Improved documentation and warnings
 - [PR #1572](https://github.com/openforcefield/openff-toolkit/pull/1572): Improved installation guide in line with ecosystem docs.
