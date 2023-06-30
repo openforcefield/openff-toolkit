@@ -8,9 +8,17 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### API-breaking changes
+
+### Behavior changes
+
+### Bugfixes
+
 ### New features
 
 - [PR #1662](https://github.com/openforcefield/openff-toolkit/pull/1662): Adds hierarchy scheme iterators to `Topology`, i.e. `Topology.residues`, when schemes of the same iterator name are defines on all constituent `Molecule`s.
+
+### Improved documentation and warnings
 
 ## 0.14.0
 
