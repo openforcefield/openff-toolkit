@@ -1766,6 +1766,7 @@ def residue_equality_check(residue1, residue2):
 
 
 class TestTopologyHierarchyIterators:
+    @requires_rdkit
     def test_single_small_peptide(
         self,
     ):
@@ -1796,6 +1797,7 @@ class TestTopologyHierarchyIterators:
         ):
             topology.residues
 
+    @requires_rdkit
     def test_error_when_mixed_iterators(
         self,
     ):
