@@ -989,7 +989,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             else:
                 a.SetQuery(
                     generic_mol.GetAtomWithIdx(a.GetAtomicNum())
-                )  # i.e. H looks up atom 0 in our generic mol
+                )  
             a.SetNoImplicit(True)
             if a.GetAtomicNum() == 0:
                 neighbor_idxs.append(idx)
