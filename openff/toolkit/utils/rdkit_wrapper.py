@@ -987,9 +987,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     Chem.AtomFromSmarts(f"[#{a.GetAtomicNum()}D{a.GetDegree()}]")
                 )
             else:
-                a.SetQuery(
-                    generic_mol.GetAtomWithIdx(a.GetAtomicNum())
-                )  
+                a.SetQuery(generic_mol.GetAtomWithIdx(a.GetAtomicNum()))
             a.SetNoImplicit(True)
             if a.GetAtomicNum() == 0:
                 neighbor_idxs.append(idx)
