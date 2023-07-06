@@ -15,6 +15,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+- [PR #1667](https://github.com/openforcefield/openff-toolkit/pull/1667): A more helpful exception is now raised when `Topology.from_openmm` is given an OpenMM Topology with virtual sites.
+
 ### New features
 
 ### Improved documentation and warnings
