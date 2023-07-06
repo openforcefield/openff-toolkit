@@ -4501,7 +4501,7 @@ class TestHierarchies:
         # Redundant hier schemes are NOT OK if their iter name is already used
         with pytest.raises(
             HierarchySchemeWithIteratorNameAlreadyRegisteredException,
-            match='Can not add iterator with name "res_by_num" to this topology',
+            match='Can not add iterator with name "res_by_num" to this molecule',
         ):
             dipeptide_residues_perceived.add_hierarchy_scheme(
                 ("residue_number",), "res_by_num"
