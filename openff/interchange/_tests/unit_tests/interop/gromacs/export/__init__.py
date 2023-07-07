@@ -1,1 +1,0 @@
-"""Exports to GROMACS files."""
