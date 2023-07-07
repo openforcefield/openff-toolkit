@@ -51,6 +51,8 @@ from openff.toolkit.utils import (
     RDKitToolkitWrapper,
 )
 from openff.toolkit.utils.exceptions import (
+    AmbiguousAtomChemicalAssignment,
+    AmbiguousBondChemicalAssignment,
     AtomNotInTopologyError,
     BondNotInTopologyError,
     DuplicateUniqueMoleculeError,
@@ -59,6 +61,10 @@ from openff.toolkit.utils.exceptions import (
     InvalidPeriodicityError,
     MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
+    NonUniqueSubstructureName,
+    SubstructureAtomSmartsInvalid,
+    SubstructureBondSmartsInvalid,
+    SubstructureImproperlySpecified,
     UnassignedChemistryInPDBError,
     WrongShapeError,
 )
@@ -2194,3 +2200,37 @@ class TestTopologyPositions:
         topology.set_positions(positions)
         topology._molecules[0]._conformers = None
         assert topology.get_positions() is None
+
+    def test_atomic_num_spec(self):
+        with pytest.raises(SubstructureAtomSmartsInvalid):
+            PE_substructs = {"PE": "[CD4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"}
+            top = Topology.from_pdb(get_data_file_path("systems/test_systems/PE.pdb"), _custom_substructures=PE_substructs)
+    def test_monomer_connectivity(self):
+        with pytest.raises(SubstructureAtomSmartsInvalid):
+            PE_substructs = {"PE": "[#6D3+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"}
+            top = Topology.from_pdb(get_data_file_path("systems/test_systems/PE.pdb"), _custom_substructures=PE_substructs)
+    def test_formal_charge_spec(self):
+        with pytest.raises(SubstructureAtomSmartsInvalid):
+            PE_substructs = {"PE": "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"}
+            top = Topology.from_pdb(get_data_file_path("systems/test_systems/PE.pdb"), _custom_substructures=PE_substructs)
+    def test_bond_type_spec(self):
+        with pytest.raises(SubstructureBondSmartsInvalid):
+            PE_substructs = {"PE": "[#6D4+0:9](~[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"}
+            top = Topology.from_pdb(get_data_file_path("systems/test_systems/PE.pdb"), _custom_substructures=PE_substructs)
+    def test_duplicate_monomers(self):
+        with pytest.raises(NonUniqueSubstructureName):
+            PE_substructs = {"LEU": "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"}
+            top = Topology.from_pdb(get_data_file_path("systems/test_systems/PE.pdb"), _custom_substructures=PE_substructs)
+    def test_ambiguous_bond_info_check(self):
+        with pytest.raises(AmbiguousBondChemicalAssignment):
+            PE_substructs = {"PE": "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
+                            "PE_wrong": "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(=[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+                            }
+            top = Topology.from_pdb(get_data_file_path("systems/test_systems/PE.pdb"), _custom_substructures=PE_substructs)   
+    def test_ambiguous_formal_charge_check(self):
+        with pytest.raises(AmbiguousAtomChemicalAssignment):
+            PE_substructs = {"PE": "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
+                            "PE_wrong": "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+1:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+                            }
+            top = Topology.from_pdb(get_data_file_path("systems/test_systems/PE.pdb"), _custom_substructures=PE_substructs)  
+    

@@ -1668,18 +1668,13 @@ class Topology(Serializable):
 
         pdb = PDBFile(file_path)
 
-        if _custom_substructures:
-            substructure_file_path = get_data_file_path(
-                "proteins/aa_residues_substructures_explicit_bond_orders_with_caps_and_explicit_connectivity.json"
-            )
-        else:
-            substructure_file_path = get_data_file_path(
-                "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
-            )
+        substructure_file_path = get_data_file_path(
+            "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
+        )
 
         with open(substructure_file_path, "r") as subfile:
             substructure_dictionary = json.load(
-                subfile, object_pairs_hook=OrderedDict
+                subfile
             )  # preserving order is useful later when saving metadata
         substructure_dictionary["HOH"] = {"[H:1][O:2][H:3]": ["H1", "O", "H2"]}
         substructure_dictionary["Li"] = {"[Li+1:1]": ["Li"]}

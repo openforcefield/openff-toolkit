@@ -302,10 +302,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         omm_top = pdbfile.topology
 
-        # if custom substructures exist, validate them separately from the official substructures
-        # and add them to the substructure_dictionary
+        # if custom substructures exist, validate them and add to the substructure_dictionary
+        # (existing amino acid substructures are already validated as part of their creation)
         if _custom_substructures:
-            self._validate_custom_substructures(
+            self._validate_custom_substructures( # errors if any errors found
                 _custom_substructures, forbidden_keys=substructure_dictionary.keys()
             )
             custom_substructure_dictionary = self._prepare_custom_substructures(
@@ -402,12 +402,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Returns
         -------
-        valid : bool
-            True if ALL substructures are valid and pass all tests.
-            TODO: for now, the return statement is somewhat useless since the validation
-            is strict and simply errros instead of returning False. However, I am keeping
-            this return structure in the case we ever decide to have looser warnings instead
-            of strict exceptions.
+        None: If validation successful. Errors otherwise
         Raises
         ------
         NonUniqueSubstructureName
@@ -430,19 +425,18 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         for name, smarts in custom_substructures.items():
             self._is_valid_substructure_smarts(name, smarts)  # raises error if invalid
 
-        return True  # all tests passed without raised exception
+        return # all tests passed without raised exception
 
     def _is_valid_substructure_smarts(self, name, smarts):
         from rdkit import Chem
 
-        def is_connected(rdmol):
+        def check_is_connected(rdmol):
             if len(Chem.rdmolops.GetMolFrags(rdmol)) > 1:
                 error_reason = "Multiple fragments detected. Must be a single and connected substructure."
                 raise SubstructureImproperlySpecified(name, error_reason)
-            else:
-                return True
+            return
 
-        def is_valid_interior_atom(atom, qmol):
+        def check_interior_atom(atom, qmol):
             atom_smarts = atom.GetSmarts()
             # ensure that no unsupported logical operators exist
             operators = r"!,;"
@@ -468,7 +462,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 raise SubstructureAtomSmartsInvalid(
                     name, atom.GetSmarts(), mol_smarts, error_reason
                 )
-            # require that all elements are specified in #<n> format. This removes the H prototype edge case
+            # require that all elements are specified in #<n> format. Because the H primitive can act as either
+            # hydrogen atom or the number of implicit hydrogens, it is cleaner to specify atoms by atomic number 
+            # rather than atomic symbol. 
             # Also require explicit connecitivity in D<n> format and explicit charge with either a + or -
             required_prims = r"[]#D:"
             missing_prims = [prim not in atom_smarts for prim in required_prims]
@@ -494,9 +490,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 raise SubstructureAtomSmartsInvalid(
                     name, atom.GetSmarts(), mol_smarts, error_reason
                 )
-            return True
+            return
 
-        def is_valid_neighbor_atom(atom, qmol):
+        def check_neighbor_atom(atom, qmol):
             atom_smarts = atom.GetSmarts()
             # ensure that no unsupported logical operators exist
             operators = r"!,;&"
@@ -534,41 +530,31 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 raise SubstructureAtomSmartsInvalid(
                     name, atom.GetSmarts(), mol_smarts, error_reason
                 )
-            return True
+            return
 
-        def is_valid_bond(bond):
+        def check_bond(bond):
             valid_bond_types = [
                 Chem.BondType.SINGLE,
-                Chem.BondType.AROMATIC,
                 Chem.BondType.DOUBLE,
                 Chem.BondType.TRIPLE,
-                Chem.BondType.QUADRUPLE,
-                Chem.BondType.QUINTUPLE,
-                Chem.BondType.HEXTUPLE,
             ]
-            if bond.GetBondType() in valid_bond_types:
-                return True
-            else:
+            if bond.GetBondType() not in valid_bond_types:
                 raise SubstructureBondSmartsInvalid(
                     name, bond, [str(b) for b in valid_bond_types]
                 )
-
+            return
+        
         qmol = Chem.MolFromSmarts(smarts)
 
         # check if graph is connected
-        if not is_connected(qmol):
-            return False
+        check_is_connected(qmol)
 
         # check atom strings for required and unsupported primitives
         for atom in qmol.GetAtoms():
             if atom.GetAtomicNum() > 0:
-                is_valid = is_valid_interior_atom(atom, qmol)
-                if not is_valid:
-                    return False
+                check_interior_atom(atom, qmol)
             elif atom.GetAtomicNum() == 0 and "#" not in atom.GetSmarts():
-                is_valid = is_valid_neighbor_atom(atom, qmol)
-                if not is_valid:
-                    return False
+                check_neighbor_atom(atom, qmol)
             else:
                 mol_smarts = Chem.MolToSmarts(qmol)
                 error_reason = "atomic num = 0 but smarts contains # primitive (likely due to conditionals)"
@@ -576,17 +562,17 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     name, atom.GetSmarts(), mol_smarts, error_reason
                 )
         for bond in qmol.GetBonds():
-            if not is_valid_bond(bond):
-                return False
+            check_bond(bond)
+            
         # ensure unique atom map numbers for each atom
         map_nums = [atom.GetAtomMapNum() for atom in qmol.GetAtoms()]
         unique_map_nums = set(map_nums)
         if len(map_nums) != len(unique_map_nums):
             reason = "non-unique atom map numbers detected"
-            SubstructureImproperlySpecified(name, reason)
+            raise SubstructureImproperlySpecified(name, reason)
 
-        # If all checks are passed, the smarts is valid
-        return True
+        # If all checks pass, continue 
+        return
 
     def _prepare_custom_substructures(self, custom_substructures: Dict[str, str]):
         """
@@ -638,6 +624,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         from rdkit import Chem
         from rdkit.DataStructs.cDataStructs import CreateFromBinaryText
+        from copy import deepcopy
 
         already_assigned_nodes = set()
         # TODO: We currently assume all single and modify a few
@@ -665,17 +652,34 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             sorted_substructure_smarts = sorted(
                 substructure_library[res_name], key=len, reverse=True
             )
+            
             for substructure_smarts in sorted_substructure_smarts:
                 # this is the molecule as defined in template
-                ref = Chem.MolFromSmarts(substructure_smarts)
+                ref = Chem.MolFromSmarts(substructure_smarts) # ref is used to execute queries and find substructures but is difficult to sanitize/calculate valence (has query atoms)
+                ref_info = deepcopy(ref)
+                Chem.SanitizeMol( # ref must be sanitized to calculate aromaticity 
+                    ref_info,
+                    Chem.SANITIZE_NONE, # run sanitization to calculate Implcit H counts to later aromaticity assignment
+                )
+
+                # params = Chem.SmilesParserParams()
+                # params.removeHs = False
+                # params.sanitize = True # Sanitization is REQUIRED (or some form of implicit H calculation) if we want to assign MDL aromaticity soon 
+                # ref_info = Chem.MolFromSmiles(Chem.MolToSmiles(ref, isomericSmiles=False, kekuleSmiles=True, canonical=False), params) # ref_info remembers chemical info and can be assigned aromaticity
+
+                # set aromaticity for ref to avoid ambiguous chemical assignments from rotating or flipping aromatic rings
+                # The entire molecule is kekulized after 
+                try:
+                    Chem.SetAromaticity(ref_info, Chem.AromaticityModel.AROMATICITY_MDL)
+                except Exception as e:
+                    raise Exception
+                
                 # then create a looser definition for pattern matching...
                 # be lax about double bonds and chirality
                 customs_exist = bool(
                     priority_substructure_residues
                 )  # do we have custom substructures?
-                fuzzy, neighbor_idxs = self._fuzzy_query(
-                    ref, strict_degree=customs_exist
-                )
+                fuzzy, neighbor_idxs = self._fuzzy_query(ref)
                 # It's important that we do the substructure search on `rdkit_mol`, but the chemical
                 # info is added to `mol`. If we use the same rdkit molecule for search AND info addition,
                 # then single bonds may no longer be present for subsequent overlapping matches.
@@ -685,6 +689,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     priority_substructure_residues
                 ):  # experimental resonance/symmetry functionality
                     sym_atoms, sym_bonds = self._get_symmetrical_groups(fuzzy, ref)
+
+                if query_number == 43:
+                    test = 1
 
                 for full_match in rdkit_mol.GetSubstructMatches(fuzzy, maxMatches=0):
                     # Keep track of all residue names that have been assigned to
@@ -705,29 +712,15 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         if sorted_match not in sorted_mol_frags:
                             continue
 
-                    # Some special residues are allowed to overlap/override previous matches
-                    if any(m in already_assigned_nodes for m in match) and (
-                        res_name
-                        not in [
-                            "PEPTIDE_BOND",
-                            "DISULFIDE",
-                            "UNIQUE_MOLECULE",
-                            *priority_substructure_residues,
-                            "ADDITIONAL_SUBSTRUCTURE",
-                        ]
-                    ):
-                        continue
+                    # assign chemical info and check all overlapping substructures for ambiguous/conflicting chemical info
 
-                    # for _custom_substructures only, allow overlaps if no chemical info is changed
-
-                    for atom_i, j in zip(ref.GetAtoms(), full_match):
+                    for atom_i, j in zip(ref_info.GetAtoms(), full_match):
                         if atom_i.GetAtomicNum() == 0:  # ignore neighboring atoms
                             continue
                         atom_j = mol.GetAtomWithIdx(j)
                         # error checking for overlapping substructures with priority. Enforce that no ambiguous chemical assignments are made
                         if (
-                            res_name in priority_substructure_residues
-                            and j in already_assigned_nodes
+                            j in already_assigned_nodes
                         ):  # if overlapping with previous match
                             if (
                                 atom_i.GetFormalCharge() != atom_j.GetFormalCharge()
@@ -755,7 +748,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
                     already_assigned_nodes.update(match)
 
-                    for b in ref.GetBonds():
+                    for b in ref_info.GetBonds():
                         ref_bond_ids = tuple(
                             sorted([b.GetBeginAtomIdx(), b.GetEndAtomIdx()])
                         )
@@ -763,10 +756,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         y = full_match[b.GetEndAtomIdx()]
                         b2 = mol.GetBondBetweenAtoms(x, y)
                         bond_ids = tuple(sorted([x, y]))
+
+                        if bond_ids == (634, 638):
+                            test = 1
+
                         # error chacking of overlapping bonds. If substructures with priority disagree on the bond order, raise exception
                         if (
-                            res_name in priority_substructure_residues
-                            and bond_ids in already_assigned_edges
+                            bond_ids in already_assigned_edges
                         ):  # if overlapping with previous match
                             if (
                                 b.GetBondType() != b2.GetBondType()
@@ -959,7 +955,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return ambiguous_atoms, ambiguous_bonds
 
     @staticmethod
-    def _fuzzy_query(query, strict_degree=False):
+    def _fuzzy_query(query):
         """return a copy of Query which is less specific:
         - ignore aromaticity and hybridization of atoms (i.e. [#6] not C)
         - ignore bond orders
@@ -971,24 +967,18 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # but you can do SetQuery on Atoms/Bonds to edit them quite powerfully
         generic = Chem.MolFromSmarts("**")
         generic_bond = generic.GetBondWithIdx(0)
-        # N.B. This isn't likely to be an active
-        generic_mol = (
-            Chem.MolFromSmarts(  # TODO: optimisation, create this once somewhere
-                "[*]" + "".join("[#{}]".format(i + 1) for i in range(112))
-            )
-        )
 
         fuzzy = Chem.Mol(query)
         neighbor_idxs = []
         for idx, a in enumerate(fuzzy.GetAtoms()):
             a.SetFormalCharge(0)
-            if strict_degree and a.GetAtomicNum() > 0:
+            if a.GetAtomicNum() > 0:
                 a.SetQuery(
                     Chem.AtomFromSmarts(f"[#{a.GetAtomicNum()}D{a.GetDegree()}]")
                 )
             else:
                 a.SetQuery(
-                    generic_mol.GetAtomWithIdx(a.GetAtomicNum())
+                    generic.GetAtomWithIdx(0)
                 )  
             a.SetNoImplicit(True)
             if a.GetAtomicNum() == 0:
