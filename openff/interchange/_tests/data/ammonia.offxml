@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='ASCII'?>
+<SMIRNOFF version="0.2" aromaticity_model="OEAroModel_MDL">
+  <!-- SMIRNOFF (SMIRKS Native Open Force Field) file -->
+  <Date>2018-04-05</Date>
+  <Author>V. T. Lim, UC Irvine</Author>
+  <!-- WARNING: This file is adapted from its original source and not suitable for production. -->
+  <!-- Minimal SMIRNOFF file for testing partly pyramidal geometry of ammonia. -->
+  <!-- This file is meant for processing via openforcefield.typing.engines.smirnoff -->
+  <!-- WARNING: AMBER functional forms drop the factor of 2 in the bond energy term, so cross-comparing this file with a corresponding .frcmod file, it will appear that the values here are twice as large as they should be. -->
+  <Bonds version="0.3" potential="harmonic" fractional_bondorder_method="None" fractional_bondorder_interpolation="linear">
+    <Bond smirks="[#7:1]-[#1:2]" length="1.021370282176 * angstrom" k="997.7547006218 * angstrom**-2 * mole**-1 * kilocalorie" id="b86"></Bond>
+  </Bonds>
+  <!-- WARNING: AMBER functional forms drop the factor of 2 in the angle energy term, so cross-comparing this file with a corresponding .frcmod file, it will appear that the values here are twice as large as they should be. -->
+  <Angles version="0.3" potential="harmonic">
+    <Angle smirks="[*:1]-[#7X4,#7X3,#7X2-1:2]-[*:3]" angle="115.9143430445 * degree" k="148.6973378749 * mole**-1 * radian**-2 * kilocalorie" id="a17"></Angle>
+  </Angles>
+  <vdW version="0.3" potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1.0" cutoff="9.0 * angstrom" switch_width="1.0 * angstrom" method="cutoff">
+	<Atom smirks="[#1:1]" epsilon="0.0157 * mole**-1 * kilocalorie" id="n1" rmin_half="0.6 * angstrom"></Atom>
+	<Atom smirks="[#7:1]" epsilon="0.17 * mole**-1 * kilocalorie" id="n20" rmin_half="1.824 * angstrom"></Atom>
+  </vdW>
+</SMIRNOFF>

@@ -1,0 +1,13 @@
+Run a single-point energy
+&cntrl
+imin=1,
+maxcyc=0,
+ntb=1,
+ntc=1,
+ntf=1,
+cut=9.0
+/
+ &ewald
+  order=4
+  skinnb=1.0
+/

@@ -1,0 +1,1 @@
+"""Foyer compatibility."""

@@ -1,0 +1,11 @@
+REMARK  WATERBOX2
+CRYST1   93.604   93.604   93.604  90.00  90.00  90.00 P 1           1
+ATOM      1  O   WAT     1      11.960   8.353   7.666
+ATOM      2  H1  WAT     1      11.880   7.439   7.396
+ATOM      3  H2  WAT     1      11.547   8.850   6.960
+TER
+ATOM      4  O   WAT     2      10.092  10.131   9.547
+ATOM      5  H1  WAT     2       9.316   9.651   9.837
+ATOM      6  H2  WAT     2      10.743   9.452   9.373
+TER
+END

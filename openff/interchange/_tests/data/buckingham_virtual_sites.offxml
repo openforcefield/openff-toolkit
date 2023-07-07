@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <Constraints version="0.3">
+        <Constraint smirks="[#1:1]-[#8X2H2+0:2]-[#1]" id="c-tip3p-H-O" distance="0.9572 * angstrom"></Constraint>
+        <Constraint smirks="[#1:1]-[#8X2H2+0]-[#1:2]" id="c-tip3p-H-O-H" distance="1.5139006545247014 * angstrom"></Constraint>
+    </Constraints>
+    <Buckingham version="0.3" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1.0" cutoff="9.0 * angstrom ** 1" switch_width="1.0 * angstrom ** 1" method="cutoff" combining_rules="Lorentz-Berthelot">
+        <Atom smirks="[#1:1]-[#8X2H2+0]-[#1]" a="0.0 * kilojoule_per_mole ** 1" b="0.0 * nanometer ** -1" c="0.0 * kilojoule_per_mole ** 1 * nanometer ** 6"></Atom>
+        <Atom smirks="[#1]-[#8X2H2+0:1]-[#1]" a="1600000.0 * kilojoule_per_mole ** 1" b="42.0 * nanometer ** -1" c="0.003 * kilojoule_per_mole ** 1 * nanometer ** 6"></Atom>
+    </Buckingham>
+    <Electrostatics version="0.3" scale12="0.0" scale13="0.0" scale14="0.8333333333" scale15="1.0" cutoff="9.0 * angstrom" switch_width="0.0 * angstrom" method="PME"></Electrostatics>
+    <LibraryCharges version="0.3">
+        <LibraryCharge smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="0 * elementary_charge" charge2="0 * elementary_charge" charge3="0 * elementary_charge" id="tip4p-de"></LibraryCharge>
+    </LibraryCharges>
+    <ToolkitAM1BCC version="0.3"></ToolkitAM1BCC>
+    <VirtualSites version="0.3" exclusion_policy="parents">
+        <VirtualSite smirks="[#1:2]-[#8X2H2+0:1]-[#1:3]"
+            type="DivalentLonePair"
+            match="once"
+            distance="-0.010743 * nanometer"
+            outOfPlaneAngle="0.0 * degree"
+            charge_increment1="0.0 * elementary_charge"
+            charge_increment2="0.53254 * elementary_charge"
+            charge_increment3="0.53254 * elementary_charge"
+            name="EP"
+        ></VirtualSite>
+    </VirtualSites>
+</SMIRNOFF>

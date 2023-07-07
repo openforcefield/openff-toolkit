@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <Electrostatics version="0.4" scale12="0.0" scale13="0.0" scale14="0.833333" scale15="1.0" cutoff="6.0 * angstrom ** 1" switch_width="0.0 * angstrom ** 1" periodic_potential="Ewald3D-ConductingBoundary" nonperiodic_potential="Coulomb" exception_potential="Coulomb"></Electrostatics>
+    <LibraryCharges version="0.3">
+        <LibraryCharge smirks="[#1:1]" charge1="1.0 * elementary_charge ** 1"></LibraryCharge>
+        <LibraryCharge smirks="[#17:1]" charge1="-1.0 * elementary_charge ** 1"></LibraryCharge>
+    </LibraryCharges>
+</SMIRNOFF>

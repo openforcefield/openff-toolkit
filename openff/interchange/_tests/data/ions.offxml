@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding='ASCII'?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <vdW version="0.3" potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" switch_width="1.0 * angstroms" cutoff="9.0 * angstroms" method="cutoff">
+    <Atom smirks="[*:1]" id="n1" sigma="0.1 * nanometers" epsilon="0.0 * kilojoules_per_mole" />
+  </vdW>
+  <Electrostatics version="0.3" scale12="0.0" scale13="0.0" scale14="0.833333" scale15="1.0" cutoff="9.0 * angstrom" switch_width="0.0 * angstrom" method="PME"></Electrostatics>
+  <LibraryCharges version="0.3">
+    <LibraryCharge name="foobar" smirks="[#3:1]" charge1="1.0*elementary_charge"/>
+    <LibraryCharge name="foobar" smirks="[#17:1]" charge1="-1.0*elementary_charge"/>
+  </LibraryCharges>
+</SMIRNOFF>

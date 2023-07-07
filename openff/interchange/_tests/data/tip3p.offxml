@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding='ASCII'?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <!-- SMIRks Native Open Force Field (SMIRNOFF) file -->
+  <Date>2019-10-26</Date>
+  <Author>J. D. Chodera, MSKCC; A. Rizzi, Weill Cornell; J. Wagner, Open Force Field; C. C. Bannan, UC Irvine</Author>
+  <!-- SMIRNOFF file implementing TIP3P water model. -->
+  <!-- These values are taken from OpenMM's TIP3P implementation: https://github.com/openmm/openmm/blob/f9106ddb6a0d72c960c73b23ed0e07cd7190a80f/wrappers/python/simtk/openmm/app/data/tip3p.xml -->
+  <vdW version="0.3" potential="Lennard-Jones-12-6" combining_rules="Lorentz-Berthelot" scale12="0.0" scale13="0.0" scale14="0.5" scale15="1" switch_width="1.0 * angstroms" cutoff="9.0 * angstroms" method="cutoff">
+    <Atom smirks="[#1]-[#8X2H2+0:1]-[#1]" id="n1" sigma="0.31507524065751241 * nanometers" epsilon="0.635968 * kilojoules_per_mole" />
+    <Atom smirks="[#1:1]-[#8X2H2+0]-[#1]" id="n2" sigma="1 * nanometers" epsilon="0 * kilojoules_per_mole" />
+  </vdW>
+  <Electrostatics version="0.3" method="PME" scale12="0.0" scale13="0.0" scale14="0.833333" scale15="1.0"/>
+  <LibraryCharges version="0.3">
+    <LibraryCharge name="TIP3P" smirks="[#1:1]-[#8X2H2+0:2]-[#1:3]" charge1="0.417*elementary_charge" charge2="-0.834*elementary_charge" charge3="0.417*elementary_charge"/>
+  </LibraryCharges>
+  <Constraints version="0.3">
+    <!-- constrain water O-H bond to equilibrium bond length (overrides earlier constraint) -->
+    <Constraint smirks="[#1:1]-[#8X2H2+0:2]-[#1]" id="c1" distance="0.9572 * angstrom"/>
+    <!-- constrain water H...H, calculating equilibrium length from H-O-H equilibrium angle and H-O equilibrium bond lengths -->
+    <Constraint smirks="[#1:1]-[#8X2H2+0]-[#1:2]" id="c2" distance="1.5139006545247014 * angstrom"/>
+  </Constraints>
+</SMIRNOFF>
