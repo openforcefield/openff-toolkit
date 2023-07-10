@@ -690,9 +690,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 ):  # experimental resonance/symmetry functionality
                     sym_atoms, sym_bonds = self._get_symmetrical_groups(fuzzy, ref)
 
-                if query_number == 43:
-                    test = 1
-
                 for full_match in rdkit_mol.GetSubstructMatches(fuzzy, maxMatches=0):
                     # Keep track of all residue names that have been assigned to
                     # each atom, for use in generating a useful error message later
@@ -756,9 +753,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         y = full_match[b.GetEndAtomIdx()]
                         b2 = mol.GetBondBetweenAtoms(x, y)
                         bond_ids = tuple(sorted([x, y]))
-
-                        if bond_ids == (634, 638):
-                            test = 1
 
                         # error chacking of overlapping bonds. If substructures with priority disagree on the bond order, raise exception
                         if (
