@@ -1669,7 +1669,7 @@ class Topology(Serializable):
         pdb = PDBFile(file_path)
 
         substructure_file_path = get_data_file_path(
-            "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
+            "proteins/aa_residues_substructures_explicit_bond_orders_with_caps_explicit_connectivity.json"
         )
 
         with open(substructure_file_path, "r") as subfile:
