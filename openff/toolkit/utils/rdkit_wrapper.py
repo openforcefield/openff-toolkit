@@ -662,11 +662,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     Chem.SANITIZE_NONE, # run sanitization to calculate Implcit H counts to later aromaticity assignment
                 )
 
-                # params = Chem.SmilesParserParams()
-                # params.removeHs = False
-                # params.sanitize = True # Sanitization is REQUIRED (or some form of implicit H calculation) if we want to assign MDL aromaticity soon 
-                # ref_info = Chem.MolFromSmiles(Chem.MolToSmiles(ref, isomericSmiles=False, kekuleSmiles=True, canonical=False), params) # ref_info remembers chemical info and can be assigned aromaticity
-
                 # set aromaticity for ref to avoid ambiguous chemical assignments from rotating or flipping aromatic rings
                 # The entire molecule is kekulized after 
                 try:
@@ -676,9 +671,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 
                 # then create a looser definition for pattern matching...
                 # be lax about double bonds and chirality
-                customs_exist = bool(
-                    priority_substructure_residues
-                )  # do we have custom substructures?
                 fuzzy, neighbor_idxs = self._fuzzy_query(ref)
                 # It's important that we do the substructure search on `rdkit_mol`, but the chemical
                 # info is added to `mol`. If we use the same rdkit molecule for search AND info addition,
@@ -879,9 +871,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             atom.SetAtomMapNum(
                 atom.GetIdx()
             )  # reorder atom map nums to later recover ids
-        #     atom.SetQuery(           # reset query
-        #             Chem.AtomFromSmarts(f"[#{atom.GetAtomicNum()}D{atom.GetDegree()}]")
-        #         )
+
         qmol = Chem.RemoveAllHs(qmol)
         idx_to_map_num = dict(
             [(a.GetIdx(), a.GetAtomMapNum()) for a in qmol.GetAtoms()]
@@ -898,7 +888,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     if idx_to_map_num[idx] != a
                 ]
             )  # only care about cases of different matching
-            # substruct_ids = [qmol.GetAtomWithIdx(a_idx).GetAtomMapNum() for a_idx in automorph]
 
             for atom_iso, new_atom_iso in automorph.items():
                 atom = substruct.GetAtomWithIdx(atom_iso)
