@@ -1536,7 +1536,7 @@ class Topology(Serializable):
         unique_molecules: Optional[Iterable[Molecule]] = None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
         _custom_substructures: Dict[str, str] = {},
-        _additional_substructures: Optional[Iterable[Molecule]] = None,
+        _additional_molecules: Optional[Iterable[Molecule]] = None,
     ):
         """
         Loads supported or user-specified molecules from a PDB file.
@@ -1616,9 +1616,14 @@ class Topology(Serializable):
             PDB. See above for details.
         toolkit_registry : ToolkitRegistry. Default = None
             The ToolkitRegistry to use as the cheminformatics backend.
-        _additional_substructures : Iterable of Molecule, Default = None
+        _custom_substructures: Dict[str, str], Default = {}
+            Experimental and unstable. Dictionary where keys are the names of new substructures
+            (cannot overlap with existing amino acid names) and the values are the new substructure
+            entries that follow the same format as those used in the amino acid substructure library
+        _additional_molecules : Iterable of Molecule, Default = None
             Experimental and unstable. Molecule with atom.metadata["substructure_atom"] =
-            True or False for all atoms.
+            True or False for all atoms. Currently only stable for independent, standalone 
+            molecules not bonded to a larger protein/molecule. (For that use _custom_substructures)
 
         Returns
         -------
@@ -1700,8 +1705,8 @@ class Topology(Serializable):
 
         substructure_dictionary["ADDITIONAL_SUBSTRUCTURE"] = {}
 
-        if _additional_substructures:
-            for mol in _additional_substructures:
+        if _additional_molecules:
+            for mol in _additional_molecules:
                 label_mol = Molecule(mol)
                 c = 0
                 label_mol.properties["atom_map"] = {}
