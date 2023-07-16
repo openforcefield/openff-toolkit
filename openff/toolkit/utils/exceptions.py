@@ -321,6 +321,10 @@ class HierarchySchemeNotFoundException(OpenFFToolkitException):
     that doesn't have one with the given iterator name"""
 
 
+class VirtualSitesUnsupportedError(OpenFFToolkitException):
+    """Exception raised when trying to store virtual sites in a `Molecule` or `Topology` object."""
+
+
 class MissingIndexedAttributeError(
     OpenFFToolkitException, IndexError, KeyError, AttributeError
 ):
