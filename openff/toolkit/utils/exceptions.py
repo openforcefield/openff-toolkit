@@ -326,6 +326,10 @@ class HierarchyIteratorNameConflictError(OpenFFToolkitException):
     already exists as a `Topology` or `Molecule` attribute."""
 
 
+class VirtualSitesUnsupportedError(OpenFFToolkitException):
+    """Exception raised when trying to store virtual sites in a `Molecule` or `Topology` object."""
+
+
 class MissingIndexedAttributeError(
     OpenFFToolkitException, IndexError, KeyError, AttributeError
 ):

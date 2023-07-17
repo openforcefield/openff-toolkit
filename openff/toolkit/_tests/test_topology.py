@@ -60,6 +60,7 @@ from openff.toolkit.utils.exceptions import (
     MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
     UnassignedChemistryInPDBError,
+    VirtualSitesUnsupportedError,
     WrongShapeError,
 )
 
@@ -517,6 +518,23 @@ class TestTopology:
         )
         for omm_atom, off_atom in zip(pdbfile.topology.atoms(), topology.atoms):
             assert omm_atom.name == off_atom.name
+
+    def test_from_openmm_virtual_sites(self):
+        from openff.toolkit import ForceField
+
+        water = Molecule.from_mapped_smiles("[O:1]([H:2])[H:3]")
+        opc = ForceField("opc-1.0.1.offxml")
+
+        openmm_topology = opc.create_interchange([water]).to_openmm_topology()
+
+        with pytest.raises(
+            VirtualSitesUnsupportedError,
+            match="Atom <Atom 3 \(EP\) of chain 0 residue 0 \(UNK\)>.* a virtual site",
+        ):
+            Topology.from_openmm(
+                openmm_topology,
+                unique_molecules=[water],
+            )
 
     def test_from_openmm_missing_reference(self):
         """Test creation of an OpenFF Topology object from an OpenMM Topology when missing a unique molecule"""

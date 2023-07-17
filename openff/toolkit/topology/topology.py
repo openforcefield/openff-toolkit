@@ -61,6 +61,7 @@ from openff.toolkit.utils.exceptions import (
     MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
     NotBondedError,
+    VirtualSitesUnsupportedError,
     WrongShapeError,
 )
 from openff.toolkit.utils.serialization import Serializable
@@ -1285,6 +1286,12 @@ class Topology(Serializable):
         # Convert all openMM mols to graphs
         omm_topology_G = nx.Graph()
         for atom in openmm_topology.atoms():
+            if atom.element is None:
+                raise VirtualSitesUnsupportedError(
+                    f"Atom {atom} has element None and is probably a virtual site. Virtual sites "
+                    "cannot be stored in `Topology` objects but can be stored in `Interchange` "
+                    "objects produced by `ForceField`s with virtual site parameters."
+                )
             omm_topology_G.add_node(
                 atom.index,
                 atomic_number=atom.element.atomic_number,
@@ -1318,6 +1325,10 @@ class Topology(Serializable):
 
         Hierarchy schemes are taken from the OpenMM topology, not from
         ``unique_molecules``.
+
+        If any virtual sites are detected in the OpenMM topology,
+        ``VirtualSitesUnsupportedError`` is raised because the ``Topology``
+        object model does not store virtual sites.
 
         Parameters
         ----------

@@ -16,6 +16,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Bugfixes
 
 - [PR #1662](https://github.com/openforcefield/openff-toolkit/pull/1662): Fixes issue [#1660](https://github.com/openforcefield/openff-toolkit/issues/1660) by forbidding the registration of `HierarchyScheme`s with iterator names that conflict with existing `Molecule` attributes.
+- [PR #1667](https://github.com/openforcefield/openff-toolkit/pull/1667): A more helpful exception is now raised when `Topology.from_openmm` is given an OpenMM Topology with virtual sites.
 
 ### New features
 
