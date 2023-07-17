@@ -56,6 +56,7 @@ from openff.toolkit.topology.molecule import (
 )
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import (
+    HierarchyIteratorNameConflictError,
     IncompatibleShapeError,
     IncompatibleTypeError,
     IncompatibleUnitError,
@@ -4500,7 +4501,7 @@ class TestHierarchies:
         # Redundant hier schemes are NOT OK if their iter name is already used
         with pytest.raises(
             HierarchySchemeWithIteratorNameAlreadyRegisteredException,
-            match='Can not add iterator with name "res_by_num" to this topology',
+            match='Can not add iterator with name "res_by_num" to this molecule',
         ):
             dipeptide_residues_perceived.add_hierarchy_scheme(
                 ("residue_number",), "res_by_num"
@@ -4552,6 +4553,18 @@ class TestHierarchies:
             match="Each item in the 'uniqueness_criteria' kwarg must be a string, received [(]'chain_id',[)]",
         ):
             offmol.add_hierarchy_scheme([("chain_id",)], "chains")
+
+    def test_add_hierarchy_scheme_name_conflict(self):
+        molecule = Molecule()
+
+        with pytest.raises(
+            HierarchyIteratorNameConflictError,
+            match="with that name already exists",
+        ):
+            molecule.add_hierarchy_scheme(
+                uniqueness_criteria=("foo"),
+                iterator_name="atoms",
+            )
 
     def test_add_default_hierarchy_schemes(self):
         """Test add_default_hierarchy_schemes and its kwargs"""
