@@ -56,27 +56,30 @@ Example SMIRNOFF `.offxml` force field definitions can be found in [`openff/tool
 
 ### Working with SMIRNOFF parameter sets
 
-The `ForceField` class in the OpenFF Toolkit is essentially a drop-in replacement for the [OpenMM `ForceField` class](http://docs.openmm.org/latest/api-python/generated/openmm.app.forcefield.ForceField.html#simtk.openmm.app.forcefield.ForceField).
+SMIRNOFF force fields can be parsed by the `ForceField` class, which offers methods including `create_openmm_system` for exporting to OpenMM and `create_interchange` for exporting to other formats (GROMACS, Amber, LAMMPS) via [Interchange](https://docs.openforcefield.org/projects/interchange).
 
 ```python
 # Load a molecule into the OpenFF Molecule object
-from openff.toolkit.topology import Molecule
+from openff.toolkit import Molecule
 from openff.toolkit.utils import get_data_file_path
 sdf_file_path = get_data_file_path('molecules/ethanol.sdf')
 molecule = Molecule.from_file(sdf_file_path)
 
 # Create an OpenFF Topology object from the molecule
-from openff.toolkit.topology import Topology
+from openff.toolkit import Topology
 topology = Topology.from_molecules(molecule)
 
 # Load the latest OpenFF force field release: version 2.0.0, codename "Sage"
-from openff.toolkit.typing.engines.smirnoff import ForceField
+from openff.toolkit import ForceField
 forcefield = ForceField('openff-2.0.0.offxml')
 
 # Create an OpenMM system representing the molecule with SMIRNOFF-applied parameters
 openmm_system = forcefield.create_openmm_system(topology)
 
+# Create an Interchange object for representations in other formats
+interchange = forcefield.create_interchange(topology)
 ```
+
 Detailed examples of using SMIRNOFF with the toolkit can be found [in the documentation](https://open-forcefield-toolkit.readthedocs.io/en/stable/examples.html).
 
 # Frequently asked questions (FAQ)
