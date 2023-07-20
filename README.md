@@ -69,9 +69,9 @@ molecule = Molecule.from_file(sdf_file_path)
 from openff.toolkit import Topology
 topology = Topology.from_molecules(molecule)
 
-# Load the latest OpenFF force field release: version 2.0.0, codename "Sage"
+# Load the latest OpenFF force field release: version 2.1.0, codename "Sage"
 from openff.toolkit import ForceField
-forcefield = ForceField('openff-2.0.0.offxml')
+forcefield = ForceField('openff-2.1.0.offxml')
 
 # Create an OpenMM system representing the molecule with SMIRNOFF-applied parameters
 openmm_system = forcefield.create_openmm_system(topology)
