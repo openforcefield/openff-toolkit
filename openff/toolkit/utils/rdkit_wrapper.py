@@ -25,9 +25,9 @@ from openff.toolkit.utils.constants import (
     DEFAULT_AROMATICITY_MODEL,
 )
 from openff.toolkit.utils.exceptions import (
-    InCHIParseError,
     ChargeMethodUnavailableError,
     ConformerGenerationError,
+    InCHIParseError,
     InvalidAromaticityModelError,
     MoleculeParseError,
     NotAttachedToMoleculeError,
