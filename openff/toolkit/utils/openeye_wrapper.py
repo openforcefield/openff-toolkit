@@ -31,6 +31,7 @@ from openff.toolkit.utils.constants import (
     DEFAULT_AROMATICITY_MODEL,
 )
 from openff.toolkit.utils.exceptions import (
+    InCHIParseError,
     ChargeCalculationError,
     ChargeMethodUnavailableError,
     ConformerGenerationError,
@@ -2063,8 +2064,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         # try and catch InChI parsing fails
         # if there are no atoms don't build the molecule
         if oemol.NumAtoms() == 0:
-            raise RuntimeError(
-                "There was an issue parsing the InChI string, please check and try again."
+            raise InCHIParseError(
+                f"There was an issue parsing the InChI string ({inchi}), please check and try again."
             )
 
         molecule = self.from_openeye(

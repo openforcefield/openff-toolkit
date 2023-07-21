@@ -31,6 +31,7 @@ from openff.toolkit._tests.utils import (
 from openff.toolkit.topology.molecule import Atom, Molecule
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import (
+    InCHIParseError,
     ChargeMethodUnavailableError,
     ConformerGenerationError,
     IncorrectNumConformersError,
@@ -810,7 +811,8 @@ class TestOpenEyeToolkitWrapper:
 
         toolkit = OpenEyeToolkitWrapper()
         inchi = "InChI=1S/ksbfksfksfksbfks"
-        with pytest.raises(RuntimeError):
+
+        with pytest.raises(InCHIParseError, match='ksbfksfksfksbfks'):
             Molecule.from_inchi(inchi, toolkit_registry=toolkit)
 
     @pytest.mark.parametrize(
@@ -2149,7 +2151,8 @@ class TestRDKitToolkitWrapper:
 
         toolkit = RDKitToolkitWrapper()
         inchi = "InChI=1S/ksbfksfksfksbfks"
-        with pytest.raises(RuntimeError):
+
+        with pytest.raises(InCHIParseError, match='ksbfksfksfksbfks'):
             Molecule.from_inchi(inchi, toolkit_registry=toolkit)
 
     inchi_data = [

@@ -25,6 +25,7 @@ from openff.toolkit.utils.constants import (
     DEFAULT_AROMATICITY_MODEL,
 )
 from openff.toolkit.utils.exceptions import (
+    InCHIParseError,
     ChargeMethodUnavailableError,
     ConformerGenerationError,
     InvalidAromaticityModelError,
@@ -1162,8 +1163,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # try and catch an InChI parsing error
         if rdmol is None:
-            raise RuntimeError(
-                "There was an issue parsing the InChI string, please check and try again."
+            raise InCHIParseError(
+                f"There was an issue parsing the InChI string ({inchi}), please check and try again."
             )
 
         # process the molecule
