@@ -1622,7 +1622,7 @@ class Topology(Serializable):
             entries that follow the same format as those used in the amino acid substructure library
         _additional_molecules : Iterable of Molecule, Default = None
             Experimental and unstable. Molecule with atom.metadata["substructure_atom"] =
-            True or False for all atoms. Currently only stable for independent, standalone 
+            True or False for all atoms. Currently only stable for independent, standalone
             molecules not bonded to a larger protein/molecule. (For that use _custom_substructures)
 
         Returns

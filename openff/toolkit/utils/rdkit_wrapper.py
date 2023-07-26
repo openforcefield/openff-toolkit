@@ -305,7 +305,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # if custom substructures exist, validate them and add to the substructure_dictionary
         # (existing amino acid substructures are already validated as part of their creation)
         if _custom_substructures:
-            self._validate_custom_substructures( # errors if any errors found
+            self._validate_custom_substructures(  # errors if any errors found
                 _custom_substructures, forbidden_keys=substructure_dictionary.keys()
             )
             custom_substructure_dictionary = self._prepare_custom_substructures(
@@ -425,7 +425,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         for name, smarts in custom_substructures.items():
             self._is_valid_substructure_smarts(name, smarts)  # raises error if invalid
 
-        return # all tests passed without raised exception
+        return  # all tests passed without raised exception
 
     def _is_valid_substructure_smarts(self, name, smarts):
         from rdkit import Chem
@@ -463,8 +463,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     name, atom.GetSmarts(), mol_smarts, error_reason
                 )
             # require that all elements are specified in #<n> format. Because the H primitive can act as either
-            # hydrogen atom or the number of implicit hydrogens, it is cleaner to specify atoms by atomic number 
-            # rather than atomic symbol. 
+            # hydrogen atom or the number of implicit hydrogens, it is cleaner to specify atoms by atomic number
+            # rather than atomic symbol.
             # Also require explicit connecitivity in D<n> format and explicit charge with either a + or -
             required_prims = r"[]#D:"
             missing_prims = [prim not in atom_smarts for prim in required_prims]
@@ -543,7 +543,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     name, bond, [str(b) for b in valid_bond_types]
                 )
             return
-        
+
         qmol = Chem.MolFromSmarts(smarts)
 
         # check if graph is connected
@@ -563,7 +563,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 )
         for bond in qmol.GetBonds():
             check_bond(bond)
-            
+
         # ensure unique atom map numbers for each atom
         map_nums = [atom.GetAtomMapNum() for atom in qmol.GetAtoms()]
         unique_map_nums = set(map_nums)
@@ -571,7 +571,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             reason = "non-unique atom map numbers detected"
             raise SubstructureImproperlySpecified(name, reason)
 
-        # If all checks pass, continue 
+        # If all checks pass, continue
         return
 
     def _prepare_custom_substructures(self, custom_substructures: Dict[str, str]):
@@ -652,23 +652,25 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             sorted_substructure_smarts = sorted(
                 substructure_library[res_name], key=len, reverse=True
             )
-            
+
             for substructure_smarts in sorted_substructure_smarts:
                 # this is the molecule as defined in template
-                ref = Chem.MolFromSmarts(substructure_smarts) # ref is used to execute queries and find substructures but is difficult to sanitize/calculate valence (has query atoms)
+                ref = Chem.MolFromSmarts(
+                    substructure_smarts
+                )  # ref is used to execute queries and find substructures but is difficult to sanitize/calculate valence (has query atoms)
                 ref_info = deepcopy(ref)
-                Chem.SanitizeMol( # ref must be sanitized to calculate aromaticity 
+                Chem.SanitizeMol(  # ref must be sanitized to calculate aromaticity
                     ref_info,
-                    Chem.SANITIZE_NONE, # run sanitization to calculate Implcit H counts to later aromaticity assignment
+                    Chem.SANITIZE_NONE,  # run sanitization to calculate Implcit H counts to later aromaticity assignment
                 )
 
                 # set aromaticity for ref to avoid ambiguous chemical assignments from rotating or flipping aromatic rings
-                # The entire molecule is kekulized after 
+                # The entire molecule is kekulized after
                 try:
                     Chem.SetAromaticity(ref_info, Chem.AromaticityModel.AROMATICITY_MDL)
                 except Exception as e:
                     raise Exception
-                
+
                 # then create a looser definition for pattern matching...
                 # be lax about double bonds and chirality
                 fuzzy, neighbor_idxs = self._fuzzy_query(ref)
@@ -960,9 +962,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     Chem.AtomFromSmarts(f"[#{a.GetAtomicNum()}D{a.GetDegree()}]")
                 )
             else:
-                a.SetQuery(
-                    generic.GetAtomWithIdx(0)
-                )  
+                a.SetQuery(generic.GetAtomWithIdx(0))
             a.SetNoImplicit(True)
             if a.GetAtomicNum() == 0:
                 neighbor_idxs.append(idx)
