@@ -760,9 +760,7 @@ class TestTopology:
             Topology.from_pdb(f)
 
         with pytest.raises(ValueError, match="Unexpected type.*PDBFile"):
-            Topology.from_pdb(
-                openmm.app.PDBFile(protein_path)
-            )
+            Topology.from_pdb(openmm.app.PDBFile(protein_path))
 
     @requires_rdkit
     def test_from_pdb_two_polymers_metadata(self):
@@ -827,8 +825,9 @@ class TestTopology:
 
         # Make unnatural AA
         # TODO: Should this be able to support defined stereo?
-        mol = Molecule.from_smiles("N[CH]([CH](C)O[P@](=O)(OCNCO)[O-])C(=O)",
-                                   allow_undefined_stereo=True)
+        mol = Molecule.from_smiles(
+            "N[CH]([CH](C)O[P@](=O)(OCNCO)[O-])C(=O)", allow_undefined_stereo=True
+        )
         # Get the indices of an N term and C term hydrogen for removal
         leaving_atoms = mol.chemical_environment_matches("[H:1]N([H])CC(=O)[H:2]")[0]
 
