@@ -677,10 +677,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 # then single bonds may no longer be present for subsequent overlapping matches.
                 sym_atoms = []
                 sym_bonds = []
-                if (
-                    priority_substructure_residues
-                ):  # experimental resonance/symmetry functionality
-                    sym_atoms, sym_bonds = self._get_symmetrical_groups(fuzzy, ref)
+
+                sym_atoms, sym_bonds = self._get_symmetrical_groups(fuzzy, ref)
 
                 for full_match in rdkit_mol.GetSubstructMatches(fuzzy, maxMatches=0):
                     # Keep track of all residue names that have been assigned to
