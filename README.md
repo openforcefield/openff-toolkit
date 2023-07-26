@@ -2,7 +2,7 @@
 | :------ |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Latest Release** | [![Last release tag](https://img.shields.io/github/release-pre/openforcefield/openff-toolkit.svg)](https://github.com/openforcefield/openff-toolkit/releases)  [![Commits since release](https://img.shields.io/github/commits-since/openforcefield/openff-toolkit/0.14.0.svg)](https://github.com/openforcefield/openff-toolkit/releases/tag/0.14.0) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8102071.svg)](https://doi.org/10.5281/zenodo.8102071)
 | **Communication** | [![docs stable](https://img.shields.io/badge/docs-stable-5077AB.svg?logo=read%20the%20docs)](https://open-forcefield-toolkit.readthedocs.io/) [![user & dev discussions](https://img.shields.io/badge/user%20%26%20dev%20discussions-GitHub-red?logo=github)](https://github.com/openforcefield/discussions/discussions) |
-| **Foundation** | [![license](https://img.shields.io/github/license/openforcefield/openff-toolkit.svg)](https://opensource.org/licenses/MIT) [![platforms](https://img.shields.io/badge/Platforms-Linux%2C%20MacOS-orange.svg)](https://open-forcefield-toolkit.readthedocs.io/en/stable/installation.html) [![python](https://img.shields.io/badge/python-3.9%2C%203.10-blue.svg)](https://open-forcefield-toolkit.readthedocs.io/en/stable/installation.html) [![Funding](https://img.shields.io/badge/Funding-Open%20Force%20Field%20Consortium-brightgreen.svg)](http://openforcefield.org)        |
+| **Foundation** | [![license](https://img.shields.io/github/license/openforcefield/openff-toolkit.svg)](https://opensource.org/licenses/MIT) [![platforms](https://img.shields.io/badge/Platforms-Linux%2C%20MacOS-orange.svg)](https://open-forcefield-toolkit.readthedocs.io/en/stable/installation.html) [![python](https://img.shields.io/badge/python-3.9%2C%203.10%2C%203.11-blue.svg)](https://open-forcefield-toolkit.readthedocs.io/en/stable/installation.html) [![Funding](https://img.shields.io/badge/Funding-Open%20Force%20Field%20Consortium-brightgreen.svg)](http://openforcefield.org)        |
 | **Installation** | [![Releases](https://img.shields.io/badge/obtain-latest-green.svg)](https://github.com/openforcefield/openff-toolkit/releases) [![Conda](https://img.shields.io/conda/v/conda-forge/openff-toolkit.svg)](https://anaconda.org/conda-forge/openff-toolkit) [![Last updated](https://anaconda.org/conda-forge/openff-toolkit/badges/latest_release_relative_date.svg)](https://anaconda.org/conda-forge/openff-toolkit) [![Anaconda Cloud downloads](https://anaconda.org/conda-forge/openff-toolkit/badges/downloads.svg)](https://anaconda.org/conda-forge/openff-toolkit)          |
 
 # The Open Force Field toolkit
@@ -10,14 +10,14 @@
 The Open Force Field Toolkit, built by the [Open Force Field Initiative](http://openforcefield.org), is a Python toolkit for the development and application of modern molecular mechanics force fields based on direct chemical perception and rigorous statistical parameterization methods.
 
 The toolkit currently covers two main areas we have committed to stably maintain throughout their lifetimes:
-* Tools for using the [SMIRKS Native Open Force Field (SMIRNOFF) specification](https://openforcefield.github.io/standards/standards/smirnoff/)
+* Tools for using [SMIRKS Native Open Force Field (SMIRNOFF)](https://openforcefield.github.io/standards/standards/smirnoff/) force fields
 * Tools for [direct chemical environment perception](https://dx.doi.org/10.1021/acs.jctc.8b00640) and manipulation
 
 **Note**: Prior to version 0.9.0, this toolkit and its associated repository were named `openforcefield` and used different import paths. For details on this change and migration instructions, see the [release notes](https://open-forcefield-toolkit.readthedocs.io/en/stable/releasehistory.html#namespace-migration) of version 0.9.0.
 
 ## Documentation
 
-[Documentation](https://open-forcefield-toolkit.readthedocs.io/en/stable/) for the Open Force Field Toolkit is hosted at [readthedocs](https://open-forcefield-toolkit.readthedocs.io/en/stable). Example notebooks are hosted on available in the `examples/` repository.
+[Documentation](https://open-forcefield-toolkit.readthedocs.io/en/stable/) for the Open Force Field Toolkit is hosted at [readthedocs](https://open-forcefield-toolkit.readthedocs.io/en/stable). Example notebooks are available in the `examples/` repository and also hosted on the [`Open Force Field`](https://docs.openforcefield.org/en/latest/examples.html) website.
 
 ## How to cite
 
@@ -25,19 +25,15 @@ Please cite the OpenFF Toolkit using the [Zenodo record](https://zenodo.org/reco
 
 ## Installation
 
-The Open Force Field Toolkit (`openff-toolkit`) is a Python toolkit, and supports Python 3.9 through 3.10.
+The Open Force Field Toolkit (`openff-toolkit`) is a Python toolkit, and supports Python 3.9 through 3.11.
 
 ### Installing via conda
 
 Detailed installation instructions can be found [here](https://open-forcefield-toolkit.readthedocs.io/en/stable/installation.html).
 
-### Installing from source
-
-If you need to install via source, see the build and run package requirements listed in the [development conda recipe](https://github.com/openforcefield/openff-toolkit/blob/0.8.3/devtools/conda-recipe/meta.yaml).
-
 ## Force Fields
 
-Two major force field development efforts have been undertaken by the Initiative, with results hosted in separate repositories.
+Two major force field development efforts have been undertaken by the Open Force Field Initiative, with results hosted in separate repositories.
 
 * The [Open Force Fields repository](https://github.com/openforcefield/openff-forcefields/), which features the [Parsley](https://openforcefield.org/community/news/general/introducing-openforcefield-1.0/) and [Sage](https://openforcefield.org/community/news/general/sage2.0.0-release/) force field lines. These are the Open Force Field Initiative's efforts toward building _new_ force fields. The initial parameters are taken from smirnoff99Frosst, but software and data produced by the Initiative's efforts have been used to refit parameter values and add new SMIRKS-based parameters.
 * The [smirnoff99Frosst repository](https://github.com/openforcefield/smirnoff99Frosst/), which is descended from AMBER's parm99 force field as well as Merck-Frosst's parm@frosst. This line of force fields does not aim to alter parameter values, but is instead a test of accurately converting an atom type-based force field to the SMIRNOFF format.
@@ -86,9 +82,9 @@ Detailed examples of using SMIRNOFF with the toolkit can be found [in the docume
 
 See [`FAQ.md`](FAQ.md) for answers to a variety of common problems, such as:
 * Why do I need to provide molecules corresponding to the components of my system, or a `Topology` with bond orders?
-* Can I use an AMBER, CHARMM, or gromacs topology/coordinate file as a starting point for applying a SMIRNOFF force field?
+* Can I use an Amber, CHARMM, or GROMACS topology/coordinate file as a starting point for applying a SMIRNOFF force field?
 * What if I am starting from a PDB file?
 
 # Contributors
 
-For a full list of contributors, see the [GitHub Contributors page](https://github.com/openforcefield/openff-toolkit/graphs/contributors).
+For a partial list of contributors, see the [GitHub Contributors page](https://github.com/openforcefield/openff-toolkit/graphs/contributors). Others whose work constitutes significant contributions but did not make it into the `git` history include Shuzhe Wang.
