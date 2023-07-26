@@ -291,7 +291,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         pdbfile,
         substructure_dictionary,
         coords_angstrom,
-        _custom_substructures: Dict[str, str] = {},
+        _custom_substructures: Dict[str, str] = None,
     ):
         import json
         from copy import deepcopy
@@ -302,18 +302,21 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         omm_top = pdbfile.topology
 
+        if not _custom_substructures:
+            _custom_substructures = dict()
+
         # if custom substructures exist, validate them and add to the substructure_dictionary
         # (existing amino acid substructures are already validated as part of their creation)
-        if _custom_substructures:
-            self._validate_custom_substructures(  # errors if any errors found
-                _custom_substructures, forbidden_keys=substructure_dictionary.keys()
-            )
-            custom_substructure_dictionary = self._prepare_custom_substructures(
-                _custom_substructures
-            )
-            substructure_dictionary.update(
-                custom_substructure_dictionary
-            )  # concats both dicts, unique keys are enforced in previous function
+
+        self._validate_custom_substructures(  # errors if any errors found
+            _custom_substructures, forbidden_keys=substructure_dictionary.keys()
+        )
+        custom_substructure_dictionary = self._prepare_custom_substructures(
+            _custom_substructures
+        )
+        substructure_dictionary.update(
+            custom_substructure_dictionary
+        )  # concats both dicts, unique keys are enforced in previous function
 
         rdkit_mol = self._polymer_openmm_topology_to_rdmol(
             omm_top, substructure_dictionary, list(_custom_substructures.keys())
