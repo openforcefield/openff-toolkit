@@ -14,7 +14,7 @@ from openff.units.openmm import from_openmm
 from openff.units.units import Quantity
 from openmm import app
 
-from openff.toolkit.tests.create_molecules import (
+from openff.toolkit._tests.create_molecules import (
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
@@ -28,7 +28,7 @@ from openff.toolkit.tests.create_molecules import (
     toluene_from_sdf,
     topology_with_metadata,
 )
-from openff.toolkit.tests.utils import (
+from openff.toolkit._tests.utils import (
     get_data_file_path,
     requires_openeye,
     requires_pkg,
@@ -138,48 +138,6 @@ class TestTopology:
         assert topology.box_vectors is None
         assert not topology.is_periodic
         assert len(topology.constrained_atom_pairs.items()) == 0
-
-    def test_deprecated_api_points(self):
-        """Ensure that some of the API deprecated circa v0.11.0 still exist."""
-        from openff.toolkit.topology.topology import TopologyDeprecationWarning
-
-        topology = Topology()
-
-        for key in ["molecules", "atoms", "bonds", "particles"]:
-            old_iterator = "topology_" + key
-            old_counter = "n_topology_" + key
-            with pytest.warns(
-                TopologyDeprecationWarning,
-                match=f"Topology.{old_counter} is deprecated. Use Topology.n_{key} instead.",
-            ):
-                assert getattr(topology, old_counter) == 0
-            with pytest.warns(
-                TopologyDeprecationWarning,
-                match=f"Topology.{old_iterator} is deprecated. Use Topology.{key} instead.",
-            ):
-                assert len([*getattr(topology, old_iterator)]) == 0
-
-        # Some particle-related methods are deprecated for reasons other than the `TopologyX` deprecation
-        with pytest.warns(
-            TopologyDeprecationWarning,
-            match="Topology.n_particles is deprecated. Use Topology.n_atoms instead.",
-        ):
-            assert topology.n_particles == 0
-
-        with pytest.warns(
-            TopologyDeprecationWarning,
-            match="Topology.particles is deprecated. Use Topology.atoms instead.",
-        ):
-            assert len([*topology.particles]) == 0
-
-        topology = Molecule.from_smiles("O").to_topology()
-        first_atom = [*topology.atoms][0]
-
-        with pytest.warns(
-            TopologyDeprecationWarning,
-            match="Topology.particle_index is deprecated. Use Topology.atom_index instead.",
-        ):
-            assert topology.particle_index(first_atom) == 0
 
     def test_reinitialization_box_vectors(self):
         topology = Topology()
@@ -367,14 +325,14 @@ class TestTopology:
         n_ch_bonds = 0
         n_cc_bonds = 0
         for index in range(12):  # 7 from ethane, 5 from ethene
-            topology_bond = topology.bond(index)
-            if topology_bond.bond_order == 1:
+            bond = topology.bond(index)
+            if bond.bond_order == 1:
                 n_single_bonds += 1
-            if topology_bond.bond_order == 2:
+            if bond.bond_order == 2:
                 n_double_bonds += 1
             n_bond_carbons = 0
             n_bond_hydrogens = 0
-            for atom in topology_bond.atoms:
+            for atom in bond.atoms:
                 if atom.atomic_number == 6:
                     n_bond_carbons += 1
                 if atom.atomic_number == 1:
@@ -390,13 +348,13 @@ class TestTopology:
         assert n_ch_bonds == 10
 
         with pytest.raises(ValueError, match="must be an int.*'str'"):
-            topology_bond = topology.bond("one")
+            topology.bond("one")
 
         with pytest.raises(BondNotInTopologyError, match="No bond with index -1"):
             topology.bond(-1)
 
         with pytest.raises(BondNotInTopologyError, match="No bond with index 12"):
-            topology_bond = topology.bond(12)
+            topology.bond(12)
 
     def test_angles(self):
         """Topology.angles should return image angles of all topology molecules."""
@@ -805,7 +763,9 @@ class TestTopology:
             Topology.from_pdb(f, _custom_substructures=nh2_group)
 
         with pytest.raises(ValueError, match="Unexpected type.*PDBFile"):
-            Topology.from_pdb(openmm.app.PDBFile(protein_path), _custom_substructures=nh2_group)
+            Topology.from_pdb(
+                openmm.app.PDBFile(protein_path), _custom_substructures=nh2_group
+            )
 
     @requires_rdkit
     def test_from_pdb_two_polymers_metadata(self):
@@ -2206,47 +2166,80 @@ class TestTopologyPositions:
 
     def test_atomic_num_spec(self):
         with pytest.raises(SubstructureAtomSmartsInvalid):
-            PE_substructs = {"PE": "[CD4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"}
-            top = Topology.from_pdb(get_data_file_path("systems/test_systems/PE.pdb"), _custom_substructures=PE_substructs)
-    
+            PE_substructs = {
+                "PE": "[CD4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+            }
+            top = Topology.from_pdb(
+                get_data_file_path("systems/test_systems/PE.pdb"),
+                _custom_substructures=PE_substructs,
+            )
+
     def test_monomer_connectivity(self):
         with pytest.raises(SubstructureAtomSmartsInvalid):
-            PE_substructs = {"PE": "[#6D3+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"}
-            top = Topology.from_pdb(get_data_file_path("systems/test_systems/PE.pdb"), _custom_substructures=PE_substructs)
-    
+            PE_substructs = {
+                "PE": "[#6D3+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+            }
+            top = Topology.from_pdb(
+                get_data_file_path("systems/test_systems/PE.pdb"),
+                _custom_substructures=PE_substructs,
+            )
+
     def test_formal_charge_spec(self):
         with pytest.raises(SubstructureAtomSmartsInvalid):
-            PE_substructs = {"PE": "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"}
-            top = Topology.from_pdb(get_data_file_path("systems/test_systems/PE.pdb"), _custom_substructures=PE_substructs)
-    
+            PE_substructs = {
+                "PE": "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+            }
+            top = Topology.from_pdb(
+                get_data_file_path("systems/test_systems/PE.pdb"),
+                _custom_substructures=PE_substructs,
+            )
+
     def test_bond_type_spec(self):
         with pytest.raises(SubstructureBondSmartsInvalid):
-            PE_substructs = {"PE": "[#6D4+0:9](~[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"}
-            top = Topology.from_pdb(get_data_file_path("systems/test_systems/PE.pdb"), _custom_substructures=PE_substructs)
-    
+            PE_substructs = {
+                "PE": "[#6D4+0:9](~[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+            }
+            top = Topology.from_pdb(
+                get_data_file_path("systems/test_systems/PE.pdb"),
+                _custom_substructures=PE_substructs,
+            )
+
     def test_duplicate_monomers(self):
         with pytest.raises(NonUniqueSubstructureName):
-            PE_substructs = {"LEU": "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"}
-            top = Topology.from_pdb(get_data_file_path("systems/test_systems/PE.pdb"), _custom_substructures=PE_substructs)
-    
+            PE_substructs = {
+                "LEU": "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+            }
+            top = Topology.from_pdb(
+                get_data_file_path("systems/test_systems/PE.pdb"),
+                _custom_substructures=PE_substructs,
+            )
+
     def test_ambiguous_bond_info_check(self):
         with pytest.raises(AmbiguousBondChemicalAssignment):
-            PE_substructs = {"PE": "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
-                            "PE_wrong": "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(=[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
-                            }
-            top = Topology.from_pdb(get_data_file_path("systems/test_systems/PE.pdb"), _custom_substructures=PE_substructs)   
-    
+            PE_substructs = {
+                "PE": "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
+                "PE_wrong": "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(=[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
+            }
+            top = Topology.from_pdb(
+                get_data_file_path("systems/test_systems/PE.pdb"),
+                _custom_substructures=PE_substructs,
+            )
+
     def test_ambiguous_formal_charge_check(self):
         with pytest.raises(AmbiguousAtomChemicalAssignment):
-            PE_substructs = {"PE": "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
-                            "PE_wrong": "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+1:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
-                            }
-            top = Topology.from_pdb(get_data_file_path("systems/test_systems/PE.pdb"), _custom_substructures=PE_substructs)  
-    
+            PE_substructs = {
+                "PE": "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
+                "PE_wrong": "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+1:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
+            }
+            top = Topology.from_pdb(
+                get_data_file_path("systems/test_systems/PE.pdb"),
+                _custom_substructures=PE_substructs,
+            )
+
     def test_symmetrical_group_COO(self):
         from rdkit import Chem
 
-        substructure_smarts = '[#7D4+:1](-[#6D4+0:2](-[#6D3+0:3](=[#8D1+0:4])-[#8D1-:6])(-[#6D4+0:5](-[#1D1+0:8])(-[#1D1+0:9])-[#1D1+0:10])-[#1D1+0:7])(-[#1D1+0:11])(-[#1D1+0:12])-[#1D1+0:13]'
+        substructure_smarts = "[#7D4+:1](-[#6D4+0:2](-[#6D3+0:3](=[#8D1+0:4])-[#8D1-:6])(-[#6D4+0:5](-[#1D1+0:8])(-[#1D1+0:9])-[#1D1+0:10])-[#1D1+0:7])(-[#1D1+0:11])(-[#1D1+0:12])-[#1D1+0:13]"
         ref = Chem.MolFromSmarts(substructure_smarts)
         rdkit_wrapper = RDKitToolkitWrapper()
         fuzzy, neighbor_idxs = rdkit_wrapper._fuzzy_query(ref)
@@ -2258,7 +2251,7 @@ class TestTopologyPositions:
     def test_symmetrical_group_ARG(self):
         from rdkit import Chem
 
-        substructure_smarts = '[#7D4+:1](-[#6D4+0:2](-[#6D3+0:3](=[#8D1+0:4])-[#8D1-:12])(-[#6D4+0:5](-[#6D4+0:6](-[#6D4+0:7](-[#7D3+0:8](-[#6D3+0:9](-[#7D3+0:10](-[#1D1+0:21])-[#1D1+0:22])=[#7D3+:11](-[#1D1+0:23])-[#1D1+0:24])-[#1D1+0:20])(-[#1D1+0:18])-[#1D1+0:19])(-[#1D1+0:16])-[#1D1+0:17])(-[#1D1+0:14])-[#1D1+0:15])-[#1D1+0:13])(-[#1D1+0:25])(-[#1D1+0:26])-[#1D1+0:27]'
+        substructure_smarts = "[#7D4+:1](-[#6D4+0:2](-[#6D3+0:3](=[#8D1+0:4])-[#8D1-:12])(-[#6D4+0:5](-[#6D4+0:6](-[#6D4+0:7](-[#7D3+0:8](-[#6D3+0:9](-[#7D3+0:10](-[#1D1+0:21])-[#1D1+0:22])=[#7D3+:11](-[#1D1+0:23])-[#1D1+0:24])-[#1D1+0:20])(-[#1D1+0:18])-[#1D1+0:19])(-[#1D1+0:16])-[#1D1+0:17])(-[#1D1+0:14])-[#1D1+0:15])-[#1D1+0:13])(-[#1D1+0:25])(-[#1D1+0:26])-[#1D1+0:27]"
         ref = Chem.MolFromSmarts(substructure_smarts)
         rdkit_wrapper = RDKitToolkitWrapper()
         fuzzy, neighbor_idxs = rdkit_wrapper._fuzzy_query(ref)

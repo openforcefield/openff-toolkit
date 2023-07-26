@@ -6,7 +6,7 @@ import pytest
 from openff.units.openmm import to_openmm
 from openmm import unit as openmm_unit
 
-from openff.toolkit.tests.utils import get_data_file_path, requires_rdkit
+from openff.toolkit._tests.utils import get_data_file_path, requires_rdkit
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 

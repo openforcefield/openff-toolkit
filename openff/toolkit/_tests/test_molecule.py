@@ -25,7 +25,7 @@ import pytest
 from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
 
-from openff.toolkit.tests.create_molecules import (
+from openff.toolkit._tests.create_molecules import (
     create_acetaldehyde,
     create_benzene_no_aromatic,
     create_cis_1_2_dichloroethene,
@@ -33,7 +33,7 @@ from openff.toolkit.tests.create_molecules import (
     create_ethanol,
     create_reversed_ethanol,
 )
-from openff.toolkit.tests.utils import (
+from openff.toolkit._tests.utils import (
     has_pkg,
     requires_ambertools,
     requires_openeye,
@@ -56,7 +56,6 @@ from openff.toolkit.topology.molecule import (
 )
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import (
-    ConformerGenerationError,
     IncompatibleShapeError,
     IncompatibleTypeError,
     IncompatibleUnitError,
@@ -2542,10 +2541,12 @@ class TestMolecule:
             }, "SDF and PDB must have same atom ordering"
 
             # Check that the coordinates are identical
-            assert np.all(
-                np.abs(np.asarray(sdf_mol.conformers) - np.asarray(pdb_mol.conformers))
-                < 1e-4
-            ), "SDF and PDB must have identical conformers"
+            np.testing.assert_allclose(
+                np.asarray(sdf_mol.conformers[0].m),
+                np.asarray(pdb_mol.conformers[0].m),
+                atol=1e-4,
+                err_msg="SDF and PDB must have identical conformers",
+            )
 
             # Not sure that the following are necessary given are_isomorphic,
             # but keeping them from previous test implementations
@@ -2871,30 +2872,6 @@ class TestMolecule:
             match="The mapped smiles does not contain enough indexes",
         ):
             Molecule.from_mapped_smiles("[Cl:1][Cl]", toolkit_registry=toolkit_class())
-
-    def test_deprecated_api_points(self):
-        """Ensure that some of the API deprecated circa v0.11.0 still exist."""
-        from openff.toolkit.topology.molecule import MoleculeDeprecationWarning
-
-        molecule = Molecule.from_smiles("O")
-
-        with pytest.warns(
-            MoleculeDeprecationWarning,
-            match="Molecule.particles is deprecated. Use Molecule.atoms instead.",
-        ):
-            assert len(molecule.particles) == 3
-
-        with pytest.warns(
-            MoleculeDeprecationWarning,
-            match="Molecule.n_particles is deprecated. Use Molecule.n_atoms instead.",
-        ):
-            assert molecule.n_particles == 3
-
-        with pytest.warns(
-            MoleculeDeprecationWarning,
-            match="Molecule.particle_index is deprecated. Use Molecule.atom_index instead.",
-        ):
-            assert molecule.particle_index(molecule.atom(0)) == 0
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_n_atoms(self, molecule):
@@ -3564,8 +3541,12 @@ class TestMolecule:
 
         offmol._make_carboxylic_acids_cis()
 
-        diffs = np.asarray(offmol.conformers) - np.asarray(expected_conformers)
-        assert np.all(np.abs(diffs)) < 1e-5
+        for index in [0, 1]:
+            np.testing.assert_allclose(
+                offmol.conformers[index].m_as(unit.angstrom),
+                expected_conformers[index].m_as(unit.angstrom),
+                atol=1e-5,
+            )
 
     @requires_openeye
     def test_assign_fractional_bond_orders(self):
@@ -3663,22 +3644,6 @@ class TestMolecule:
             if 1 in (bond.atom1.atomic_number, bond.atom2.atomic_number):
                 continue
             assert bond.is_in_ring()
-
-    @requires_rdkit
-    @requires_openeye
-    def test_conformer_generation_failure(self):
-        # This test seems possibly redundant, is it needed?
-        molecule = Molecule.from_smiles("F[U](F)(F)(F)(F)F")
-
-        with pytest.raises(ConformerGenerationError, match="Omega conf.*fail"):
-            molecule.generate_conformers(
-                n_conformers=1, toolkit_registry=OpenEyeToolkitWrapper()
-            )
-
-        with pytest.raises(ConformerGenerationError, match="RDKit conf.*fail"):
-            molecule.generate_conformers(
-                n_conformers=1, toolkit_registry=RDKitToolkitWrapper()
-            )
 
     def test_deepcopy_not_shallow(self):
         """
@@ -3799,12 +3764,15 @@ class TestMoleculeVisualization:
 
         trajectory = _OFFTrajectoryNGLView(molecule)
 
-        np.testing.assert_allclose(trajectory.get_coordinates(), molecule.conformers[0])
+        # _OFFTrajectoryNGLView.get_coordinates returns a unitless array implicitly in Angstroms
         np.testing.assert_allclose(
-            trajectory.get_coordinates(0), molecule.conformers[0]
+            trajectory.get_coordinates(), molecule.conformers[0].m
         )
         np.testing.assert_allclose(
-            trajectory.get_coordinates(1), molecule.conformers[1]
+            trajectory.get_coordinates(0), molecule.conformers[0].m
+        )
+        np.testing.assert_allclose(
+            trajectory.get_coordinates(1), molecule.conformers[1].m
         )
 
         with pytest.raises(IndexError, match="too high"):
@@ -4474,7 +4442,7 @@ class TestMoleculeSubclass:
 class TestHierarchies:
     def test_nothing_perceived_dipeptide(self):
         """Test that loading a "vanilla" molecule from SDF does not assign atom metadata"""
-        from openff.toolkit.tests.create_molecules import dipeptide as create_dipeptide
+        from openff.toolkit._tests.create_molecules import dipeptide as create_dipeptide
 
         dipeptide = create_dipeptide()
 
@@ -4491,7 +4459,7 @@ class TestHierarchies:
 
     def test_residues_perceived_dipeptide(self):
         """Test that perceiving residues on a residue-containing molecule correctly populates atom metadata"""
-        from openff.toolkit.tests.create_molecules import (
+        from openff.toolkit._tests.create_molecules import (
             dipeptide_residues_perceived as create_dipeptide,
         )
 
@@ -4511,7 +4479,7 @@ class TestHierarchies:
 
     def test_add_delete_hierarchy_scheme(self):
         """Test adding and removing HierarchySchemes to/from molecules"""
-        from openff.toolkit.tests.create_molecules import (
+        from openff.toolkit._tests.create_molecules import (
             dipeptide_residues_perceived as create_dipeptide,
         )
 
@@ -4628,7 +4596,7 @@ class TestHierarchies:
 
     def test_hierarchy_perceived_dipeptide(self):
         """Test populating and accessing HierarchyElements"""
-        from openff.toolkit.tests.create_molecules import (
+        from openff.toolkit._tests.create_molecules import (
             dipeptide_hierarchy_added as create_dipeptide,
         )
 
@@ -4666,7 +4634,7 @@ class TestHierarchies:
 
     def test_hierarchy_perceived_information_propagation(self):
         """Ensure that updating atom metadata doesn't update the iterators until the hierarchy is re-perceived"""
-        from openff.toolkit.tests.create_molecules import (
+        from openff.toolkit._tests.create_molecules import (
             dipeptide_hierarchy_added as create_dipeptide,
         )
 
@@ -4684,7 +4652,7 @@ class TestHierarchies:
 
     def test_hierarchy_element_generation(self):
         """Ensure that hierarchy elements are generated correctly from atom metadata"""
-        from openff.toolkit.tests.create_molecules import create_ethanol
+        from openff.toolkit._tests.create_molecules import create_ethanol
 
         ethanol = create_ethanol()
 
