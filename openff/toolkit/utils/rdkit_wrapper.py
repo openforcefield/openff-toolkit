@@ -622,9 +622,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             Raised when bonds or atoms in ``rdkit_mol`` are missing from the
             substructure library
         """
+        from copy import deepcopy
+
         from rdkit import Chem
         from rdkit.DataStructs.cDataStructs import CreateFromBinaryText
-        from copy import deepcopy
 
         already_assigned_nodes = set()
         # TODO: We currently assume all single and modify a few
