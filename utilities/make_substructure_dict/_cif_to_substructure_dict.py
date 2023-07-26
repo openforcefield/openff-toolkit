@@ -692,7 +692,7 @@ class CifSubstructures:
         self.data["NME"] = {
             "[N:1]([C:2]([H:4])([H:5])[H:6])[H:3]": ["N", "C", "H", "H1", "H2", "H3"]
         }
-        # self.data["NH2"] = {"[N:1]([H:2])[H:3]": ["N", "HN1", "HN2"]} # removed as part of new substructure spec
+        self.data["NH2"] = {"[N:1]([H:2])[H:3]": ["N", "HN1", "HN2"]}
 
     def _add_common_linkages(self):
         """
@@ -803,7 +803,7 @@ class CifSubstructures:
                         ]
         special_cases = {'[C:1](=[O:2])[C:3]([H:4])([H:5])[H:6]': '[*]-[C:1](=[O:2])[C:3]([H:4])([H:5])[H:6]',
                         '[N:1]([C:2]([H:4])([H:5])[H:6])[H:3]': '[*]-[N:1]([C:2]([H:4])([H:5])[H:6])[H:3]',
-                        '[N:1]([H:2])[H:3]': '',
+                        '[N:1]([H:2])[H:3]': '[*]-C(=O)[N:1]([H:2])[H:3]',
                         '[C:1](=[O:2])[N:3]': '[*]-[C:1](=[O:2])[N:3](-[H])[C:4](-[*])(-[*])(-[*])',
                         '[S:1][S:2]': '[*]-[S:1]-[S:2]-[*]',
                         }

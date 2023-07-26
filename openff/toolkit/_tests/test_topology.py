@@ -752,19 +752,16 @@ class TestTopology:
 
         protein_path = get_data_file_path("proteins/ace-ala-nh2.pdb")
 
-        # NH2 can only be used when ARG not in the protein
-        nh2_group = {"NH2": "[*:1]-[#7D3+0:2]([#1D1+0:3])([#1D1+0:4])"}
+        Topology.from_pdb(protein_path)
 
-        Topology.from_pdb(protein_path, _custom_substructures=nh2_group)
-
-        Topology.from_pdb(pathlib.Path(protein_path), _custom_substructures=nh2_group)
+        Topology.from_pdb(pathlib.Path(protein_path))
 
         with open(protein_path) as f:
-            Topology.from_pdb(f, _custom_substructures=nh2_group)
+            Topology.from_pdb(f)
 
         with pytest.raises(ValueError, match="Unexpected type.*PDBFile"):
             Topology.from_pdb(
-                openmm.app.PDBFile(protein_path), _custom_substructures=nh2_group
+                openmm.app.PDBFile(protein_path)
             )
 
     @requires_rdkit
@@ -827,24 +824,24 @@ class TestTopology:
     #     """Test that the _additional_substructures arg is wired up correctly"""
     #     with pytest.raises(UnassignedChemistryInPDBError):
     #         Topology.from_pdb(get_data_file_path("proteins/ace-ZZZ-gly-nme.pdb"))
-
+    #
     #     # Make unnatural AA
     #     mol = Molecule.from_smiles("N[C@@H]([C@@H](C)O[P@](=O)(OCNCO)[O-])C(=O)")
     #     # Get the indices of an N term and C term hydrogen for removal
     #     leaving_atoms = mol.chemical_environment_matches("[H:1]N([H])CC(=O)[H:2]")[0]
-
+    #
     #     # Label the atoms with whether they're leaving
     #     for atom in mol.atoms:
     #         if atom.molecule_atom_index not in leaving_atoms:
     #             atom.metadata["substructure_atom"] = True
     #         else:
     #             atom.metadata["substructure_atom"] = False
-
+    #
     #     top = Topology.from_pdb(
     #         get_data_file_path("proteins/ace-ZZZ-gly-nme.pdb"),
     #         _additional_substructures=[mol],
     #     )
-
+    #
     #     expected_mol = Molecule.from_file(
     #         get_data_file_path("proteins/ace-ZZZ-gly-nme.sdf")
     #     )
