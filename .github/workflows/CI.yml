@@ -72,10 +72,10 @@ jobs:
           fi
 
       - name: Install environment with ${{ env.JOBNAME }}
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: devtools/conda-envs/${{ env.ENVFILE }}.yaml
-          extra-specs: |
+          create-args: >-
             python=${{ matrix.python-version }}
 
       - name: Additional info about the build
@@ -134,7 +134,7 @@ jobs:
 
       - name: Check links
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: pytest -r fE --tb=short openff/toolkit/tests/test_links.py
+        run: pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
 
       - name: Run mypy
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
@@ -142,12 +142,13 @@ jobs:
 
       - name: Run unit tests
         run: |
-          PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_examples.py"
-          PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
+          PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_examples.py"
+          PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_links.py"
           if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
             PYTEST_ARGS+=" --runslow"
           fi
-          python -m pytest $PYTEST_ARGS $COV openff/toolkit/
+
+          python -m pytest $PYTEST_ARGS $COV
 
       - name: Run code snippets in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
@@ -162,7 +163,7 @@ jobs:
       - name: Run examples in docstrings
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: |
-          pytest -v --no-cov --doctest-modules --ignore=openff/toolkit/tests/ --ignore=openff/toolkit/data/ --ignore=openff/toolkit/utils/utils.py openff/
+          pytest -v --no-cov --doctest-modules --ignore=openff/toolkit/_tests/ --ignore=openff/toolkit/data/ --ignore=openff/toolkit/utils/utils.py openff/
 
       - name: Codecov
         uses: codecov/codecov-action@v3

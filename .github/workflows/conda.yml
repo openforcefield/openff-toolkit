@@ -35,18 +35,18 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Vanilla install from conda
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@v1
         if: ${{ matrix.openeye == 'false' }}
         with:
           environment-file: devtools/conda-envs/conda.yaml
-          extra-specs: |
+          create-args: >-
             python=${{ matrix.python-version }}
       - name: Install from conda with OpenEye
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@v1
         if: ${{ matrix.openeye == 'true' }}
         with:
           environment-file: devtools/conda-envs/conda_oe.yaml
-          extra-specs: |
+          create-args: >-
             python=${{ matrix.python-version }}
 
       - name: Additional info about the build
@@ -116,6 +116,6 @@ jobs:
             python -c "import openeye; print(openeye.oechem.OEChemIsLicensed())"
           fi
 
-          PYTEST_ARGS=" -r fE --tb=short --runslow openff/toolkit/tests/conftest.py"
-          PYTEST_ARGS+=" --ignore=openff/toolkit/tests/test_links.py"
+          PYTEST_ARGS=" -r fE --tb=short --runslow openff/toolkit/_tests/conftest.py"
+          PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_links.py"
           pytest $PYTEST_ARGS openff

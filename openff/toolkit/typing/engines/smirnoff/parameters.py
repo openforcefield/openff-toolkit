@@ -71,7 +71,7 @@ from typing import (
 )
 
 import numpy as np
-from openff.units import unit
+from openff.units import Quantity, Unit, unit
 from packaging.version import Version
 
 from openff.toolkit.topology import ImproperDict, TagSortedDict, Topology, ValenceDict
@@ -203,11 +203,11 @@ def _allow_only(allowed_values):
     return _value_checker
 
 
-def _validate_units(attr, value: Union[str, unit.Quantity], units: unit.Unit):
+def _validate_units(attr, value: Union[str, Quantity], units: Unit):
     value = object_to_quantity(value)
 
     try:
-        if not units.is_compatible_with(value.units):
+        if not units.is_compatible_with(value.units):  # type: ignore[union-attr]
             raise IncompatibleUnitError(
                 f"{attr.name}={value} should have units of {units}"
             )
@@ -338,7 +338,7 @@ class ParameterAttribute:
     def __init__(
         self,
         default: Any = UNDEFINED,
-        unit: Optional[unit.Unit] = None,
+        unit: Optional[Unit] = None,
         converter: Optional[Callable] = None,
         docstring: str = "",
     ):
@@ -3309,7 +3309,7 @@ class GBSAHandler(ParameterHandler):
     solute_dielectric = ParameterAttribute(default=1, converter=float)
     sa_model = ParameterAttribute(default="ACE", converter=_allow_only(["ACE", None]))
     surface_area_penalty = ParameterAttribute(
-        default=unit.Quantity(5.4, _cal_mol_a2),
+        default=Quantity(5.4, _cal_mol_a2),
         unit=_cal_mol_a2,
     )
     solvent_radius = ParameterAttribute(default=1.4 * unit.angstrom, unit=unit.angstrom)

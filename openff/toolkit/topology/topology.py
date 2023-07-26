@@ -12,7 +12,6 @@ Class definitions to represent a molecular system and its chemical components
 
 """
 import re
-import warnings
 from collections import defaultdict
 from collections.abc import MutableMapping
 from contextlib import nullcontext
@@ -39,7 +38,11 @@ from openff.units import Quantity, ensure_quantity, unit
 from typing_extensions import TypeAlias
 
 from openff.toolkit.topology import Molecule
-from openff.toolkit.topology._mm_molecule import _SimpleBond, _SimpleMolecule
+from openff.toolkit.topology._mm_molecule import (
+    _SimpleAtom,
+    _SimpleBond,
+    _SimpleMolecule,
+)
 from openff.toolkit.topology.molecule import FrozenMolecule, HierarchyElement
 from openff.toolkit.utils import quantity_to_string, string_to_quantity
 from openff.toolkit.utils.constants import (
@@ -70,22 +73,9 @@ if TYPE_CHECKING:
     from openmm.unit import Quantity as OMMQuantity
 
     from openff.toolkit.topology.molecule import Atom, Bond
-    from openff.toolkit.utils.toolkits import ToolkitRegistry, ToolkitWrapper
-
+    from openff.toolkit.utils import ToolkitRegistry, ToolkitWrapper
 
 TKR: TypeAlias = Union["ToolkitRegistry", "ToolkitWrapper"]
-
-
-def _topology_deprecation(old_method, new_method):
-    warnings.warn(
-        f"Topology.{old_method} is deprecated. Use Topology.{new_method} instead.",
-        TopologyDeprecationWarning,
-        stacklevel=2,
-    )
-
-
-class TopologyDeprecationWarning(UserWarning):
-    """Warning for deprecated portions of the Topology API."""
 
 
 class _TransformedDict(MutableMapping):
@@ -385,7 +375,7 @@ class Topology(Serializable):
     Import some utilities
 
     >>> from openmm import app
-    >>> from openff.toolkit.tests.utils import get_data_file_path, get_packmol_pdb_file_path
+    >>> from openff.toolkit._tests.utils import get_data_file_path, get_packmol_pdb_file_path
     >>> pdb_filepath = get_packmol_pdb_file_path('cyclohexane_ethanol_0.4_0.6')
     >>> monomer_names = ('cyclohexane', 'ethanol')
 
@@ -666,7 +656,7 @@ class Topology(Serializable):
             )
 
     @property
-    def constrained_atom_pairs(self) -> Dict[Tuple[int], Union[unit.Quantity, bool]]:
+    def constrained_atom_pairs(self) -> Dict[Tuple[int], Union[Quantity, bool]]:
         """Returns the constrained atom pairs of the Topology
 
         Returns
@@ -830,18 +820,18 @@ class Topology(Serializable):
 
     @property
     def angles(self) -> Generator[Tuple["Atom", ...], None, None]:
-        """Iterable of Tuple[Atom]: iterator over the angles in this Topology."""
+        """Iterator over the angles in this Topology. Returns a Generator of Tuple[Atom]."""
         for molecule in self._molecules:
             for angle in molecule.angles:
                 yield angle
 
     @property
     def n_propers(self) -> int:
-        """int: number of proper torsions in this Topology."""
+        """The number of proper torsions in this Topology."""
         return sum(mol.n_propers for mol in self._molecules)
 
     @property
-    def propers(self) -> Generator[Tuple["Atom", ...], None, None]:
+    def propers(self) -> Generator[Tuple[Union["Atom", _SimpleAtom], ...], None, None]:
         """Iterable of Tuple[Atom]: iterator over the proper torsions in this Topology."""
         for molecule in self.molecules:
             for proper in molecule.propers:
@@ -849,18 +839,20 @@ class Topology(Serializable):
 
     @property
     def n_impropers(self) -> int:
-        """int: number of possible improper torsions in this Topology."""
+        """The number of possible improper torsions in this Topology."""
         return sum(mol.n_impropers for mol in self._molecules)
 
     @property
     def impropers(self) -> Generator[Tuple["Atom", ...], None, None]:
-        """Iterable of Tuple[Atom]: iterator over the possible improper torsions in this Topology."""
+        """Generator of Tuple[Atom]: iterator over the possible improper torsions in this Topology."""
         for molecule in self._molecules:
             for improper in molecule.impropers:
                 yield improper
 
     @property
-    def smirnoff_impropers(self) -> Generator[Tuple["Atom", ...], None, None]:
+    def smirnoff_impropers(
+        self,
+    ) -> Generator[Tuple[Union["Atom", _SimpleAtom], ...], None, None]:
         """
         Iterate over improper torsions in the molecule, but only those with
         trivalent centers, reporting the central atom second in each improper.
@@ -884,10 +876,10 @@ class Topology(Serializable):
 
         Returns
         -------
-        impropers : set of tuple
-            An iterator of tuples, each containing the indices of atoms making
-            up a possible improper torsion. The central atom is listed second
-            in each tuple.
+        smirnoff_impropers : Generator of tuples of Atom
+            An iterator of tuples, each containing the Atom objects comprising
+            up a possible improper torsion. The central atom is listed second in
+            each tuple.
 
         See Also
         --------
@@ -899,7 +891,9 @@ class Topology(Serializable):
                 yield smirnoff_improper
 
     @property
-    def amber_impropers(self) -> Generator[Tuple["Atom", ...], None, None]:
+    def amber_impropers(
+        self,
+    ) -> Generator[Tuple[Union["Atom", _SimpleAtom], ...], None, None]:
         """
         Iterate over improper torsions in the molecule, but only those with
         trivalent centers, reporting the central atom first in each improper.
@@ -915,8 +909,8 @@ class Topology(Serializable):
 
         Returns
         -------
-        impropers : set of tuple
-            An iterator of tuples, each containing the indices of atoms making
+        amber_impropers : Generator of tuples of Atom
+            An iterator of tuples, each containing the Atom objects comprising
             up a possible improper torsion. The central atom is listed first in
             each tuple.
 
@@ -1061,7 +1055,7 @@ class Topology(Serializable):
                 mol_instance = self.molecule(mol_instance_idx)
                 # Loop over matches
                 for match in mol_matches:
-                    # Collect indices of matching atoms
+                    # Collect indices of matching `Atom`s
                     topology_atom_indices = []
                     for molecule_atom_index in match:
                         atom = mol_instance.atom(atom_map[molecule_atom_index])
@@ -1276,7 +1270,7 @@ class Topology(Serializable):
                 (3, 3),
             )
             box_vectors_unit = getattr(unit, topology_dict["box_vectors_unit"])
-            self.box_vectors = unit.Quantity(box_vectors_unitless, box_vectors_unit)
+            self.box_vectors = Quantity(box_vectors_unitless, box_vectors_unit)
 
         for molecule_dict in topology_dict["molecules"]:
             new_mol = Molecule.from_dict(molecule_dict)
@@ -1985,7 +1979,7 @@ class Topology(Serializable):
         # Get positions in OpenMM format
         if isinstance(positions, openmm_unit.Quantity):
             openmm_positions = positions
-        elif isinstance(positions, unit.Quantity):
+        elif isinstance(positions, Quantity):
             openmm_positions = to_openmm_quantity(positions)
         elif isinstance(positions, np.ndarray):
             openmm_positions = openmm_unit.Quantity(positions, openmm_unit.angstroms)
@@ -2165,7 +2159,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        bond : TopologyBond
+        bond : Bond
             The bond between i and j.
 
         """
@@ -2180,7 +2174,7 @@ class Topology(Serializable):
         else:
             raise ValueError(
                 "Invalid input passed to is_bonded(). Expected ints or `Atom`s, "
-                "got {} and {}".format(i, j)
+                "got {} and {}".format(type(i), type(j))
             )
 
         for bond in atomi.bonds:
@@ -2263,23 +2257,18 @@ class Topology(Serializable):
         # atom_molecule_index = atom_topology_index - search_index
         # return topology_molecule.atom(atom_molecule_index)
 
-    def bond(self, bond_topology_index):
+    def bond(self, bond_topology_index: int) -> "Bond":  # type: ignore[return]
         """
-        Get the TopologyBond at a given Topology bond index.
+        Get the Bond at a given Topology bond index.
 
         Parameters
         ----------
         bond_topology_index : int
-             The index of the TopologyBond in this Topology
+             The index of the Bond in this Topology
 
         Returns
         -------
-        An openff.toolkit.topology.TopologyBond
-
-        Raises
-        ------
-        ValueError if bond_topology_index is not an int
-        BondNotInTopologyError if bond_topology_index is not in the range [0, self.n_bonds)
+        An openff.toolkit.topology.Bond
         """
         if not isinstance(bond_topology_index, int):
             raise ValueError(
@@ -2335,7 +2324,7 @@ class Topology(Serializable):
         # Check that constraint hasn't already been specified.
         if (iatom, jatom) in self._constrained_atom_pairs:
             existing_distance = self._constrained_atom_pairs[(iatom, jatom)]
-            if isinstance(existing_distance, unit.Quantity) and distance is True:
+            if isinstance(existing_distance, Quantity) and distance is True:
                 raise ConstraintExsistsError(
                     f"Atoms ({iatom},{jatom}) already constrained with distance {existing_distance} "
                     "but attempting to override with unspecified distance"
@@ -2406,145 +2395,3 @@ class Topology(Serializable):
             if hasattr(molecule, iter_name):
                 for item in getattr(molecule, iter_name):
                     yield item
-
-    # DEPRECATED API POINTS
-    @property
-    def n_topology_atoms(self) -> int:
-        """
-        .. deprecated:: 0.11.0
-            This property has been deprecated and will soon be removed. Use
-            :meth:`Topology.n_atoms` instead.
-        ..
-        """
-        _topology_deprecation("n_topology_atoms", "n_atoms")
-        return self.n_atoms
-
-    @property
-    def topology_atoms(self):
-        """
-        .. deprecated:: 0.11.0
-            This property has been deprecated and will soon be removed. Use
-            :meth:`Topology.atoms` instead.
-        ..
-        """
-        _topology_deprecation("topology_atoms", "atoms")
-        return self.atoms
-
-    @property
-    def n_topology_bonds(self) -> int:
-        """
-        .. deprecated:: 0.11.0
-            This property has been deprecated and will soon be removed. Use
-            :meth:`Topology.n_bonds` instead.
-        ..
-        """
-        _topology_deprecation("n_topology_bonds", "n_bonds")
-        return self.n_bonds
-
-    @property
-    def topology_bonds(self):
-        """
-        .. deprecated:: 0.11.0
-            This property has been deprecated and will soon be removed. Use
-            :meth:`Topology.bonds` instead.
-        ..
-        """
-        _topology_deprecation("topology_bonds", "bonds")
-        return self.bonds
-
-    @property
-    def n_topology_particles(self) -> int:
-        """
-        .. deprecated:: 0.11.0
-            This property has been deprecated and will soon be removed. Use
-            :meth:`Topology.n_particles` instead.
-        ..
-        """
-        _topology_deprecation("n_topology_particles", "n_particles")
-        return self.n_particles
-
-    @property
-    def topology_particles(self):
-        """
-        .. deprecated:: 0.11.0
-            This property has been deprecated and will soon be removed. Use
-            :meth:`Topology.particles` instead.
-        ..
-        """
-        _topology_deprecation("topology_particles", "particles")
-        return self.particles
-
-    @property
-    def reference_molecules(self) -> Iterator[Molecule]:
-        """
-        .. deprecated:: 0.11.0
-            This property has been deprecated and will soon be removed. Use
-            :meth:`Topology.unique_molecules` instead.
-        ..
-        """
-        _topology_deprecation("reference_molecules", "unique_molecules")
-        return self.unique_molecules
-
-    @property
-    def n_reference_molecules(self) -> int:
-        """
-        .. deprecated:: 0.11.0
-            This property has been deprecated and will soon be removed. Use
-            :meth:`Topology.n_unique_molecules` instead.
-        ..
-        """
-        _topology_deprecation("n_reference_molecules", "n_unique_molecules")
-        return self.n_molecules
-
-    @property
-    def n_topology_molecules(self) -> int:
-        """
-        .. deprecated:: 0.11.0
-            This property has been deprecated and will soon be removed. Use
-            :meth:`Topology.n_molecules` instead.
-        ..
-        """
-        _topology_deprecation("n_topology_molecules", "n_molecules")
-        return self.n_molecules
-
-    @property
-    def topology_molecules(self):
-        """
-        .. deprecated:: 0.11.0
-            This property has been deprecated and will soon be removed. Use
-            :meth:`Topology.molecules` instead.
-        ..
-        """
-        _topology_deprecation("topology_molecules", "molecules")
-        return self.molecules
-
-    @property
-    def n_particles(self) -> int:
-        """
-        .. deprecated:: 0.11.0
-            This property has been deprecated and will soon be removed. Use
-            :meth:`Topology.n_atoms` instead.
-        ..
-        """
-        _topology_deprecation("n_particles", "n_atoms")
-        return self.n_atoms
-
-    @property
-    def particles(self):
-        """
-        .. deprecated:: 0.11.0
-            This property has been deprecated and will soon be removed. Use
-            :meth:`Topology.atoms` instead.
-        ..
-        """
-        _topology_deprecation("particles", "atoms")
-        return self.atoms
-
-    def particle_index(self, particle) -> int:
-        """
-        .. deprecated:: 0.11.0
-            This method has been deprecated and will soon be removed. Use
-            :meth:`Topology.atom_index` instead.
-        """
-        _topology_deprecation("particle_index", "atom_index")
-        return self.atom_index(particle)
