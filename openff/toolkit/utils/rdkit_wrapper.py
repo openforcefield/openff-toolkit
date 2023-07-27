@@ -601,9 +601,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             prepared_dict[name] = {smarts: atom_list}
         return prepared_dict
 
-    def _polymer_openmm_topology_to_rdmol(
-        self, omm_top, substructure_library
-    ):
+    def _polymer_openmm_topology_to_rdmol(self, omm_top, substructure_library):
         """
         Parameters
         ----------
