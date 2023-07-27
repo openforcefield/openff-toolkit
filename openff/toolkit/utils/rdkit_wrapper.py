@@ -294,8 +294,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         _custom_substructures: Dict[str, str] = None,
     ):
         import json
-        from copy import deepcopy
-
         from openff.units.openmm import from_openmm
         from rdkit import Chem, Geometry
         from rdkit.DataStructs.cDataStructs import BitVectToBinaryText
@@ -488,7 +486,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     name, atom.GetSmarts(), mol_smarts, error_reason
                 )
             if not atom.Match(atom):
-                error_reason = f"query does not match rdchem.Mol reading of the molecule (likely due to incorrect/ambiguous connectivity)"
+                error_reason = "query does not match rdchem.Mol reading of the molecule (likely due to incorrect" \
+                               "/ambiguous connectivity)"
                 mol_smarts = Chem.MolToSmarts(qmol)
                 raise SubstructureAtomSmartsInvalid(
                     name, atom.GetSmarts(), mol_smarts, error_reason
@@ -658,22 +657,24 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             )
 
             for substructure_smarts in sorted_substructure_smarts:
-                # this is the molecule as defined in template
+                # this is the molecule as defined in template.
+                # ref is used to execute queries and find substructures but is difficult to
+                # sanitize/calculate valence (has query atoms)
                 ref = Chem.MolFromSmarts(
                     substructure_smarts
-                )  # ref is used to execute queries and find substructures but is difficult to sanitize/calculate valence (has query atoms)
+                )
                 ref_info = deepcopy(ref)
-                Chem.SanitizeMol(  # ref must be sanitized to calculate aromaticity
+                # ref must be sanitized to calculate aromaticity
+                # run sanitization to calculate Implcit H counts to later aromaticity assignment
+                Chem.SanitizeMol(
                     ref_info,
-                    Chem.SANITIZE_NONE,  # run sanitization to calculate Implcit H counts to later aromaticity assignment
+                    Chem.SANITIZE_NONE,
                 )
 
-                # set aromaticity for ref to avoid ambiguous chemical assignments from rotating or flipping aromatic rings
+                # set aromaticity for ref to avoid ambiguous chemical assignments from rotating or
+                # flipping aromatic rings.
                 # The entire molecule is kekulized after
-                try:
-                    Chem.SetAromaticity(ref_info, Chem.AromaticityModel.AROMATICITY_MDL)
-                except Exception as e:
-                    raise Exception
+                Chem.SetAromaticity(ref_info, Chem.AromaticityModel.AROMATICITY_MDL)
 
                 # then create a looser definition for pattern matching...
                 # be lax about double bonds and chirality
@@ -696,8 +697,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     ]
                     match = list(zip(*match_ids))[
                         1
-                    ]  # get the molecule ids without the corresponding query ids
-                    # ^^ matches return match ids in the order that they appear in the query. The code above filters neighboring (*) atoms
+                    ]  # get the molecule ids without the corresponding query ids.
+                    # ^^ matches return match ids in the order that they appear in the query.
+                    # The code above filters neighboring (*) atoms.
 
                     # Unique molecule matches should only apply if they match entire molecule
                     if res_name == "UNIQUE_MOLECULE":
@@ -705,13 +707,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         if sorted_match not in sorted_mol_frags:
                             continue
 
-                    # assign chemical info and check all overlapping substructures for ambiguous/conflicting chemical info
-
+                    # assign chemical info and check all overlapping substructures for ambiguous/conflicting
+                    # chemical info.
                     for atom_i, j in zip(ref_info.GetAtoms(), full_match):
                         if atom_i.GetAtomicNum() == 0:  # ignore neighboring atoms
                             continue
                         atom_j = mol.GetAtomWithIdx(j)
-                        # error checking for overlapping substructures with priority. Enforce that no ambiguous chemical assignments are made
+                        # error checking for overlapping substructures with priority. Enforce that no ambiguous
+                        # chemical assignments are made.
                         if (
                             j in already_assigned_nodes
                         ):  # if overlapping with previous match
@@ -719,7 +722,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                                 atom_i.GetFormalCharge() != atom_j.GetFormalCharge()
                                 and atom_i.GetIdx() not in sym_atoms
                             ):
-                                error_reason = f"Formal charge of new query ({atom_i.GetFormalCharge()}) does not match the formal charge of previous query ({atom_j.GetFormalCharge()})"
+                                error_reason = f"Formal charge of new query ({atom_i.GetFormalCharge()}) does " \
+                                               f"not match the formal charge of previous query " \
+                                               f"({atom_j.GetFormalCharge()})"
                                 raise AmbiguousAtomChemicalAssignment(
                                     res_name,
                                     atom_j.GetIdx(),
@@ -727,7 +732,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                                     error_reason,
                                 )
                             elif atom_i.GetChiralTag() != atom_j.GetChiralTag():
-                                error_reason = f"Chiral Tag of new query ({atom_i.GetChiralTag()}) does not match the chiral tag of previous query ({atom_j.GetChiralTag()})"
+                                error_reason = f"Chiral Tag of new query ({atom_i.GetChiralTag()}) does not " \
+                                               f"match the chiral tag of previous query ({atom_j.GetChiralTag()})"
                                 raise AmbiguousAtomChemicalAssignment(
                                     res_name,
                                     atom_j.GetIdx(),
@@ -750,7 +756,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         b2 = mol.GetBondBetweenAtoms(x, y)
                         bond_ids = tuple(sorted([x, y]))
 
-                        # error chacking of overlapping bonds. If substructures with priority disagree on the bond order, raise exception
+                        # error checking of overlapping bonds. If substructures with priority disagree on the
+                        # bond order, raise exception
                         if (
                             bond_ids in already_assigned_edges
                         ):  # if overlapping with previous match
@@ -758,7 +765,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                                 b.GetBondType() != b2.GetBondType()
                                 and ref_bond_ids not in sym_bonds
                             ):
-                                error_reason = f"Bond order of new query ({b.GetBondType()}) does not match the bond order of previous query ({b2.GetBondType()})"
+                                error_reason = f"Bond order of new query ({b.GetBondType()}) does not match the " \
+                                               f"bond order of previous query ({b2.GetBondType()})"
                                 query_bond = tuple(
                                     sorted([b.GetBeginAtomIdx(), b.GetEndAtomIdx()])
                                 )

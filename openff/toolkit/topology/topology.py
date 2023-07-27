@@ -1653,7 +1653,6 @@ class Topology(Serializable):
         """
         import io
         import json
-        from collections import OrderedDict
 
         import openmm.unit as openmm_unit
         from openmm.app import PDBFile
