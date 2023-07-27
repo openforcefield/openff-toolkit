@@ -291,7 +291,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         pdbfile,
         substructure_dictionary,
         coords_angstrom,
-        _custom_substructures: Dict[str, str] = None,
+        _custom_substructures: Optional[Dict[str, str]] = None,
     ):
         import json
 
@@ -318,7 +318,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         )  # concats both dicts, unique keys are enforced in previous function
 
         rdkit_mol = self._polymer_openmm_topology_to_rdmol(
-            omm_top, substructure_dictionary, list(_custom_substructures.keys())
+            omm_top, substructure_dictionary
         )
 
         rdmol_conformer = Chem.Conformer()
@@ -344,7 +344,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # the metadata assignment and coordinate setting outside this method, so
         # as long as a chemically equivalent atom is sitting at the right index
         # in the topology when the metadata is assigned there's no difference.
-        smiles2offmol = dict()
+        smiles2offmol: Dict[str, Molecule] = dict()
         for rdmol in rdmols:
             # Make a copy of the molecule to assign atom maps, since
             # otherwise the atom maps will mess with stereo assignment.
@@ -592,11 +592,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             substructures (amino acids, etc). Atom names are given the format
             "CSTM_{symbol}", including wildtypes which show as "CSTM_*"
         """
-        from collections import OrderedDict
-
         from rdkit import Chem
 
-        prepared_dict = OrderedDict[str, OrderedDict[str, List[str]]]()
+        prepared_dict = dict[str, dict[str, List[str]]]()
         for name, smarts in custom_substructures.items():
             rdmol = Chem.MolFromSmarts(smarts)
             atom_list = [f"CSTM_{atom.GetSymbol()}" for atom in rdmol.GetAtoms()]
@@ -604,7 +602,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return prepared_dict
 
     def _polymer_openmm_topology_to_rdmol(
-        self, omm_top, substructure_library, priority_substructure_residues=[]
+        self, omm_top, substructure_library
     ):
         """
         Parameters

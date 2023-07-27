@@ -1529,7 +1529,7 @@ class Topology(Serializable):
         file_path: Union[str, Path, TextIO],
         unique_molecules: Optional[Iterable[Molecule]] = None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-        _custom_substructures: Dict[str, str] = None,
+        _custom_substructures: Optional[Dict[str, str]] = None,
         _additional_substructures: Optional[Iterable[Molecule]] = None,
     ):
         """
