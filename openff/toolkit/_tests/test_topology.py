@@ -2161,7 +2161,7 @@ class TestTopologyPositions:
         topology._molecules[0]._conformers = None
         assert topology.get_positions() is None
 
-
+@requires_rdkit
 class TestTopologyFromPdbCustomSubstructures:
     def test_atomic_num_spec(self):
         with pytest.raises(SubstructureAtomSmartsInvalid):
