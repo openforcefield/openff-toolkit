@@ -294,6 +294,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         _custom_substructures: Dict[str, str] = None,
     ):
         import json
+
         from openff.units.openmm import from_openmm
         from rdkit import Chem, Geometry
         from rdkit.DataStructs.cDataStructs import BitVectToBinaryText
@@ -486,8 +487,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     name, atom.GetSmarts(), mol_smarts, error_reason
                 )
             if not atom.Match(atom):
-                error_reason = "query does not match rdchem.Mol reading of the molecule (likely due to incorrect" \
-                               "/ambiguous connectivity)"
+                error_reason = (
+                    "query does not match rdchem.Mol reading of the molecule (likely due to incorrect"
+                    "/ambiguous connectivity)"
+                )
                 mol_smarts = Chem.MolToSmarts(qmol)
                 raise SubstructureAtomSmartsInvalid(
                     name, atom.GetSmarts(), mol_smarts, error_reason
@@ -660,9 +663,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 # this is the molecule as defined in template.
                 # ref is used to execute queries and find substructures but is difficult to
                 # sanitize/calculate valence (has query atoms)
-                ref = Chem.MolFromSmarts(
-                    substructure_smarts
-                )
+                ref = Chem.MolFromSmarts(substructure_smarts)
                 ref_info = deepcopy(ref)
                 # ref must be sanitized to calculate aromaticity
                 # run sanitization to calculate Implcit H counts to later aromaticity assignment
@@ -722,9 +723,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                                 atom_i.GetFormalCharge() != atom_j.GetFormalCharge()
                                 and atom_i.GetIdx() not in sym_atoms
                             ):
-                                error_reason = f"Formal charge of new query ({atom_i.GetFormalCharge()}) does " \
-                                               f"not match the formal charge of previous query " \
-                                               f"({atom_j.GetFormalCharge()})"
+                                error_reason = (
+                                    f"Formal charge of new query ({atom_i.GetFormalCharge()}) does "
+                                    f"not match the formal charge of previous query "
+                                    f"({atom_j.GetFormalCharge()})"
+                                )
                                 raise AmbiguousAtomChemicalAssignment(
                                     res_name,
                                     atom_j.GetIdx(),
@@ -732,8 +735,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                                     error_reason,
                                 )
                             elif atom_i.GetChiralTag() != atom_j.GetChiralTag():
-                                error_reason = f"Chiral Tag of new query ({atom_i.GetChiralTag()}) does not " \
-                                               f"match the chiral tag of previous query ({atom_j.GetChiralTag()})"
+                                error_reason = (
+                                    f"Chiral Tag of new query ({atom_i.GetChiralTag()}) does not "
+                                    f"match the chiral tag of previous query ({atom_j.GetChiralTag()})"
+                                )
                                 raise AmbiguousAtomChemicalAssignment(
                                     res_name,
                                     atom_j.GetIdx(),
@@ -765,8 +770,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                                 b.GetBondType() != b2.GetBondType()
                                 and ref_bond_ids not in sym_bonds
                             ):
-                                error_reason = f"Bond order of new query ({b.GetBondType()}) does not match the " \
-                                               f"bond order of previous query ({b2.GetBondType()})"
+                                error_reason = (
+                                    f"Bond order of new query ({b.GetBondType()}) does not match the "
+                                    f"bond order of previous query ({b2.GetBondType()})"
+                                )
                                 query_bond = tuple(
                                     sorted([b.GetBeginAtomIdx(), b.GetEndAtomIdx()])
                                 )

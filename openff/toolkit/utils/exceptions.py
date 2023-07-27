@@ -706,8 +706,10 @@ class AmbiguousAtomChemicalAssignment(OpenFFToolkitException):
     """Exception raised when substructure does not contain enough information"""
 
     def __init__(self, res_name, mol_atom, query_atom, reason):
-        msg = f"Ambiguous chemical information assigned for residue {res_name} for molecule atom {mol_atom} and " \
-              f"query atom {query_atom}:\n"
+        msg = (
+            f"Ambiguous chemical information assigned for residue {res_name} for molecule atom {mol_atom} and "
+            f"query atom {query_atom}:\n"
+        )
         msg += f"\t{reason}"
         super().__init__(msg)
         self.msg = msg
@@ -717,8 +719,10 @@ class AmbiguousBondChemicalAssignment(OpenFFToolkitException):
     """Exception raised when substructure does not contain enough information"""
 
     def __init__(self, res_name, mol_bond, query_bond, reason):
-        msg = f"Ambiguous chemical information assigned for residue {res_name} for molecule bond {mol_bond} and " \
-              f"query bond {query_bond}:\n"
+        msg = (
+            f"Ambiguous chemical information assigned for residue {res_name} for molecule bond {mol_bond} and "
+            f"query bond {query_bond}:\n"
+        )
         msg += f"\t{reason}"
         super().__init__(msg)
         self.msg = msg
