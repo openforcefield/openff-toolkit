@@ -1652,9 +1652,9 @@ class Topology(Serializable):
 
          Polymer systems can also be supported if _custom_substructures are given as a Dict[str, List[str]],
          where the keys are unique atom names and the values are lists of substructure smarts. The
-         substructure smarts must follow the same format as given in 
+         substructure smarts must follow the same format as given in
          "proteins/aa_residues_substructures_explicit_bond_orders_with_caps_explicit_connectivity.json":
-         ”<bond>[#<atomic number>D<degree>+<formal charge>:<id>]<bond>” for monomer atoms and 
+         ”<bond>[#<atomic number>D<degree>+<formal charge>:<id>]<bond>” for monomer atoms and
          ”<bond>[*:<id>]” for adjacent neighboring atoms
          (NOTE: This functionality is experimental!)
 
