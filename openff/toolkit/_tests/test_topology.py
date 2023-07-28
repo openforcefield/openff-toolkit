@@ -2167,7 +2167,9 @@ class TestTopologyFromPdbCustomSubstructures:
     def test_atomic_num_spec(self):
         with pytest.raises(SubstructureAtomSmartsInvalid):
             PE_substructs = {
-                "PE": ["[CD4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"]
+                "PE": [
+                    "[CD4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+                ]
             }
             Topology.from_pdb(
                 get_data_file_path("systems/test_systems/PE.pdb"),
@@ -2177,7 +2179,9 @@ class TestTopologyFromPdbCustomSubstructures:
     def test_monomer_connectivity(self):
         with pytest.raises(SubstructureAtomSmartsInvalid):
             PE_substructs = {
-                "PE": ["[#6D3+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"]
+                "PE": [
+                    "[#6D3+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+                ]
             }
             Topology.from_pdb(
                 get_data_file_path("systems/test_systems/PE.pdb"),
@@ -2187,7 +2191,9 @@ class TestTopologyFromPdbCustomSubstructures:
     def test_formal_charge_spec(self):
         with pytest.raises(SubstructureAtomSmartsInvalid):
             PE_substructs = {
-                "PE": ["[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"]
+                "PE": [
+                    "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+                ]
             }
             Topology.from_pdb(
                 get_data_file_path("systems/test_systems/PE.pdb"),
@@ -2197,7 +2203,9 @@ class TestTopologyFromPdbCustomSubstructures:
     def test_bond_type_spec(self):
         with pytest.raises(SubstructureBondSmartsInvalid):
             PE_substructs = {
-                "PE": ["[#6D4+0:9](~[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"]
+                "PE": [
+                    "[#6D4+0:9](~[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+                ]
             }
             Topology.from_pdb(
                 get_data_file_path("systems/test_systems/PE.pdb"),
@@ -2207,7 +2215,9 @@ class TestTopologyFromPdbCustomSubstructures:
     def test_duplicate_monomers(self):
         with pytest.raises(NonUniqueSubstructureName):
             PE_substructs = {
-                "LEU": ["[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"]
+                "LEU": [
+                    "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+                ]
             }
             Topology.from_pdb(
                 get_data_file_path("systems/test_systems/PE.pdb"),
@@ -2217,8 +2227,10 @@ class TestTopologyFromPdbCustomSubstructures:
     def test_ambiguous_bond_info_check(self):
         with pytest.raises(AmbiguousBondChemicalAssignment):
             PE_substructs = {
-                "PE": ["[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
-                       "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(=[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"]
+                "PE": [
+                    "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
+                    "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(=[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
+                ]
             }
             Topology.from_pdb(
                 get_data_file_path("systems/test_systems/PE.pdb"),
@@ -2228,8 +2240,10 @@ class TestTopologyFromPdbCustomSubstructures:
     def test_ambiguous_formal_charge_check(self):
         with pytest.raises(AmbiguousAtomChemicalAssignment):
             PE_substructs = {
-                "PE": ["[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
-                       "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+1:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"]
+                "PE": [
+                    "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
+                    "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+1:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
+                ]
             }
             Topology.from_pdb(
                 get_data_file_path("systems/test_systems/PE.pdb"),
