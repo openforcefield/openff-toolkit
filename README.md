@@ -17,7 +17,7 @@ The toolkit currently covers two main areas we have committed to stably maintain
 
 ## Documentation
 
-[Documentation](https://open-forcefield-toolkit.readthedocs.io/en/stable/) for the Open Force Field Toolkit is hosted at [readthedocs](https://open-forcefield-toolkit.readthedocs.io/en/stable). Example notebooks are available in the `examples/` repository and also hosted on the [`Open Force Field`](https://docs.openforcefield.org/en/latest/examples.html) website.
+[Documentation](https://open-forcefield-toolkit.readthedocs.io/en/stable/) for the Open Force Field Toolkit is hosted at [readthedocs](https://open-forcefield-toolkit.readthedocs.io/en/stable). Example notebooks are available in the `examples/` directory and also hosted on the [`Open Force Field`](https://docs.openforcefield.org/en/latest/examples.html) website.
 
 ## How to cite
 
@@ -70,10 +70,8 @@ from openff.toolkit import ForceField
 forcefield = ForceField('openff-2.1.0.offxml')
 
 # Create an OpenMM system representing the molecule with SMIRNOFF-applied parameters
-openmm_system = forcefield.create_openmm_system(topology)
-
-# Create an Interchange object for representations in other formats
 interchange = forcefield.create_interchange(topology)
+openmm_system = interchange.to_openmm()
 ```
 
 Detailed examples of using SMIRNOFF with the toolkit can be found [in the documentation](https://open-forcefield-toolkit.readthedocs.io/en/stable/examples.html).
