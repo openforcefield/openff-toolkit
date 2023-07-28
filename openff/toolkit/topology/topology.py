@@ -1529,7 +1529,7 @@ class Topology(Serializable):
         file_path: Union[str, Path, TextIO],
         unique_molecules: Optional[Iterable[Molecule]] = None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-        _custom_substructures: Optional[Dict[str, str]] = None,
+        _custom_substructures: Optional[Dict[str, List[str]]] = None,
         _additional_substructures: Optional[Iterable[Molecule]] = None,
     ):
         """
@@ -1610,7 +1610,7 @@ class Topology(Serializable):
             PDB. See above for details.
         toolkit_registry : ToolkitRegistry. Default = None
             The ToolkitRegistry to use as the cheminformatics backend.
-        _custom_substructures: Dict[str, str], Default = {}
+        _custom_substructures: Dict[str, List[str]], Default = {}
             Experimental and unstable. Dictionary where keys are the names of new substructures
             (cannot overlap with existing amino acid names) and the values are the new substructure
             entries that follow the same format as those used in the amino acid substructure library

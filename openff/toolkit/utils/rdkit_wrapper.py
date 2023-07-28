@@ -392,7 +392,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return top
 
     def _validate_custom_substructures(
-        self, custom_substructures: Dict[str, str], forbidden_keys
+        self, custom_substructures: Dict[str, List[str]], forbidden_keys
     ):
         """Validates custom substructures to adhere to monomer specifications
         Parameters
@@ -424,8 +424,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         same_keys = set(forbidden_keys).intersection(set(custom_keys))
         if same_keys:
             raise NonUniqueSubstructureName(list(same_keys))
-        for name, smarts in custom_substructures.items():
-            self._is_valid_substructure_smarts(name, smarts)  # raises error if invalid
+        for name, smarts_list in custom_substructures.items():
+            for smarts in smarts_list:
+                self._is_valid_substructure_smarts(name, smarts)  # raises error if invalid
 
         return  # all tests passed without raised exception
 
@@ -579,11 +580,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # If all checks pass, continue
         return
 
-    def _prepare_custom_substructures(self, custom_substructures: Dict[str, str]):
-        """
+    def _prepare_custom_substructures(self, custom_substructures: Dict[str, List[str]]):
+        """Adds general atom names to match the format of the amino acid substructure dict
         Parameters
         ----------
-        custom_substructures : Dict[str, str]
+        custom_substructures : Dict[str, List[str]]
             substructures given with unique names as keys and smarts as values
         Returns
         -------
@@ -594,11 +595,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         from rdkit import Chem
 
-        prepared_dict = dict[str, dict[str, List[str]]]()
-        for name, smarts in custom_substructures.items():
-            rdmol = Chem.MolFromSmarts(smarts)
-            atom_list = [f"CSTM_{atom.GetSymbol()}" for atom in rdmol.GetAtoms()]
-            prepared_dict[name] = {smarts: atom_list}
+        prepared_dict = defaultdict[str, List[dict[str, List[str]]]](lambda: defaultdict(list))
+        for name, smarts_list in custom_substructures.items():
+            for smarts in smarts_list:
+                rdmol = Chem.MolFromSmarts(smarts)
+                atom_list = [f"CSTM_{atom.GetSymbol()}" for atom in rdmol.GetAtoms()]
+                prepared_dict[name][smarts] = atom_list
         return prepared_dict
 
     def _polymer_openmm_topology_to_rdmol(self, omm_top, substructure_library):
