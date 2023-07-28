@@ -2273,7 +2273,5 @@ class TestTopologyFromPdbCustomSubstructures:
 
     def test_protein_with_symmetrical_group(self):
         # The following system fails if symmetry detection does not account for the ARG group.
-        # Also a good test for protein loading in general. 
-        Topology.from_pdb(
-                get_data_file_path("systems/test_systems/8fy3.pdb")
-            )
+        # Also a good test for protein loading in general.
+        Topology.from_pdb(get_data_file_path("systems/test_systems/8fy3.pdb"))
