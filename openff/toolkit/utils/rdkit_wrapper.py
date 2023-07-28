@@ -730,20 +730,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                                     atom_i.GetIdx(),
                                     error_reason,
                                 )
-                            elif atom_i.GetChiralTag() != atom_j.GetChiralTag():
-                                error_reason = (
-                                    f"Chiral Tag of new query ({atom_i.GetChiralTag()}) does not "
-                                    f"match the chiral tag of previous query ({atom_j.GetChiralTag()})"
-                                )
-                                raise AmbiguousAtomChemicalAssignment(
-                                    res_name,
-                                    atom_j.GetIdx(),
-                                    atom_i.GetIdx(),
-                                    error_reason,
-                                )
-                        # copy over chirality
-                        if atom_i.GetChiralTag():
-                            mol.GetAtomWithIdx(j).SetChiralTag(atom_i.GetChiralTag())
+
                         atom_j.SetFormalCharge(atom_i.GetFormalCharge())
 
                     already_assigned_nodes.update(match)
