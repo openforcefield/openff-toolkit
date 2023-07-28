@@ -2250,6 +2250,19 @@ class TestTopologyFromPdbCustomSubstructures:
                 _custom_substructures=PE_substructs,
             )
 
+    def test_successful_PE_loading(self):
+        PE_substructs = {
+                "PE": [
+                    "[#6D4+0:2](-[#1D1+0:3])(-[#1D1+0:4])(-[#6D4+0:5](-[#1D1+0:6])(-[#1D1+0:7])-[*:8])-[*:1]",
+                    "[#6D4+0:2](-[#1D1+0:3])(-[#1D1+0:4])(-[#6D4+0:5](-[#1D1+0:6])(-[#1D1+0:7])-[#1D1+0:8])-[*:1]",
+                    "[#6D4+0:2](-[#1D1+0:3])(-[#1D1+0:4])(-[#6D4+0:5](-[#1D1+0:6])(-[#1D1+0:7])-[*:8])-[#1D1+0:1]",
+                ]
+            }
+        Topology.from_pdb(
+            get_data_file_path("systems/test_systems/PE.pdb"),
+            _custom_substructures=PE_substructs,
+        )
+
     def test_symmetrical_group_COO(self):
         from rdkit import Chem
 

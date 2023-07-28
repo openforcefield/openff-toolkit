@@ -1650,6 +1650,25 @@ class Topology(Serializable):
          HierarchyElement ('B', '2', ' ', 'CYS') of iterator 'residues' containing 11 atom(s),
          HierarchyElement ('B', '3', ' ', 'NME') of iterator 'residues' containing 6 atom(s)]
 
+         Polymer systems can also be supported if _custom_substructures are given as a Dict[str, List[str]],
+         where the keys are unique atom names and the values are lists of substructure smarts. The
+         substructure smarts must follow the same format as given in 
+         "proteins/aa_residues_substructures_explicit_bond_orders_with_caps_explicit_connectivity.json":
+         ”<bond>[#<atomic number>D<degree>+<formal charge>:<id>]<bond>” for monomer atoms and 
+         ”<bond>[*:<id>]” for adjacent neighboring atoms
+         (NOTE: This functionality is experimental!)
+
+        >>> PE_substructs = {
+                "PE": [
+                    "[#6D4+0:2](-[#1D1+0:3])(-[#1D1+0:4])(-[#6D4+0:5](-[#1D1+0:6])(-[#1D1+0:7])-[*:8])-[*:1]",
+                    "[#6D4+0:2](-[#1D1+0:3])(-[#1D1+0:4])(-[#6D4+0:5](-[#1D1+0:6])(-[#1D1+0:7])-[#1D1+0:8])-[*:1]",
+                    "[#6D4+0:2](-[#1D1+0:3])(-[#1D1+0:4])(-[#6D4+0:5](-[#1D1+0:6])(-[#1D1+0:7])-[*:8])-[#1D1+0:1]",
+                ]
+            }
+        >>> top = Topology.from_pdb(
+                     get_data_file_path("systems/test_systems/PE.pdb"),
+                     _custom_substructures=PE_substructs,
+                 )
         """
         import io
         import json
