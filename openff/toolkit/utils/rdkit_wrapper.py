@@ -291,7 +291,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         pdbfile,
         substructure_dictionary,
         coords_angstrom,
-        _custom_substructures: Optional[Dict[str, str]] = None,
+        _custom_substructures: Optional[Dict[str, List[str]]] = None,
     ):
         import json
 
@@ -597,7 +597,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         from rdkit import Chem
 
-        prepared_dict = defaultdict[str, List[dict[str, List[str]]]](
+        prepared_dict = defaultdict[str, dict[str, List[str]]](
             lambda: defaultdict(list)
         )
         for name, smarts_list in custom_substructures.items():
