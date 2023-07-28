@@ -426,7 +426,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             raise NonUniqueSubstructureName(list(same_keys))
         for name, smarts_list in custom_substructures.items():
             for smarts in smarts_list:
-                self._is_valid_substructure_smarts(name, smarts)  # raises error if invalid
+                self._is_valid_substructure_smarts(
+                    name, smarts
+                )  # raises error if invalid
 
         return  # all tests passed without raised exception
 
@@ -595,7 +597,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         from rdkit import Chem
 
-        prepared_dict = defaultdict[str, List[dict[str, List[str]]]](lambda: defaultdict(list))
+        prepared_dict = defaultdict[str, List[dict[str, List[str]]]](
+            lambda: defaultdict(list)
+        )
         for name, smarts_list in custom_substructures.items():
             for smarts in smarts_list:
                 rdmol = Chem.MolFromSmarts(smarts)
