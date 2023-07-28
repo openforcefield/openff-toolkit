@@ -1659,16 +1659,16 @@ class Topology(Serializable):
          (NOTE: This functionality is experimental!)
 
         >>> PE_substructs = {
-                "PE": [
-                    "[#6D4+0:2](-[#1D1+0:3])(-[#1D1+0:4])(-[#6D4+0:5](-[#1D1+0:6])(-[#1D1+0:7])-[*:8])-[*:1]",
-                    "[#6D4+0:2](-[#1D1+0:3])(-[#1D1+0:4])(-[#6D4+0:5](-[#1D1+0:6])(-[#1D1+0:7])-[#1D1+0:8])-[*:1]",
-                    "[#6D4+0:2](-[#1D1+0:3])(-[#1D1+0:4])(-[#6D4+0:5](-[#1D1+0:6])(-[#1D1+0:7])-[*:8])-[#1D1+0:1]",
-                ]
-            }
+        ...     "PE": [
+        ...         "[#6D4+0:2](-[#1D1+0:3])(-[#1D1+0:4])(-[#6D4+0:5](-[#1D1+0:6])(-[#1D1+0:7])-[*:8])-[*:1]",
+        ...         "[#6D4+0:2](-[#1D1+0:3])(-[#1D1+0:4])(-[#6D4+0:5](-[#1D1+0:6])(-[#1D1+0:7])-[#1D1+0:8])-[*:1]",
+        ...         "[#6D4+0:2](-[#1D1+0:3])(-[#1D1+0:4])(-[#6D4+0:5](-[#1D1+0:6])(-[#1D1+0:7])-[*:8])-[#1D1+0:1]",
+        ...     ]
+        ... }
         >>> top = Topology.from_pdb(
-                     get_data_file_path("systems/test_systems/PE.pdb"),
-                     _custom_substructures=PE_substructs,
-                 )
+        ...          get_data_file_path("systems/test_systems/PE.pdb"),
+        ...          _custom_substructures=PE_substructs,
+        ...      )
         """
         import io
         import json
