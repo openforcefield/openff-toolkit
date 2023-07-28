@@ -25,6 +25,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1654](https://github.com/openforcefield/openff-toolkit/pull/1654): Fixes issue [#1653](https://github.com/openforcefield/openff-toolkit/issues/1653), where a test that expected RDKit to fail began returning an error when RDKit became able to generate conformers for octahedral molecules.
 
 ### New features
+- [PR #1627](https://github.com/openforcefield/openff-toolkit/pull/1627): (beta release of major new feature by @connordavel) Adds experimental support for custom substructure loading in `Topology.from_pdb`, via the `_custom_substructures` keyword argument. This will be added to the public API (by removing the leading underscore) in a future feature release, but is available for testing now. This feature should allow for easier loading of modified amino acids, nucleic acids, and other polymers. 
 
 ### Improved documentation and warnings
 - [PR #1572](https://github.com/openforcefield/openff-toolkit/pull/1572): Improved installation guide in line with ecosystem docs.
