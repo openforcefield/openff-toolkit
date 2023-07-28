@@ -19,6 +19,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1667](https://github.com/openforcefield/openff-toolkit/pull/1667): A more helpful exception is now raised when `Topology.from_openmm` is given an OpenMM Topology with virtual sites.
 
 ### New features
+- [PR #1627](https://github.com/openforcefield/openff-toolkit/pull/1627): (beta release of major new feature by @connordavel) Adds experimental support for custom substructure loading in `Topology.from_pdb`, via the `_custom_substructures` keyword argument. This will be added to the public API (by removing the leading underscore) in a future feature release, but is available for testing now. This feature should allow for easier loading of modified amino acids, nucleic acids, and other polymers. 
 
 ### Improved documentation and warnings
 

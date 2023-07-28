@@ -3941,9 +3941,18 @@ class FrozenMolecule(Serializable):
 
         pdb = PDBFile(file_path)
 
-        substructure_file_path = get_data_file_path(
-            "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
-        )
+        # Kludgy fix for the fact that RDKitToolkitWrapper uses new substructure spec.
+        # Hopefully this will be short-lived as we can deprecate this method entirely in favor of
+        # Topology.from_pdb, which only uses the RDKit backend.
+        resolved_method = toolkit_registry.resolve("_polymer_openmm_topology_to_offmol")
+        if "RDKit" in str(resolved_method):
+            substructure_file_path = get_data_file_path(
+                "proteins/aa_residues_substructures_explicit_bond_orders_with_caps_explicit_connectivity.json"
+            )
+        else:
+            substructure_file_path = get_data_file_path(
+                "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
+            )
 
         with open(substructure_file_path, "r") as subfile:
             substructure_dictionary = json.load(subfile)
