@@ -70,8 +70,10 @@ from openff.toolkit import ForceField
 forcefield = ForceField('openff-2.1.0.offxml')
 
 # Create an OpenMM system representing the molecule with SMIRNOFF-applied parameters
+openmm_system = forcefield.create_openmm_system(topology)
+
+# Create an Interchange object for representations in other formats
 interchange = forcefield.create_interchange(topology)
-openmm_system = interchange.to_openmm()
 ```
 
 Detailed examples of using SMIRNOFF with the toolkit can be found [in the documentation](https://open-forcefield-toolkit.readthedocs.io/en/stable/examples.html).
