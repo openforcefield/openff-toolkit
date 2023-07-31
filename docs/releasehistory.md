@@ -19,6 +19,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### New features
 
+### Examples updated
+- [PR #1671](https://github.com/openforcefield/openff-toolkit/pull/1671): Re-rendered all examples using RDKit+AmberTools backend, and using most recent version of OFF Toolkit. 
+
 ### Improved documentation and warnings
 
 
