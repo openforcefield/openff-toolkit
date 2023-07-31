@@ -12,6 +12,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### API-breaking changes
 
 ### Behavior changes
+- [PR #1675](https://github.com/openforcefield/openff-toolkit/pull/1675): Makes InChI parsing failures more informative and gives them their own exception type, `InChIParseError`.
 
 ### Bugfixes
 

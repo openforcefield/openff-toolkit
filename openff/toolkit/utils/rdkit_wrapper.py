@@ -29,6 +29,7 @@ from openff.toolkit.utils.exceptions import (
     AmbiguousBondChemicalAssignment,
     ChargeMethodUnavailableError,
     ConformerGenerationError,
+    InChIParseError,
     InvalidAromaticityModelError,
     MoleculeParseError,
     NonUniqueSubstructureName,
@@ -1615,8 +1616,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # try and catch an InChI parsing error
         if rdmol is None:
-            raise RuntimeError(
-                "There was an issue parsing the InChI string, please check and try again."
+            raise InChIParseError(
+                f"There was an issue parsing the InChI string ({inchi}), please check and try again."
             )
 
         # process the molecule
