@@ -3207,13 +3207,6 @@ class TestMolecule:
 
         assert molecule == molecule_copy
 
-    def test_chemical_environment_old_arg(self):
-        from openff.toolkit.typing.chemistry import ChemicalEnvironment
-
-        molecule = create_ethanol()
-        with pytest.raises(ValueError, match="'query' must be a SMARTS"):
-            molecule.chemical_environment_matches(ChemicalEnvironment("[*:1]"))
-
     @requires_openeye
     def test_chemical_environment_matches_OE(self):
         """Test chemical environment matches"""

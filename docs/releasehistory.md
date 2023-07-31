@@ -10,6 +10,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ## Current development
 
 ### API-breaking changes
+- [PR #1664](https://github.com/openforcefield/openff-toolkit/pull/1664): Removes `ChemicalEnvironment` and the entire `openff.toolkit.typing.chemistry` submodule, which was deprecated in 0.12.0.
 
 ### Behavior changes
 - [PR #1675](https://github.com/openforcefield/openff-toolkit/pull/1675): Makes InChI parsing failures more informative and gives them their own exception type, `InChIParseError`.

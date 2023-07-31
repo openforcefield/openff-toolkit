@@ -3531,11 +3531,6 @@ class FrozenMolecule(Serializable):
              ``chemical_environment_matches``
 
         """
-        if isinstance(query, str):
-            smirks = query
-        else:
-            raise ValueError("'query' must be a SMARTS/SMIRKS string")
-
         # Use specified cheminformatics toolkit to determine matches with specified aromaticity model
         # TODO: Simplify this by requiring a toolkit registry for the molecule?
         # TODO: Do we have to pass along an aromaticity model?
@@ -3543,14 +3538,14 @@ class FrozenMolecule(Serializable):
             matches = toolkit_registry.call(
                 "find_smarts_matches",
                 self,
-                smirks,
+                query,
                 unique=unique,
                 raise_exception_types=[],
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             matches = toolkit_registry.find_smarts_matches(  # type: ignore[attr-defined]
                 self,
-                smirks,
+                query,
                 unique=unique,
             )
         else:
