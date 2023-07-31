@@ -35,7 +35,7 @@ from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ConformerGenerationError,
     GAFFAtomTypeWarning,
-    InCHIParseError,
+    InChIParseError,
     InconsistentStereochemistryError,
     InvalidAromaticityModelError,
     InvalidIUPACNameError,
@@ -2064,7 +2064,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         # try and catch InChI parsing fails
         # if there are no atoms don't build the molecule
         if oemol.NumAtoms() == 0:
-            raise InCHIParseError(
+            raise InChIParseError(
                 f"There was an issue parsing the InChI string ({inchi}), please check and try again."
             )
 

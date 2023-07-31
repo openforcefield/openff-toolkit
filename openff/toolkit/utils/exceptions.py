@@ -101,8 +101,8 @@ class SMILESParseError(OpenFFToolkitException, ValueError):
     """The record could not be parsed into the given format"""
 
 
-class InCHIParseError(MoleculeParseError, RuntimeError):
-    """The InCHI record could not be parsed."""
+class InChIParseError(MoleculeParseError, RuntimeError):
+    """The InChI record could not be parsed."""
 
 
 class RadicalsNotSupportedError(OpenFFToolkitException):
