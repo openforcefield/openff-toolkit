@@ -1753,6 +1753,12 @@ class TestvdWHandlerUpconversion:
         assert converted.periodic_method == new.periodic_method == "cutoff"
         assert converted.nonperiodic_method == new.nonperiodic_method == "no-cutoff"
 
+        try:
+            assert not hasattr(converted, "method")
+        except AttributeError:
+            # https://github.com/openforcefield/openff-toolkit/issues/1680
+            pytest.skip("ParameterAttribute.__delete__ not implemented")
+
     def test_invalid_0_4_kwargs(self):
         with pytest.raises(
             SMIRNOFFSpecError,
