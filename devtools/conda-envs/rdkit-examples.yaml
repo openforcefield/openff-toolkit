@@ -44,3 +44,5 @@ dependencies:
   - pdbfixer
   - openmmforcefields >=0.11.2
   - gromacs >=2021=nompi*
+  - pip:
+    - git+https://github.com/openforcefield/openff-interchange.git@vdw-0.4

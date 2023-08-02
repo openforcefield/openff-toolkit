@@ -38,3 +38,5 @@ dependencies:
   - qcengine
   - mdtraj
   - parmed =3
+  - pip:
+    - git+https://github.com/openforcefield/openff-interchange.git@vdw-0.4
