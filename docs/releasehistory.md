@@ -7,6 +7,19 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `micro` increments represent bugfix releases or improvements in documentation
 
 
+## Current development
+
+### API-breaking changes
+
+### Behavior changes
+
+### Bugfixes
+
+### New features
+
+### Improved documentation and warnings
+
+
 ## 0.14.1
 
 ### API-breaking changes
