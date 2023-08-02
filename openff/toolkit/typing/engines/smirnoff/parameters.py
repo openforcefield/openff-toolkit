@@ -2818,7 +2818,7 @@ class vdWHandler(_NonbondedHandler):
         default="cutoff", converter=_allow_only(["cutoff", "no-cutoff"])
     )
     nonperiodic_method = ParameterAttribute(
-        default="cutoff", converter=_allow_only(["cutoff", "no-cutoff"])
+        default="no-cutoff", converter=_allow_only(["cutoff", "no-cutoff"])
     )
 
     def __init__(self, **kwargs):
@@ -2830,29 +2830,30 @@ class vdWHandler(_NonbondedHandler):
                     "See https://openforcefield.github.io/standards/standards/smirnoff/#electrostatics"
                 )
 
-            if kwargs.get("version") == 0.3:
+        if kwargs.get("version") == 0.3:
+            logger.info(
+                "Attempting to up-convert Electrostatics section from 0.3 to 0.4"
+            )
+
+            # This is the only supported value of "method" is version 0.3
+            if kwargs.get("method") == "cutoff":
+                kwargs["periodic_method"] = "cutoff"
+                kwargs["nonperiodic_method"] = "no-cutoff"
+                kwargs["version"] = 0.4
+                kwargs.pop("method", None)
+
                 logger.info(
-                    "Attempting to up-convert Electrostatics section from 0.3 to 0.4"
+                    'Successfully up-converted vdW section from 0.3 to 0.4. `method="cutoff"` '
+                    'is now split into `periodic_method="cutoff"` '
+                    'and `nonperiodic_method="no-cutoff"`.'
                 )
-
-                # This is the only supported value of "method" is version 0.3
-                if kwargs.get("method") == "cutoff":
-                    kwargs["periodic_method"] = "cutoff"
-                    kwargs["nonperiodic_method"] = "no-cutoff"
-                    kwargs["version"] = 0.4
-                    kwargs.pop("method", None)
-
-                    logger.info(
-                        'Successfully up-converted vdW section from 0.3 to 0.4. `method="cutoff"` '
-                        'is now split into `periodic_method="cutoff"` '
-                        'and `nonperiodic_method="no-cutoff"`.'
-                    )
 
             else:
                 raise NotImplementedError(
                     "Failed to up-convert vdW section from 0.3 to 0.4. Did not know "
                     f"how to up-convert `method={kwargs['method']}`."
                 )
+        super().__init__(**kwargs)
 
     # TODO: Use _allow_only when ParameterAttribute will support multiple converters
     #       (it'll be easy when we switch to use the attrs library)

@@ -689,105 +689,6 @@ def generate_monatomic_ions():
     )
 
 
-nonbonded_resolution_matrix = [
-    {
-        "vdw_method": "cutoff",
-        "electrostatics_periodic_potential": "Coulomb",
-        "has_periodic_box": True,
-        "omm_force": None,
-        "exception": SMIRNOFFSpecUnimplementedError,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "cutoff",
-        "electrostatics_periodic_potential": "Coulomb",
-        "has_periodic_box": False,
-        "omm_force": openmm.NonbondedForce.NoCutoff,
-        "exception": None,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "cutoff",
-        "electrostatics_periodic_potential": "reaction-field",
-        "has_periodic_box": True,
-        "omm_force": None,
-        "exception": SMIRNOFFSpecUnimplementedError,
-        "exception_match": "reaction-field",
-    },
-    {
-        "vdw_method": "cutoff",
-        "electrostatics_periodic_potential": "reaction-field",
-        "has_periodic_box": False,
-        "omm_force": openmm.NonbondedForce.NoCutoff,
-        "exception": None,
-        "exception_match": "reaction-field",
-    },
-    {
-        "vdw_method": "cutoff",
-        "electrostatics_periodic_potential": "PME",
-        "has_periodic_box": True,
-        "omm_force": openmm.NonbondedForce.PME,
-        "exception": None,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "cutoff",
-        "electrostatics_periodic_potential": "PME",
-        "has_periodic_box": False,
-        "omm_force": openmm.NonbondedForce.NoCutoff,
-        "exception": None,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_periodic_potential": "Coulomb",
-        "has_periodic_box": True,
-        "omm_force": None,
-        "exception": IncompatibleParameterError,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_periodic_potential": "Coulomb",
-        "has_periodic_box": False,
-        "omm_force": None,
-        "exception": SMIRNOFFSpecError,
-        "exception_match": "vdw method PME.* is only valid for periodic systems",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_periodic_potential": "reaction-field",
-        "has_periodic_box": True,
-        "omm_force": None,
-        "exception": IncompatibleParameterError,
-        "exception_match": "must also be PME",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_periodic_potential": "reaction-field",
-        "has_periodic_box": False,
-        "omm_force": None,
-        "exception": SMIRNOFFSpecError,
-        "exception_match": "vdw method PME.* is only valid for periodic systems",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_periodic_potential": "PME",
-        "has_periodic_box": True,
-        "omm_force": openmm.NonbondedForce.LJPME,
-        "exception": None,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_periodic_potential": "PME",
-        "has_periodic_box": False,
-        "omm_force": openmm.NonbondedForce.NoCutoff,
-        "exception": SMIRNOFFSpecError,
-        "exception_match": "vdw method PME.* is only valid for periodic systems",
-    },
-]
-
 partial_charge_method_resolution_matrix = [
     {
         "toolkit": AmberToolsToolkitWrapper,
@@ -1649,8 +1550,7 @@ class TestForceField(_ForceFieldFixtures):
 
         force_field = ForceField()
 
-        vdw_handler = vdWHandler(version=0.3)
-        vdw_handler.method = "cutoff"
+        vdw_handler = vdWHandler(version=0.4)
         vdw_handler.cutoff = 6.0 * unit.angstrom
         vdw_handler.scale14 = 1.0
 
@@ -1704,8 +1604,7 @@ class TestForceField(_ForceFieldFixtures):
 
         force_field = ForceField()
 
-        vdw_handler = vdWHandler(version=0.3)
-        vdw_handler.method = "cutoff"
+        vdw_handler = vdWHandler(version=0.4)
         vdw_handler.cutoff = 7.89 * unit.angstrom
         vdw_handler.scale14 = 1.0
 
