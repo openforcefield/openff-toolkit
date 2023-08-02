@@ -6,16 +6,24 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+## Current development
+
+## Behavior changes
+
+- [PR #1678](https://github.com/openforcefield/openff-toolkit/pull/1678): Version 0.3 `<vdW>` sections of OFFXML files will automatically be up-converted (in memory) to version 0.4 accordingto the recomendations provided in [OFF-EP 0008](https://openforcefield.github.io/standards/enhancement-proposals/off-ep-0008/).
 
 ## 0.14.1
 
 ### API-breaking changes
+
 - [PR #1664](https://github.com/openforcefield/openff-toolkit/pull/1664): Removes `ChemicalEnvironment` and the entire `openff.toolkit.typing.chemistry` submodule, which was deprecated in 0.12.0.
 
 ### Behavior changes
+
 - [PR #1675](https://github.com/openforcefield/openff-toolkit/pull/1675): Makes InChI parsing failures more informative and gives them their own exception type, `InChIParseError`.
 
 ### New features
+
 - [PR #1627](https://github.com/openforcefield/openff-toolkit/pull/1627): (beta release of major new feature by @connordavel) Adds experimental support for custom substructure loading in `Topology.from_pdb`, via the `_custom_substructures` keyword argument. This will be added to the public API (by removing the leading underscore) in a future feature release, but is available for testing now. This feature should allow for easier loading of modified amino acids, nucleic acids, and other polymers.  
 
 
