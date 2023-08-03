@@ -18,7 +18,7 @@ dependencies:
   - openff-amber-ff-ports >=0.0.3
   - openff-units =0.2.0
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.3.5
+  - openff-interchange-base >=0.3.10
   - openff-nagl >=0.2.2
   - openff-nagl-models >=0.0.2
   - typing_extensions
@@ -44,5 +44,3 @@ dependencies:
   - pdbfixer
   - openmmforcefields >=0.11.2
   - gromacs >=2021=nompi*
-  - pip:
-    - git+https://github.com/openforcefield/openff-interchange.git@vdw-0.4

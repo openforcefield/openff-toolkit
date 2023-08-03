@@ -17,7 +17,7 @@ dependencies:
   - smirnoff99Frosst
   - openff-units =0.2.0
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.3.3
+  - openff-interchange-base >=0.3.10
   - openff-nagl >=0.2.2
   - openff-nagl-models >=0.0.2
   - typing_extensions
@@ -36,5 +36,3 @@ dependencies:
   - qcelemental
   - qcportal >=0.15
   - qcengine
-  - pip:
-    - git+https://github.com/openforcefield/openff-interchange.git@vdw-0.4
