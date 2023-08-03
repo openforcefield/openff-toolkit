@@ -37,4 +37,4 @@ dependencies:
   - qcportal >=0.15
   - qcengine
   - pip:
-    - git+https://github.com/openforcefield/openff-interchange.git@vdw-0.4
+    - git+https://github.com/openforcefield/openff-interchange.git@openmm-optional
