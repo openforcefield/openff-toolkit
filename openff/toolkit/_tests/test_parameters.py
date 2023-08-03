@@ -1702,7 +1702,7 @@ class TestvdWHandler:
         sigma/rmin_half setters silently set each other's value.
         See https://github.com/openforcefield/openff-toolkit/issues/788
         """
-        vdw_handler = vdWHandler(version=0.3)
+        vdw_handler = vdWHandler(version=0.4)
         param1 = {
             "epsilon": "0.5 * kilocalorie/mole",
             "rmin_half": "1.2 * angstrom",
@@ -1722,7 +1722,7 @@ class TestvdWHandler:
         assert vdw_handler.get_parameter({"smirks": "[#1:1]"})[0].id == "n00"
 
     def test_set_invalid_scale_factor(self):
-        handler = vdWHandler(version=0.3)
+        handler = vdWHandler(version=0.4)
 
         with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale12"):
             handler.scale12 = 0.1
@@ -1732,6 +1732,49 @@ class TestvdWHandler:
 
         with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale15"):
             handler.scale15 = 0.1
+
+
+class TestvdWHandlerUpConversion:
+    """
+    Test the implementation of OFF-EP-0008:
+
+    https://openforcefield.github.io/standards/enhancement-proposals/off-ep-0008/
+    """
+
+    def test_upconversion(self):
+        converted = vdWHandler(version=0.3, method="cutoff")
+
+        new = vdWHandler(version=0.4)
+
+        assert converted.version == new.version == Version("0.4")
+
+        # Up-conversion from default (only) value of .method in 0.3 happens
+        # happens to match default values of new attributes version 0.4
+        assert converted.periodic_method == new.periodic_method == "cutoff"
+        assert converted.nonperiodic_method == new.nonperiodic_method == "no-cutoff"
+
+        try:
+            assert not hasattr(converted, "method")
+        except AttributeError:
+            # https://github.com/openforcefield/openff-toolkit/issues/1680
+            pytest.skip("ParameterAttribute.__delete__ not implemented")
+
+    def test_upconversion_unknown_kwarg(self):
+        with pytest.raises(
+            NotImplementedError,
+            match=r"Did not know.*`method=\"no-cutoff",
+        ):
+            vdWHandler(
+                version=0.3,
+                method="no-cutoff",
+            )
+
+    def test_invalid_0_4_kwargs(self):
+        with pytest.raises(
+            SMIRNOFFSpecError,
+            match="removed in version 0.4 of the vdW",
+        ):
+            vdWHandler(version=0.4, method="cutoff")
 
 
 class TestvdWType:
