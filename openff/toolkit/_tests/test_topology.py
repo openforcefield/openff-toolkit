@@ -12,7 +12,7 @@ import pytest
 from openff.units import unit
 from openff.units.openmm import from_openmm
 from openff.units.units import Quantity
-from openmm import app
+from openff.utilities import has_package, skip_if_missing
 
 from openff.toolkit._tests.create_molecules import (
     create_cyclohexane,
@@ -68,6 +68,9 @@ from openff.toolkit.utils.exceptions import (
     VirtualSitesUnsupportedError,
     WrongShapeError,
 )
+
+if has_package("openmm"):
+    import openmm.app
 
 
 def assert_tuple_of_atoms_equal(
@@ -183,6 +186,7 @@ class TestTopology:
             topology.box_vectors = good_vectors
             assert (topology.box_vectors == good_vectors * np.eye(3)).all()
 
+    @skip_if_missing("openmm")
     def test_issue_1527(self):
         """Test the error handling of setting box vectors with an OpenMM quantity."""
         import numpy
@@ -490,15 +494,113 @@ class TestTopology:
             )
             assert mod_imp in top.amber_impropers
 
+    @skip_if_missing("openmm")
+    @requires_rdkit
+    def test_chemical_environments_matches_RDK(self):
+        """Test Topology.chemical_environment_matches"""
+        toolkit_wrapper = RDKitToolkitWrapper()
+
+        topology = Topology.from_pdb(
+            get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb"),
+            unique_molecules=[Molecule.from_smiles(val) for val in ["CCO", "C1CCCCC1"]],
+        )
+
+        # Count CCO matches
+        matches = topology.chemical_environment_matches(
+            "[C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper
+        )
+        assert len(matches) == 143
+        assert matches[0].topology_atom_indices == (1728, 1729, 1730)
+        matches = topology.chemical_environment_matches(
+            "[H][C:1]([H])([H])-[C:2]([H])([H])-[O:3][H]",
+            toolkit_registry=toolkit_wrapper,
+        )
+        assert (
+            len(matches) == 1716
+        )  # 143 * 12 (there are 12 possible hydrogen mappings)
+        assert matches[0].topology_atom_indices == (1728, 1729, 1730)
+        # Search for a substructure that isn't there
+        matches = topology.chemical_environment_matches(
+            "[C][C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper
+        )
+        assert len(matches) == 0
+
+    def test_topology_hierarchy_iterators(
+        self,
+    ):
+        top = Topology()
+        # Ensure that an empty topology has no residues defined
+        residues = list(top.hierarchy_iterator("residues"))
+        assert residues == []
+        # Ensure that a topology with no metadata has no residues defined
+        top.add_molecule(dipeptide())
+        residues = list(top.hierarchy_iterator("residues"))
+        assert residues == []
+        # Ensure that a topology with residues perceived has residues but not chains
+        top.add_molecule(dipeptide_residues_perceived())
+        residues = list(top.hierarchy_iterator("residues"))
+        chains = list(top.hierarchy_iterator("chains"))
+        assert chains == []
+        assert [res.identifier for res in residues] == [
+            ("None", "1", " ", "ACE"),
+            ("None", "2", " ", "ALA"),
+        ]
+        # Ensure that adding molecules WITH hierarchy perceived DOES give the
+        # topology residues and chains to iterate over
+        top.add_molecule(dipeptide_hierarchy_added())
+        top.add_molecule(cyx_hierarchy_added())
+        residues = list(top.hierarchy_iterator("residues"))
+        chains = list(top.hierarchy_iterator("chains"))
+        assert [res.identifier for res in residues] == [
+            ("None", "1", " ", "ACE"),
+            ("None", "2", " ", "ALA"),
+            ("None", "1", " ", "ACE"),
+            ("None", "2", " ", "ALA"),
+            ("None", "1", " ", "ACE"),
+            ("None", "2", " ", "CYS"),
+            ("None", "3", " ", "NME"),
+            ("None", "4", " ", "ACE"),
+            ("None", "5", " ", "CYS"),
+            ("None", "6", " ", "NME"),
+        ]
+        # First chain hierarchy element is from dipeptide_hierarchy_added,
+        # second is from cyx_hierarchy_added. Both have the same uniqueness
+        # identifier; unclear that this behaviour is desired --- Perhaps
+        # Topology.hierarchy_iterator should consolidate hierarchy elements from
+        # different molecules?
+        assert len(chains) == 2
+        # Haven't changed anything, so updating hierarchy schemes should give
+        # same results
+        top.molecule(3).update_hierarchy_schemes()
+        residues = list(top.hierarchy_iterator("residues"))
+        chains = list(top.hierarchy_iterator("chains"))
+        assert [res.identifier for res in residues] == [
+            ("None", "1", " ", "ACE"),
+            ("None", "2", " ", "ALA"),
+            ("None", "1", " ", "ACE"),
+            ("None", "2", " ", "ALA"),
+            ("None", "1", " ", "ACE"),
+            ("None", "2", " ", "CYS"),
+            ("None", "3", " ", "NME"),
+            ("None", "4", " ", "ACE"),
+            ("None", "5", " ", "CYS"),
+            ("None", "6", " ", "NME"),
+        ]
+        assert len(chains) == 2
+
     # test_two_of_same_molecule
     # test_two_different_molecules
     # test_get_molecule
     # test_is_bonded
     # TODO: Test serialization
 
+
+@skip_if_missing("openmm")
+class TestTopologyToFromOpenMM:
+    @skip_if_missing("openmm")
     def test_from_openmm(self):
         """Test creation of an OpenFF Topology object from an OpenMM Topology and component molecules"""
-        pdbfile = app.PDBFile(
+        pdbfile = openmm.app.PDBFile(
             get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb")
         )
 
@@ -541,9 +643,10 @@ class TestTopology:
                 unique_molecules=[water],
             )
 
+    @skip_if_missing("openmm")
     def test_from_openmm_missing_reference(self):
         """Test creation of an OpenFF Topology object from an OpenMM Topology when missing a unique molecule"""
-        pdbfile = app.PDBFile(
+        pdbfile = openmm.app.PDBFile(
             get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb")
         )
 
@@ -551,12 +654,13 @@ class TestTopology:
         with pytest.raises(ValueError, match="No match found for molecule C6H12"):
             Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
+    @skip_if_missing("openmm")
     def test_from_openmm_missing_conect(self):
         """
         Test creation of an OpenFF Topology object from an OpenMM Topology
         when the origin PDB lacks CONECT records
         """
-        pdbfile = app.PDBFile(
+        pdbfile = openmm.app.PDBFile(
             get_data_file_path("systems/test_systems/1_ethanol_no_conect.pdb")
         )
 
@@ -574,6 +678,7 @@ class TestTopology:
         ):
             Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
+    @skip_if_missing("openmm")
     def test_to_from_openmm(self):
         """Test a round-trip OpenFF -> OpenMM -> OpenFF Topology."""
         # Create OpenFF topology with 1 ethanol and 2 benzenes.
@@ -586,7 +691,9 @@ class TestTopology:
 
         # Check that bond orders are preserved.
         n_double_bonds = sum([b.order == 2 for b in omm_topology.bonds()])
-        n_aromatic_bonds = sum([b.type is app.Aromatic for b in omm_topology.bonds()])
+        n_aromatic_bonds = sum(
+            [b.type is openmm.app.Aromatic for b in omm_topology.bonds()]
+        )
         assert n_double_bonds == 6
         assert n_aromatic_bonds == 12
 
@@ -1180,12 +1287,13 @@ class TestTopology:
         for residue_atom_names in residues.values():
             assert len(residue_atom_names) == len(set(residue_atom_names))
 
+    @skip_if_missing("openmm")
     @requires_openeye
     def test_from_openmm_duplicate_unique_mol(self):
         """
         Check that a DuplicateUniqueMoleculeError is raised if we try to pass in two indistinguishably unique mols
         """
-        pdbfile = app.PDBFile(
+        pdbfile = openmm.app.PDBFile(
             get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb")
         )
         molecules = [
@@ -1571,11 +1679,12 @@ class TestTopology:
     def test_identical_molecule_groups_mixed_topology(self, mixed_topology):
         assert len(mixed_topology.identical_molecule_groups) == 2
 
+    @skip_if_missing("openmm")
     @requires_openeye
     def test_chemical_environments_matches_OE(self):
         """Test Topology.chemical_environment_matches"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        pdbfile = app.PDBFile(
+        pdbfile = openmm.app.PDBFile(
             get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb")
         )
         # toolkit_wrapper = RDKitToolkitWrapper()
@@ -1604,103 +1713,6 @@ class TestTopology:
             "[C][C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper
         )
         assert len(matches) == 0
-
-    @requires_rdkit
-    def test_chemical_environments_matches_RDK(self):
-        """Test Topology.chemical_environment_matches"""
-        toolkit_wrapper = RDKitToolkitWrapper()
-        pdbfile = app.PDBFile(
-            get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb")
-        )
-        # toolkit_wrapper = RDKitToolkitWrapper()
-        # molecules = [Molecule.from_file(get_data_file_path(name)) for name in ('molecules/ethanol.mol2',
-        #                                                                      'molecules/cyclohexane.mol2')]
-        molecules = []
-        molecules.append(Molecule.from_smiles("CCO"))
-        molecules.append(Molecule.from_smiles("C1CCCCC1"))
-        topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
-        # Count CCO matches
-        matches = topology.chemical_environment_matches(
-            "[C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper
-        )
-        assert len(matches) == 143
-        assert matches[0].topology_atom_indices == (1728, 1729, 1730)
-        matches = topology.chemical_environment_matches(
-            "[H][C:1]([H])([H])-[C:2]([H])([H])-[O:3][H]",
-            toolkit_registry=toolkit_wrapper,
-        )
-        assert (
-            len(matches) == 1716
-        )  # 143 * 12 (there are 12 possible hydrogen mappings)
-        assert matches[0].topology_atom_indices == (1728, 1729, 1730)
-        # Search for a substructure that isn't there
-        matches = topology.chemical_environment_matches(
-            "[C][C:1]-[C:2]-[O:3]", toolkit_registry=toolkit_wrapper
-        )
-        assert len(matches) == 0
-
-    def test_topology_hierarchy_iterators(
-        self,
-    ):
-        top = Topology()
-        # Ensure that an empty topology has no residues defined
-        residues = list(top.hierarchy_iterator("residues"))
-        assert residues == []
-        # Ensure that a topology with no metadata has no residues defined
-        top.add_molecule(dipeptide())
-        residues = list(top.hierarchy_iterator("residues"))
-        assert residues == []
-        # Ensure that a topology with residues perceived has residues but not chains
-        top.add_molecule(dipeptide_residues_perceived())
-        residues = list(top.hierarchy_iterator("residues"))
-        chains = list(top.hierarchy_iterator("chains"))
-        assert chains == []
-        assert [res.identifier for res in residues] == [
-            ("None", "1", " ", "ACE"),
-            ("None", "2", " ", "ALA"),
-        ]
-        # Ensure that adding molecules WITH hierarchy perceived DOES give the
-        # topology residues and chains to iterate over
-        top.add_molecule(dipeptide_hierarchy_added())
-        top.add_molecule(cyx_hierarchy_added())
-        residues = list(top.hierarchy_iterator("residues"))
-        chains = list(top.hierarchy_iterator("chains"))
-        assert [res.identifier for res in residues] == [
-            ("None", "1", " ", "ACE"),
-            ("None", "2", " ", "ALA"),
-            ("None", "1", " ", "ACE"),
-            ("None", "2", " ", "ALA"),
-            ("None", "1", " ", "ACE"),
-            ("None", "2", " ", "CYS"),
-            ("None", "3", " ", "NME"),
-            ("None", "4", " ", "ACE"),
-            ("None", "5", " ", "CYS"),
-            ("None", "6", " ", "NME"),
-        ]
-        # First chain hierarchy element is from dipeptide_hierarchy_added,
-        # second is from cyx_hierarchy_added. Both have the same uniqueness
-        # identifier; unclear that this behaviour is desired --- Perhaps
-        # Topology.hierarchy_iterator should consolidate hierarchy elements from
-        # different molecules?
-        assert len(chains) == 2
-        # Haven't changed anything, so updating hierarchy schemes should give
-        # same results
-        top.molecule(3).update_hierarchy_schemes()
-        residues = list(top.hierarchy_iterator("residues"))
-        chains = list(top.hierarchy_iterator("chains"))
-        assert [res.identifier for res in residues] == [
-            ("None", "1", " ", "ACE"),
-            ("None", "2", " ", "ALA"),
-            ("None", "1", " ", "ACE"),
-            ("None", "2", " ", "ALA"),
-            ("None", "1", " ", "ACE"),
-            ("None", "2", " ", "CYS"),
-            ("None", "3", " ", "NME"),
-            ("None", "4", " ", "ACE"),
-            ("None", "5", " ", "CYS"),
-            ("None", "6", " ", "NME"),
-        ]
-        assert len(chains) == 2
 
 
 class TestAddTopology:
@@ -2180,6 +2192,7 @@ class TestTopologyPositions:
         assert topology.get_positions() is None
 
 
+@skip_if_missing("openmm")
 @requires_rdkit
 class TestTopologyFromPdbCustomSubstructures:
     def test_atomic_num_spec(self):

@@ -1,16 +1,20 @@
 import json
 
 import numpy as np
-import openmm
 import pytest
-from openff.units.openmm import to_openmm
-from openmm import unit as openmm_unit
+from openff.utilities import has_package, skip_if_missing
 
 from openff.toolkit._tests.utils import get_data_file_path, requires_rdkit
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 
+if has_package("openmm"):
+    import openmm
+    import openmm.unit
+    from openff.units.openmm import to_openmm
 
+
+@skip_if_missing("openmm")
 @requires_rdkit
 @pytest.mark.parametrize("constrained", [True, False])
 @pytest.mark.parametrize(
@@ -45,7 +49,7 @@ def test_reference(constrained, mol):
     derived_energy = _get_energy(simulation=simulation, positions=positions)
 
     np.testing.assert_almost_equal(
-        actual=derived_energy.value_in_unit(openmm_unit.kilojoule_per_mole),
+        actual=derived_energy.value_in_unit(openmm.unit.kilojoule_per_mole),
         desired=reference_energy,
         decimal=5,
     )
@@ -74,7 +78,7 @@ def generate_reference():
                 name += "un"
             name += "constrained"
             reference.update(
-                {name: energy.value_in_unit(openmm_unit.kilojoule_per_mole)}
+                {name: energy.value_in_unit(openmm.unit.kilojoule_per_mole)}
             )
 
     import openff.toolkit
@@ -121,7 +125,7 @@ def _build_system(mol, constrained):
 def _build_simulation(omm_sys, off_top):
     """Given an OpenMM System, initialize a barebones OpenMM Simulation."""
     # Use OpenMM to compute initial and minimized energy for all conformers
-    integrator = openmm.VerletIntegrator(1 * openmm_unit.femtoseconds)
+    integrator = openmm.VerletIntegrator(1 * openmm.unit.femtoseconds)
     platform = openmm.Platform.getPlatformByName("Reference")
     omm_top = off_top.to_openmm()
     simulation = openmm.app.Simulation(omm_top, omm_sys, integrator, platform)

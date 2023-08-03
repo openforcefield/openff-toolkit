@@ -10,6 +10,7 @@ import tempfile
 import textwrap
 
 import pytest
+from openff.utilities import skip_if_missing
 
 from openff.toolkit.utils import RDKIT_AVAILABLE, get_data_file_path, temporary_cd
 
@@ -89,12 +90,14 @@ def find_readme_examples():
     return re.findall("```python(.*?)```", readme_content, flags=re.DOTALL)
 
 
+@skip_if_missing("openmm")
 @pytest.mark.parametrize("readme_example_str", find_readme_examples())
 def test_readme_examples(readme_example_str):
     """Test the example"""
     run_script_str(readme_example_str)
 
 
+@skip_if_missing("openmm")
 @pytest.mark.parametrize("example_file_path", find_example_scripts())
 def test_examples(example_file_path):
     """Test that the example run without errors."""

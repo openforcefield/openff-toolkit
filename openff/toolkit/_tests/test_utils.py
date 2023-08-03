@@ -7,6 +7,7 @@ import os
 
 import pytest
 from openff.units import unit
+from openff.utilities import skip_if_missing
 
 
 def test_subclasses():
@@ -69,6 +70,7 @@ def test_dimensionless_units():
     assert unit_value == unit.dimensionless
 
 
+@skip_if_missing("openmm")
 def test_object_to_quantity_accepts_openmm():
     import openmm
 

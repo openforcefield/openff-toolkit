@@ -3099,7 +3099,13 @@ class FrozenMolecule(Serializable):
                 )
 
         elif hasattr(charges, "unit"):
-            from openmm import unit as openmm_unit
+            try:
+                from openmm import unit as openmm_unit
+            except ModuleNotFoundError as error:
+                raise IncompatibleUnitError(
+                    "Unsupported unit passed to partial_charges setter. "
+                    "Found object with attribute `unit` but OpenMM is not installed."
+                ) from error
 
             if not isinstance(charges, openmm_unit.Quantity):
                 raise IncompatibleUnitError(
