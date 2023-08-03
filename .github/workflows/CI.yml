@@ -28,7 +28,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["3.9", "3.10"]
+        python-version: ["3.9", "3.10", "3.11"]
         rdkit: [true, false]
         openeye: [true, false]
         exclude:
@@ -36,6 +36,8 @@ jobs:
             openeye: false
           - openeye: true
             python-version: "3.10"
+          - openeye: true
+            python-version: "3.11"
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt

@@ -8,22 +8,19 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### API-breaking changes
+
 ## Behavior changes
 
 - [PR #1679](https://github.com/openforcefield/openff-toolkit/pull/1679): Version 0.3 `<vdW>` sections of OFFXML files will automatically be up-converted (in memory) to version 0.4 according to the recomendations provided in [OFF-EP 0008](https://openforcefield.github.io/standards/enhancement-proposals/off-ep-0008/).
 
-## Current development
+### New features
 
-### API-breaking changes
-
-### Behavior changes
+- [PR #1631](https://github.com/openforcefield/openff-toolkit/pull/1631): Adds support for Python 3.11.
 
 ### Bugfixes
 
-### New features
-
 ### Improved documentation and warnings
-
 
 ## 0.14.1
 
