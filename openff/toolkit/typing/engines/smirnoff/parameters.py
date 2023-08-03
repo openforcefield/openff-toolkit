@@ -2851,7 +2851,7 @@ class vdWHandler(_NonbondedHandler):
             else:
                 raise NotImplementedError(
                     "Failed to up-convert vdW section from 0.3 to 0.4. Did not know "
-                    f"how to up-convert `method={kwargs['method']}`."
+                    f'how to up-convert `method="{kwargs["method"]}"`.'
                 )
         super().__init__(**kwargs)
 

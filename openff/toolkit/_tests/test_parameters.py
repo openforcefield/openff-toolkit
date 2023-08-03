@@ -1734,7 +1734,7 @@ class TestvdWHandler:
             handler.scale15 = 0.1
 
 
-class TestvdWHandlerUpconversion:
+class TestvdWHandlerUpConversion:
     """
     Test the implementation of OFF-EP-0008:
 
@@ -1758,6 +1758,13 @@ class TestvdWHandlerUpconversion:
         except AttributeError:
             # https://github.com/openforcefield/openff-toolkit/issues/1680
             pytest.skip("ParameterAttribute.__delete__ not implemented")
+
+    def test_upconversion_unknown_kwarg(self):
+        with pytest.raises(
+            NotImplementedError,
+            match=r"Did not know.*`method=\"no-cutoff",
+        ):
+            vdWHandler(version=0.3, method="no-cutoff",)
 
     def test_invalid_0_4_kwargs(self):
         with pytest.raises(
