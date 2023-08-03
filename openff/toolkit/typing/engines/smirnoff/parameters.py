@@ -2832,7 +2832,7 @@ class vdWHandler(_NonbondedHandler):
 
         if kwargs.get("version") == 0.3:
             logger.info(
-                "Attempting to up-convert Electrostatics section from 0.3 to 0.4"
+                "Attempting to up-convert vdW section from 0.3 to 0.4"
             )
 
             # This is the only supported value of "method" is version 0.3
