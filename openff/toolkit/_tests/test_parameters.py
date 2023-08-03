@@ -1764,7 +1764,10 @@ class TestvdWHandlerUpConversion:
             NotImplementedError,
             match=r"Did not know.*`method=\"no-cutoff",
         ):
-            vdWHandler(version=0.3, method="no-cutoff",)
+            vdWHandler(
+                version=0.3,
+                method="no-cutoff",
+            )
 
     def test_invalid_0_4_kwargs(self):
         with pytest.raises(
