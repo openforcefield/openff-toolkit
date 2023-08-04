@@ -15,7 +15,10 @@ from openff.units import unit
 from openff.units.openmm import from_openmm, to_openmm
 from openmm import NonbondedForce, Platform, XmlSerializer, app
 from openmm import unit as openmm_unit
-from pydantic import ValidationError
+try:
+    from pydantic.v1 import ValidationError
+except ImportError:
+    from pydantic import ValidationError
 
 from openff.toolkit._tests.create_molecules import (
     create_acetate,
