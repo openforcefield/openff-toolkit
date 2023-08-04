@@ -22,7 +22,6 @@ Molecular chemical entity representation and routines to interface with cheminfo
    * Refactor toolkit encapsulation to generalize and provide only a few major toolkit methods and toolkit objects
         that can be queried for features
    * Speed up overall import time by putting non-global imports only where they are needed
-
 """
 import json
 import operator
