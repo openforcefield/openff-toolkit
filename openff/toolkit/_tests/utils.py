@@ -6,7 +6,6 @@ Utilities for testing.
 import collections
 import copy
 import functools
-import importlib
 import itertools
 import os
 import pprint
