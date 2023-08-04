@@ -42,6 +42,7 @@ dependencies:
   - nbval
   - mypy
   - typing_extensions
+  - pydantic =1
   - pip:
     - types-setuptools
     - types-toml
