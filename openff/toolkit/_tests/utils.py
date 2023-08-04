@@ -19,8 +19,8 @@ import openmm
 import pytest
 from openff.units import unit
 from openff.units.openmm import to_openmm
+from openff.utilities import has_package, skip_if_missing
 from openmm import unit as openmm_unit
-from openff.utilities import skip_if_missing, has_package
 
 from openff.toolkit.utils import (
     AmberToolsToolkitWrapper,
@@ -50,6 +50,7 @@ requires_openeye_mol2 = pytest.mark.skipif(
 has_pkg = has_package
 
 requires_pkg = skip_if_missing
+
 
 @contextmanager
 def does_not_raise():

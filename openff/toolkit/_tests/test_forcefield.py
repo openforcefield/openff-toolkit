@@ -15,6 +15,7 @@ from openff.units import unit
 from openff.units.openmm import from_openmm, to_openmm
 from openmm import NonbondedForce, Platform, XmlSerializer, app
 from openmm import unit as openmm_unit
+
 try:
     from pydantic.v1 import ValidationError
 except ImportError:
