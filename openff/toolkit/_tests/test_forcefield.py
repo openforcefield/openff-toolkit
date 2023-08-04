@@ -19,7 +19,7 @@ from openmm import unit as openmm_unit
 try:
     from pydantic.v1 import ValidationError
 except ImportError:
-    from pydantic import ValidationError
+    from pydantic import ValidationError  # type: ignore[assignment]
 
 from openff.toolkit._tests.create_molecules import (
     create_acetate,
