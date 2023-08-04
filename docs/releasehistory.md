@@ -6,9 +6,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-## Current development
-
-### API-breaking changes
+## 0.14.2
 
 ## Behavior changes
 
@@ -18,9 +16,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 - [PR #1631](https://github.com/openforcefield/openff-toolkit/pull/1631): Adds support for Python 3.11.
 
-### Bugfixes
-
-### Improved documentation and warnings
 
 ## 0.14.1
 
