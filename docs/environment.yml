@@ -5,7 +5,7 @@ channels:
     - conda-forge
     - defaults
 dependencies:
-    - pip
+    - pip ==23.2
     # readthedocs dependencies
     - myst-nb
     - myst-parser>=0.14
