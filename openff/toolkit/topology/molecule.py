@@ -112,7 +112,7 @@ class Particle(Serializable):
         The ``Molecule`` this particle is part of.
 
         .. todo::
-
+        
             * Should we have a single unique ``Molecule`` for each molecule
               type in the system, or if we have multiple copies of the same
               molecule, should we have multiple ``Molecule``\ s?
@@ -403,7 +403,7 @@ class Atom(Particle):
 
     @stereochemistry.setter
     def stereochemistry(self, value):
-        """Set the atoms stereochemistry
+        """Set the atom's stereochemistry
         Parameters
         ----------
         value : str
