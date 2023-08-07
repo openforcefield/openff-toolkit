@@ -6,6 +6,12 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+## Current development
+
+## Bugfixes
+
+- [PR #1689](https://github.com/openforcefield/openff-toolkit/pull/1689): Fixes [#1688](https://github.com/openforcefield/openff-toolkit/issues/1688) in which automatic up-conversion of version 0.3 of `vdWHandler` created via the Python API errored out if `method` was not specified.
+
 ## 0.14.2
 
 ## Behavior changes
