@@ -2834,7 +2834,7 @@ class vdWHandler(_NonbondedHandler):
             logger.info("Attempting to up-convert vdW section from 0.3 to 0.4")
 
             # This is the only supported value of "method" is version 0.3
-            if kwargs.get("method") == "cutoff":
+            if kwargs.get("method") in ("cutoff", None):
                 kwargs["periodic_method"] = "cutoff"
                 kwargs["nonperiodic_method"] = "no-cutoff"
                 kwargs["version"] = 0.4

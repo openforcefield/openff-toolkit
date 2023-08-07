@@ -1759,6 +1759,15 @@ class TestvdWHandlerUpConversion:
             # https://github.com/openforcefield/openff-toolkit/issues/1680
             pytest.skip("ParameterAttribute.__delete__ not implemented")
 
+    def test_issue_1668(self):
+        """Reproduce https://github.com/openforcefield/openff-toolkit/issues/1688"""
+        handler1 = vdWHandler(version=0.3)
+        handler2 = vdWHandler(version=0.3, method="cutoff")
+
+        assert handler1.version == handler2.version
+        assert handler1.periodic_method == handler2.periodic_method
+        assert handler1.nonperiodic_method == handler2.nonperiodic_method
+
     def test_upconversion_unknown_kwarg(self):
         with pytest.raises(
             NotImplementedError,
