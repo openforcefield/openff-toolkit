@@ -6,9 +6,15 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+## 0.14.3
+
+### Bugfixes
+
+- [PR #1690](https://github.com/openforcefield/openff-toolkit/pull/1690): Fixes a circular-import bug that occurs when attempting to print a "no cheminformatics toolkits available" warning. 
+
 ## 0.14.2
 
-## Behavior changes
+### Behavior changes
 
 - [PR #1679](https://github.com/openforcefield/openff-toolkit/pull/1679): Version 0.3 `<vdW>` sections of OFFXML files will automatically be up-converted (in memory) to version 0.4 according to the recomendations provided in [OFF-EP 0008](https://openforcefield.github.io/standards/enhancement-proposals/off-ep-0008/).
 

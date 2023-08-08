@@ -131,7 +131,7 @@ for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits:
             break
 
 if not any_toolkits:  # pragma: no cover
-    from openff.toolkit.utils import all_subclasses
+    from openff.toolkit.utils.utils import all_subclasses
 
     msg = "WARNING: No basic cheminformatics toolkits are available.\n"
     msg += "At least one basic toolkit is required to handle SMARTS matching and file I/O. \n"
