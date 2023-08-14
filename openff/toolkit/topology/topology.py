@@ -2402,7 +2402,7 @@ class Topology(Serializable):
             return [
                 element
                 for molecule in self.molecules
-                for element in getattr(molecule, name)
+                for element in molecule.hierarchy_schemes[name].hierarchy_elements)
             ]
         except AttributeError as error:
             raise AttributeError(
