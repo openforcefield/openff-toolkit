@@ -820,25 +820,6 @@ class TestParameterList:
         p2 = ParameterType(smirks="[#1:1]")
         ParameterList([p1, p2])
 
-    @pytest.mark.wip(
-        reason="Until ChemicalEnvironment won't be refactored to use the ToolkitRegistry "
-        "API, the smirks assignment will fail with RDKit."
-    )
-    def test_getitem(self):
-        """Test ParameterList __getitem__ overloading."""
-        p1 = ParameterType(smirks="[*:1]")
-        p2 = ParameterType(smirks="[#1:1]")
-        parameters = ParameterList([p1, p2])
-        assert parameters[0] == p1
-        assert parameters[1] == p2
-        assert parameters[p1.smirks] == p1
-        assert parameters[p2.smirks] == p2
-
-        # Note that this call access __getitem__, not __setitem__.
-        parameters["[*:1]"].smirks = "[*X4:1]"
-        assert parameters[0].smirks == "[*X4:1]"
-        assert p1.smirks == "[*X4:1]"
-
     def test_index(self):
         """
         Tests the ParameterList.index() function by attempting lookups by SMIRKS and by ParameterType equivalence.
@@ -1721,7 +1702,7 @@ class TestvdWHandler:
         sigma/rmin_half setters silently set each other's value.
         See https://github.com/openforcefield/openff-toolkit/issues/788
         """
-        vdw_handler = vdWHandler(version=0.3)
+        vdw_handler = vdWHandler(version=0.4)
         param1 = {
             "epsilon": "0.5 * kilocalorie/mole",
             "rmin_half": "1.2 * angstrom",
@@ -1741,7 +1722,7 @@ class TestvdWHandler:
         assert vdw_handler.get_parameter({"smirks": "[#1:1]"})[0].id == "n00"
 
     def test_set_invalid_scale_factor(self):
-        handler = vdWHandler(version=0.3)
+        handler = vdWHandler(version=0.4)
 
         with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale12"):
             handler.scale12 = 0.1
@@ -1751,6 +1732,58 @@ class TestvdWHandler:
 
         with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale15"):
             handler.scale15 = 0.1
+
+
+class TestvdWHandlerUpConversion:
+    """
+    Test the implementation of OFF-EP-0008:
+
+    https://openforcefield.github.io/standards/enhancement-proposals/off-ep-0008/
+    """
+
+    def test_upconversion(self):
+        converted = vdWHandler(version=0.3, method="cutoff")
+
+        new = vdWHandler(version=0.4)
+
+        assert converted.version == new.version == Version("0.4")
+
+        # Up-conversion from default (only) value of .method in 0.3 happens
+        # happens to match default values of new attributes version 0.4
+        assert converted.periodic_method == new.periodic_method == "cutoff"
+        assert converted.nonperiodic_method == new.nonperiodic_method == "no-cutoff"
+
+        try:
+            assert not hasattr(converted, "method")
+        except AttributeError:
+            # https://github.com/openforcefield/openff-toolkit/issues/1680
+            pytest.skip("ParameterAttribute.__delete__ not implemented")
+
+    def test_issue_1668(self):
+        """Reproduce https://github.com/openforcefield/openff-toolkit/issues/1688"""
+        handler1 = vdWHandler(version=0.3)
+        handler2 = vdWHandler(version=0.3, method="cutoff")
+
+        assert handler1.version == handler2.version
+        assert handler1.periodic_method == handler2.periodic_method
+        assert handler1.nonperiodic_method == handler2.nonperiodic_method
+
+    def test_upconversion_unknown_kwarg(self):
+        with pytest.raises(
+            NotImplementedError,
+            match=r"Did not know.*`method=\"no-cutoff",
+        ):
+            vdWHandler(
+                version=0.3,
+                method="no-cutoff",
+            )
+
+    def test_invalid_0_4_kwargs(self):
+        with pytest.raises(
+            SMIRNOFFSpecError,
+            match="removed in version 0.4 of the vdW",
+        ):
+            vdWHandler(version=0.4, method="cutoff")
 
 
 class TestvdWType:

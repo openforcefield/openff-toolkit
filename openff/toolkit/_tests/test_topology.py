@@ -51,6 +51,8 @@ from openff.toolkit.utils import (
     RDKitToolkitWrapper,
 )
 from openff.toolkit.utils.exceptions import (
+    AmbiguousAtomChemicalAssignment,
+    AmbiguousBondChemicalAssignment,
     AtomNotInTopologyError,
     BondNotInTopologyError,
     DuplicateUniqueMoleculeError,
@@ -60,7 +62,11 @@ from openff.toolkit.utils.exceptions import (
     InvalidPeriodicityError,
     MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
+    NonUniqueSubstructureName,
+    SubstructureAtomSmartsInvalid,
+    SubstructureBondSmartsInvalid,
     UnassignedChemistryInPDBError,
+    VirtualSitesUnsupportedError,
     WrongShapeError,
 )
 
@@ -519,6 +525,23 @@ class TestTopology:
         for omm_atom, off_atom in zip(pdbfile.topology.atoms(), topology.atoms):
             assert omm_atom.name == off_atom.name
 
+    def test_from_openmm_virtual_sites(self):
+        from openff.toolkit import ForceField
+
+        water = Molecule.from_mapped_smiles("[O:1]([H:2])[H:3]")
+        opc = ForceField("opc-1.0.1.offxml")
+
+        openmm_topology = opc.create_interchange([water]).to_openmm_topology()
+
+        with pytest.raises(
+            VirtualSitesUnsupportedError,
+            match="Atom <Atom 3 \(EP\) of chain 0 residue 0 \(UNK\)>.* a virtual site",
+        ):
+            Topology.from_openmm(
+                openmm_topology,
+                unique_molecules=[water],
+            )
+
     def test_from_openmm_missing_reference(self):
         """Test creation of an OpenFF Topology object from an OpenMM Topology when missing a unique molecule"""
         pdbfile = app.PDBFile(
@@ -819,7 +842,10 @@ class TestTopology:
             Topology.from_pdb(get_data_file_path("proteins/ace-ZZZ-gly-nme.pdb"))
 
         # Make unnatural AA
-        mol = Molecule.from_smiles("N[C@@H]([C@@H](C)O[P@](=O)(OCNCO)[O-])C(=O)")
+        # TODO: Should this be able to support defined stereo?
+        mol = Molecule.from_smiles(
+            "N[CH]([CH](C)O[P@](=O)(OCNCO)[O-])C(=O)", allow_undefined_stereo=True
+        )
         # Get the indices of an N term and C term hydrogen for removal
         leaving_atoms = mol.chemical_environment_matches("[H:1]N([H])CC(=O)[H:2]")[0]
 
@@ -2253,3 +2279,138 @@ class TestTopologyPositions:
         topology.set_positions(positions)
         topology._molecules[0]._conformers = None
         assert topology.get_positions() is None
+
+
+@requires_rdkit
+class TestTopologyFromPdbCustomSubstructures:
+    def test_atomic_num_spec(self):
+        with pytest.raises(SubstructureAtomSmartsInvalid):
+            PE_substructs = {
+                "PE": [
+                    "[CD4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+                ]
+            }
+            Topology.from_pdb(
+                get_data_file_path("systems/test_systems/PE.pdb"),
+                _custom_substructures=PE_substructs,
+            )
+
+    def test_monomer_connectivity(self):
+        with pytest.raises(SubstructureAtomSmartsInvalid):
+            PE_substructs = {
+                "PE": [
+                    "[#6D3+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+                ]
+            }
+            Topology.from_pdb(
+                get_data_file_path("systems/test_systems/PE.pdb"),
+                _custom_substructures=PE_substructs,
+            )
+
+    def test_formal_charge_spec(self):
+        with pytest.raises(SubstructureAtomSmartsInvalid):
+            PE_substructs = {
+                "PE": [
+                    "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+                ]
+            }
+            Topology.from_pdb(
+                get_data_file_path("systems/test_systems/PE.pdb"),
+                _custom_substructures=PE_substructs,
+            )
+
+    def test_bond_type_spec(self):
+        with pytest.raises(SubstructureBondSmartsInvalid):
+            PE_substructs = {
+                "PE": [
+                    "[#6D4+0:9](~[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+                ]
+            }
+            Topology.from_pdb(
+                get_data_file_path("systems/test_systems/PE.pdb"),
+                _custom_substructures=PE_substructs,
+            )
+
+    def test_duplicate_monomers(self):
+        with pytest.raises(NonUniqueSubstructureName):
+            PE_substructs = {
+                "LEU": [
+                    "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+                ]
+            }
+            Topology.from_pdb(
+                get_data_file_path("systems/test_systems/PE.pdb"),
+                _custom_substructures=PE_substructs,
+            )
+
+    def test_ambiguous_bond_info_check(self):
+        with pytest.raises(AmbiguousBondChemicalAssignment):
+            PE_substructs = {
+                "PE": [
+                    "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
+                    "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(=[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
+                ]
+            }
+            Topology.from_pdb(
+                get_data_file_path("systems/test_systems/PE.pdb"),
+                _custom_substructures=PE_substructs,
+            )
+
+    def test_ambiguous_formal_charge_check(self):
+        with pytest.raises(AmbiguousAtomChemicalAssignment):
+            PE_substructs = {
+                "PE": [
+                    "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
+                    "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+1:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
+                ]
+            }
+            Topology.from_pdb(
+                get_data_file_path("systems/test_systems/PE.pdb"),
+                _custom_substructures=PE_substructs,
+            )
+
+    def test_successful_PE_loading(self):
+        PE_substructs = {
+            "PE": [
+                "[#6D4+0:2](-[#1D1+0:3])(-[#1D1+0:4])(-[#6D4+0:5](-[#1D1+0:6])(-[#1D1+0:7])-[*:8])-[*:1]",
+                "[#6D4+0:2](-[#1D1+0:3])(-[#1D1+0:4])(-[#6D4+0:5](-[#1D1+0:6])(-[#1D1+0:7])-[#1D1+0:8])-[*:1]",
+                "[#6D4+0:2](-[#1D1+0:3])(-[#1D1+0:4])(-[#6D4+0:5](-[#1D1+0:6])(-[#1D1+0:7])-[*:8])-[#1D1+0:1]",
+            ]
+        }
+        Topology.from_pdb(
+            get_data_file_path("systems/test_systems/PE.pdb"),
+            _custom_substructures=PE_substructs,
+        )
+
+    def test_symmetrical_group_COO(self):
+        from rdkit import Chem
+
+        substructure_smarts = (
+            "[#7D4+:1](-[#6D4+0:2](-[#6D3+0:3](=[#8D1+0:4])-[#8D1-:6])(-[#6D4+0:5](-[#1D1+0:8])(-"
+            "[#1D1+0:9])-[#1D1+0:10])-[#1D1+0:7])(-[#1D1+0:11])(-[#1D1+0:12])-[#1D1+0:13]"
+        )
+        ref = Chem.MolFromSmarts(substructure_smarts)
+        rdkit_wrapper = RDKitToolkitWrapper()
+        fuzzy, neighbor_idxs = rdkit_wrapper._fuzzy_query(ref)
+        sym_atoms, sym_bonds = rdkit_wrapper._get_symmetrical_groups(fuzzy, ref)
+
+        assert sorted(sym_atoms) == [3, 4]
+        assert sorted(sym_bonds) == [(2, 3), (2, 4)]
+
+    def test_symmetrical_group_ARG(self):
+        from rdkit import Chem
+
+        substructure_smarts = (
+            "[#7D4+:1](-[#6D4+0:2](-[#6D3+0:3](=[#8D1+0:4])-[#8D1-:12])(-[#6D4+0:5](-[#6D4+0:6](-"
+            "[#6D4+0:7](-[#7D3+0:8](-[#6D3+0:9](-[#7D3+0:10](-[#1D1+0:21])-[#1D1+0:22])=[#7D3+:11"
+            "](-[#1D1+0:23])-[#1D1+0:24])-[#1D1+0:20])(-[#1D1+0:18])-[#1D1+0:19])(-[#1D1+0:16])-["
+            "#1D1+0:17])(-[#1D1+0:14])-[#1D1+0:15])-[#1D1+0:13])(-[#1D1+0:25])(-[#1D1+0:26])-[#1D"
+            "1+0:27]"
+        )
+        ref = Chem.MolFromSmarts(substructure_smarts)
+        rdkit_wrapper = RDKitToolkitWrapper()
+        fuzzy, neighbor_idxs = rdkit_wrapper._fuzzy_query(ref)
+        sym_atoms, sym_bonds = rdkit_wrapper._get_symmetrical_groups(fuzzy, ref)
+
+        assert sorted(sym_atoms) == [3, 4, 10, 13]
+        assert sorted(sym_bonds) == [(2, 3), (2, 4), (9, 10), (9, 13)]

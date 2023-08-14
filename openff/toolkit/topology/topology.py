@@ -62,6 +62,7 @@ from openff.toolkit.utils.exceptions import (
     MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
     NotBondedError,
+    VirtualSitesUnsupportedError,
     WrongShapeError,
 )
 from openff.toolkit.utils.serialization import Serializable
@@ -1286,6 +1287,12 @@ class Topology(Serializable):
         # Convert all openMM mols to graphs
         omm_topology_G = nx.Graph()
         for atom in openmm_topology.atoms():
+            if atom.element is None:
+                raise VirtualSitesUnsupportedError(
+                    f"Atom {atom} has element None and is probably a virtual site. Virtual sites "
+                    "cannot be stored in `Topology` objects but can be stored in `Interchange` "
+                    "objects produced by `ForceField`s with virtual site parameters."
+                )
             omm_topology_G.add_node(
                 atom.index,
                 atomic_number=atom.element.atomic_number,
@@ -1319,6 +1326,10 @@ class Topology(Serializable):
 
         Hierarchy schemes are taken from the OpenMM topology, not from
         ``unique_molecules``.
+
+        If any virtual sites are detected in the OpenMM topology,
+        ``VirtualSitesUnsupportedError`` is raised because the ``Topology``
+        object model does not store virtual sites.
 
         Parameters
         ----------
@@ -1530,6 +1541,7 @@ class Topology(Serializable):
         file_path: Union[str, Path, TextIO],
         unique_molecules: Optional[Iterable[Molecule]] = None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        _custom_substructures: Optional[Dict[str, List[str]]] = None,
         _additional_substructures: Optional[Iterable[Molecule]] = None,
     ):
         """
@@ -1610,9 +1622,14 @@ class Topology(Serializable):
             PDB. See above for details.
         toolkit_registry : ToolkitRegistry. Default = None
             The ToolkitRegistry to use as the cheminformatics backend.
+        _custom_substructures: Dict[str, List[str]], Default = {}
+            Experimental and unstable. Dictionary where keys are the names of new substructures
+            (cannot overlap with existing amino acid names) and the values are the new substructure
+            entries that follow the same format as those used in the amino acid substructure library
         _additional_substructures : Iterable of Molecule, Default = None
             Experimental and unstable. Molecule with atom.metadata["substructure_atom"] =
-            True or False for all atoms.
+            True or False for all atoms. Currently only stable for independent, standalone
+            molecules not bonded to a larger protein/molecule. (For that use _custom_substructures)
 
         Returns
         -------
@@ -1645,6 +1662,25 @@ class Topology(Serializable):
          HierarchyElement ('B', '2', ' ', 'CYS') of iterator 'residues' containing 11 atom(s),
          HierarchyElement ('B', '3', ' ', 'NME') of iterator 'residues' containing 6 atom(s)]
 
+         Polymer systems can also be supported if _custom_substructures are given as a Dict[str, List[str]],
+         where the keys are unique atom names and the values are lists of substructure smarts. The
+         substructure smarts must follow the same format as given in
+         "proteins/aa_residues_substructures_explicit_bond_orders_with_caps_explicit_connectivity.json":
+         ”<bond>[#<atomic number>D<degree>+<formal charge>:<id>]<bond>” for monomer atoms and
+         ”<bond>[*:<id>]” for adjacent neighboring atoms
+         (NOTE: This functionality is experimental!)
+
+        >>> PE_substructs = {
+        ...     "PE": [
+        ...         "[#6D4+0:2](-[#1D1+0:3])(-[#1D1+0:4])(-[#6D4+0:5](-[#1D1+0:6])(-[#1D1+0:7])-[*:8])-[*:1]",
+        ...         "[#6D4+0:2](-[#1D1+0:3])(-[#1D1+0:4])(-[#6D4+0:5](-[#1D1+0:6])(-[#1D1+0:7])-[#1D1+0:8])-[*:1]",
+        ...         "[#6D4+0:2](-[#1D1+0:3])(-[#1D1+0:4])(-[#6D4+0:5](-[#1D1+0:6])(-[#1D1+0:7])-[*:8])-[#1D1+0:1]",
+        ...     ]
+        ... }
+        >>> top = Topology.from_pdb(
+        ...          get_data_file_path("systems/test_systems/PE.pdb"),
+        ...          _custom_substructures=PE_substructs,
+        ...      )
         """
         import io
         import json
@@ -1659,14 +1695,19 @@ class Topology(Serializable):
         else:
             raise ValueError(f"Unexpected type {type(file_path)}")
 
+        if not _custom_substructures:
+            _custom_substructures = dict()
+
         pdb = PDBFile(file_path)
 
         substructure_file_path = get_data_file_path(
-            "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
+            "proteins/aa_residues_substructures_explicit_bond_orders_with_caps_explicit_connectivity.json"
         )
 
         with open(substructure_file_path, "r") as subfile:
-            substructure_dictionary = json.load(subfile)
+            substructure_dictionary = json.load(
+                subfile
+            )  # preserving order is useful later when saving metadata
         substructure_dictionary["HOH"] = {"[H:1][O:2][H:3]": ["H1", "O", "H2"]}
         substructure_dictionary["Li"] = {"[Li+1:1]": ["Li"]}
         substructure_dictionary["Na"] = {"[Na+1:1]": ["Na"]}
@@ -1703,7 +1744,7 @@ class Topology(Serializable):
                 smi = label_mol.to_smiles(mapped=True)
                 # remove unmapped atoms from mapped smiles. This will catch things like
                 # `[H]` and `[Cl]` but not anything with 3 characters like `[H:1]`
-                smi = re.sub("\[[A-Za-z]{1,2}\]", "", smi)
+                smi = re.sub("\[[A-Za-z]{1,2}\]", "[*]", smi)
                 # Remove any orphaned () that remain
                 smi = smi.replace("()", "")
 
@@ -1721,6 +1762,7 @@ class Topology(Serializable):
             pdb,
             substructure_dictionary,
             coords_angstrom,
+            _custom_substructures,
         )
 
         for off_atom, atom in zip([*topology.atoms], pdb.topology.atoms()):
