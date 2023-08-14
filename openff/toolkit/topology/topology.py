@@ -2435,16 +2435,11 @@ class Topology(Serializable):
         if name.startswith("__"):
             raise AttributeError
 
-        if name in dir(self):
-            raise HierarchyIteratorNameConflictError(
-                f"Name {name} is already defined as an attribute/method of `Topology`."
-            )
-
         try:
             return [
                 element
                 for molecule in self.molecules
-                for element in molecule.hierarchy_schemes[name].hierarchy_elements)
+                for element in molecule.hierarchy_schemes[name].hierarchy_elements
             ]
         except AttributeError as error:
             raise AttributeError(
