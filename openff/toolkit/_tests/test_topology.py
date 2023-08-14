@@ -1814,7 +1814,7 @@ class TestTopologyHierarchyIterators:
                 molecule_residue,
             )
 
-    def test_no_ieratators(self):
+    def test_no_iterators(self):
         topology = Molecule.from_smiles("CCO").to_topology()
 
         with pytest.raises(
