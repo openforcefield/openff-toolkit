@@ -2443,5 +2443,7 @@ class Topology(Serializable):
             ]
         except AttributeError as error:
             raise AttributeError(
-                f"'{self.__class__.__name__}' object has no attribute {name!r}"
+                f"'{self.__class__.__name__}' object has no attribute {name}. If looking for a "
+                "`HierarchyScheme` iterator, not all molecules in this topology have an interator "
+                f"name {name} defined."
             ) from error
