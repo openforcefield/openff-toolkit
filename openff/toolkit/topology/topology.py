@@ -54,7 +54,6 @@ from openff.toolkit.utils.exceptions import (
     BondNotInTopologyError,
     ConstraintExsistsError,
     DuplicateUniqueMoleculeError,
-    HierarchyIteratorNameConflictError,
     IncompatibleUnitError,
     InvalidAromaticityModelError,
     InvalidBoxVectorsError,
@@ -2441,9 +2440,9 @@ class Topology(Serializable):
                 for molecule in self.molecules
                 for element in molecule.hierarchy_schemes[name].hierarchy_elements
             ]
-        except AttributeError as error:
+        except (KeyError, AttributeError) as error:
             raise AttributeError(
-                f"'{self.__class__.__name__}' object has no attribute {name}. If looking for a "
+                f"'{self.__class__.__name__}' object has no attribute '{name}'. If looking for a "
                 "`HierarchyScheme` iterator, not all molecules in this topology have an interator "
                 f"name {name} defined."
             ) from error
