@@ -2874,10 +2874,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         .. notes ::
 
-           * Raises ``ValueError`` if ``smarts`` query is malformed
+           * Raises ``SMARTSParsingError`` if ``smarts`` query is malformed
 
         """
         from rdkit import Chem
+
+        from openff.toolkit.utils.exceptions import SMARTSParsingError
 
         # This code is part of a possible performance optimization that hasn't been validated
         # for production use yet.
@@ -2914,8 +2916,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Set up query.
         qmol = Chem.MolFromSmarts(smarts)  # cannot catch the error
         if qmol is None:
-            raise ValueError(
-                'RDKit could not parse the SMIRKS string "{}"'.format(smarts)
+            raise SMARTSParsingError(
+                f'RDKit could not parse the SMARTS string "{smarts}"'
             )
 
         # Create atom mapping for query molecule

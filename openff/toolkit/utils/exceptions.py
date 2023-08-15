@@ -203,10 +203,15 @@ class SMIRKSMismatchError(OpenFFToolkitException):
     """
 
 
-# TODO: This should be renamed to SMARTSParsingError
 class SMIRKSParsingError(OpenFFToolkitException):
     """
     Exception for when SMIRKS are not parseable for any environment
+    """
+
+
+class SMARTSParsingError(OpenFFToolkitException, ValueError):
+    """
+    Exception for when SMARTS are not parseable by a wrapped toolkit
     """
 
 
