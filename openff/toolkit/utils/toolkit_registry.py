@@ -376,7 +376,7 @@ class ToolkitRegistry:
 # Coped from https://github.com/openforcefield/openff-fragmenter/blob/4a290b866a8ed43eabcbd3231c62b01f0c6d7df6
 # /openff/fragmenter/utils.py#L97-L123
 @contextmanager
-def _toolkit_registry_manager(toolkit_registry: Union[ToolkitRegistry, ToolkitWrapper]):
+def toolkit_registry_manager(toolkit_registry: Union[ToolkitRegistry, ToolkitWrapper]):
     from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
     if isinstance(toolkit_registry, ToolkitRegistry):
@@ -403,3 +403,5 @@ def _toolkit_registry_manager(toolkit_registry: Union[ToolkitRegistry, ToolkitWr
             GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(toolkit)
         for toolkit in original_toolkits:
             GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit)
+
+_toolkit_registry_manager = toolkit_registry_manager
