@@ -404,4 +404,5 @@ def toolkit_registry_manager(toolkit_registry: Union[ToolkitRegistry, ToolkitWra
         for toolkit in original_toolkits:
             GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit)
 
+
 _toolkit_registry_manager = toolkit_registry_manager

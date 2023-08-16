@@ -1210,7 +1210,7 @@ class ForceField:
         """
         from openff.interchange import Interchange  # type: ignore[import]
 
-        from openff.toolkit.utils.toolkit_registry import _toolkit_registry_manager
+        from openff.toolkit.utils.toolkit_registry import toolkit_registry_manager
 
         if toolkit_registry is not None:
             used_registry = toolkit_registry
@@ -1219,7 +1219,7 @@ class ForceField:
 
             used_registry = GLOBAL_TOOLKIT_REGISTRY
 
-        with _toolkit_registry_manager(used_registry):
+        with toolkit_registry_manager(used_registry):
             return Interchange.from_smirnoff(
                 force_field=self,
                 topology=topology,

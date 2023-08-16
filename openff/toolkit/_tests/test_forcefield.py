@@ -4004,8 +4004,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
 class TestForceFieldWithToolkits(_ForceFieldFixtures):
     """Test interactions between ``ForceField`` methods and wrapped toolkits."""
 
-    # TODO: If `_toolkit_registry_manager` is made public or used for other parts of the API,
-    #       these tests should be moved/adapted into more unit tests that call it directly
+    # TODO: Many of these tests could leverage toolkit_registry_manager
 
     def test_toolkit_registry_bogus_argument(self, force_field):
         topology = create_ethanol().to_topology()
