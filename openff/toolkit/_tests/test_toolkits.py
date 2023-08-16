@@ -40,6 +40,7 @@ from openff.toolkit.utils.exceptions import (
     InvalidToolkitError,
     NotAttachedToMoleculeError,
     RadicalsNotSupportedError,
+    SMARTSParsingError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
@@ -2026,6 +2027,16 @@ class TestOpenEyeToolkitWrapper:
         assert len(tk.find_smarts_matches(mol, smirks, unique=True)) == 1
         assert len(tk.find_smarts_matches(mol, smirks, unique=False)) == 2
 
+    def test_find_matches_bad_smarts(self):
+        with pytest.raises(
+            SMARTSParsingError,
+            match="foobar",
+        ):
+            OpenEyeToolkitWrapper().find_smarts_matches(
+                create_ethanol(),
+                smarts="foobar",
+            )
+
 
 @requires_rdkit
 class TestRDKitToolkitWrapper:
@@ -3313,6 +3324,16 @@ class TestRDKitToolkitWrapper:
 
         assert len(tk.find_smarts_matches(mol, smirks, unique=True)) == 1
         assert len(tk.find_smarts_matches(mol, smirks, unique=False)) == 2
+
+    def test_find_matches_bad_smarts(self):
+        with pytest.raises(
+            SMARTSParsingError,
+            match="foobar",
+        ):
+            RDKitToolkitWrapper().find_smarts_matches(
+                create_ethanol(),
+                smarts="foobar",
+            )
 
     def test_to_rdkit_losing_aromaticity_(self):
         # test the example given in issue #513
