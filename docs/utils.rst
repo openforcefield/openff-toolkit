@@ -65,9 +65,12 @@ To remove ``ToolkitWrappers`` permanently from a ``ToolkitRegistry``, the ``dere
     >>> from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
     >>> print(len(toolkit_registry.registered_toolkits))
     4
-    >>> toolkit_registry.deregister_toolkit(OpenEyeToolkitWrapper)
+    >>> toolkit_registry.deregister_toolkit(RDKitToolkitWrapper)
     >>> print(len(toolkit_registry.registered_toolkits))
     3
+    >>> toolkit_registry.register_toolkit(RDKitToolkitWrapper)
+    >>> print(len(toolkit_registry.registered_toolkits))
+    4
 
 For example, differences in ``to_smiles`` functionality between OpenEye toolkits and The RDKit can
 be explored by selecting which toolkit(s) are and are not registered.
