@@ -53,3 +53,4 @@ from openff.toolkit.utils.utils import (
     temporary_cd,
     unit_to_string,
 )
+from openff.toolkit.utils.toolkit_registry import toolkit_registry_manager
