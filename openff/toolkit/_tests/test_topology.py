@@ -56,6 +56,7 @@ from openff.toolkit.utils.exceptions import (
     AtomNotInTopologyError,
     BondNotInTopologyError,
     DuplicateUniqueMoleculeError,
+    HierarchyIteratorNameConflictError,
     IncompatibleUnitError,
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
@@ -1779,6 +1780,106 @@ class TestAddTopology:
         assert combined_topology.constrained_atom_pairs[(7, 6)] == unit.Quantity(
             1.234, unit.angstrom
         )
+
+
+def residue_equality_check(residue1, residue2):
+    """Hack to work around #1659."""
+    assert residue1.n_atoms == residue2.n_atoms
+    assert residue1.residue_number == residue2.residue_number
+    assert residue1.residue_name == residue2.residue_name
+    assert residue1.chain_id == residue2.chain_id
+    assert residue1.insertion_code == residue2.insertion_code
+
+
+class TestTopologyHierarchyIterators:
+    @requires_rdkit
+    def test_single_small_peptide(
+        self,
+    ):
+        protein_path = get_data_file_path("proteins/ace-ala-nh2.pdb")
+
+        topology = Topology.from_pdb(protein_path)
+        molecule = Molecule.from_polymer_pdb(protein_path)
+
+        assert hasattr(topology, "residues")
+
+        assert len(topology.residues) == len(molecule.residues)
+
+        for topology_residue, molecule_residue in zip(
+            topology.residues,
+            molecule.residues,
+        ):
+            residue_equality_check(
+                topology_residue,
+                molecule_residue,
+            )
+
+    def test_no_iterators(self):
+        topology = Molecule.from_smiles("CCO").to_topology()
+
+        with pytest.raises(
+            AttributeError,
+            match="'Topology' object has no attribute 'residues'",
+        ):
+            topology.residues
+
+    @requires_rdkit
+    def test_error_when_mixed_iterators(
+        self,
+    ):
+        """Test that an error is raised when a topology has molecules with and without an iterator."""
+        protein_path = get_data_file_path("proteins/ace-ala-nh2.pdb")
+
+        topology = Topology.from_pdb(protein_path)
+        topology.add_molecule(Molecule.from_smiles("CCO"))
+
+        with pytest.raises(
+            AttributeError,
+            match="'Topology' object has no attribute 'residues'",
+        ):
+            topology.residues
+
+    def test_molecule_order_wins_over_residue_order(
+        self,
+    ):
+        """Test that no effort is made to sort residues by residue number across molecules."""
+        protein_path = get_data_file_path("proteins/ace-ala-nh2.pdb")
+
+        topology = Topology.from_molecules(
+            [
+                Molecule.from_polymer_pdb(protein_path),
+                Molecule.from_polymer_pdb(protein_path),
+            ]
+        )
+
+        assert (
+            topology.residues[0].residue_number == topology.residues[3].residue_number
+        )
+        assert (
+            topology.residues[1].residue_number == topology.residues[4].residue_number
+        )
+        assert (
+            topology.residues[2].residue_number == topology.residues[5].residue_number
+        )
+
+        assert int(topology.residues[2].residue_number) > int(
+            topology.residues[3].residue_number
+        )
+
+    @pytest.mark.skip(reason="Undefined behavior upstream, see #1660")
+    def test_clashing_hierarchy_scheme_iterator_name(
+        self,
+    ):
+        molecule = Molecule.from_smiles("CCO")
+        molecule.add_hierarchy_scheme(
+            uniqueness_criteria=("magic",),
+            iterator_name="atoms",
+        )
+
+        topology = molecule.to_topology()
+
+        with pytest.raises(HierarchyIteratorNameConflictError):
+            topology.atoms
 
 
 class TestTopologySerialization:

@@ -6,7 +6,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-
 ## Current development
 
 ### API-breaking changes
@@ -18,8 +17,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### New features
 - [PR #1698](https://github.com/openforcefield/openff-toolkit/pull/1698): Makes `openff.toolkit.utils.toolkit_registry.toolkit_registry_manager` public. 
 
-### Improved documentation and warnings
+- [PR #1662](https://github.com/openforcefield/openff-toolkit/pull/1662): Adds hierarchy scheme iterators to `Topology`, i.e. `Topology.residues`, when schemes of the same iterator name are defines on all constituent `Molecule`s.
 
+### Improved documentation and warnings
 
 ## 0.14.3
 
