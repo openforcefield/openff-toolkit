@@ -119,7 +119,7 @@ jobs:
       - name: Optionally remove OpenMM
         if: ${{ matrix.openmm == false }}
         run: |
-          micromamba remove --force openmm -yq
+          micromamba remove --force openmm
 
       - name: Check installed toolkits
         run: |
