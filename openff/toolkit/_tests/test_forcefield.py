@@ -1299,7 +1299,7 @@ class TestForceField(_ForceFieldFixtures):
 
         forcefield = ForceField(xml_missing_torsion)
 
-        topology = Topology.from_openmm(
+        topology = Topology.from_pdb(
             get_data_file_path("systems/test_systems/1_ethanol.pdb"),
             unique_molecules=[create_ethanol()],
         )
@@ -1920,26 +1920,21 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
     def test_charges_from_molecule(self, toolkit_registry, force_field):
         """Test skipping charge generation and instead getting charges from the original Molecule"""
-        topology = Topology.from_pdb(
-            get_data_file_path("systems/test_systems/1_ethanol.pdb"),
-            unique_molecules=[create_ethanol()],
-        )
-        omm_system = force_field.create_openmm_system(
-            topology,
-            charge_from_molecules=list(topology.molecules),
-            toolkit_registry=toolkit_registry,
-        )
-        nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == openmm.NonbondedForce
-        ][0]
-        expected_charges = (
-            (0, -0.4 * openmm.unit.elementary_charge),
-            (1, -0.3 * openmm.unit.elementary_charge),
-            (2, -0.2 * openmm.unit.elementary_charge),
-        )
-        for particle_index, expected_charge in expected_charges:
-            q, _, _ = nonbondedForce.getParticleParameters(particle_index)
-            assert q == expected_charge
+        expected_charges = [-0.4, -0.3, -0.2]
+
+        topology = create_ethanol().to_topology()
+
+        found_charges = [
+            charge.m
+            for charge in force_field.create_interchange(
+                topology,
+                charge_from_molecules=[topology.molecule(0)],
+                toolkit_registry=toolkit_registry,
+            )["Electrostatics"].charges.values()
+        ][:3]
+
+        for expected_charge, found_charge in zip(expected_charges, found_charges):
+            assert expected_charge == found_charge
 
     @skip_if_missing("openmm")
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
@@ -2024,28 +2019,26 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         cyclohexane = create_cyclohexane()
         molecules = [ethanol, cyclohexane]
 
-        topology = Topology.from_openmm(
+        topology = Topology.from_pdb(
             get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb"),
             unique_molecules=molecules,
         )
 
-        omm_system = force_field.create_openmm_system(
-            topology, charge_from_molecules=[ethanol], toolkit_registry=toolkit_registry
-        )
-        nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == openmm.NonbondedForce
-        ][0]
-        expected_charges = (
-            (18, -0.4 * openmm.unit.elementary_charge),
-            (19, -0.3 * openmm.unit.elementary_charge),
-            (20, -0.2 * openmm.unit.elementary_charge),
-        )
-        for particle_index, expected_charge in expected_charges:
-            q, _, _ = nonbondedForce.getParticleParameters(particle_index)
-            assert q == expected_charge
+        found_charges = [
+            charge.m
+            for charge in force_field.create_interchange(
+                topology,
+                charge_from_molecules=[ethanol],
+                toolkit_registry=toolkit_registry,
+            )["Electrostatics"].charges.values()
+        ]
+
+        assert found_charges[18] == -0.4
+        assert found_charges[19] == -0.3
+        assert found_charges[20] == -0.2
+
         for atom_index in range(topology.n_atoms):
-            q, _, _ = nonbondedForce.getParticleParameters(atom_index)
-            assert q != (0.0 * unit.elementary_charge)
+            assert found_charges[atom_index] != 0.0
 
     @skip_if_missing("openmm")
     @pytest.mark.parametrize(
