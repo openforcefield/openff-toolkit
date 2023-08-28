@@ -5,7 +5,7 @@ channels:
 dependencies:
     # Base depends
   - python
-  - pip
+  - pydantic =1
   - packaging
   - numpy
   - networkx
@@ -17,9 +17,10 @@ dependencies:
   - openff-forcefields >=2023.05.1
   - smirnoff99Frosst
   - openff-units =0.2.0
+  - openff-amber-ff-ports
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.3.3
-  - openff-nagl >=0.2.2
+  - openff-interchange-base >=0.3.10
+  - openff-nagl =0.2.2
   - openff-nagl-models >=0.0.2
   - typing_extensions
     # Toolkit-specific
@@ -38,5 +39,3 @@ dependencies:
   - qcengine
   - mdtraj
   - parmed =3
-  - pip:
-    - git+https://github.com/openforcefield/openff-interchange.git@openmm-optional

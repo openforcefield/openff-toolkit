@@ -6,7 +6,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-
 ## Current development
 
 ### API-breaking changes
@@ -16,19 +15,43 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Bugfixes
 
 ### New features
+- [PR #1698](https://github.com/openforcefield/openff-toolkit/pull/1698): Makes `openff.toolkit.utils.toolkit_registry.toolkit_registry_manager` public. 
+
+- [PR #1662](https://github.com/openforcefield/openff-toolkit/pull/1662): Adds hierarchy scheme iterators to `Topology`, i.e. `Topology.residues`, when schemes of the same iterator name are defines on all constituent `Molecule`s.
 
 ### Improved documentation and warnings
+
+## 0.14.3
+
+### Bugfixes
+
+- [PR #1689](https://github.com/openforcefield/openff-toolkit/pull/1689): Fixes [#1688](https://github.com/openforcefield/openff-toolkit/issues/1688) in which automatic up-conversion of version 0.3 of `vdWHandler` created via the Python API errored out if `method` was not specified.
+- [PR #1690](https://github.com/openforcefield/openff-toolkit/pull/1690): Fixes a circular-import bug that occurs when attempting to print a "no cheminformatics toolkits available" warning. 
+
+
+## 0.14.2
+
+### Behavior changes
+
+- [PR #1679](https://github.com/openforcefield/openff-toolkit/pull/1679): Version 0.3 `<vdW>` sections of OFFXML files will automatically be up-converted (in memory) to version 0.4 according to the recomendations provided in [OFF-EP 0008](https://openforcefield.github.io/standards/enhancement-proposals/off-ep-0008/).
+
+### New features
+
+- [PR #1631](https://github.com/openforcefield/openff-toolkit/pull/1631): Adds support for Python 3.11.
 
 
 ## 0.14.1
 
 ### API-breaking changes
+
 - [PR #1664](https://github.com/openforcefield/openff-toolkit/pull/1664): Removes `ChemicalEnvironment` and the entire `openff.toolkit.typing.chemistry` submodule, which was deprecated in 0.12.0.
 
 ### Behavior changes
+
 - [PR #1675](https://github.com/openforcefield/openff-toolkit/pull/1675): Makes InChI parsing failures more informative and gives them their own exception type, `InChIParseError`.
 
 ### New features
+
 - [PR #1627](https://github.com/openforcefield/openff-toolkit/pull/1627): (beta release of major new feature by @connordavel) Adds experimental support for custom substructure loading in `Topology.from_pdb`, via the `_custom_substructures` keyword argument. This will be added to the public API (by removing the leading underscore) in a future feature release, but is available for testing now. This feature should allow for easier loading of modified amino acids, nucleic acids, and other polymers.  
 
 

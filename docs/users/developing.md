@@ -397,8 +397,8 @@ The CI matrix is currently as follows:
 +-----------------------+------------+-----------+-------------+------------+-----------+-------------+
 | Python 3.10           | **Test**   | Skip      | Skip        | **Test**   | Skip      | Skip        |
 +-----------------------+------------+-----------+-------------+------------+-----------+-------------+
-| Python 3.11 and newer | Pending upstream support
+| Python 3.11           | **Test**   | Skip      | Skip        | **Test**   | Skip      | Skip        |
 +-----------------------+------------+-----------+-------------+------------+-----------+-------------+
-| Python 3.12 and newer | Pending official releases and upstream support
+| Python 3.12 and newer | Pending official releases and upstream support                              | 
 +-----------------------+------------+-----------+-------------+------------+-----------+-------------+
 :::

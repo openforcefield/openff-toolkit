@@ -2798,6 +2798,7 @@ class vdWHandler(_NonbondedHandler):
 
     _TAGNAME = "vdW"  # SMIRNOFF tag name to process
     _INFOTYPE = vdWType  # info type to store
+    _MAX_SUPPORTED_SECTION_VERSION = Version("0.4")
 
     potential = ParameterAttribute(
         default="Lennard-Jones-12-6", converter=_allow_only(["Lennard-Jones-12-6"])
@@ -2813,9 +2814,44 @@ class vdWHandler(_NonbondedHandler):
 
     cutoff = ParameterAttribute(default=9.0 * unit.angstroms, unit=unit.angstrom)
     switch_width = ParameterAttribute(default=1.0 * unit.angstroms, unit=unit.angstrom)
-    method = ParameterAttribute(
-        default="cutoff", converter=_allow_only(["cutoff", "PME"])
+    periodic_method = ParameterAttribute(
+        default="cutoff", converter=_allow_only(["cutoff", "no-cutoff"])
     )
+    nonperiodic_method = ParameterAttribute(
+        default="no-cutoff", converter=_allow_only(["cutoff", "no-cutoff"])
+    )
+
+    def __init__(self, **kwargs):
+        if kwargs.get("version") == 0.4:
+            if "method" in kwargs:
+                raise SMIRNOFFSpecError(
+                    "`method` attribute has been removed in version 0.4 of the vdW tag. Use "
+                    "`periodic_method` and `nonperiodic_method` instead. "
+                    "See https://openforcefield.github.io/standards/standards/smirnoff/#electrostatics"
+                )
+
+        if kwargs.get("version") == 0.3:
+            logger.info("Attempting to up-convert vdW section from 0.3 to 0.4")
+
+            # This is the only supported value of "method" is version 0.3
+            if kwargs.get("method") in ("cutoff", None):
+                kwargs["periodic_method"] = "cutoff"
+                kwargs["nonperiodic_method"] = "no-cutoff"
+                kwargs["version"] = 0.4
+                kwargs.pop("method", None)
+
+                logger.info(
+                    'Successfully up-converted vdW section from 0.3 to 0.4. `method="cutoff"` '
+                    'is now split into `periodic_method="cutoff"` '
+                    'and `nonperiodic_method="no-cutoff"`.'
+                )
+
+            else:
+                raise NotImplementedError(
+                    "Failed to up-convert vdW section from 0.3 to 0.4. Did not know "
+                    f'how to up-convert `method="{kwargs["method"]}"`.'
+                )
+        super().__init__(**kwargs)
 
     # TODO: Use _allow_only when ParameterAttribute will support multiple converters
     #       (it'll be easy when we switch to use the attrs library)
@@ -2864,7 +2900,12 @@ class vdWHandler(_NonbondedHandler):
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
         float_attrs_to_compare = ["scale12", "scale13", "scale14", "scale15"]
-        string_attrs_to_compare = ["potential", "combining_rules", "method"]
+        string_attrs_to_compare = [
+            "potential",
+            "combining_rules",
+            "periodic_method",
+            "nonperiodic_method",
+        ]
         unit_attrs_to_compare = ["cutoff", "switch_width"]
 
         self._check_attributes_are_equal(
@@ -2986,7 +3027,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             if "method" in kwargs:
                 raise SMIRNOFFSpecError(
                     "`method` attribute has been removed in version 0.4 of the Electrostatics tag. Use "
-                    "`periodic_potential`, `nonperiodic_potenetial`, and `exception_potential` instead. "
+                    "`periodic_potential`, `nonperiodic_potential`, and `exception_potential` instead. "
                     "See https://openforcefield.github.io/standards/standards/smirnoff/#electrostatics"
                 )
         if kwargs.get("version") == 0.3:

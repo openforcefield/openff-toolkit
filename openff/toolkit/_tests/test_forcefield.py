@@ -1577,8 +1577,7 @@ class TestForceField(_ForceFieldFixtures):
 
         force_field = ForceField()
 
-        vdw_handler = vdWHandler(version=0.3)
-        vdw_handler.method = "cutoff"
+        vdw_handler = vdWHandler(version=0.4)
         vdw_handler.cutoff = 6.0 * unit.angstrom
         vdw_handler.scale14 = 1.0
 
@@ -1633,8 +1632,7 @@ class TestForceField(_ForceFieldFixtures):
 
         force_field = ForceField()
 
-        vdw_handler = vdWHandler(version=0.3)
-        vdw_handler.method = "cutoff"
+        vdw_handler = vdWHandler(version=0.4)
         vdw_handler.cutoff = 7.89 * unit.angstrom
         vdw_handler.scale14 = 1.0
 
@@ -4071,8 +4069,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
 class TestForceFieldWithToolkits(_ForceFieldFixtures):
     """Test interactions between ``ForceField`` methods and wrapped toolkits."""
 
-    # TODO: If `_toolkit_registry_manager` is made public or used for other parts of the API,
-    #       these tests should be moved/adapted into more unit tests that call it directly
+    # TODO: Many of these tests could leverage toolkit_registry_manager
 
     @skip_if_missing("openmm")
     def test_toolkit_registry_bogus_argument(self, force_field):
