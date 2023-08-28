@@ -1805,6 +1805,7 @@ def residue_equality_check(residue1, residue2):
 
 class TestTopologyHierarchyIterators:
     @requires_rdkit
+    @skip_if_missing("openmm")
     def test_single_small_peptide(
         self,
     ):
@@ -1835,6 +1836,7 @@ class TestTopologyHierarchyIterators:
         ):
             topology.residues
 
+    @skip_if_missing("openmm")
     @requires_rdkit
     def test_error_when_mixed_iterators(
         self,
@@ -1851,6 +1853,7 @@ class TestTopologyHierarchyIterators:
         ):
             topology.residues
 
+    @skip_if_missing("openmm")
     def test_molecule_order_wins_over_residue_order(
         self,
     ):
