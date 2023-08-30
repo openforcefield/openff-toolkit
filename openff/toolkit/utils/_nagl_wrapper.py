@@ -85,9 +85,7 @@ class _NAGLToolkitWrapper(ToolkitWrapper):
             import pathlib
 
             from openff.nagl import GNNModel
-            from openff.nagl_models import (
-                validate_nagl_model_path,
-            )
+            from openff.nagl_models import validate_nagl_model_path
 
             model_name = "openff-gnn-am1bcc-0.1.0-rc.1.pt"
             _only_model = validate_nagl_model_path(model_name)
