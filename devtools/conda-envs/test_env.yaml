@@ -21,7 +21,7 @@ dependencies:
   - openff-utilities >=0.1.5
   - openff-interchange-base >=0.3.10
   - openff-nagl-base ==0.3.0
-  - openff-nagl-models ==0.0.3
+  - openff-nagl-models ==0.1.0
     # Toolkit-specific
   - ambertools >=22
   - rdkit
