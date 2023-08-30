@@ -3,7 +3,7 @@ import re
 import numpy
 import pytest
 from openff.units import unit
-from openff.utilities.testing import skip_if_missing
+from openff.utilities import has_package, skip_if_missing
 
 from openff.toolkit import Molecule
 from openff.toolkit._tests.create_molecules import (
@@ -15,7 +15,10 @@ from openff.toolkit._tests.create_molecules import (
 )
 from openff.toolkit._tests.utils import requires_openeye
 from openff.toolkit.utils._nagl_wrapper import _NAGLToolkitWrapper
-from openff.toolkit.utils.exceptions import ChargeMethodUnavailableError
+from openff.toolkit.utils.exceptions import (
+    ChargeMethodUnavailableError,
+    ToolkitUnavailableException,
+)
 from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 
 
@@ -81,6 +84,30 @@ class TestNAGLToolkitWrapper:
             atol=1e-7,
         )
 
+    def test_conformer_argument(self):
+        molecule = create_ethanol()
+        molecule.generate_conformers(n_conformers=2)
+
+        with pytest.warns(
+            UserWarning,
+            match="optional argument.*use_conformers",
+        ):
+            molecule.assign_partial_charges(
+                partial_charge_method="_nagl_am1bccelf10",
+                toolkit_registry=_NAGLToolkitWrapper(),
+                use_conformers=[molecule.conformers[-1]],
+            )
+
+        with pytest.warns(
+            UserWarning,
+            match="optional argument.*strict_n_conformers",
+        ):
+            molecule.assign_partial_charges(
+                partial_charge_method="_nagl_am1bccelf10",
+                toolkit_registry=_NAGLToolkitWrapper(),
+                strict_n_conformers=1,
+            )
+
     def test_unsupported_charge_method(self):
         with pytest.raises(
             ChargeMethodUnavailableError,
@@ -107,3 +134,19 @@ class TestNAGLToolkitWrapper:
                 partial_charge_method="_nagl_am1bccelf10",
                 toolkit_registry=_NAGLToolkitWrapper(),
             )
+
+
+@pytest.mark.skipif(
+    has_package("openff.nagl"),
+    reason="Test requires that OpenFF NAGL is not installed",
+)
+class TestNoNAGLToolkitWrapper:
+    def test_nagl_toolkit_wrapper_unavailable(self):
+        assert not _NAGLToolkitWrapper.is_available()
+
+    def test_init_unavailable(self):
+        with pytest.raises(
+            ToolkitUnavailableException,
+            match="OpenFF NAGL is not available",
+        ):
+            _NAGLToolkitWrapper()

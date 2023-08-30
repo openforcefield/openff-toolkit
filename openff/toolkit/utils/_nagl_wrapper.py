@@ -93,6 +93,7 @@ class _NAGLToolkitWrapper(ToolkitWrapper):
             model_name = "openff-gnn-am1bcc-0.1.0-rc.1.pt"
             _only_model = validate_nagl_model_path(model_name)
 
+            # This variable is not exposed so it cannot be tested
             if not pathlib.Path(_only_model).exists():
                 raise FileNotFoundError(f"Could not find model {_only_model.name}")
 
