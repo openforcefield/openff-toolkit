@@ -59,7 +59,9 @@ class TestNAGLToolkitWrapper:
         assert nagl_charges.dtype == float
 
         numpy.testing.assert_allclose(
-            openeye_charges.m_as(unit.elementary_charge), nagl_charges, atol=0.07
+            openeye_charges.m_as(unit.elementary_charge),
+            nagl_charges,
+            atol=0.07,
         )
 
     def test_atom_order_dependence(self):
@@ -72,6 +74,7 @@ class TestNAGLToolkitWrapper:
                 partial_charge_method="_nagl_am1bccelf10",
                 toolkit_registry=_NAGLToolkitWrapper(),
             )
+
         numpy.testing.assert_allclose(
             forward.partial_charges,
             reverse.partial_charges[::-1],
