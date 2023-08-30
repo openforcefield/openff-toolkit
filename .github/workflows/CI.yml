@@ -29,6 +29,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
         python-version: ["3.9", "3.10", "3.11"]
+        pydantic-version: ["1", "2"]
         rdkit: [true, false]
         openeye: [true, false]
         exclude:
@@ -79,6 +80,7 @@ jobs:
           environment-file: devtools/conda-envs/${{ env.ENVFILE }}.yaml
           create-args: >-
             python=${{ matrix.python-version }}
+            pydantic=${{ matrix.pydantic-version }}
 
       - name: Additional info about the build
         run: |
