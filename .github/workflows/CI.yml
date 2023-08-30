@@ -28,9 +28,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["3.11"]
-        rdkit: [false]
-        openeye: [true]
+        python-version: ["3.9", "3.10", "3.11"]
+        rdkit: [true, false]
+        openeye: [true, false]
         exclude:
           - rdkit: false
             openeye: false
