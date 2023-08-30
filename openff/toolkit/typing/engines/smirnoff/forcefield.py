@@ -1208,7 +1208,7 @@ class ForceField:
             An `Interchange` object resulting from applying this `ForceField` to a `Topology`.
 
         """
-        from openff.interchange import Interchange  # type: ignore[import]
+        from openff.interchange import Interchange
 
         from openff.toolkit.utils.toolkit_registry import toolkit_registry_manager
 
@@ -1385,7 +1385,7 @@ class ForceField:
         # Bad type annotation in Interchange, expect to be fixed in 0.3.1
         return unit.Quantity(
             [
-                c.m  # type: ignore[union-attr]
+                c.m
                 for c in Interchange.from_smirnoff(
                     force_field=self, topology=[molecule], **kwargs
                 )["Electrostatics"].charges.values()

@@ -102,7 +102,7 @@ def get_data_file_path(relative_path: str) -> str:
     _DATA_ROOT = files("openff.toolkit") / "data"
 
     # mypy unhappy because this might not return a path, might be fixed with 3.10+
-    file_path = _DATA_ROOT / relative_path  # type: ignore[arg-type]
+    file_path = _DATA_ROOT / relative_path
 
     if not file_path.exists():  # type: ignore[attr-defined]
         raise ValueError(

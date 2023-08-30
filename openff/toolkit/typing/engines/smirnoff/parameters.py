@@ -207,7 +207,7 @@ def _validate_units(attr, value: Union[str, Quantity], units: Unit):
     value = object_to_quantity(value)
 
     try:
-        if not units.is_compatible_with(value.units):  # type: ignore[union-attr]
+        if not units.is_compatible_with(value.units):
             raise IncompatibleUnitError(
                 f"{attr.name}={value} should have units of {units}"
             )
