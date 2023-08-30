@@ -86,7 +86,6 @@ class _NAGLToolkitWrapper(ToolkitWrapper):
 
             from openff.nagl import GNNModel
             from openff.nagl_models import (
-                list_available_nagl_models,
                 validate_nagl_model_path,
             )
 
