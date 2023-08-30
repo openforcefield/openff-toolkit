@@ -65,4 +65,4 @@ def test_skip_wrong_subclass(caplog):
     caplog.set_level(logging.INFO)
     load_handler_plugins()
 
-    assert "does not inherit from ParameterHandler" in caplog.text
+    assert "does not inherit from ParameterHandler" in caplog.text, caplog.text

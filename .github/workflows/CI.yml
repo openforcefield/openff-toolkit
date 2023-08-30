@@ -114,6 +114,10 @@ jobs:
             done
           fi
 
+      - name: Remove NAGL if no RDKit
+        if: ${{ matrix.rdkit == false }}
+        run: micromamba remove --force openff-nagl-base --yes
+
       - name: Check installed toolkits
         run: |
           for tk in ${{ env.TOOLKIT_CHECKS }}; do
