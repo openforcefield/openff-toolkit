@@ -63,7 +63,7 @@ jobs:
               echo "ENVFILE=openeye" >> $GITHUB_ENV
               echo "JOBNAME=OpenEye" >> $GITHUB_ENV
               echo "TOOLKIT_CHECKS=OPENEYE" >> $GITHUB_ENV
-              echo "PACKAGES_TO_REMOVE=ambertools rdkit openff-nagl" >> $GITHUB_ENV
+              echo "PACKAGES_TO_REMOVE=ambertools rdkit openff-nagl-base" >> $GITHUB_ENV
           fi
 
           if [[ ${{ matrix.openeye }} == false && ${{ matrix.rdkit }} == true ]]; then
