@@ -117,7 +117,8 @@ with toolkit_registry_manager(
             RDKitToolkitWrapper,
             AmberToolsToolkitWrapper,
             _NAGLToolkitWrapper,
-        ]
+        ],
+        exception_if_unavailable=False,
     )
 ) as registry:
     for toolkit in registry.registered_toolkits:
