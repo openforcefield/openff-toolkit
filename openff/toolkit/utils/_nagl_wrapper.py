@@ -84,19 +84,24 @@ class _NAGLToolkitWrapper(ToolkitWrapper):
         if partial_charge_method == "_nagl_am1bccelf10":
             import pathlib
 
-            from openff.nagl.nn._models import GNNModel
-            from openff.nagl_models import (
-                list_available_nagl_models,
-                validate_nagl_model_path,
-            )
+            from openff.nagl import GNNModel
+            from openff.nagl_models import validate_nagl_model_path
 
-            _only_model = validate_nagl_model_path(list_available_nagl_models()[0])
+            model_name = "openff-gnn-am1bcc-0.1.0-rc.1.pt"
+            _only_model = validate_nagl_model_path(model_name)
 
             if not pathlib.Path(_only_model).exists():
                 raise FileNotFoundError(f"Could not find model {_only_model.name}")
 
             model = GNNModel.load(_only_model, eval_mode=True)
-            charges = model.compute_property(molecule, as_numpy=True)
+            charges = model.compute_property(
+                molecule,
+                as_numpy=True,
+                readout_name="am1bcc_charges",
+                check_domains=True,
+                # if False, only warns
+                error_if_unsupported=True,
+            )
             molecule.partial_charges = Quantity(
                 charges.astype(float),
                 unit.elementary_charge,
