@@ -88,7 +88,7 @@ from openff.toolkit.utils.exceptions import (
 )
 from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
-from openff.toolkit.utils.toolkit_registry import ToolkitRegistry
+from openff.toolkit.utils.toolkit_registry import ToolkitRegistry, toolkit_registry_manager
 
 logger = logging.getLogger(__name__)
 
@@ -108,16 +108,27 @@ GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
 OPENEYE_AVAILABLE = False
 RDKIT_AVAILABLE = False
 AMBERTOOLS_AVAILABLE = False
-_NAGL_AVAILABLE = _NAGLToolkitWrapper.is_available()
+_NAGL_AVAILABLE = False
 
-# Only available toolkits will have made it into the GLOBAL_TOOLKIT_REGISTRY
-for toolkit in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits:
-    if type(toolkit) is OpenEyeToolkitWrapper:
-        OPENEYE_AVAILABLE = True
-    elif type(toolkit) is RDKitToolkitWrapper:
-        RDKIT_AVAILABLE = True
-    elif type(toolkit) is AmberToolsToolkitWrapper:
-        AMBERTOOLS_AVAILABLE = True
+with toolkit_registry_manager(
+    ToolkitRegistry(
+        toolkit_precedence=[
+            OpenEyeToolkitWrapper,
+            RDKitToolkitWrapper,
+            AmberToolsToolkitWrapper,
+            _NAGLToolkitWrapper,
+        ]
+    )
+) as registry:
+    for toolkit in registry.registered_toolkits:
+        if type(toolkit) is OpenEyeToolkitWrapper:
+            OPENEYE_AVAILABLE = True
+        elif type(toolkit) is RDKitToolkitWrapper:
+            RDKIT_AVAILABLE = True
+        elif type(toolkit) is AmberToolsToolkitWrapper:
+            AMBERTOOLS_AVAILABLE = True
+        elif type(toolkit) is _NAGLToolkitWrapper:
+            _NAGL_AVAILABLE = True
 
 
 # Define basic toolkits that handle essential file I/O

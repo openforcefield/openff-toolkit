@@ -55,7 +55,7 @@ jobs:
           if [[ ${{ matrix.openeye }} == true && ${{ matrix.rdkit }} == true ]]; then
               echo "ENVFILE=test_env" >> $GITHUB_ENV
               echo "JOBNAME=RDKit and OpenEye" >> $GITHUB_ENV
-              echo "TOOLKIT_CHECKS=RDKIT OPENEYE" >> $GITHUB_ENV
+              echo "TOOLKIT_CHECKS=RDKIT OPENEYE NAGL" >> $GITHUB_ENV
               echo "PACKAGES_TO_REMOVE=" >> $GITHUB_ENV
           fi
 
@@ -69,7 +69,7 @@ jobs:
           if [[ ${{ matrix.openeye }} == false && ${{ matrix.rdkit }} == true ]]; then
               echo "ENVFILE=rdkit" >> $GITHUB_ENV
               echo "JOBNAME=RDKit" >> $GITHUB_ENV
-              echo "TOOLKIT_CHECKS=RDKIT" >> $GITHUB_ENV
+              echo "TOOLKIT_CHECKS=RDKIT NAGL" >> $GITHUB_ENV
               echo "PACKAGES_TO_REMOVE=openeye-toolkits" >> $GITHUB_ENV
           fi
 
