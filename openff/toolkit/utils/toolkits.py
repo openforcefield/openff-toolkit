@@ -120,8 +120,8 @@ with toolkit_registry_manager(
         ],
         exception_if_unavailable=False,
     )
-) as registry:
-    for toolkit in registry.registered_toolkits:
+):
+    for toolkit in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits:
         if type(toolkit) is OpenEyeToolkitWrapper:
             OPENEYE_AVAILABLE = True
         elif type(toolkit) is RDKitToolkitWrapper:
