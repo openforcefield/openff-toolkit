@@ -15,6 +15,7 @@ from openff.toolkit._tests.create_molecules import (
 )
 from openff.toolkit._tests.utils import requires_openeye
 from openff.toolkit.utils._nagl_wrapper import _NAGLToolkitWrapper
+from openff.toolkit.utils.exceptions import ChargeMethodUnavailableError
 from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 
 
@@ -78,7 +79,10 @@ class TestNAGLToolkitWrapper:
         )
 
     def test_unsupported_charge_method(self):
-        with pytest.raises(ValueError, match="Charge model hartree_fock not supported"):
+        with pytest.raises(
+            ChargeMethodUnavailableError,
+            match="Charge model hartree_fock not supported",
+        ):
             create_ethanol().assign_partial_charges(
                 partial_charge_method="hartree_fock",
                 toolkit_registry=_NAGLToolkitWrapper(),

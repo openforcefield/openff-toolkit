@@ -5,7 +5,10 @@ from typing import TYPE_CHECKING, List, Optional, Type
 from openff.units import Quantity, unit
 
 from openff.toolkit.utils.base_wrapper import ToolkitWrapper
-from openff.toolkit.utils.exceptions import ToolkitUnavailableException
+from openff.toolkit.utils.exceptions import (
+    ChargeMethodUnavailableError,
+    ToolkitUnavailableException,
+)
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import FrozenMolecule, Molecule
@@ -64,7 +67,7 @@ class _NAGLToolkitWrapper(ToolkitWrapper):
 
         if use_conformers:
             warnings.warn(
-                "`_NAGLToolkitWrapper.assign_partial_charges` was passed optional orgument "
+                "`_NAGLToolkitWrapper.assign_partial_charges` was passed optional argument "
                 "`use_conformers` which will not be used. OpenFF NAGL does not generate "
                 "conformers as part of assigning partial charges.",
                 UserWarning,
@@ -73,7 +76,7 @@ class _NAGLToolkitWrapper(ToolkitWrapper):
 
         if strict_n_conformers:
             warnings.warn(
-                "`_NAGLToolkitWrapper.assign_partial_charges` was passed optional orgument "
+                "`_NAGLToolkitWrapper.assign_partial_charges` was passed optional argument "
                 "`strict_n_conformers` which will not be used. OpenFF NAGL does not generate "
                 "conformers as part of assigning partial charges.",
                 UserWarning,
@@ -108,8 +111,7 @@ class _NAGLToolkitWrapper(ToolkitWrapper):
             )
 
         else:
-            # This should be a more specific exception that inherits from ValueError?
-            raise ValueError(
+            raise ChargeMethodUnavailableError(
                 f"Charge model {partial_charge_method} not supported by "
                 f"{self.__class__.__name__}."
             )
