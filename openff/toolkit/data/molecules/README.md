@@ -18,4 +18,3 @@ contains all the molecules in `AlkEthOH_tripos.tar.gz/AlkEthOH_test_filt1`.
 **For all molecule sets**
         - `*` = `ff` for parm@frosst atom types
         - `*` = `tripos` for tripos atom types
-

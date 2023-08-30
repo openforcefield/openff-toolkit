@@ -20,4 +20,3 @@
 - `GBSA_HCT-1.0.offxml`: An experimental force field used in validation tests against OpenMM's implementation of the [Hawkins-Cramer-Truhlar](http://docs.openmm.org/latest/userguide/zbibliography.html#hawkins1995) GBSA model (corresponding to igb=1 in AMBER) 
 - `GBSA_OBC1-1.0.offxml`: An experimental force field used in validation tests against OpenMM's implementation of the [Onufriev-Bashford-Case](http://docs.openmm.org/latest/userguide/zbibliography.html#onufriev2004) using the GB(OBC)I model (corresponding to igb=2 in AMBER) 
 - `GBSA_OBC2-1.0.offxml`: An experimental force field used in validation tests against OpenMM's implementation of the [Onufriev-Bashford-Case](http://docs.openmm.org/latest/userguide/zbibliography.html#onufriev2004) using the GB(OBC)II model (corresponding to igb=5 in AMBER) 
-

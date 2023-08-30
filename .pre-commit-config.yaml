@@ -2,6 +2,11 @@ ci:
   autoupdate_schedule: "quarterly"
 files: ^openff|(^examples/((?!deprecated).)*$)
 repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.4.0
+  hooks:
+  - id: end-of-file-fixer
+    exclude: '\.(json|pdb)$'
 - repo: https://github.com/psf/black
   rev: 23.3.0
   hooks:

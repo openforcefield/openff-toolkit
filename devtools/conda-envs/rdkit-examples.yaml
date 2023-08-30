@@ -4,7 +4,7 @@ channels:
 dependencies:
     # Base depends
   - python
-  - pydantic
+  - pydantic =1
   - packaging
   - numpy
   - networkx
@@ -36,7 +36,9 @@ dependencies:
   - toml
   - bson
   - msgpack-python
-  - qcportal ==0.15.8
+  - qcelemental
+  - qcportal >=0.15
+  - qcengine
   - nbval
   - mdtraj
   - pdbfixer

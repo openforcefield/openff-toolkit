@@ -108,6 +108,10 @@ jobs:
         run: |
           python -m pip install utilities/test_plugins
 
+      - name: Install QCPortal
+        if: ${{ matrix.pydantic-version == 1 }}
+        run: micromamba install "qcportal ==0.15.8" -c conda-forge
+
       - name: Remove undesired toolkits
         run: |
           if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
