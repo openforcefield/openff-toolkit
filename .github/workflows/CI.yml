@@ -55,7 +55,7 @@ jobs:
           if [[ ${{ matrix.openeye }} == true && ${{ matrix.rdkit }} == true ]]; then
               echo "ENVFILE=test_env" >> $GITHUB_ENV
               echo "JOBNAME=RDKit and OpenEye" >> $GITHUB_ENV
-              echo "TOOLKIT_CHECKS=RDKIT OPENEYE NAGL" >> $GITHUB_ENV
+              echo "TOOLKIT_CHECKS=RDKIT OPENEYE" >> $GITHUB_ENV
               echo "PACKAGES_TO_REMOVE=" >> $GITHUB_ENV
           fi
 
@@ -63,13 +63,13 @@ jobs:
               echo "ENVFILE=openeye" >> $GITHUB_ENV
               echo "JOBNAME=OpenEye" >> $GITHUB_ENV
               echo "TOOLKIT_CHECKS=OPENEYE" >> $GITHUB_ENV
-              echo "PACKAGES_TO_REMOVE=ambertools rdkit openff-nagl-base" >> $GITHUB_ENV
+              echo "PACKAGES_TO_REMOVE=ambertools rdkit" >> $GITHUB_ENV
           fi
 
           if [[ ${{ matrix.openeye }} == false && ${{ matrix.rdkit }} == true ]]; then
               echo "ENVFILE=rdkit" >> $GITHUB_ENV
               echo "JOBNAME=RDKit" >> $GITHUB_ENV
-              echo "TOOLKIT_CHECKS=RDKIT NAGL" >> $GITHUB_ENV
+              echo "TOOLKIT_CHECKS=RDKIT" >> $GITHUB_ENV
               echo "PACKAGES_TO_REMOVE=openeye-toolkits" >> $GITHUB_ENV
           fi
 
@@ -114,6 +114,10 @@ jobs:
             done
           fi
 
+      - name: Remove NAGL if no RDKit
+        if: ${{ matrix.rdkit == false }}
+        run: micromamba remove --force openff-nagl-base --yes
+
       - name: Check installed toolkits
         run: |
           for tk in ${{ env.TOOLKIT_CHECKS }}; do
@@ -124,7 +128,7 @@ jobs:
         run: |
           if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
             for tk in ${{ env.PACKAGES_TO_REMOVE }}; do
-              TK=$(echo ${tk%-*} | sed 's/openff-nagl/_nagl/' | tr 'a-z' 'A-Z')
+              TK=$(echo ${tk%-*} | tr 'a-z' 'A-Z')
               python -c "from openff.toolkit.utils.toolkits import ${TK}_AVAILABLE; assert not ${TK}_AVAILABLE, '${TK} available'"
             done
           fi

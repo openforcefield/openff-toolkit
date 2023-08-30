@@ -57,7 +57,6 @@ __all__ = (
 
 import logging
 
-from openff.toolkit.utils._nagl_wrapper import _NAGLToolkitWrapper
 from openff.toolkit.utils.ambertools_wrapper import AmberToolsToolkitWrapper
 from openff.toolkit.utils.base_wrapper import ToolkitWrapper
 from openff.toolkit.utils.builtin_wrapper import BuiltInToolkitWrapper
@@ -108,7 +107,6 @@ GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
 OPENEYE_AVAILABLE = False
 RDKIT_AVAILABLE = False
 AMBERTOOLS_AVAILABLE = False
-_NAGL_AVAILABLE = False
 
 with toolkit_registry_manager(
     ToolkitRegistry(
@@ -116,7 +114,6 @@ with toolkit_registry_manager(
             OpenEyeToolkitWrapper,
             RDKitToolkitWrapper,
             AmberToolsToolkitWrapper,
-            _NAGLToolkitWrapper,
         ],
         exception_if_unavailable=False,
     )
@@ -128,8 +125,6 @@ with toolkit_registry_manager(
             RDKIT_AVAILABLE = True
         elif type(toolkit) is AmberToolsToolkitWrapper:
             AMBERTOOLS_AVAILABLE = True
-        elif type(toolkit) is _NAGLToolkitWrapper:
-            _NAGL_AVAILABLE = True
 
 
 # Define basic toolkits that handle essential file I/O
