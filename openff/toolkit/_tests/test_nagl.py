@@ -5,6 +5,7 @@ import pytest
 from openff.units import unit
 from openff.utilities.testing import skip_if_missing
 
+from openff.toolkit import Molecule
 from openff.toolkit._tests.create_molecules import (
     create_acetaldehyde,
     create_cis_1_2_dichloroethene,
@@ -12,7 +13,6 @@ from openff.toolkit._tests.create_molecules import (
     create_ethanol,
     create_reversed_ethanol,
 )
-from openff.toolkit import Molecule
 from openff.toolkit._tests.utils import requires_openeye
 from openff.toolkit.utils._nagl_wrapper import _NAGLToolkitWrapper
 from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
@@ -58,9 +58,7 @@ class TestNAGLToolkitWrapper:
         assert nagl_charges.dtype == float
 
         numpy.testing.assert_allclose(
-            openeye_charges.m_as(unit.elementary_charge),
-            nagl_charges,
-            atol=0.07
+            openeye_charges.m_as(unit.elementary_charge), nagl_charges, atol=0.07
         )
 
     def test_atom_order_dependence(self):
@@ -86,7 +84,6 @@ class TestNAGLToolkitWrapper:
                 toolkit_registry=_NAGLToolkitWrapper(),
             )
 
-
     def test_unsupported_molecule_element(self):
         si = Molecule.from_smiles("[Si+4]")
         with pytest.raises(ValueError, match="Molecule contains forbidden element 14"):
@@ -94,7 +91,7 @@ class TestNAGLToolkitWrapper:
                 partial_charge_method="_nagl_am1bccelf10",
                 toolkit_registry=_NAGLToolkitWrapper(),
             )
-    
+
     def test_unsupported_molecule_bond(self):
         mol = Molecule.from_smiles("C=[Cl+1]")
         err = re.escape("Molecule contains forbidden SMARTS pattern [#17:1]#,:,=[*:2]")
