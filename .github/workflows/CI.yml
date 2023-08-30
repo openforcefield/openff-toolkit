@@ -124,7 +124,7 @@ jobs:
         run: |
           if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
             for tk in ${{ env.PACKAGES_TO_REMOVE }}; do
-              TK=$(echo ${tk%-*} | tr 'a-z' 'A-Z')
+              TK=$(echo ${tk%-*} | sed 's/openff-nagl/_nagl/' | tr 'a-z' 'A-Z')
               python -c "from openff.toolkit.utils.toolkits import ${TK}_AVAILABLE; assert not ${TK}_AVAILABLE, '${TK} available'"
             done
           fi

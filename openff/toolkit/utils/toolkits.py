@@ -57,6 +57,7 @@ __all__ = (
 
 import logging
 
+from openff.toolkit.utils._nagl_wrapper import _NAGLToolkitWrapper
 from openff.toolkit.utils.ambertools_wrapper import AmberToolsToolkitWrapper
 from openff.toolkit.utils.base_wrapper import ToolkitWrapper
 from openff.toolkit.utils.builtin_wrapper import BuiltInToolkitWrapper
@@ -107,6 +108,7 @@ GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
 OPENEYE_AVAILABLE = False
 RDKIT_AVAILABLE = False
 AMBERTOOLS_AVAILABLE = False
+_NAGL_AVAILABLE = _NAGLToolkitWrapper.is_available()
 
 # Only available toolkits will have made it into the GLOBAL_TOOLKIT_REGISTRY
 for toolkit in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits:
