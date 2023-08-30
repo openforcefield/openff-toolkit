@@ -44,13 +44,33 @@ Alternatively, the global toolkit registry (which will attempt to register any a
 Individual toolkits can be registered or deregistered to control the backend that ToolkitRegistry calls resolve to. This can
 be useful for debugging and exploring subtley different behavior between toolkit wrappers.
 
+To temporarily change the state of ``GLOBAL_TOOLKIT_REGISTRY``, we provide the ``toolkit_registry_manager``
+context manager.
+
 .. code-block:: python
 
-    from openff.toolkit.utils.toolkits import OpenEyeToolkitWrapper, BuiltInToolkitWrapper
-    from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
-    toolkit_registry.deregister_toolkit(OpenEyeToolkitWrapper)
-    toolkit_registry.register_toolkit(BuiltInToolkitWrapper)
-    toolkit_registry.registered_toolkits
+    >>> from openff.toolkit.utils.toolkits import RDKitToolkitWrapper, AmberToolsToolkitWrapper, GLOBAL_TOOLKIT_REGISTRY
+    >>> from openff.toolkit.utils import toolkit_registry_manager
+    >>> print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
+    4
+    >>> with toolkit_registry_manager(ToolkitRegistry([RDKitToolkitWrapper(), AmberToolsToolkitWrapper()])):
+    ...     print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
+    2
+
+To remove ``ToolkitWrappers`` permanently from a ``ToolkitRegistry``, the ``deregister_toolkit`` method can be used:
+
+.. code-block:: python
+
+    >>> from openff.toolkit.utils.toolkits import OpenEyeToolkitWrapper, BuiltInToolkitWrapper
+    >>> from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
+    >>> print(len(toolkit_registry.registered_toolkits))
+    4
+    >>> toolkit_registry.deregister_toolkit(RDKitToolkitWrapper)
+    >>> print(len(toolkit_registry.registered_toolkits))
+    3
+    >>> toolkit_registry.register_toolkit(RDKitToolkitWrapper)
+    >>> print(len(toolkit_registry.registered_toolkits))
+    4
 
 For example, differences in ``to_smiles`` functionality between OpenEye toolkits and The RDKit can
 be explored by selecting which toolkit(s) are and are not registered.
@@ -80,6 +100,13 @@ be explored by selecting which toolkit(s) are and are not registered.
     RDKitToolkitWrapper
     AmberToolsToolkitWrapper
     BuiltInToolkitWrapper
+
+.. currentmodule:: openff.toolkit.utils.toolkit_registry
+.. autosummary::
+    :nosignatures:
+    :toctree: api/generated/
+
+    toolkit_registry_manager
 
 Serialization support
 ---------------------

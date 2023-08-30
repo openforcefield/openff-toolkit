@@ -2427,3 +2427,22 @@ class Topology(Serializable):
             if hasattr(molecule, iter_name):
                 for item in getattr(molecule, iter_name):
                     yield item
+
+    def __getattr__(self, name: str) -> List["HierarchyElement"]:
+        """If a requested attribute is not found, check the hierarchy schemes"""
+        # Avoid attempting to process dunder methods as hierarchy scheme iterator names
+        if name.startswith("__"):
+            raise AttributeError
+
+        try:
+            return [
+                element
+                for molecule in self.molecules
+                for element in molecule.hierarchy_schemes[name].hierarchy_elements
+            ]
+        except (KeyError, AttributeError) as error:
+            raise AttributeError(
+                f"'{self.__class__.__name__}' object has no attribute '{name}'. If looking for a "
+                "`HierarchyScheme` iterator, not all molecules in this topology have an interator "
+                f"name {name} defined."
+            ) from error
