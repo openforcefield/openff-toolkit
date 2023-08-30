@@ -22,7 +22,7 @@ defaults:
 jobs:
   test:
     if: (github.event_name == 'schedule' && github.repository == 'openforcefield/openff-toolkit') || (github.event_name != 'schedule')
-    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.rdkit }}, OpenEye=${{ matrix.openeye }}
+    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.rdkit }}, OpenEye=${{ matrix.openeye }}, Pydantic v${{ matrix.pydantic-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
