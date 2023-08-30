@@ -35,12 +35,12 @@ dependencies:
   - toml
   - bson
   - msgpack-python
-  - nglview
+  - qcelemental
+  - qcportal ==0.15.8
   - mdtraj
   - nbval
   - mypy
   - typing_extensions
-  - pydantic
   - pip:
     - types-setuptools
     - types-toml

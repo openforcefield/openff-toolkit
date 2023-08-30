@@ -36,9 +36,9 @@ dependencies:
   - toml
   - bson
   - msgpack-python
+  - qcportal ==0.15.8
   - nbval
   - mdtraj
   - pdbfixer
   - openmmforcefields >=0.11.2
   - gromacs >=2021=nompi*
-  - nglview
