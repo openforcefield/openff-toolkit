@@ -28,7 +28,6 @@ import os
 import pathlib
 from typing import TYPE_CHECKING, List, Optional, Type, Union
 
-from openff.interchange.exceptions import PluginCompatibilityError
 from packaging.version import Version
 
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
@@ -1162,6 +1161,9 @@ class ForceField:
         allow_nonintegral_charges
             Allow charges that do not sum to an integer.
         """
+
+        from openff.interchange.exceptions import PluginCompatibilityError
+
         try:
             return self.create_interchange(
                 topology,
