@@ -28,7 +28,7 @@ import os
 import pathlib
 from typing import TYPE_CHECKING, List, Optional, Type, Union
 
-import openff.interchange.exceptions
+from openff.interchange.exceptions import PluginCompatibilityError
 from packaging.version import Version
 
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
@@ -1170,7 +1170,7 @@ class ForceField:
                 partial_bond_orders_from_molecules=partial_bond_orders_from_molecules,
                 allow_nonintegral_charges=allow_nonintegral_charges,
             ).to_openmm(combine_nonbonded_forces=True)
-        except openff.interchange.exceptions.PluginCompatibilityError:
+        except PluginCompatibilityError:
             return self.create_interchange(
                 topology,
                 toolkit_registry,
