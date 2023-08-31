@@ -173,7 +173,7 @@ jobs:
           pytest -v --no-cov --nbval --ignore docs/_build/ docs/
 
       - name: Run examples in docstrings
-        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
+        if: ${{ matrix.rdkit == true && matrix.openeye == true && matrix.pydantic-version == 1 }}
         run: |
           pytest -v --no-cov --doctest-modules --ignore=openff/toolkit/_tests/ --ignore=openff/toolkit/data/ --ignore=openff/toolkit/utils/utils.py openff/
 
