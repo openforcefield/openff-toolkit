@@ -3674,8 +3674,9 @@ class TestMolecule:
         assert mol_source._partial_charges is not mol_copy._partial_charges
 
 
+@requires_pkg("IPython")
 class TestMoleculeVisualization:
-    @requires_pkg("IPython")
+
     @requires_rdkit
     def test_visualize_rdkit(self):
         """
