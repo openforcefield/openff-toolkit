@@ -28,6 +28,7 @@ import os
 import pathlib
 from typing import TYPE_CHECKING, List, Optional, Type, Union
 
+import openff.interchange.exceptions
 from packaging.version import Version
 
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
@@ -1161,13 +1162,22 @@ class ForceField:
         allow_nonintegral_charges
             Allow charges that do not sum to an integer.
         """
-        return self.create_interchange(
-            topology,
-            toolkit_registry,
-            charge_from_molecules=charge_from_molecules,
-            partial_bond_orders_from_molecules=partial_bond_orders_from_molecules,
-            allow_nonintegral_charges=allow_nonintegral_charges,
-        ).to_openmm(combine_nonbonded_forces=True)
+        try:
+            return self.create_interchange(
+                topology,
+                toolkit_registry,
+                charge_from_molecules=charge_from_molecules,
+                partial_bond_orders_from_molecules=partial_bond_orders_from_molecules,
+                allow_nonintegral_charges=allow_nonintegral_charges,
+            ).to_openmm(combine_nonbonded_forces=True)
+        except openff.interchange.exceptions.PluginCompatibilityError:
+            return self.create_interchange(
+                topology,
+                toolkit_registry,
+                charge_from_molecules=charge_from_molecules,
+                partial_bond_orders_from_molecules=partial_bond_orders_from_molecules,
+                allow_nonintegral_charges=allow_nonintegral_charges,
+            ).to_openmm(combine_nonbonded_forces=False)
 
     @requires_package("openff.interchange")
     def create_interchange(
