@@ -3745,8 +3745,15 @@ class TestMoleculeVisualization:
     )
     def test_ipython_repr_no_nglview(self):
         """Test that the default Molecule repr does not break when nglview is not installed"""
+        from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
+
         molecule = Molecule().from_smiles("CCO")
-        molecule._ipython_display_()
+
+        if RDKIT_AVAILABLE:
+            # the default is `backend="rdkit"`
+            molecule.visualize()
+        elif OPENEYE_AVAILABLE:
+            molecule.visualize(backend="openeye")
 
     def test_get_coordinates(self):
         from openff.toolkit.utils.viz import _OFFTrajectoryNGLView
