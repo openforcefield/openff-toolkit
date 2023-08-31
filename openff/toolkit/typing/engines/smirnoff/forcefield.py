@@ -1124,6 +1124,7 @@ class ForceField:
 
     # TODO: Should we also accept a Molecule as an alternative to a Topology?
     @requires_package("openmm")
+    @requires_package("openff.interchange")
     def create_openmm_system(
         self,
         topology: "Topology",
