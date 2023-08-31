@@ -3676,7 +3676,6 @@ class TestMolecule:
 
 @requires_pkg("IPython")
 class TestMoleculeVisualization:
-
     @requires_rdkit
     def test_visualize_rdkit(self):
         """
