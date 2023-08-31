@@ -110,7 +110,7 @@ jobs:
 
       - name: Install QCPortal
         if: ${{ matrix.pydantic-version == 1 }}
-        run: micromamba install "qcportal ==0.15.8" -c conda-forge
+        run: micromamba install qcelemental "qcportal ==0.15.8" -c conda-forge
 
       - name: Remove undesired toolkits
         run: |
