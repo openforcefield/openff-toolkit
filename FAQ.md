@@ -70,19 +70,19 @@ As of August 2022, some upstreams (at least AmberTools, possibly more) are not b
 
 (Keywords `osx-arm64`, M1 Mac, M2 Mac)
 
-## My conda installation of the toolkit doesn't appear to work. What should I try next?
+## My mamba/conda installation of the toolkit doesn't appear to work. What should I try next?
 
-We recommend that you install the toolkit in a fresh conda environment, explicitly passing the channels to be used, in-order:
+We recommend that you install the toolkit in a fresh environment, explicitly passing the channels to be used, in-order:
 
 ```shell
-conda create -n <my_new_env> -c conda-forge openff-toolkit
-conda activate <my_new_env>
+mamba create -n <my_new_env> -c conda-forge openff-toolkit
+mamba activate <my_new_env>
 ```
 
-Installing into a new environment avoids forcing conda to satisfy the dependencies of both the toolkit and all existing packages in that environment.
-Taking the approach that conda environments are generally disposable, even ephemeral, minimizes the chances for hard-to-diagnose dependency issues.
+Installing into a new environment avoids forcing mamba to satisfy the dependencies of both the toolkit and all existing packages in that environment.
+Taking the approach that virtual environments are generally disposable, even ephemeral, minimizes the chances for hard-to-diagnose dependency issues.
 
-## My conda installation of the toolkit STILL doesn't appear to work.
+## My mamba/conda installation of the toolkit STILL doesn't appear to work.
 
 Many of our users encounter issues that are ultimately due to their terminal finding a different `conda` at higher priority in their `PATH` than the `conda` deployment where OpenFF is installed. To fix this, find the conda deployment where OpenFF is installed. Then, if that folder is something like `~/miniconda3`, run in the terminal:
 
