@@ -1179,22 +1179,22 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     )
                 return description
 
-            msg = (
-                "OEMol has unspecified stereochemistry. "
-                "oemol.GetTitle(): {}\n".format(oemol.GetTitle())
-            )
-            if len(problematic_atoms) != 0:
-                msg += "Problematic atoms are:\n"
-                for problematic_atom in problematic_atoms:
-                    msg += describe_oeatom(problematic_atom) + "\n"
-            if len(problematic_bonds) != 0:
-                msg += "Problematic bonds are: {}\n".format(problematic_bonds)
-            if allow_undefined_stereo:
-                msg = "Warning (not error because allow_undefined_stereo=True): " + msg
-                logger.warning(msg)
-            else:
-                msg = "Unable to make OFFMol from OEMol: " + msg
-                raise UndefinedStereochemistryError(msg)
+            if (
+                len(problematic_atoms) != 0 or len(problematic_bonds) != 0
+            ) and not allow_undefined_stereo:
+                msg = f"OEMol has unspecified stereochemistry. {oemol.GetTitle()=}"
+
+                if len(problematic_atoms) != 0:
+                    msg += "Problematic atoms are:\n"
+                    for problematic_atom in problematic_atoms:
+                        msg += describe_oeatom(problematic_atom) + "\n"
+
+                if len(problematic_bonds) != 0:
+                    msg += f"Problematic bonds are: {problematic_bonds}\n"
+
+                raise UndefinedStereochemistryError(
+                    f"Unable to make OFFMol from OEMol: {msg}"
+                )
 
         if _cls is None:
             from openff.toolkit.topology.molecule import Molecule
