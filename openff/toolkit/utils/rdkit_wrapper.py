@@ -1046,7 +1046,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             Note that not all toolkits support all formats. Check
             ToolkitWrapper.toolkit_file_read_formats for details.
         allow_undefined_stereo : bool, default=False
-            If false, raises an exception if oemol contains undefined stereochemistry.
+            If false, raises an exception if RDMol contains undefined stereochemistry.
         _cls : class
             Molecule constructor
         Returns
@@ -1135,7 +1135,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             Note that not all toolkits support all formats. Check
             ToolkitWrapper.toolkit_file_read_formats for details.
         allow_undefined_stereo : bool, default=False
-            If false, raises an exception if oemol contains undefined stereochemistry.
+            If false, raises an exception if RDMol contains undefined stereochemistry.
         _cls : class
             Molecule constructor
         Returns
@@ -2307,7 +2307,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 map_id = rda.GetAtomMapNum()
 
             # create a new atom
-            # atomic_number = oemol.NewAtom(rda.GetAtomicNum())
             atomic_number = rda.GetAtomicNum()
             # implicit units of elementary charge
             formal_charge = rda.GetFormalCharge()

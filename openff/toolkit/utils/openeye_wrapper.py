@@ -634,7 +634,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         ofs.close()
 
     @staticmethod
-    def _turn_oemolbase_sd_charges_into_partial_charges(oemol):
+    def _turn_oemolbase_sd_charges_into_partial_charges(oemol) -> bool:
         """
         Process an OEMolBase object and check to see whether it has an SD data pair
         where the tag is "atom.dprop.PartialCharge", indicating that it has a list of
@@ -671,7 +671,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         return False
 
     def _read_oemolistream_molecules(
-        self, oemolistream, allow_undefined_stereo, file_path=None, _cls=None
+        self, oemolistream, allow_undefined_stereo: bool, file_path=None, _cls=None
     ):
         """
         Reads and return the Molecules in a OEMol input stream.
@@ -1808,7 +1808,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def to_inchi(self, molecule: "Molecule", fixed_hydrogens: bool = False) -> str:
         """
-        Create an InChI string for the molecule using the RDKit Toolkit.
+        Create an InChI string for the molecule using the OpenEye OEChem Toolkit.
         InChI is a standardised representation that does not capture tautomers
         unless specified using the fixed hydrogen layer.
 
@@ -1845,7 +1845,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def to_inchikey(self, molecule: "Molecule", fixed_hydrogens: bool = False) -> str:
         """
-        Create an InChIKey for the molecule using the RDKit Toolkit.
+        Create an InChIKey for the molecule using the OpenEye OEChem Toolkit.
         InChIKey is a standardised representation that does not capture tautomers
         unless specified using the fixed hydrogen layer.
 
