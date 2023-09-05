@@ -25,7 +25,7 @@ jobs:
     name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.rdkit }}, OpenEye=${{ matrix.openeye }}, OpenMM=${{ matrix.openmm }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os: [ubuntu-latest, macos-latest]
         python-version: ["3.9", "3.10", "3.11"]
@@ -44,7 +44,7 @@ jobs:
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openff
-      PYTEST_ARGS: -r fE --tb=short -nauto
+      PYTEST_ARGS: -r fE --tb=short -nauto -x
       COV: --cov=openff/toolkit --cov-config=setup.cfg --cov-append --cov-report=xml
 
     steps:
