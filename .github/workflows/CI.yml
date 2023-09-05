@@ -168,7 +168,7 @@ jobs:
           pytest -v --no-cov --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
 
       - name: Run notebooks in docs
-        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
+        if: ${{ matrix.rdkit == true && matrix.openeye == true && matrix.openmm == true}}
         run: |
           pytest -v --no-cov --nbval --ignore docs/_build/ docs/
 
