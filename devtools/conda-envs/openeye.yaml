@@ -29,7 +29,6 @@ dependencies:
   - pytest
   - pytest-cov
   - pytest-xdist
-  - pytest-randomly
   - pytest-rerunfailures
   - pyyaml
   - toml
