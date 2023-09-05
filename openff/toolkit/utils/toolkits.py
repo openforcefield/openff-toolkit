@@ -87,6 +87,7 @@ from openff.toolkit.utils.exceptions import (
 )
 from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
+from openff.toolkit.utils._nagl_wrapper import _NAGLToolkitWrapper
 from openff.toolkit.utils.toolkit_registry import (
     ToolkitRegistry,
     toolkit_registry_manager,
@@ -98,6 +99,7 @@ logger = logging.getLogger(__name__)
 # Create global toolkit registry, where all available toolkits are registered
 GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
     toolkit_precedence=[
+        _NAGLToolkitWrapper,
         OpenEyeToolkitWrapper,
         RDKitToolkitWrapper,
         AmberToolsToolkitWrapper,
