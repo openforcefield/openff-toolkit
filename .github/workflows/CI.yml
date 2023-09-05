@@ -48,7 +48,7 @@ jobs:
       COV: --cov=openff/toolkit --cov-config=setup.cfg --cov-append --cov-report=xml
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
@@ -118,8 +118,11 @@ jobs:
 
       - name: Optionally remove OpenMM
         if: ${{ matrix.openmm == false }}
-        run: |
-          micromamba remove --force openmm
+        run: micromamba remove --force openmm --yes
+
+      - name: Remove NAGL if no RDKit
+        if: ${{ matrix.rdkit == false }}
+        run: micromamba remove --force openff-nagl-base --yes
 
       - name: Check installed toolkits
         run: |
