@@ -1293,25 +1293,19 @@ class TestForceField(_ForceFieldFixtures):
         BondHandler._DEPENDENCIES = orig_bh_depends
         AngleHandler._DEPENDENCIES = orig_ah_depends
 
-    @skip_if_missing("openmm")
     def test_parameterize_ethanol_missing_torsion(self):
         from openff.interchange.exceptions import UnassignedTorsionError
-
-        forcefield = ForceField(xml_missing_torsion)
-
-        topology = Topology.from_pdb(
-            get_data_file_path("systems/test_systems/1_ethanol.pdb"),
-            unique_molecules=[create_ethanol()],
-        )
 
         with pytest.raises(
             UnassignedTorsionError,
             match="- Topology indices [(]5, 0, 1, 6[)]: "
             r"names and elements [(](H\d+)? H[)], [(](C\d+)? C[)], [(](C\d+)? C[)], [(](H\d+)? H[)],",
         ):
-            forcefield.create_interchange(topology)
+            ForceField(xml_missing_torsion).create_interchange(
+                create_ethanol().to_topology()
+            )
 
-    @skip_if_missing("openmm")
+    # TODO: This test does not really complete a "arrange, act, assert"
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
     def test_parameterize_1_cyclohexane_1_ethanol(
         self,
@@ -1319,14 +1313,10 @@ class TestForceField(_ForceFieldFixtures):
         force_field,
     ):
         """Test parameterizing a periodic system of two distinct molecules"""
-        topology = Topology.from_pdb(
-            get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb"),
-            unique_molecules=[create_ethanol(), create_cyclohexane()],
-        )
+        topology = Topology.from_molecules([create_ethanol(), create_cyclohexane()])
 
         force_field.create_interchange(topology, toolkit_registry=toolkit_registry)
 
-    @skip_if_missing("openmm")
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
     def test_parameterize_1_cyclohexane_1_ethanol_vacuum(
         self,
@@ -1334,16 +1324,15 @@ class TestForceField(_ForceFieldFixtures):
         force_field,
     ):
         """Test parametrizing a nonperiodic system of two distinct molecules"""
-        topology = Topology.from_pdb(
-            get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb"),
-            unique_molecules=[create_ethanol(), create_cyclohexane()],
-        )
-
+        topology = Topology.from_molecules([create_ethanol(), create_cyclohexane()])
         topology.box_vectors = None
 
-        force_field.create_interchange(topology, toolkit_registry=toolkit_registry)
+        out = force_field.create_interchange(
+            topology=topology,
+            toolkit_registry=toolkit_registry,
+        )
+        assert not out.box
 
-    @skip_if_missing("openmm")
     @pytest.mark.slow
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
     @pytest.mark.parametrize(
@@ -1966,7 +1955,6 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             q, _, _ = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
 
-    @skip_if_missing("openmm")
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
     def test_nonintegral_charge_exception(self, toolkit_registry, force_field):
         # Create an ethanol molecule without using a toolkit
@@ -1975,34 +1963,23 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         ethanol = create_ethanol()
         ethanol.partial_charges[0] = 1.0 * unit.elementary_charge
 
-        topology = Topology.from_pdb(
-            get_data_file_path("systems/test_systems/1_ethanol.pdb"),
-            unique_molecules=[ethanol],
-        )
-
         with pytest.raises(
             NonIntegralMoleculeChargeError, match="Molecule .* has a net charge"
         ):
             force_field.create_interchange(
-                topology,
+                topology=ethanol.to_topology(),
                 charge_from_molecules=[ethanol],
                 toolkit_registry=toolkit_registry,
             )
 
-    @skip_if_missing("openmm")
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
     def test_nonintegral_charge_override(self, toolkit_registry, force_field):
         ethanol = create_ethanol()
         ethanol.partial_charges[0] = 1.0 * unit.elementary_charge
 
-        topology = Topology.from_pdb(
-            get_data_file_path("systems/test_systems/1_ethanol.pdb"),
-            unique_molecules=[ethanol],
-        )
-
         # Pass when the `allow_nonintegral_charges` keyword is included
         force_field.create_interchange(
-            topology,
+            topology=ethanol.to_topology(),
             charge_from_molecules=[ethanol],
             toolkit_registry=toolkit_registry,
             allow_nonintegral_charges=True,
@@ -2017,12 +1994,8 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         """
         ethanol = create_ethanol()
         cyclohexane = create_cyclohexane()
-        molecules = [ethanol, cyclohexane]
 
-        topology = Topology.from_pdb(
-            get_data_file_path("systems/test_systems/1_cyclohexane_1_ethanol.pdb"),
-            unique_molecules=molecules,
-        )
+        topology = Topology.from_molecules([cyclohexane, ethanol])
 
         found_charges = [
             charge.m
