@@ -82,7 +82,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
     _toolkit_name = "OpenEye Toolkit"
     _toolkit_installation_instructions = (
         "The OpenEye Toolkits can be installed via "
-        "`conda install openeye-toolkits -c openeye`"
+        "`mamba install openeye-toolkits -c openeye`"
     )
     _toolkit_license_instructions = (
         "The OpenEye Toolkits require a (free for academics) license, see "
