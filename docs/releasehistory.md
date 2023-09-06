@@ -12,6 +12,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Behavior changes
 
+- [PR #1705](https://github.com/openforcefield/openff-toolkit/pull/1705): Do not raise warning when `allow_undefined_stereo=True`.
+
 ### Bugfixes
 
 ### New features
