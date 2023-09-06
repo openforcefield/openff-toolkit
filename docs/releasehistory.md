@@ -8,6 +8,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+- [PR #17XX](https://github.com/openforcefield/openff-toolkit/pull/17XX): Deprecates `Molecule.from_polymer_pdb`, `Molecule.from_pdb_and_smiles`, and `RDKitToolkitWrapper.from_pdb_and_smiles` in favor of `Topology.from_pdb`.
+
 ### API-breaking changes
 
 ### Behavior changes
