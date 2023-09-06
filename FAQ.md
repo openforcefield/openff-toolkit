@@ -80,7 +80,7 @@ mamba activate <my_new_env>
 ```
 
 Installing into a new environment avoids forcing mamba to satisfy the dependencies of both the toolkit and all existing packages in that environment.
-Taking the approach that virtual environments are generally disposable, even ephemeral, minimizes the chances for hard-to-diagnose dependency issues.
+Taking the approach that conda/mamba environments are generally disposable, even ephemeral, minimizes the chances for hard-to-diagnose dependency issues.
 
 ## My mamba/conda installation of the toolkit STILL doesn't appear to work.
 
