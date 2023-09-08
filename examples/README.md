@@ -1,5 +1,7 @@
 # Examples using SMIRNOFF with the toolkit
 
+These examples are best viewed at our [centralized documentation](https://docs.openforcefield.org/en/latest/examples.html), which also contains [installation instructions](https://docs.openforcefield.org/en/latest/install.html).
+
 The following examples are available in [the OpenFF toolkit repository](https://github.com/openforcefield/openff-toolkit/tree/stable/examples).
 
 ## Index of provided examples
