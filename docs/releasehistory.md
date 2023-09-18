@@ -16,6 +16,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+- [PR #1726](https://github.com/openforcefield/openff-toolkit/pull/1726): Fix error message in setting `scale12`, `scale13`, and `scale15` attributes.
+
 ### New features
 
 - [PR #1698](https://github.com/openforcefield/openff-toolkit/pull/1698): Makes `openff.toolkit.utils.toolkit_registry.toolkit_registry_manager` public.
