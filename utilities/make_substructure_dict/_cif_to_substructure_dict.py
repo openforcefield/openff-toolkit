@@ -862,7 +862,7 @@ class CifSubstructures:
         for res_name, subs in new_subs_dict.items():
             res_num = 0
             for substruct, atom_names in subs.items():
-                check_dict[f"{res_name}_{res_num}"] = substruct
+                check_dict[f"{res_name}_{res_num}"] = [ substruct ]
                 res_num += 1
         RDKitToolkitWrapper()._validate_custom_substructures(custom_substructures=check_dict, forbidden_keys=[]) # errors if any are invalid
         self.data = new_subs_dict
