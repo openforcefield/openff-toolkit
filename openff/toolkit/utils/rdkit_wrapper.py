@@ -398,7 +398,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """Validates custom substructures to adhere to monomer specifications
         Parameters
         ----------
-        custom_substructures : Dict[str, str]
+        custom_substructures : Dict[str, List[str]]
             substructures given with unique names as keys and smarts as values
         forbidden_keys : DictKeys[str]
             a list of keys that cannot overlap with the custom substructure keys
