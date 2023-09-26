@@ -4090,7 +4090,7 @@ class TestMoleculeFromPDB:
         offmol = Molecule.from_polymer_pdb(
             get_data_file_path("proteins/MainChain_CYM.pdb")
         )
-        assert offmol.n_atoms == 23
+        assert offmol.n_atoms == 22
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C[S-])C(=O)NC")
         assert offmol.is_isomorphic_with(
             expected_mol, atom_stereochemistry_matching=False
