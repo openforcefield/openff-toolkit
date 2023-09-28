@@ -17,6 +17,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Bugfixes
 
 - [PR #1726](https://github.com/openforcefield/openff-toolkit/pull/1726): Fix error message in setting `scale12`, `scale13`, and `scale15` attributes.
+- [PR #1728](https://github.com/openforcefield/openff-toolkit/pull/1728): Adds support for loading deprotonated cysteine (sometimes labeled as "CYM") residues in `Topology.from_pdb`
 
 ### New features
 
