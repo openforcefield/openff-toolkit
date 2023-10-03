@@ -2004,7 +2004,6 @@ class Topology(Serializable):
         """
         import openmm.app
         import openmm.unit
-        from openff.units.openmm import to_openmm as to_openmm_quantity
 
         # Convert the topology to OpenMM
         openmm_top = self.to_openmm(ensure_unique_atom_names=ensure_unique_atom_names)
@@ -2013,14 +2012,13 @@ class Topology(Serializable):
         if isinstance(positions, openmm.unit.Quantity):
             openmm_positions = positions
         elif isinstance(positions, Quantity):
-            openmm_positions = to_openmm_quantity(positions)
+            openmm_positions: openmm.unit.Quantity = positions.to_openmm()
         elif isinstance(positions, np.ndarray):
             openmm_positions = openmm.unit.Quantity(positions, openmm.unit.angstroms)
         elif positions is None:
-            raise ValueError(
-                "Positions must be specified in either molecule conformers or"
-                + " the positions argument."
-            )
+            openmm_positions: openmm.unit.Quantity = self.get_positions().to_openmm()
+        else:
+            raise ValueError(f"Could not process positions of type {type(positions)}.")
 
         if file_format.upper() == "PDB":
             import openmm

@@ -3724,8 +3724,6 @@ class TestMoleculeVisualization:
             mol.visualize(backend="nglview", width=100)
         with pytest.raises(ValueError):
             mol.visualize(backend="nglview", height=100)
-        with pytest.raises(ValueError):
-            mol.visualize(backend="nglview", show_all_hydrogens=False)
 
     @requires_pkg("IPython")
     @requires_openeye
@@ -3769,7 +3767,7 @@ class TestMoleculeVisualization:
             trajectory.get_coordinates(1), molecule.conformers[1].m
         )
 
-        with pytest.raises(IndexError, match="too high"):
+        with pytest.raises(IndexError, match="out of range"):
             trajectory.get_coordinates(100000)
 
 

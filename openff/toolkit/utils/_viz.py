@@ -53,7 +53,7 @@ class MoleculeNGLViewTrajectory(Structure, Trajectory):
         self.params = {}
         self.id = str(uuid.uuid4())
 
-    def get_coordinates(self, index: int):
+    def get_coordinates(self, index: int = 0):
         return self.molecule.conformers[index].m_as(unit.angstrom)
 
     @property
