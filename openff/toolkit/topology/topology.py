@@ -2046,7 +2046,7 @@ class Topology(Serializable):
 
             RDKitToolkitWrapper()._write_topology(
                 topology=self,
-                positions=positions,
+                positions=positions if positions is not None else self.get_positions(),
                 file_path=str(file),
                 file_format=file_format,
             )

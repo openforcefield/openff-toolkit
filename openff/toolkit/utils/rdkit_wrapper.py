@@ -1282,6 +1282,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         from openff.units import ensure_quantity
         from rdkit.Chem import SDWriter
 
+        from openff.toolkit import Topology
+
         # TODO: why was mol2 allowed in this logic? it's an sdf writer
         assert file_format.lower() in ("mol2", "sdf")
 
