@@ -45,7 +45,7 @@ from openff.toolkit.utils.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Atom, Bond, Molecule
+    from openff.toolkit.topology.molecule import Atom, Bond, Molecule, Topology
 
 logger = logging.getLogger(__name__)
 
@@ -1265,6 +1265,31 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             self.to_file_obj(
                 molecule=molecule, file_obj=file_obj, file_format=file_format
             )
+
+    def _write_topology(
+        self,
+        topology: "Topology",
+        positions: Quantity,
+        file_path: str,
+        file_format: str,
+    ):
+        """
+        Backdoor to writing MOL2 files of `Topology`s with RDKit, used only for vizualization.
+
+        Not safe for public use.
+        """
+        from openff.units import ensure_quantity
+        from rdkit.Chem import SDWriter
+
+        # TODO: why was mol2 allowed in this logic? it's an sdf writer
+        assert file_format.lower() in ("mol2", "sdf")
+
+        writer = SDWriter(file_path)
+
+        temp_top = Topology(topology)
+        temp_top.set_positions(ensure_quantity(positions, "openff"))
+        for molecule in temp_top.molecules:
+            writer.write(molecule.to_rdkit())
 
     def enumerate_stereoisomers(
         self,

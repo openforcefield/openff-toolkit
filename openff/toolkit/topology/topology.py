@@ -2042,14 +2042,14 @@ class Topology(Serializable):
                     keepIds=keep_ids,
                 )
         elif file_format.upper() in ["SDF", "MOL2"]:
-            from rdkit.Chem import SDWriter
+            from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
 
-            writer = SDWriter(file)
-
-            temp_top = Topology(self)
-            temp_top.set_positions(ensure_quantity(positions, "openff"))
-            for molecule in temp_top.molecules:
-                writer.write(molecule.to_rdkit())
+            RDKitToolkitWrapper()._write_topology(
+                topology=self,
+                positions=positions,
+                file_path=file,
+                file_format=file_format,
+            )
         else:
             raise NotImplementedError(
                 "Topology.to_file supports only PDB and SDF formats"
