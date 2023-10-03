@@ -2643,13 +2643,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # TODO: Set other properties
         for name, value in molecule.properties.items():
-            if type(value) == str:
+            if type(value) is str:
                 rdmol.SetProp(name, value)
-            elif type(value) == int:
+            elif type(value) is int:
                 rdmol.SetIntProp(name, value)
-            elif type(value) == float:
+            elif type(value) is float:
                 rdmol.SetDoubleProp(name, value)
-            elif type(value) == bool:
+            elif type(value) is bool:
                 rdmol.SetBoolProp(name, value)
             else:
                 # Shove everything else into a string
