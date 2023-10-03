@@ -2417,6 +2417,8 @@ class Topology(Serializable):
         """
         Visualize the trajectory with NGLView.
 
+        Requires all molecules in this topology have positions.
+
         NGLView is a 3D molecular visualization library for use in Jupyter
         notebooks. Note that for performance reasons, by default the
         visualized connectivity is inferred from positions and may not reflect
@@ -2446,9 +2448,15 @@ class Topology(Serializable):
 
         from openff.toolkit.utils._viz import TopologyNGLViewStructure
 
+        if self.get_positions() is None:
+            raise ValueError(
+                "All molecules in this topology must have positions for it to be visualized in a widget."
+            )
+
         widget = nglview.NGLWidget(
             TopologyNGLViewStructure(
-                self, ext="sdf" if ensure_correct_connectivity else "pdb"
+                topology=self,
+                ext="sdf" if ensure_correct_connectivity else "pdb",
             ),
             representations=[
                 dict(type="unitcell", params=dict()),

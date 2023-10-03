@@ -5396,7 +5396,20 @@ class Molecule(FrozenMolecule):
             if self.conformers:
                 from openff.toolkit.utils._viz import MoleculeNGLViewTrajectory
 
-                widget = nv.NGLWidget(MoleculeNGLViewTrajectory(self))
+                try:
+                    widget = nv.NGLWidget(
+                        MoleculeNGLViewTrajectory(
+                            molecule=self,
+                            ext="MOL2",
+                        )
+                    )
+                except ValueError:
+                    widget = nv.NGLWidget(
+                        MoleculeNGLViewTrajectory(
+                            molecule=self,
+                            ext="PDB",
+                        )
+                    )
 
                 widget.clear_representations()
                 widget.add_representation(
