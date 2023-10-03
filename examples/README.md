@@ -1,6 +1,8 @@
 # Examples using SMIRNOFF with the toolkit
 
-The following examples are available in [the OpenFF toolkit repository](https://github.com/openforcefield/openff-toolkit/tree/stable/examples). Each can be run interactively in the browser with [binder](https://mybinder.org/v2/gh/openforcefield/openforcefield/stable?filepath=%2Fexamples%2F), without installing anything on your computer. 
+For users: These examples are best viewed at our [centralized documentation page](https://docs.openforcefield.org/en/latest/examples.html), where you will find a variety of ways to view and run the notebooks.
+
+For developers: The following examples live in [the OpenFF toolkit repository](https://github.com/openforcefield/openff-toolkit/tree/main/examples).
 
 ## Index of provided examples
 

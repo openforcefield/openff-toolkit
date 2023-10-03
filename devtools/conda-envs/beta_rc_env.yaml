@@ -7,7 +7,7 @@ channels:
 dependencies:
     # Base depends
   - python
-  - pip
+  - pydantic =1
   - packaging
   - numpy
   - networkx
@@ -16,13 +16,13 @@ dependencies:
   - xmltodict
   - python-constraint
   - openmm >=7.6
-  - openff-forcefields
+  - openff-forcefields >=2023.05.1
   - smirnoff99Frosst
-  - openff-units >=0.2
+  - openff-units =0.2.0
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.2
-  - openff-nagl >=0.2.2
-  - openff-nagl-models >=0.0.2
+  - openff-interchange-base >=0.3.10
+  - openff-nagl-base ==0.3.0
+  - openff-nagl-models ==0.1.0
     # Toolkit-specific
   - ambertools >=22
   - rdkit
@@ -43,7 +43,6 @@ dependencies:
   - nbval
   - mypy
   - pip:
-    - types-pkg_resources
     - types-setuptools
     - types-toml
     - types-PyYAML

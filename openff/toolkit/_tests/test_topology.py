@@ -14,7 +14,7 @@ from openff.units.openmm import from_openmm
 from openff.units.units import Quantity
 from openmm import app
 
-from openff.toolkit.tests.create_molecules import (
+from openff.toolkit._tests.create_molecules import (
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
@@ -28,7 +28,7 @@ from openff.toolkit.tests.create_molecules import (
     toluene_from_sdf,
     topology_with_metadata,
 )
-from openff.toolkit.tests.utils import (
+from openff.toolkit._tests.utils import (
     get_data_file_path,
     requires_openeye,
     requires_pkg,
@@ -51,15 +51,22 @@ from openff.toolkit.utils import (
     RDKitToolkitWrapper,
 )
 from openff.toolkit.utils.exceptions import (
+    AmbiguousAtomChemicalAssignment,
+    AmbiguousBondChemicalAssignment,
     AtomNotInTopologyError,
     BondNotInTopologyError,
     DuplicateUniqueMoleculeError,
+    HierarchyIteratorNameConflictError,
     IncompatibleUnitError,
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
     MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
+    NonUniqueSubstructureName,
+    SubstructureAtomSmartsInvalid,
+    SubstructureBondSmartsInvalid,
     UnassignedChemistryInPDBError,
+    VirtualSitesUnsupportedError,
     WrongShapeError,
 )
 
@@ -132,48 +139,6 @@ class TestTopology:
         assert topology.box_vectors is None
         assert not topology.is_periodic
         assert len(topology.constrained_atom_pairs.items()) == 0
-
-    def test_deprecated_api_points(self):
-        """Ensure that some of the API deprecated circa v0.11.0 still exist."""
-        from openff.toolkit.topology.topology import TopologyDeprecationWarning
-
-        topology = Topology()
-
-        for key in ["molecules", "atoms", "bonds", "particles"]:
-            old_iterator = "topology_" + key
-            old_counter = "n_topology_" + key
-            with pytest.warns(
-                TopologyDeprecationWarning,
-                match=f"Topology.{old_counter} is deprecated. Use Topology.n_{key} instead.",
-            ):
-                assert getattr(topology, old_counter) == 0
-            with pytest.warns(
-                TopologyDeprecationWarning,
-                match=f"Topology.{old_iterator} is deprecated. Use Topology.{key} instead.",
-            ):
-                assert len([*getattr(topology, old_iterator)]) == 0
-
-        # Some particle-related methods are deprecated for reasons other than the `TopologyX` deprecation
-        with pytest.warns(
-            TopologyDeprecationWarning,
-            match="Topology.n_particles is deprecated. Use Topology.n_atoms instead.",
-        ):
-            assert topology.n_particles == 0
-
-        with pytest.warns(
-            TopologyDeprecationWarning,
-            match="Topology.particles is deprecated. Use Topology.atoms instead.",
-        ):
-            assert len([*topology.particles]) == 0
-
-        topology = Molecule.from_smiles("O").to_topology()
-        first_atom = [*topology.atoms][0]
-
-        with pytest.warns(
-            TopologyDeprecationWarning,
-            match="Topology.particle_index is deprecated. Use Topology.atom_index instead.",
-        ):
-            assert topology.particle_index(first_atom) == 0
 
     def test_reinitialization_box_vectors(self):
         topology = Topology()
@@ -361,14 +326,14 @@ class TestTopology:
         n_ch_bonds = 0
         n_cc_bonds = 0
         for index in range(12):  # 7 from ethane, 5 from ethene
-            topology_bond = topology.bond(index)
-            if topology_bond.bond_order == 1:
+            bond = topology.bond(index)
+            if bond.bond_order == 1:
                 n_single_bonds += 1
-            if topology_bond.bond_order == 2:
+            if bond.bond_order == 2:
                 n_double_bonds += 1
             n_bond_carbons = 0
             n_bond_hydrogens = 0
-            for atom in topology_bond.atoms:
+            for atom in bond.atoms:
                 if atom.atomic_number == 6:
                     n_bond_carbons += 1
                 if atom.atomic_number == 1:
@@ -384,13 +349,13 @@ class TestTopology:
         assert n_ch_bonds == 10
 
         with pytest.raises(ValueError, match="must be an int.*'str'"):
-            topology_bond = topology.bond("one")
+            topology.bond("one")
 
         with pytest.raises(BondNotInTopologyError, match="No bond with index -1"):
             topology.bond(-1)
 
         with pytest.raises(BondNotInTopologyError, match="No bond with index 12"):
-            topology_bond = topology.bond(12)
+            topology.bond(12)
 
     def test_angles(self):
         """Topology.angles should return image angles of all topology molecules."""
@@ -559,6 +524,23 @@ class TestTopology:
         )
         for omm_atom, off_atom in zip(pdbfile.topology.atoms(), topology.atoms):
             assert omm_atom.name == off_atom.name
+
+    def test_from_openmm_virtual_sites(self):
+        from openff.toolkit import ForceField
+
+        water = Molecule.from_mapped_smiles("[O:1]([H:2])[H:3]")
+        opc = ForceField("opc-1.0.1.offxml")
+
+        openmm_topology = opc.create_interchange([water]).to_openmm_topology()
+
+        with pytest.raises(
+            VirtualSitesUnsupportedError,
+            match="Atom <Atom 3 \(EP\) of chain 0 residue 0 \(UNK\)>.* a virtual site",
+        ):
+            Topology.from_openmm(
+                openmm_topology,
+                unique_molecules=[water],
+            )
 
     def test_from_openmm_missing_reference(self):
         """Test creation of an OpenFF Topology object from an OpenMM Topology when missing a unique molecule"""
@@ -781,6 +763,24 @@ class TestTopology:
         assert top.molecule(18).is_isomorphic_with(Molecule.from_smiles("[I-]"))
 
     @requires_rdkit
+    def test_from_pdb_input_types(self):
+        import pathlib
+
+        import openmm.app
+
+        protein_path = get_data_file_path("proteins/ace-ala-nh2.pdb")
+
+        Topology.from_pdb(protein_path)
+
+        Topology.from_pdb(pathlib.Path(protein_path))
+
+        with open(protein_path) as f:
+            Topology.from_pdb(f)
+
+        with pytest.raises(ValueError, match="Unexpected type.*PDBFile"):
+            Topology.from_pdb(openmm.app.PDBFile(protein_path))
+
+    @requires_rdkit
     def test_from_pdb_two_polymers_metadata(self):
         """Test that a PDB with two capped polymers is loaded correctly"""
         top = Topology.from_pdb(get_data_file_path("proteins/TwoMol_SER_CYS.pdb"))
@@ -842,7 +842,10 @@ class TestTopology:
             Topology.from_pdb(get_data_file_path("proteins/ace-ZZZ-gly-nme.pdb"))
 
         # Make unnatural AA
-        mol = Molecule.from_smiles("N[C@@H]([C@@H](C)O[P@](=O)(OCNCO)[O-])C(=O)")
+        # TODO: Should this be able to support defined stereo?
+        mol = Molecule.from_smiles(
+            "N[CH]([CH](C)O[P@](=O)(OCNCO)[O-])C(=O)", allow_undefined_stereo=True
+        )
         # Get the indices of an N term and C term hydrogen for removal
         leaving_atoms = mol.chemical_environment_matches("[H:1]N([H])CC(=O)[H:2]")[0]
 
@@ -1779,6 +1782,106 @@ class TestAddTopology:
         )
 
 
+def residue_equality_check(residue1, residue2):
+    """Hack to work around #1659."""
+    assert residue1.n_atoms == residue2.n_atoms
+    assert residue1.residue_number == residue2.residue_number
+    assert residue1.residue_name == residue2.residue_name
+    assert residue1.chain_id == residue2.chain_id
+    assert residue1.insertion_code == residue2.insertion_code
+
+
+class TestTopologyHierarchyIterators:
+    @requires_rdkit
+    def test_single_small_peptide(
+        self,
+    ):
+        protein_path = get_data_file_path("proteins/ace-ala-nh2.pdb")
+
+        topology = Topology.from_pdb(protein_path)
+        molecule = Molecule.from_polymer_pdb(protein_path)
+
+        assert hasattr(topology, "residues")
+
+        assert len(topology.residues) == len(molecule.residues)
+
+        for topology_residue, molecule_residue in zip(
+            topology.residues,
+            molecule.residues,
+        ):
+            residue_equality_check(
+                topology_residue,
+                molecule_residue,
+            )
+
+    def test_no_iterators(self):
+        topology = Molecule.from_smiles("CCO").to_topology()
+
+        with pytest.raises(
+            AttributeError,
+            match="'Topology' object has no attribute 'residues'",
+        ):
+            topology.residues
+
+    @requires_rdkit
+    def test_error_when_mixed_iterators(
+        self,
+    ):
+        """Test that an error is raised when a topology has molecules with and without an iterator."""
+        protein_path = get_data_file_path("proteins/ace-ala-nh2.pdb")
+
+        topology = Topology.from_pdb(protein_path)
+        topology.add_molecule(Molecule.from_smiles("CCO"))
+
+        with pytest.raises(
+            AttributeError,
+            match="'Topology' object has no attribute 'residues'",
+        ):
+            topology.residues
+
+    def test_molecule_order_wins_over_residue_order(
+        self,
+    ):
+        """Test that no effort is made to sort residues by residue number across molecules."""
+        protein_path = get_data_file_path("proteins/ace-ala-nh2.pdb")
+
+        topology = Topology.from_molecules(
+            [
+                Molecule.from_polymer_pdb(protein_path),
+                Molecule.from_polymer_pdb(protein_path),
+            ]
+        )
+
+        assert (
+            topology.residues[0].residue_number == topology.residues[3].residue_number
+        )
+        assert (
+            topology.residues[1].residue_number == topology.residues[4].residue_number
+        )
+        assert (
+            topology.residues[2].residue_number == topology.residues[5].residue_number
+        )
+
+        assert int(topology.residues[2].residue_number) > int(
+            topology.residues[3].residue_number
+        )
+
+    @pytest.mark.skip(reason="Undefined behavior upstream, see #1660")
+    def test_clashing_hierarchy_scheme_iterator_name(
+        self,
+    ):
+        molecule = Molecule.from_smiles("CCO")
+        molecule.add_hierarchy_scheme(
+            uniqueness_criteria=("magic",),
+            iterator_name="atoms",
+        )
+
+        topology = molecule.to_topology()
+
+        with pytest.raises(HierarchyIteratorNameConflictError):
+            topology.atoms
+
+
 class TestTopologySerialization:
     @pytest.fixture
     def oleic_acid(self):
@@ -2176,3 +2279,138 @@ class TestTopologyPositions:
         topology.set_positions(positions)
         topology._molecules[0]._conformers = None
         assert topology.get_positions() is None
+
+
+@requires_rdkit
+class TestTopologyFromPdbCustomSubstructures:
+    def test_atomic_num_spec(self):
+        with pytest.raises(SubstructureAtomSmartsInvalid):
+            PE_substructs = {
+                "PE": [
+                    "[CD4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+                ]
+            }
+            Topology.from_pdb(
+                get_data_file_path("systems/test_systems/PE.pdb"),
+                _custom_substructures=PE_substructs,
+            )
+
+    def test_monomer_connectivity(self):
+        with pytest.raises(SubstructureAtomSmartsInvalid):
+            PE_substructs = {
+                "PE": [
+                    "[#6D3+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+                ]
+            }
+            Topology.from_pdb(
+                get_data_file_path("systems/test_systems/PE.pdb"),
+                _custom_substructures=PE_substructs,
+            )
+
+    def test_formal_charge_spec(self):
+        with pytest.raises(SubstructureAtomSmartsInvalid):
+            PE_substructs = {
+                "PE": [
+                    "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+                ]
+            }
+            Topology.from_pdb(
+                get_data_file_path("systems/test_systems/PE.pdb"),
+                _custom_substructures=PE_substructs,
+            )
+
+    def test_bond_type_spec(self):
+        with pytest.raises(SubstructureBondSmartsInvalid):
+            PE_substructs = {
+                "PE": [
+                    "[#6D4+0:9](~[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+                ]
+            }
+            Topology.from_pdb(
+                get_data_file_path("systems/test_systems/PE.pdb"),
+                _custom_substructures=PE_substructs,
+            )
+
+    def test_duplicate_monomers(self):
+        with pytest.raises(NonUniqueSubstructureName):
+            PE_substructs = {
+                "LEU": [
+                    "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]"
+                ]
+            }
+            Topology.from_pdb(
+                get_data_file_path("systems/test_systems/PE.pdb"),
+                _custom_substructures=PE_substructs,
+            )
+
+    def test_ambiguous_bond_info_check(self):
+        with pytest.raises(AmbiguousBondChemicalAssignment):
+            PE_substructs = {
+                "PE": [
+                    "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
+                    "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(=[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
+                ]
+            }
+            Topology.from_pdb(
+                get_data_file_path("systems/test_systems/PE.pdb"),
+                _custom_substructures=PE_substructs,
+            )
+
+    def test_ambiguous_formal_charge_check(self):
+        with pytest.raises(AmbiguousAtomChemicalAssignment):
+            PE_substructs = {
+                "PE": [
+                    "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+0:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
+                    "[#6D4+0:9](-[#1D1+0:10])(-[#1D1+0:11])(-[#6D4+1:12](-[#1D1+0:13])(-[#1D1+0:14])-[*:15])-[*:16]",
+                ]
+            }
+            Topology.from_pdb(
+                get_data_file_path("systems/test_systems/PE.pdb"),
+                _custom_substructures=PE_substructs,
+            )
+
+    def test_successful_PE_loading(self):
+        PE_substructs = {
+            "PE": [
+                "[#6D4+0:2](-[#1D1+0:3])(-[#1D1+0:4])(-[#6D4+0:5](-[#1D1+0:6])(-[#1D1+0:7])-[*:8])-[*:1]",
+                "[#6D4+0:2](-[#1D1+0:3])(-[#1D1+0:4])(-[#6D4+0:5](-[#1D1+0:6])(-[#1D1+0:7])-[#1D1+0:8])-[*:1]",
+                "[#6D4+0:2](-[#1D1+0:3])(-[#1D1+0:4])(-[#6D4+0:5](-[#1D1+0:6])(-[#1D1+0:7])-[*:8])-[#1D1+0:1]",
+            ]
+        }
+        Topology.from_pdb(
+            get_data_file_path("systems/test_systems/PE.pdb"),
+            _custom_substructures=PE_substructs,
+        )
+
+    def test_symmetrical_group_COO(self):
+        from rdkit import Chem
+
+        substructure_smarts = (
+            "[#7D4+:1](-[#6D4+0:2](-[#6D3+0:3](=[#8D1+0:4])-[#8D1-:6])(-[#6D4+0:5](-[#1D1+0:8])(-"
+            "[#1D1+0:9])-[#1D1+0:10])-[#1D1+0:7])(-[#1D1+0:11])(-[#1D1+0:12])-[#1D1+0:13]"
+        )
+        ref = Chem.MolFromSmarts(substructure_smarts)
+        rdkit_wrapper = RDKitToolkitWrapper()
+        fuzzy, neighbor_idxs = rdkit_wrapper._fuzzy_query(ref)
+        sym_atoms, sym_bonds = rdkit_wrapper._get_symmetrical_groups(fuzzy, ref)
+
+        assert sorted(sym_atoms) == [3, 4]
+        assert sorted(sym_bonds) == [(2, 3), (2, 4)]
+
+    def test_symmetrical_group_ARG(self):
+        from rdkit import Chem
+
+        substructure_smarts = (
+            "[#7D4+:1](-[#6D4+0:2](-[#6D3+0:3](=[#8D1+0:4])-[#8D1-:12])(-[#6D4+0:5](-[#6D4+0:6](-"
+            "[#6D4+0:7](-[#7D3+0:8](-[#6D3+0:9](-[#7D3+0:10](-[#1D1+0:21])-[#1D1+0:22])=[#7D3+:11"
+            "](-[#1D1+0:23])-[#1D1+0:24])-[#1D1+0:20])(-[#1D1+0:18])-[#1D1+0:19])(-[#1D1+0:16])-["
+            "#1D1+0:17])(-[#1D1+0:14])-[#1D1+0:15])-[#1D1+0:13])(-[#1D1+0:25])(-[#1D1+0:26])-[#1D"
+            "1+0:27]"
+        )
+        ref = Chem.MolFromSmarts(substructure_smarts)
+        rdkit_wrapper = RDKitToolkitWrapper()
+        fuzzy, neighbor_idxs = rdkit_wrapper._fuzzy_query(ref)
+        sym_atoms, sym_bonds = rdkit_wrapper._get_symmetrical_groups(fuzzy, ref)
+
+        assert sorted(sym_atoms) == [3, 4, 10, 13]
+        assert sorted(sym_bonds) == [(2, 3), (2, 4), (9, 10), (9, 13)]

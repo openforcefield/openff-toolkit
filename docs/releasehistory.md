@@ -6,23 +6,116 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-## Current Development
+## Current development
 
+### API-breaking changes
+
+### Behavior changes
+
+- [PR #1705](https://github.com/openforcefield/openff-toolkit/pull/1705): Do not raise warning when `allow_undefined_stereo=True`.
+
+### Bugfixes
+
+- [PR #1726](https://github.com/openforcefield/openff-toolkit/pull/1726): Fix error message in setting `scale12`, `scale13`, and `scale15` attributes.
+- [PR #1728](https://github.com/openforcefield/openff-toolkit/pull/1728): Adds support for loading deprotonated cysteine (sometimes labeled as "CYM") residues in `Topology.from_pdb`
 
 ### New features
 
+- [PR #1698](https://github.com/openforcefield/openff-toolkit/pull/1698): Makes `openff.toolkit.utils.toolkit_registry.toolkit_registry_manager` public.
+- [PR #1662](https://github.com/openforcefield/openff-toolkit/pull/1662): Adds hierarchy scheme iterators to `Topology`, i.e. `Topology.residues`, when schemes of the same iterator name are defines on all constituent `Molecule`s.
+- [PR #1700](https://github.com/openforcefield/openff-toolkit/pull/1700): Use `openff-nagl` v0.3.0.
+
+### Improved documentation and warnings
+- [PR #1709](https://github.com/openforcefield/openff-toolkit/pull/1709): Update molecule cookbook to use the maximally capable `Topology.from_pdb` in lieu of the more limited `Molecule.from_pdb_and_smiles` and `Molecule.from_polymer_pdb`.
+- [PR #1719](https://github.com/openforcefield/openff-toolkit/pull/1719): Remove out-of-date and unused `examples/environment.yaml` and various examples updates.  
+
+## 0.14.3
+
+### Bugfixes
+
+- [PR #1689](https://github.com/openforcefield/openff-toolkit/pull/1689): Fixes [#1688](https://github.com/openforcefield/openff-toolkit/issues/1688) in which automatic up-conversion of version 0.3 of `vdWHandler` created via the Python API errored out if `method` was not specified.
+- [PR #1690](https://github.com/openforcefield/openff-toolkit/pull/1690): Fixes a circular-import bug that occurs when attempting to print a "no cheminformatics toolkits available" warning.
+
+
+## 0.14.2
 
 ### Behavior changes
+
+- [PR #1679](https://github.com/openforcefield/openff-toolkit/pull/1679): Version 0.3 `<vdW>` sections of OFFXML files will automatically be up-converted (in memory) to version 0.4 according to the recomendations provided in [OFF-EP 0008](https://openforcefield.github.io/standards/enhancement-proposals/off-ep-0008/).
+
+### New features
+
+- [PR #1631](https://github.com/openforcefield/openff-toolkit/pull/1631): Adds support for Python 3.11.
+
+
+## 0.14.1
+
+### API-breaking changes
+
+- [PR #1664](https://github.com/openforcefield/openff-toolkit/pull/1664): Removes `ChemicalEnvironment` and the entire `openff.toolkit.typing.chemistry` submodule, which was deprecated in 0.12.0.
+
+### Behavior changes
+
+- [PR #1675](https://github.com/openforcefield/openff-toolkit/pull/1675): Makes InChI parsing failures more informative and gives them their own exception type, `InChIParseError`.
+
+### New features
+
+- [PR #1627](https://github.com/openforcefield/openff-toolkit/pull/1627): (beta release of major new feature by @connordavel) Adds experimental support for custom substructure loading in `Topology.from_pdb`, via the `_custom_substructures` keyword argument. This will be added to the public API (by removing the leading underscore) in a future feature release, but is available for testing now. This feature should allow for easier loading of modified amino acids, nucleic acids, and other polymers.
 
 
 ### Bugfixes
 
+- [PR #1662](https://github.com/openforcefield/openff-toolkit/pull/1662): Fixes issue [#1660](https://github.com/openforcefield/openff-toolkit/issues/1660) by forbidding the registration of `HierarchyScheme`s with iterator names that conflict with existing `Molecule` attributes.
+- [PR #1667](https://github.com/openforcefield/openff-toolkit/pull/1667): A more helpful exception is now raised when `Topology.from_openmm` is given an OpenMM Topology with virtual sites.
+
+### Examples updated
+- [PR #1671](https://github.com/openforcefield/openff-toolkit/pull/1671): Re-rendered all examples using RDKit+AmberTools backend, and using most recent version of OFF Toolkit.
 
 ### Improved documentation and warnings
 
 
-### Examples updates
+## 0.14.0
 
+### API-breaking changes
+- [PR #1649](https://github.com/openforcefield/openff-toolkit/pull/1649): Removes tests and associated modules from the public API.
+- [PR #1508](https://github.com/openforcefield/openff-toolkit/pull/1508): Removes the `return_topology` kwawrg from `ForceField.create_openmm_system` which was [deprecated in version 0.11.0](https://docs.openforcefield.org/projects/toolkit/en/stable/releasehistory.html#breaking-change-interchange-now-responsible-for-system-parametrization). To access the `Topology` that results from parametrization, call `ForceField.create_interchange` and access the `.topology` attribute of the returned `Interchange` object.
+- [PR #1506](https://github.com/openforcefield/openff-toolkit/pull/1506): Removes several classes and properties in the `topology` submodule that were [deprecated in version 0.11.0](https://docs.openforcefield.org/projects/toolkit/en/stable/releasehistory.html#breaking-change-topology-molecule-representation).
+
+
+### Behavior changes
+- [PR #1652](https://github.com/openforcefield/openff-toolkit/pull/1652): Fixes issue [#1642](https://github.com/openforcefield/openff-toolkit/issues/1642) by making AmberToolsToolkitWrapper thread-safe (previously `AmberToolsToolkitWrapper.assign_partial_charges` and `assign_fractional_bond_orders` were not)
+
+### Bugfixes
+- [PR #1654](https://github.com/openforcefield/openff-toolkit/pull/1654): Fixes issue [#1653](https://github.com/openforcefield/openff-toolkit/issues/1653), where a test that expected RDKit to fail began returning an error when RDKit became able to generate conformers for octahedral molecules.
+
+### Improved documentation and warnings
+- [PR #1572](https://github.com/openforcefield/openff-toolkit/pull/1572): Improved installation guide in line with ecosystem docs.
+
+### Examples updated
+- [PR #1644](https://github.com/openforcefield/openff-toolkit/pull/1644): Streamlines several examples by using `Interchange.to_openmm_simulation`.
+- [PR #1651](https://github.com/openforcefield/openff-toolkit/pull/1651): Fix broken links in several examples.
+- [PR #1648](https://github.com/openforcefield/openff-toolkit/pull/1648): Update examples to use `Topology.from_pdb` and other small cleanups.
+
+## 0.13.2
+
+### Bugfixes
+
+- [PR #1640](https://github.com/openforcefield/openff-toolkit/pull/1640): Fixes issue [#1633](https://github.com/openforcefield/openff-toolkit/issues/1633) in which some force field attributes were erroneously parsed as `Quantity` objects and issue [#1635](https://github.com/openforcefield/openff-toolkit/issues/1635) in which OpenFF 2.1.0 ("Sage") could not be loaded with Pint 0.22.
+
+
+### Improved documentation and warnings
+- [PR #1636](https://github.com/openforcefield/openff-toolkit/pull/1636) and [PR #1643](https://github.com/openforcefield/openff-toolkit/pull/1643): Make the Molecule Cookbook and `Molecule.from_qcschema` docstring only pull down QCF records with fully defined stereo.
+
+
+## 0.13.1
+
+### Behavior changes
+- [PR #1619](https://github.com/openforcefield/openff-toolkit/pull/1619): Fixes **silent error** [#1618](https://github.com/openforcefield/openff-toolkit/issues/1618), by making partial_charges.setter more comprehensive in type and shape checking.
+
+
+### Bugfixes
+- [PR #1617](https://github.com/openforcefield/openff-toolkit/pull/1617): Fixes [#1616](https://github.com/openforcefield/openff-toolkit/issues/1616), by converting NAGL charges to float and converting partial_charges to float before converting to_openeye()
+- [PR #1622](https://github.com/openforcefield/openff-toolkit/pull/1622): Fixes [#1621](https://github.com/openforcefield/openff-toolkit/issues/1621) and [#1346](https://github.com/openforcefield/openff-toolkit/issues/1347) in which some file-loading methods would fail on `pathlib.Path`.
 
 ## 0.13.0
 
@@ -35,14 +128,14 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1577](https://github.com/openforcefield/openff-toolkit/pull/1577): Drops support for Python 3.8, following [NEP-29](https://numpy.org/neps/nep-0029-deprecation_policy.html).
 
 ### Bugfixes
-- [PR #1589](https://github.com/openforcefield/openff-toolkit/pull/1589): Fixes [Issue #1579](https://github.com/openforcefield/openff-toolkit/issues/1579), where Molecule.from_polymer_pdb could not handle NH2 caps at C termini.  
-- [PR #1591](https://github.com/openforcefield/openff-toolkit/pull/1591): Fixes [#1563](https://github.com/openforcefield/openff-toolkit/issues/1563), where `from_rdkit` would sometimes raise an error about radicals if a molecule using a non-MDL aromaticity model was provided. 
+- [PR #1589](https://github.com/openforcefield/openff-toolkit/pull/1589): Fixes [Issue #1579](https://github.com/openforcefield/openff-toolkit/issues/1579), where Molecule.from_polymer_pdb could not handle NH2 caps at C termini.
+- [PR #1591](https://github.com/openforcefield/openff-toolkit/pull/1591): Fixes [#1563](https://github.com/openforcefield/openff-toolkit/issues/1563), where `from_rdkit` would sometimes raise an error about radicals if a molecule using a non-MDL aromaticity model was provided.
 
 ### Improved documentation and warnings
 
-- [PR #1564](https://github.com/openforcefield/openff-toolkit/pull1564) Improve documentation of conformer selection in `Molecule.assign_partial_charges()`
-- [PR #1574](https://github.com/openforcefield/openff-toolkit/pull/1574) Fix class method signature rendering throughout API docs
-- [PR #1584](https://github.com/openforcefield/openff-toolkit/pull/1584) Update some outdated docstrings and add some annotations.
+- [PR #1564](https://github.com/openforcefield/openff-toolkit/pull/1564): Improve documentation of conformer selection in `Molecule.assign_partial_charges()`
+- [PR #1574](https://github.com/openforcefield/openff-toolkit/pull/1574): Fix class method signature rendering throughout API docs
+- [PR #1584](https://github.com/openforcefield/openff-toolkit/pull/1584): Update some outdated docstrings and add some annotations.
 
 ### Examples updates
 - [PR #1575](https://github.com/openforcefield/openff-toolkit/pull/1575): The Toolkit Showcase example has been simplified via use of `Topology.from_pdb`

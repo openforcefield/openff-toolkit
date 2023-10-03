@@ -12,10 +12,10 @@ from io import BytesIO, StringIO
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
-from openff.units import unit
+from openff.units import Quantity, unit
 
-from openff.toolkit.tests import create_molecules
-from openff.toolkit.tests.utils import requires_openeye, requires_rdkit
+from openff.toolkit._tests import create_molecules
+from openff.toolkit._tests.utils import requires_openeye, requires_rdkit
 from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.utils import OpenEyeToolkitWrapper, RDKitToolkitWrapper
 from openff.toolkit.utils.exceptions import (
@@ -72,7 +72,7 @@ CAFFEINE
 $$$$
 """
 
-CAFFEINE_2D_COORDS = unit.Quantity(
+CAFFEINE_2D_COORDS = Quantity(
     np.array(
         [
             (-1.1875, -9.6542, 0.0000),
@@ -277,7 +277,7 @@ M  END
 $$$$
 """
 
-CAFFEINE_3D_COORDS = unit.Quantity(
+CAFFEINE_3D_COORDS = Quantity(
     np.array(
         [
             (0.4700, 2.5688, 0.0006),
@@ -835,7 +835,9 @@ class BaseFromFileIO:
         assert conformer.units == unit.angstrom
 
         # Beyond this are the hydrogens, which are added by algorithm.
-        assert_allclose(conformer[: CAFFEINE_2D_COORDS.shape[0]], CAFFEINE_2D_COORDS)
+        assert_allclose(
+            conformer[: CAFFEINE_2D_COORDS.shape[0]].m, CAFFEINE_2D_COORDS.m
+        )
 
     def test_from_file_3D_sdf_keeps_hydrogens(self):
         mol = self.toolkit_wrapper.from_file(file_manager.caffeine_3d_sdf, "sdf")[0]
@@ -856,7 +858,7 @@ class BaseFromFileIO:
         assert conformer.units == unit.angstrom
 
         # All hydrogens are explicit in the file
-        assert_allclose(conformer, CAFFEINE_3D_COORDS)
+        assert_allclose(conformer.m, CAFFEINE_3D_COORDS.m)
 
     def test_from_file_with_undefined_stereo(self):
         with pytest.raises(

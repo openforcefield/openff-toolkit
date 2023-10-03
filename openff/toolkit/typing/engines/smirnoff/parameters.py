@@ -71,7 +71,7 @@ from typing import (
 )
 
 import numpy as np
-from openff.units import unit
+from openff.units import Quantity, Unit, unit
 from packaging.version import Version
 
 from openff.toolkit.topology import ImproperDict, TagSortedDict, Topology, ValenceDict
@@ -203,11 +203,11 @@ def _allow_only(allowed_values):
     return _value_checker
 
 
-def _validate_units(attr, value: Union[str, unit.Quantity], units: unit.Unit):
+def _validate_units(attr, value: Union[str, Quantity], units: Unit):
     value = object_to_quantity(value)
 
     try:
-        if not units.is_compatible_with(value.units):
+        if not units.is_compatible_with(value.units):  # type: ignore[union-attr]
             raise IncompatibleUnitError(
                 f"{attr.name}={value} should have units of {units}"
             )
@@ -338,7 +338,7 @@ class ParameterAttribute:
     def __init__(
         self,
         default: Any = UNDEFINED,
-        unit: Optional[unit.Unit] = None,
+        unit: Optional[Unit] = None,
         converter: Optional[Callable] = None,
         docstring: str = "",
     ):
@@ -2772,13 +2772,13 @@ class vdWHandler(_NonbondedHandler):
         def __setattr__(self, name, value):
             super().__setattr__(key=name, value=value)
             if name == "rmin_half":
-                if type(value) == str:
+                if type(value) is str:
                     value = object_to_quantity(value)
                 super().__setattr__("sigma", 2.0 * value / 2 ** (1 / 6))
                 self._extra_nb_var = "sigma"
 
             if name == "sigma":
-                if type(value) == str:
+                if type(value) is str:
                     value = object_to_quantity(value)
                 super().__setattr__("rmin_half", value * 2 ** (1 / 6) / 2.0)
                 self._extra_nb_var = "rmin_half"
@@ -2798,6 +2798,7 @@ class vdWHandler(_NonbondedHandler):
 
     _TAGNAME = "vdW"  # SMIRNOFF tag name to process
     _INFOTYPE = vdWType  # info type to store
+    _MAX_SUPPORTED_SECTION_VERSION = Version("0.4")
 
     potential = ParameterAttribute(
         default="Lennard-Jones-12-6", converter=_allow_only(["Lennard-Jones-12-6"])
@@ -2813,9 +2814,44 @@ class vdWHandler(_NonbondedHandler):
 
     cutoff = ParameterAttribute(default=9.0 * unit.angstroms, unit=unit.angstrom)
     switch_width = ParameterAttribute(default=1.0 * unit.angstroms, unit=unit.angstrom)
-    method = ParameterAttribute(
-        default="cutoff", converter=_allow_only(["cutoff", "PME"])
+    periodic_method = ParameterAttribute(
+        default="cutoff", converter=_allow_only(["cutoff", "no-cutoff"])
     )
+    nonperiodic_method = ParameterAttribute(
+        default="no-cutoff", converter=_allow_only(["cutoff", "no-cutoff"])
+    )
+
+    def __init__(self, **kwargs):
+        if kwargs.get("version") == 0.4:
+            if "method" in kwargs:
+                raise SMIRNOFFSpecError(
+                    "`method` attribute has been removed in version 0.4 of the vdW tag. Use "
+                    "`periodic_method` and `nonperiodic_method` instead. "
+                    "See https://openforcefield.github.io/standards/standards/smirnoff/#electrostatics"
+                )
+
+        if kwargs.get("version") == 0.3:
+            logger.info("Attempting to up-convert vdW section from 0.3 to 0.4")
+
+            # This is the only supported value of "method" is version 0.3
+            if kwargs.get("method") in ("cutoff", None):
+                kwargs["periodic_method"] = "cutoff"
+                kwargs["nonperiodic_method"] = "no-cutoff"
+                kwargs["version"] = 0.4
+                kwargs.pop("method", None)
+
+                logger.info(
+                    'Successfully up-converted vdW section from 0.3 to 0.4. `method="cutoff"` '
+                    'is now split into `periodic_method="cutoff"` '
+                    'and `nonperiodic_method="no-cutoff"`.'
+                )
+
+            else:
+                raise NotImplementedError(
+                    "Failed to up-convert vdW section from 0.3 to 0.4. Did not know "
+                    f'how to up-convert `method="{kwargs["method"]}"`.'
+                )
+        super().__init__(**kwargs)
 
     # TODO: Use _allow_only when ParameterAttribute will support multiple converters
     #       (it'll be easy when we switch to use the attrs library)
@@ -2823,8 +2859,8 @@ class vdWHandler(_NonbondedHandler):
     def scale12(self, attrs, new_scale12):
         if new_scale12 != 0.0:
             raise SMIRNOFFSpecError(
-                "Current OFF toolkit is unable to handle scale12 values other than 0.0. "
-                "Specified 1-2 scaling was {}".format(self.scale12)
+                "Current OpenFF toolkit is unable to handle scale12 values other than 0.0. "
+                f"Specified 1-2 scaling was {new_scale12}."
             )
         return new_scale12
 
@@ -2832,8 +2868,8 @@ class vdWHandler(_NonbondedHandler):
     def scale13(self, attrs, new_scale13):
         if new_scale13 != 0.0:
             raise SMIRNOFFSpecError(
-                "Current OFF toolkit is unable to handle scale13 values other than 0.0. "
-                "Specified 1-3 scaling was {}".format(self.scale13)
+                "Current OpenFF toolkit is unable to handle scale13 values other than 0.0. "
+                f"Specified 1-3 scaling was {new_scale13}."
             )
         return new_scale13
 
@@ -2841,8 +2877,8 @@ class vdWHandler(_NonbondedHandler):
     def scale15(self, attrs, new_scale15):
         if new_scale15 != 1.0:
             raise SMIRNOFFSpecError(
-                "Current OFF toolkit is unable to handle scale15 values other than 1.0. "
-                "Specified 1-5 scaling was {}".format(self.scale15)
+                "Current OpenFF toolkit is unable to handle scale15 values other than 1.0. "
+                f"Specified 1-5 scaling was {new_scale15}."
             )
         return new_scale15
 
@@ -2864,7 +2900,12 @@ class vdWHandler(_NonbondedHandler):
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
         float_attrs_to_compare = ["scale12", "scale13", "scale14", "scale15"]
-        string_attrs_to_compare = ["potential", "combining_rules", "method"]
+        string_attrs_to_compare = [
+            "potential",
+            "combining_rules",
+            "periodic_method",
+            "nonperiodic_method",
+        ]
         unit_attrs_to_compare = ["cutoff", "switch_width"]
 
         self._check_attributes_are_equal(
@@ -2926,8 +2967,8 @@ class ElectrostaticsHandler(_NonbondedHandler):
     def scale12(self, attrs, new_scale12):
         if new_scale12 != 0.0:
             raise SMIRNOFFSpecError(
-                "Current OFF toolkit is unable to handle scale12 values other than 0.0. "
-                "Specified 1-2 scaling was {}".format(self.scale12)
+                "Current OpenFF toolkit is unable to handle scale12 values other than 0.0. "
+                f"Specified 1-2 scaling was {new_scale12}."
             )
         return new_scale12
 
@@ -2935,8 +2976,8 @@ class ElectrostaticsHandler(_NonbondedHandler):
     def scale13(self, attrs, new_scale13):
         if new_scale13 != 0.0:
             raise SMIRNOFFSpecError(
-                "Current OFF toolkit is unable to handle scale13 values other than 0.0. "
-                "Specified 1-3 scaling was {}".format(self.scale13)
+                "Current OpenFF toolkit is unable to handle scale13 values other than 0.0. "
+                f"Specified 1-3 scaling was {new_scale13}."
             )
         return new_scale13
 
@@ -2944,8 +2985,8 @@ class ElectrostaticsHandler(_NonbondedHandler):
     def scale15(self, attrs, new_scale15):
         if new_scale15 != 1.0:
             raise SMIRNOFFSpecError(
-                "Current OFF toolkit is unable to handle scale15 values other than 1.0. "
-                "Specified 1-5 scaling was {}".format(self.scale15)
+                "Current OpenFF toolkit is unable to handle scale15 values other than 1.0. "
+                f"Specified 1-5 scaling was {new_scale15}."
             )
         return new_scale15
 
@@ -2986,7 +3027,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             if "method" in kwargs:
                 raise SMIRNOFFSpecError(
                     "`method` attribute has been removed in version 0.4 of the Electrostatics tag. Use "
-                    "`periodic_potential`, `nonperiodic_potenetial`, and `exception_potential` instead. "
+                    "`periodic_potential`, `nonperiodic_potential`, and `exception_potential` instead. "
                     "See https://openforcefield.github.io/standards/standards/smirnoff/#electrostatics"
                 )
         if kwargs.get("version") == 0.3:
@@ -3309,7 +3350,7 @@ class GBSAHandler(ParameterHandler):
     solute_dielectric = ParameterAttribute(default=1, converter=float)
     sa_model = ParameterAttribute(default="ACE", converter=_allow_only(["ACE", None]))
     surface_area_penalty = ParameterAttribute(
-        default=unit.Quantity(5.4, _cal_mol_a2),
+        default=Quantity(5.4, _cal_mol_a2),
         unit=_cal_mol_a2,
     )
     solvent_radius = ParameterAttribute(default=1.4 * unit.angstrom, unit=unit.angstrom)

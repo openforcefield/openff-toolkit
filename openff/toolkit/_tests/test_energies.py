@@ -6,7 +6,7 @@ import pytest
 from openff.units.openmm import to_openmm
 from openmm import unit as openmm_unit
 
-from openff.toolkit.tests.utils import get_data_file_path, requires_rdkit
+from openff.toolkit._tests.utils import get_data_file_path, requires_rdkit
 from openff.toolkit.topology import Molecule, Topology
 from openff.toolkit.typing.engines.smirnoff import ForceField
 
@@ -93,10 +93,10 @@ def _build_system(mol, constrained):
 
     mol = Molecule.from_file(get_data_file_path("molecules/" + mol), file_format="sdf")
 
-    if type(mol) == Molecule:
+    if type(mol) is Molecule:
         off_top = mol.to_topology()
         positions = mol.conformers[0]
-    elif type(mol) == list:
+    elif type(mol) is list:
         # methane_multiconformer case is a list of two mols
         off_top = Topology()
         for mol_i in mol:

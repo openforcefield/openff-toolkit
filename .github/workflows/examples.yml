@@ -41,7 +41,7 @@ jobs:
       NB_ARGS: -v --nbval-lax --ignore=examples/deprecated --durations=20
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
@@ -60,10 +60,10 @@ jobs:
           fi
 
       - name: Install conda environment with ${{ env.ENVFILE }}
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: devtools/conda-envs/${{env.ENVFILE}}-examples.yaml
-          extra-specs: |
+          create-args: >-
             python=${{ matrix.python-version }}
 
       - name: Additional info about the build
@@ -87,7 +87,7 @@ jobs:
 
       - name: Remove undesired toolkits
         run: |
-          # If openmmforcefields is included in examples/environment.yaml,
+          # If openmmforcefields is included in either environment file,
           # remove RDKit and AmberTools brought in by it. Currently it's not included,
           # so don't remove it.
           if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
@@ -130,7 +130,7 @@ jobs:
             PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
           fi
-          pytest $PYTEST_ARGS openff/toolkit/tests/test_examples.py
+          pytest $PYTEST_ARGS openff/toolkit/_tests/test_examples.py
 
       - name: Run example notebooks
         run: |
@@ -141,6 +141,7 @@ jobs:
             NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
             NB_ARGS+=" --ignore=examples/toolkit_showcase"
             NB_ARGS+=" --ignore=examples/using_smirnoff_with_amber_protein_forcefield"
+            NB_ARGS+=" --ignore=examples/SMIRNOFF_simulation/run_simulation.ipynb"
           fi
 
           python -m pytest $PYTEST_ARGS $NB_ARGS examples

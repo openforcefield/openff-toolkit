@@ -1,6 +1,6 @@
 "Registry for ToolkitWrapper objects"
 
-__all__ = ("ToolkitRegistry",)
+__all__ = ("ToolkitRegistry", "toolkit_registry_manager")
 
 import inspect
 import logging
@@ -214,7 +214,7 @@ class ToolkitRegistry:
         toolkits_to_remove = []
 
         for toolkit in self._toolkits:
-            if type(toolkit) == type(toolkit_wrapper):
+            if type(toolkit) is type(toolkit_wrapper):
                 toolkits_to_remove.append(toolkit)
 
         if not toolkits_to_remove:
@@ -373,10 +373,28 @@ class ToolkitRegistry:
         return f"<ToolkitRegistry containing {', '.join([tk.toolkit_name for tk in self._toolkits])}>"
 
 
-# Coped from https://github.com/openforcefield/openff-fragmenter/blob/4a290b866a8ed43eabcbd3231c62b01f0c6d7df6
+# Copied from https://github.com/openforcefield/openff-fragmenter/blob/4a290b866a8ed43eabcbd3231c62b01f0c6d7df6
 # /openff/fragmenter/utils.py#L97-L123
 @contextmanager
-def _toolkit_registry_manager(toolkit_registry: Union[ToolkitRegistry, ToolkitWrapper]):
+def toolkit_registry_manager(toolkit_registry: Union[ToolkitRegistry, ToolkitWrapper]):
+    """
+    A context manager that temporarily changes the ToolkitWrappers in the GLOBAL_TOOLKIT_REGISTRY.
+    This can be useful in cases where one would otherwise need to otherwise manually specify the use of a specific
+    ToolkitWrapper or ToolkitRegistry repeatedly in a block of code, or in cases where there isn't another way to
+    switch the ToolkitWrappers used for a particular operation.
+
+    Examples
+    --------
+    >>> from openff.toolkit import Molecule, RDKitToolkitWrapper, AmberToolsToolkitWrapper
+    >>> from openff.toolkit.utils import toolkit_registry_manager, ToolkitRegistry
+    >>> mol = Molecule.from_smiles("CCO")
+    >>> print(mol.to_smiles()) # This will use the OpenEye backend (if installed and licensed)
+    [H]C([H])([H])C([H])([H])O[H]
+    >>> with toolkit_registry_manager(ToolkitRegistry([RDKitToolkitWrapper()])):
+    ...    print(mol.to_smiles())
+    [H][O][C]([H])([H])[C]([H])([H])[H]
+
+    """
     from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
 
     if isinstance(toolkit_registry, ToolkitRegistry):
@@ -403,3 +421,6 @@ def _toolkit_registry_manager(toolkit_registry: Union[ToolkitRegistry, ToolkitWr
             GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(toolkit)
         for toolkit in original_toolkits:
             GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit)
+
+
+_toolkit_registry_manager = toolkit_registry_manager

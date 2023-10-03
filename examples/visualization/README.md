@@ -1,7 +1,5 @@
 # Built-in visualizations in `openff-toolkit`
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openforcefield/openff-toolkit/stable?filepath=examples%2Fvisualization%2Fvisualization.ipynb)
-
 PR [#560](https://github.com/openforcefield/openff-toolkit/pull/560) introduced rich representation for the `openff.toolkit.topology.Molecule` objects. This means you can visualize them in your Jupyter Notebooks:
 
 We have implemented three backends:
@@ -19,7 +17,7 @@ This notebook demonstrates all the possible uses.
 This can be tricky to get working.
 Install with:
 
-    conda install -c conda-forge nglview
+    mamba install -c conda-forge nglview
     
 And configure for use with Jupyter with:
 
