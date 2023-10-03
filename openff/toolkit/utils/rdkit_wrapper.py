@@ -45,7 +45,8 @@ from openff.toolkit.utils.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Atom, Bond, Molecule, Topology
+    from openff.toolkit.topology.molecule import Atom, Bond, Molecule
+    from openff.toolkit.topology.topology import Topology
 
 logger = logging.getLogger(__name__)
 
@@ -1289,7 +1290,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         temp_top = Topology(topology)
         temp_top.set_positions(ensure_quantity(positions, "openff"))
         for molecule in temp_top.molecules:
-            writer.write(molecule.to_rdkit())
+            writer.write(molecule.to_rdkit())  # type: ignore[union-attr]
 
     def enumerate_stereoisomers(
         self,

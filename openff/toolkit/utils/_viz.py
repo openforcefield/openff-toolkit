@@ -50,7 +50,7 @@ class MoleculeNGLViewTrajectory(Structure, Trajectory):
             )
         self.molecule = molecule
         self.ext = ext.lower()
-        self.params = {}
+        self.params: dict = dict()
         self.id = str(uuid.uuid4())
 
     def get_coordinates(self, index: int = 0):
@@ -97,7 +97,7 @@ class TopologyNGLViewStructure(Structure):
     ):
         self.topology = topology
         self.ext = ext.lower()
-        self.params = {}
+        self.params: dict = dict()
         self.id = str(uuid.uuid4())
 
     def get_structure_string(self):

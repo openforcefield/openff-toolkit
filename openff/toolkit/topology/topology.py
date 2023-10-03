@@ -2016,7 +2016,7 @@ class Topology(Serializable):
         elif isinstance(positions, np.ndarray):
             openmm_positions = openmm.unit.Quantity(positions, openmm.unit.angstroms)
         elif positions is None:
-            openmm_positions: openmm.unit.Quantity = self.get_positions().to_openmm()
+            openmm_positions: openmm.unit.Quantity = self.get_positions().to_openmm()  # type: ignore[union-attr]
         else:
             raise ValueError(f"Could not process positions of type {type(positions)}.")
 
@@ -2047,7 +2047,7 @@ class Topology(Serializable):
             RDKitToolkitWrapper()._write_topology(
                 topology=self,
                 positions=positions,
-                file_path=file,
+                file_path=str(file),
                 file_format=file_format,
             )
         else:
