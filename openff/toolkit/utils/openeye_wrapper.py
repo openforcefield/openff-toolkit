@@ -35,6 +35,7 @@ from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ConformerGenerationError,
     GAFFAtomTypeWarning,
+    InChIParseError,
     InconsistentStereochemistryError,
     InvalidAromaticityModelError,
     InvalidIUPACNameError,
@@ -81,7 +82,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
     _toolkit_name = "OpenEye Toolkit"
     _toolkit_installation_instructions = (
         "The OpenEye Toolkits can be installed via "
-        "`conda install openeye-toolkits -c openeye`"
+        "`mamba install openeye-toolkits -c openeye`"
     )
     _toolkit_license_instructions = (
         "The OpenEye Toolkits require a (free for academics) license, see "
@@ -633,7 +634,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         ofs.close()
 
     @staticmethod
-    def _turn_oemolbase_sd_charges_into_partial_charges(oemol):
+    def _turn_oemolbase_sd_charges_into_partial_charges(oemol) -> bool:
         """
         Process an OEMolBase object and check to see whether it has an SD data pair
         where the tag is "atom.dprop.PartialCharge", indicating that it has a list of
@@ -670,7 +671,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         return False
 
     def _read_oemolistream_molecules(
-        self, oemolistream, allow_undefined_stereo, file_path=None, _cls=None
+        self, oemolistream, allow_undefined_stereo: bool, file_path=None, _cls=None
     ):
         """
         Reads and return the Molecules in a OEMol input stream.
@@ -1178,22 +1179,22 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                     )
                 return description
 
-            msg = (
-                "OEMol has unspecified stereochemistry. "
-                "oemol.GetTitle(): {}\n".format(oemol.GetTitle())
-            )
-            if len(problematic_atoms) != 0:
-                msg += "Problematic atoms are:\n"
-                for problematic_atom in problematic_atoms:
-                    msg += describe_oeatom(problematic_atom) + "\n"
-            if len(problematic_bonds) != 0:
-                msg += "Problematic bonds are: {}\n".format(problematic_bonds)
-            if allow_undefined_stereo:
-                msg = "Warning (not error because allow_undefined_stereo=True): " + msg
-                logger.warning(msg)
-            else:
-                msg = "Unable to make OFFMol from OEMol: " + msg
-                raise UndefinedStereochemistryError(msg)
+            if (
+                len(problematic_atoms) != 0 or len(problematic_bonds) != 0
+            ) and not allow_undefined_stereo:
+                msg = f"OEMol has unspecified stereochemistry. {oemol.GetTitle()=}"
+
+                if len(problematic_atoms) != 0:
+                    msg += "Problematic atoms are:\n"
+                    for problematic_atom in problematic_atoms:
+                        msg += describe_oeatom(problematic_atom) + "\n"
+
+                if len(problematic_bonds) != 0:
+                    msg += f"Problematic bonds are: {problematic_bonds}\n"
+
+                raise UndefinedStereochemistryError(
+                    f"Unable to make OFFMol from OEMol: {msg}"
+                )
 
         if _cls is None:
             from openff.toolkit.topology.molecule import Molecule
@@ -1807,7 +1808,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def to_inchi(self, molecule: "Molecule", fixed_hydrogens: bool = False) -> str:
         """
-        Create an InChI string for the molecule using the RDKit Toolkit.
+        Create an InChI string for the molecule using the OpenEye OEChem Toolkit.
         InChI is a standardised representation that does not capture tautomers
         unless specified using the fixed hydrogen layer.
 
@@ -1844,7 +1845,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def to_inchikey(self, molecule: "Molecule", fixed_hydrogens: bool = False) -> str:
         """
-        Create an InChIKey for the molecule using the RDKit Toolkit.
+        Create an InChIKey for the molecule using the OpenEye OEChem Toolkit.
         InChIKey is a standardised representation that does not capture tautomers
         unless specified using the fixed hydrogen layer.
 
@@ -2063,8 +2064,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         # try and catch InChI parsing fails
         # if there are no atoms don't build the molecule
         if oemol.NumAtoms() == 0:
-            raise RuntimeError(
-                "There was an issue parsing the InChI string, please check and try again."
+            raise InChIParseError(
+                f"There was an issue parsing the InChI string ({inchi}), please check and try again."
             )
 
         molecule = self.from_openeye(

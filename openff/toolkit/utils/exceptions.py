@@ -101,6 +101,10 @@ class SMILESParseError(OpenFFToolkitException, ValueError):
     """The record could not be parsed into the given format"""
 
 
+class InChIParseError(MoleculeParseError, RuntimeError):
+    """The InChI record could not be parsed."""
+
+
 class RadicalsNotSupportedError(OpenFFToolkitException):
     """The OpenFF Toolkit does not currently support parsing molecules with radicals."""
 
@@ -659,3 +663,79 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
             ]
 
         return []
+
+
+class NonUniqueSubstructureName(OpenFFToolkitException):
+    """Exception raised when nonunique names are given"""
+
+    def __init__(self, duplicate_keys):
+        msg = "The following keys were found to be duplicate:"
+        for dkey in duplicate_keys:
+            msg += f"\n\t{dkey}"
+        msg += "\nDo not use standard residue names when naming custom substructures"
+        super().__init__(msg)
+        self.msg = msg
+
+
+class SubstructureAtomSmartsInvalid(OpenFFToolkitException):
+    """Exception raised when atom or bond smarts are found to be improperly formatted"""
+
+    def __init__(self, name, atom_smarts, smarts, reason):
+        msg = f"Invalid atom smarts found in substructure smarts for {name}:\n"
+        msg += (
+            smarts
+            + "\n"
+            + " " * smarts.find(atom_smarts)
+            + "^" * len(atom_smarts)
+            + "\n"
+        )
+        msg += "REASON: " + reason
+        super().__init__(msg)
+        self.msg = msg
+
+
+class SubstructureBondSmartsInvalid(OpenFFToolkitException):
+    def __init__(self, name, bond, valid_bond_types):
+        msg = f"Invalid bond smarts found in subsucture smarts for {name}:\n"
+        msg += f"SMARTS: {bond.GetSmarts()}\t" + f"BONDTYPE: {bond.GetBondType()}\n"
+        msg += "The only currently supported bond types are:\n"
+        for bond_type in valid_bond_types:
+            msg += f"\t{bond_type}\n"
+        super().__init__(msg)
+        self.msg = msg
+
+
+class SubstructureImproperlySpecified(OpenFFToolkitException):
+    """Exception raised when substructure does not contain enough information"""
+
+    def __init__(self, name, reason):
+        msg = f"Improperly specified monomer for {name}:\n"
+        msg += f"\t{reason}"
+        super().__init__(msg)
+        self.msg = msg
+
+
+class AmbiguousAtomChemicalAssignment(OpenFFToolkitException):
+    """Exception raised when substructure does not contain enough information"""
+
+    def __init__(self, res_name, mol_atom, query_atom, reason):
+        msg = (
+            f"Ambiguous chemical information assigned for residue {res_name} for molecule atom {mol_atom} and "
+            f"query atom {query_atom}:\n"
+        )
+        msg += f"\t{reason}"
+        super().__init__(msg)
+        self.msg = msg
+
+
+class AmbiguousBondChemicalAssignment(OpenFFToolkitException):
+    """Exception raised when substructure does not contain enough information"""
+
+    def __init__(self, res_name, mol_bond, query_bond, reason):
+        msg = (
+            f"Ambiguous chemical information assigned for residue {res_name} for molecule bond {mol_bond} and "
+            f"query bond {query_bond}:\n"
+        )
+        msg += f"\t{reason}"
+        super().__init__(msg)
+        self.msg = msg

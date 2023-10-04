@@ -3207,13 +3207,6 @@ class TestMolecule:
 
         assert molecule == molecule_copy
 
-    def test_chemical_environment_old_arg(self):
-        from openff.toolkit.typing.chemistry import ChemicalEnvironment
-
-        molecule = create_ethanol()
-        with pytest.raises(ValueError, match="'query' must be a SMARTS"):
-            molecule.chemical_environment_matches(ChemicalEnvironment("[*:1]"))
-
     @requires_openeye
     def test_chemical_environment_matches_OE(self):
         """Test chemical environment matches"""
@@ -4089,6 +4082,16 @@ class TestMoleculeFromPDB:
         )
         assert offmol.n_atoms == 23
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CS)C(=O)NC")
+        assert offmol.is_isomorphic_with(
+            expected_mol, atom_stereochemistry_matching=False
+        )
+
+    def test_molecule_from_pdb_mainchain_cym_dipeptide(self):
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_CYM.pdb")
+        )
+        assert offmol.n_atoms == 22
+        expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C[S-])C(=O)NC")
         assert offmol.is_isomorphic_with(
             expected_mol, atom_stereochemistry_matching=False
         )

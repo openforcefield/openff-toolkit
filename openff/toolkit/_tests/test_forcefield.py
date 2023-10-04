@@ -689,105 +689,6 @@ def generate_monatomic_ions():
     )
 
 
-nonbonded_resolution_matrix = [
-    {
-        "vdw_method": "cutoff",
-        "electrostatics_periodic_potential": "Coulomb",
-        "has_periodic_box": True,
-        "omm_force": None,
-        "exception": SMIRNOFFSpecUnimplementedError,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "cutoff",
-        "electrostatics_periodic_potential": "Coulomb",
-        "has_periodic_box": False,
-        "omm_force": openmm.NonbondedForce.NoCutoff,
-        "exception": None,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "cutoff",
-        "electrostatics_periodic_potential": "reaction-field",
-        "has_periodic_box": True,
-        "omm_force": None,
-        "exception": SMIRNOFFSpecUnimplementedError,
-        "exception_match": "reaction-field",
-    },
-    {
-        "vdw_method": "cutoff",
-        "electrostatics_periodic_potential": "reaction-field",
-        "has_periodic_box": False,
-        "omm_force": openmm.NonbondedForce.NoCutoff,
-        "exception": None,
-        "exception_match": "reaction-field",
-    },
-    {
-        "vdw_method": "cutoff",
-        "electrostatics_periodic_potential": "PME",
-        "has_periodic_box": True,
-        "omm_force": openmm.NonbondedForce.PME,
-        "exception": None,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "cutoff",
-        "electrostatics_periodic_potential": "PME",
-        "has_periodic_box": False,
-        "omm_force": openmm.NonbondedForce.NoCutoff,
-        "exception": None,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_periodic_potential": "Coulomb",
-        "has_periodic_box": True,
-        "omm_force": None,
-        "exception": IncompatibleParameterError,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_periodic_potential": "Coulomb",
-        "has_periodic_box": False,
-        "omm_force": None,
-        "exception": SMIRNOFFSpecError,
-        "exception_match": "vdw method PME.* is only valid for periodic systems",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_periodic_potential": "reaction-field",
-        "has_periodic_box": True,
-        "omm_force": None,
-        "exception": IncompatibleParameterError,
-        "exception_match": "must also be PME",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_periodic_potential": "reaction-field",
-        "has_periodic_box": False,
-        "omm_force": None,
-        "exception": SMIRNOFFSpecError,
-        "exception_match": "vdw method PME.* is only valid for periodic systems",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_periodic_potential": "PME",
-        "has_periodic_box": True,
-        "omm_force": openmm.NonbondedForce.LJPME,
-        "exception": None,
-        "exception_match": "",
-    },
-    {
-        "vdw_method": "PME",
-        "electrostatics_periodic_potential": "PME",
-        "has_periodic_box": False,
-        "omm_force": openmm.NonbondedForce.NoCutoff,
-        "exception": SMIRNOFFSpecError,
-        "exception_match": "vdw method PME.* is only valid for periodic systems",
-    },
-]
-
 partial_charge_method_resolution_matrix = [
     {
         "toolkit": AmberToolsToolkitWrapper,
@@ -1649,8 +1550,7 @@ class TestForceField(_ForceFieldFixtures):
 
         force_field = ForceField()
 
-        vdw_handler = vdWHandler(version=0.3)
-        vdw_handler.method = "cutoff"
+        vdw_handler = vdWHandler(version=0.4)
         vdw_handler.cutoff = 6.0 * unit.angstrom
         vdw_handler.scale14 = 1.0
 
@@ -1704,8 +1604,7 @@ class TestForceField(_ForceFieldFixtures):
 
         force_field = ForceField()
 
-        vdw_handler = vdWHandler(version=0.3)
-        vdw_handler.method = "cutoff"
+        vdw_handler = vdWHandler(version=0.4)
         vdw_handler.cutoff = 7.89 * unit.angstrom
         vdw_handler.scale14 = 1.0
 
@@ -2001,7 +1900,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             topology, charge_from_molecules=molecules, toolkit_registry=toolkit_registry
         )
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         expected_charges = (
             (0, -0.4 * openmm_unit.elementary_charge),
@@ -2030,7 +1929,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             toolkit_registry=toolkit_registry,
         )
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         expected_charges = (
             (0, -0.2 * openmm_unit.elementary_charge),
@@ -2099,7 +1998,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             topology, charge_from_molecules=[ethanol], toolkit_registry=toolkit_registry
         )
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         expected_charges = (
             (18, -0.4 * openmm_unit.elementary_charge),
@@ -2131,7 +2030,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         )
         omm_system = ff.create_openmm_system(mol.to_topology())
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         expected_charges = [-0.834, 0.417, 0.417] * openmm_unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
@@ -2513,7 +2412,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         )
         omm_system = ff.create_openmm_system(mol.to_topology())
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         expected_charges = [-2.0, 1.0, 1.0] * openmm_unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
@@ -2528,7 +2427,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         )
         omm_system = ff.create_openmm_system(mol.to_topology())
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         expected_charges = [-0.834, 0.417, 0.417] * openmm_unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
@@ -2547,7 +2446,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         top = Topology.from_molecules([mol, mol])
         omm_system = ff.create_openmm_system(top)
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         expected_charges = [
             -0.834,
@@ -2600,7 +2499,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         top = Topology.from_molecules(molecules)
         omm_system = ff.create_openmm_system(top)
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         expected_charges = [
             -0.2,
@@ -2646,7 +2545,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         omm_system = ff.create_openmm_system(mol.to_topology())
 
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         q, _, _ = nonbondedForce.getParticleParameters(0)
         assert q == formal_charge
@@ -2738,7 +2637,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         omm_system = ff.create_openmm_system(
             top, charge_from_molecules=[cyclohexane, butanol]
         )
-        existing = [f for f in omm_system.getForces() if type(f) == NonbondedForce]
+        existing = [f for f in omm_system.getForces() if type(f) is NonbondedForce]
 
         # Ensure that the handlers do not make multiple NonbondedForce objects
         assert len(existing) == 1
@@ -2826,7 +2725,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         top = Topology.from_molecules(molecules)
         omm_system = ff.create_openmm_system(top)
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         expected_charges = [
             -0.2,
@@ -2868,7 +2767,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         top = Topology.from_molecules(molecules)
         omm_system = ff.create_openmm_system(top)
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         expected_charges = [
             -0.2,
@@ -2921,7 +2820,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         )
         omm_system = ff.create_openmm_system(top)
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         for particle_index in range(top.n_atoms):
             q, _, _ = nonbondedForce.getParticleParameters(particle_index)
@@ -4105,8 +4004,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
 class TestForceFieldWithToolkits(_ForceFieldFixtures):
     """Test interactions between ``ForceField`` methods and wrapped toolkits."""
 
-    # TODO: If `_toolkit_registry_manager` is made public or used for other parts of the API,
-    #       these tests should be moved/adapted into more unit tests that call it directly
+    # TODO: Many of these tests could leverage toolkit_registry_manager
 
     def test_toolkit_registry_bogus_argument(self, force_field):
         topology = create_ethanol().to_topology()

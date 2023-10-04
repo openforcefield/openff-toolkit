@@ -33,6 +33,7 @@ from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ConformerGenerationError,
+    InChIParseError,
     IncorrectNumConformersError,
     IncorrectNumConformersWarning,
     InvalidIUPACNameError,
@@ -810,7 +811,8 @@ class TestOpenEyeToolkitWrapper:
 
         toolkit = OpenEyeToolkitWrapper()
         inchi = "InChI=1S/ksbfksfksfksbfks"
-        with pytest.raises(RuntimeError):
+
+        with pytest.raises(InChIParseError, match="ksbfksfksfksbfks"):
             Molecule.from_inchi(inchi, toolkit_registry=toolkit)
 
     @pytest.mark.parametrize(
@@ -2149,7 +2151,8 @@ class TestRDKitToolkitWrapper:
 
         toolkit = RDKitToolkitWrapper()
         inchi = "InChI=1S/ksbfksfksfksbfks"
-        with pytest.raises(RuntimeError):
+
+        with pytest.raises(InChIParseError, match="ksbfksfksfksbfks"):
             Molecule.from_inchi(inchi, toolkit_registry=toolkit)
 
     inchi_data = [
@@ -4523,6 +4526,50 @@ class TestToolkitRegistry:
                 molecule=mol,
                 partial_charge_method="NotARealChargeMethod",
                 raise_exception_types=[],
+            )
+
+
+@requires_openeye
+@requires_ambertools
+@requires_rdkit
+class TestToolkitRegistryManager:
+    def test_openeye_registry(self):
+        from openff.toolkit.utils.toolkit_registry import toolkit_registry_manager
+
+        openeye_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
+
+        with toolkit_registry_manager(openeye_registry):
+            assert "OpenEye" in str(GLOBAL_TOOLKIT_REGISTRY)
+            assert "RDKit" not in str(GLOBAL_TOOLKIT_REGISTRY)
+
+            create_ethanol().assign_partial_charges(
+                partial_charge_method="am1bccelf10",
+            )
+
+    def test_no_openeye_registry(self):
+        from openff.toolkit.utils.toolkit_registry import toolkit_registry_manager
+
+        no_openeye_registry = ToolkitRegistry(
+            toolkit_precedence=[
+                RDKitToolkitWrapper,
+                AmberToolsToolkitWrapper,
+            ]
+        )
+
+        with toolkit_registry_manager(no_openeye_registry):
+            assert "OpenEye" not in str(GLOBAL_TOOLKIT_REGISTRY)
+            assert "RDKit" in str(GLOBAL_TOOLKIT_REGISTRY)
+
+            with pytest.raises(
+                ValueError,
+                match="No registered toolkits",
+            ):
+                create_ethanol().assign_partial_charges(
+                    partial_charge_method="am1bccelf10",
+                )
+
+            create_ethanol().assign_partial_charges(
+                partial_charge_method="am1bcc",
             )
 
 

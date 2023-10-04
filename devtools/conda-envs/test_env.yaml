@@ -17,10 +17,11 @@ dependencies:
   - openff-forcefields >=2023.05.1
   - smirnoff99Frosst
   - openff-units =0.2.0
+  - openff-amber-ff-ports
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.3.3
-  - openff-nagl >=0.2.2
-  - openff-nagl-models >=0.0.2
+  - openff-interchange-base >=0.3.10
+  - openff-nagl-base ==0.3.0
+  - openff-nagl-models ==0.1.0
     # Toolkit-specific
   - ambertools >=22
   - rdkit
@@ -35,12 +36,13 @@ dependencies:
   - bson
   - msgpack-python
   - qcelemental
-  - qcportal >=0.15
+  - qcportal >=0.15, <0.50.0a0
   - qcengine
   - mdtraj
   - nbval
   - mypy
   - typing_extensions
+  - pydantic =1
   - pip:
     - types-setuptools
     - types-toml

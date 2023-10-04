@@ -17,7 +17,7 @@ This notebook demonstrates all the possible uses.
 This can be tricky to get working.
 Install with:
 
-    conda install -c conda-forge nglview
+    mamba install -c conda-forge nglview
     
 And configure for use with Jupyter with:
 

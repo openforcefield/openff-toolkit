@@ -463,7 +463,7 @@ class Atom(Particle):
         other : string
             The new name for this atom
         """
-        if type(other) != str:
+        if type(other) is not str:
             raise ValueError(
                 f"In setting atom name. Expected str, received {other} (type {type(other)})."
             )
@@ -646,8 +646,8 @@ class Bond(Serializable):
         Create a new chemical bond.
 
         """
-        assert type(atom1) == Atom
-        assert type(atom2) == Atom
+        assert type(atom1) is Atom
+        assert type(atom2) is Atom
         assert atom1.molecule is atom2.molecule
         assert isinstance(atom1.molecule, FrozenMolecule)
         self._molecule = atom1.molecule
@@ -1024,7 +1024,7 @@ class FrozenMolecule(Serializable):
                         toolkit_registry=toolkit_registry,
                         allow_undefined_stereo=allow_undefined_stereo,
                     )  # returns a list only if multiple molecules are found
-                    if type(mol) == list:
+                    if type(mol) is list:
                         raise ValueError(
                             "Specified file or file-like object must contain exactly one molecule"
                         )
@@ -3531,11 +3531,6 @@ class FrozenMolecule(Serializable):
              ``chemical_environment_matches``
 
         """
-        if isinstance(query, str):
-            smirks = query
-        else:
-            raise ValueError("'query' must be a SMARTS/SMIRKS string")
-
         # Use specified cheminformatics toolkit to determine matches with specified aromaticity model
         # TODO: Simplify this by requiring a toolkit registry for the molecule?
         # TODO: Do we have to pass along an aromaticity model?
@@ -3543,14 +3538,14 @@ class FrozenMolecule(Serializable):
             matches = toolkit_registry.call(
                 "find_smarts_matches",
                 self,
-                smirks,
+                query,
                 unique=unique,
                 raise_exception_types=[],
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             matches = toolkit_registry.find_smarts_matches(  # type: ignore[attr-defined]
                 self,
-                smirks,
+                query,
                 unique=unique,
             )
         else:
@@ -3941,9 +3936,18 @@ class FrozenMolecule(Serializable):
 
         pdb = PDBFile(file_path)
 
-        substructure_file_path = get_data_file_path(
-            "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
-        )
+        # Kludgy fix for the fact that RDKitToolkitWrapper uses new substructure spec.
+        # Hopefully this will be short-lived as we can deprecate this method entirely in favor of
+        # Topology.from_pdb, which only uses the RDKit backend.
+        resolved_method = toolkit_registry.resolve("_polymer_openmm_topology_to_offmol")
+        if "RDKit" in str(resolved_method):
+            substructure_file_path = get_data_file_path(
+                "proteins/aa_residues_substructures_explicit_bond_orders_with_caps_explicit_connectivity.json"
+            )
+        else:
+            substructure_file_path = get_data_file_path(
+                "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
+            )
 
         with open(substructure_file_path, "r") as subfile:
             substructure_dictionary = json.load(subfile)
@@ -4114,7 +4118,7 @@ class FrozenMolecule(Serializable):
             )
 
         # Write file
-        if type(file_path) == str:
+        if type(file_path) is str:
             # Open file for writing
             toolkit.to_file(self, file_path, file_format)
         else:
