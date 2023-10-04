@@ -214,7 +214,7 @@ class ToolkitRegistry:
         toolkits_to_remove = []
 
         for toolkit in self._toolkits:
-            if type(toolkit) == type(toolkit_wrapper):
+            if type(toolkit) is type(toolkit_wrapper):
                 toolkits_to_remove.append(toolkit)
 
         if not toolkits_to_remove:

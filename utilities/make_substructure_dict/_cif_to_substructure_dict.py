@@ -467,6 +467,8 @@ class CifSubstructures:
             "his_lfoh_dhe2": ["H2"],
             # CYX
             "cys": ["HG"],
+            # CYM
+            "cys_lfoh_dhg": ["H1", "H2"],
         }
 
         for entry, entry_data in self._cif_multi_entry_object.items():
@@ -791,12 +793,16 @@ class CifSubstructures:
                         (Chem.MolFromSmarts("[N+0:1]1[C@@:2]([C:3](=[O:4]))([H:9])[C:5]([H:10])([H:11])[C:6]([H:12])([H:13])[C:7]1([H:14])[H:15]"), [0], [], 2),
                         (Chem.MolFromSmarts("[N+](-[H])(-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6]([H]))([H:9])[H:10])[H:8]"), [], [], 5),
                         (Chem.MolFromSmarts("[N+](-[H])(-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6])([H:9])[H:10])[H:8]"), [8], [], 5),
+                        (Chem.MolFromSmarts("[N+](-[H])(-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S-1:6])([H:9])[H:10])[H:8]"), [], [], 5),
                         (Chem.MolFromSmarts("[N](-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6]([H]))([H:9])[H:10])[H:8]"), [], [], 4),
                         (Chem.MolFromSmarts("[N](-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6])([H:9])[H:10])[H:8]"), [7], [], 4),
+                        (Chem.MolFromSmarts("[N](-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S-1:6])([H:9])[H:10])[H:8]"), [], [], 4),
                         (Chem.MolFromSmarts("[N](-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6]([H]))([H:9])[H:10])[H:8]"), [0], [], 3),
                         (Chem.MolFromSmarts("[N](-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6])([H:9])[H:10])[H:8]"), [0, 6], [], 3),
+                        (Chem.MolFromSmarts("[N](-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S-1:6])([H:9])[H:10])[H:8]"), [0], [], 3),
                         (Chem.MolFromSmarts("[N:1][C@:2]([C:3](=[O:4]))([C:5]([S+0:6]([H]))([H:9])[H:10])[H:8]"), [0,0], [], 2),
                         (Chem.MolFromSmarts("[N:1][C@:2]([C:3](=[O:4]))([C:5]([S+0:6])([H:9])[H:10])[H:8]"), [0,0, 5], [], 2),
+                        (Chem.MolFromSmarts("[N:1][C@:2]([C:3](=[O:4]))([C:5]([S-1:6])([H:9])[H:10])[H:8]"), [0,0], [], 2),
                         (Chem.MolFromSmarts("[N+](-[H])(-[H])(-[H])-[C@](-[H])(-[*])-[C](=[O])"), [], [], 7),
                         (Chem.MolFromSmarts("[N](-[H])(-[H])-[C@](-[H])(-[*])-[C](=[O])"), [], [], 6),
                         (Chem.MolFromSmarts("[N](-[H])-[C@](-[H])(-[*])-[C](=[O])"), [0], [], 5),
@@ -856,7 +862,7 @@ class CifSubstructures:
         for res_name, subs in new_subs_dict.items():
             res_num = 0
             for substruct, atom_names in subs.items():
-                check_dict[f"{res_name}_{res_num}"] = substruct
+                check_dict[f"{res_name}_{res_num}"] = [ substruct ]
                 res_num += 1
         RDKitToolkitWrapper()._validate_custom_substructures(custom_substructures=check_dict, forbidden_keys=[]) # errors if any are invalid
         self.data = new_subs_dict

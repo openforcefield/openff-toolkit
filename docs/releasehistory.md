@@ -12,7 +12,12 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Behavior changes
 
+- [PR #1705](https://github.com/openforcefield/openff-toolkit/pull/1705): Do not raise warning when `allow_undefined_stereo=True`.
+
 ### Bugfixes
+
+- [PR #1726](https://github.com/openforcefield/openff-toolkit/pull/1726): Fix error message in setting `scale12`, `scale13`, and `scale15` attributes.
+- [PR #1728](https://github.com/openforcefield/openff-toolkit/pull/1728): Adds support for loading deprotonated cysteine (sometimes labeled as "CYM") residues in `Topology.from_pdb`
 
 ### New features
 
@@ -22,7 +27,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Improved documentation and warnings
 - [PR #1709](https://github.com/openforcefield/openff-toolkit/pull/1709): Update molecule cookbook to use the maximally capable `Topology.from_pdb` in lieu of the more limited `Molecule.from_pdb_and_smiles` and `Molecule.from_polymer_pdb`.
-
+- [PR #1719](https://github.com/openforcefield/openff-toolkit/pull/1719): Remove out-of-date and unused `examples/environment.yaml` and various examples updates.  
 
 ## 0.14.3
 
