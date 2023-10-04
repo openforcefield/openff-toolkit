@@ -3699,31 +3699,21 @@ class TestMoleculeVisualization:
 
     @requires_pkg("nglview")
     def test_visualize_nglview(self):
-        """Test that the visualize method returns an NGLview widget. Note that
-        nglview is not explicitly a requirement in the test environment, but
-        is likely to get pulled in with other dependencies."""
-        try:
-            import nglview
-        except ModuleNotFoundError:
-            pass
+        import nglview
 
-        # Start with a molecule without conformers
         mol = Molecule().from_smiles("CCO")
 
         with pytest.raises(ValueError):
             mol.visualize(backend="nglview")
 
-        # Add conformers
         mol.generate_conformers()
 
-        # Ensure an NGLView widget is returned
         assert isinstance(mol.visualize(backend="nglview"), nglview.NGLWidget)
 
-        # Providing other arguments is an error
-        with pytest.raises(ValueError):
-            mol.visualize(backend="nglview", width=100)
-        with pytest.raises(ValueError):
-            mol.visualize(backend="nglview", height=100)
+        with pytest.warns(UserWarning, match="ignored.*nglview.*111"):
+            mol.visualize(backend="nglview", width=111)
+        with pytest.warns(UserWarning, match="ignored.*nglview.*222"):
+            mol.visualize(backend="nglview", height=222)
 
     @requires_pkg("IPython")
     @requires_openeye

@@ -39,12 +39,14 @@ from typing import (
     Generator,
     Iterable,
     List,
+    Literal,
     Optional,
     Sequence,
     Set,
     TextIO,
     Tuple,
     Union,
+    overload,
 )
 
 import networkx as nx
@@ -86,6 +88,9 @@ from openff.toolkit.utils.toolkits import (
 from openff.toolkit.utils.utils import get_data_file_path, requires_package
 
 if TYPE_CHECKING:
+    import IPython.display
+    import nglview
+
     from openff.toolkit.topology._mm_molecule import _SimpleAtom, _SimpleMolecule
 
 # TODO: Can we have the `ALLOWED_*_MODELS` list automatically appear in the docstrings below?
@@ -5338,13 +5343,34 @@ class Molecule(FrozenMolecule):
 
         return self._add_conformer(coordinates)
 
+    @overload
     def visualize(
         self,
-        backend="rdkit",
-        width=None,
-        height=None,
-        show_all_hydrogens=True,
-    ):
+        backend: Literal["rdkit"],
+    ) -> "IPython.display.SVG":
+        ...
+
+    @overload
+    def visualize(
+        self,
+        backend: Literal["openeye"],
+    ) -> "IPython.display.Image":
+        ...
+
+    @overload
+    def visualize(
+        self,
+        backend: Literal["nglview"],
+    ) -> "nglview.NGLWidget":
+        ...
+
+    def visualize(
+        self,
+        backend: str = "rdkit",
+        width: int = 500,
+        height: int = 300,
+        show_all_hydrogens: bool = True,
+    ) -> Union["IPython.display.SVG", "IPython.display.Image", "nglview.NGLWidget"]:
         """
         Render a visualization of the molecule in Jupyter
 
@@ -5357,15 +5383,15 @@ class Molecule(FrozenMolecule):
             - ``"openeye"``
             - ``"nglview"`` (requires conformers)
 
-        width : int, optional, default=500
+        width : int, default=500
             Width of the generated representation (only applicable to
-            ``backend=openeye`` or ``backend=rdkit``)
-        height : int, optional, default=300
+            ``backend="openeye"`` or ``backend="rdkit"``)
+        height : int, default=300
             Width of the generated representation (only applicable to
-            ``backend=openeye`` or ``backend=rdkit``)
-        show_all_hydrogens : bool, optional, default=True
+            ``backend="openeye"`` or ``backend="rdkit"``)
+        show_all_hydrogens : bool, default=True
             Whether to explicitly depict all hydrogen atoms. (only applicable to
-            ``backend=openeye`` or ``backend=rdkit``)
+            ``backend="openeye"`` or ``backend="rdkit"``)
 
         Returns
         -------
@@ -5377,6 +5403,8 @@ class Molecule(FrozenMolecule):
             - nglview → nglview.NGLWidget
 
         """
+        import inspect
+
         from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
 
         backend = backend.lower()
@@ -5387,10 +5415,14 @@ class Molecule(FrozenMolecule):
             except ImportError:
                 raise MissingOptionalDependencyError("nglview")
 
-            if width is not None or height is not None:
-                # TODO: More specific exception
-                raise ValueError(
-                    "The width and height arguments do not apply to the nglview backend."
+            signature = inspect.signature(Molecule.visualize).parameters
+            if (width != signature["width"].default) or (
+                height != signature["height"].default
+            ):
+                warnings.warn(
+                    f"Arguments `width` and `height` are ignored with {backend=}."
+                    f"Found non-default values {width=} and {height=}",
+                    stacklevel=2,
                 )
 
             if self.conformers:
@@ -5427,10 +5459,6 @@ class Molecule(FrozenMolecule):
                     "Visualizing with NGLview requires that the molecule has "
                     "conformers."
                 )
-
-        width = 500 if width is None else width
-        height = 300 if height is None else height
-        show_all_hydrogens = True if show_all_hydrogens is None else show_all_hydrogens
 
         if backend == "rdkit":
             if RDKIT_AVAILABLE:
