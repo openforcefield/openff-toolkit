@@ -2041,7 +2041,7 @@ class Topology(Serializable):
                     file=outfile,
                     keepIds=keep_ids,
                 )
-        elif file_format.upper() in ["SDF", "MOL2"]:
+        elif file_format.upper() in ("SDF"):
             from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
 
             RDKitToolkitWrapper()._write_topology(
@@ -2049,6 +2049,10 @@ class Topology(Serializable):
                 positions=positions if positions is not None else self.get_positions(),
                 file_path=str(file),
                 file_format=file_format,
+            )
+        elif file_format.upper() in ("MOL2"):
+            raise NotImplementedError(
+                "Multi-molecule MOL2 writer not (fully) implemented."
             )
         else:
             raise NotImplementedError(

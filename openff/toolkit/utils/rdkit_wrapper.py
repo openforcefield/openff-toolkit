@@ -1275,7 +1275,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         file_format: str,
     ):
         """
-        Backdoor to writing MOL2 files of `Topology`s with RDKit, used only for vizualization.
+        Backdoor to writing multi-molecule (topology) SDF files, used only for vizualization.
+
+        It'd be nice to have analogous functionality for MOL2 files, but RDKit doesn't support this
+        (single or multi-molecule).
 
         Not safe for public use.
         """
@@ -1284,8 +1287,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         from openff.toolkit import Topology
 
-        # TODO: why was mol2 allowed in this logic? it's an sdf writer
-        assert file_format.lower() in ("mol2", "sdf")
+        assert file_format.lower() in ("sdf")
 
         writer = SDWriter(file_path)
 
