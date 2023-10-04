@@ -1719,6 +1719,7 @@ class TestTopologyVisaulization:
 
         assert isinstance(topology.visualize(), nglview.NGLWidget)
 
+    @requires_rdkit
     def test_write_sdf_basic(self):
         water = create_water()
         ammonia = create_ammonia()
