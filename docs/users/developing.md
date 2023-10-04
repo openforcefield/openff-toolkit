@@ -258,7 +258,7 @@ Development of new toolkit features generally proceeds in the following stages:
 (install_dev)=
 ### Setting up a development environment
 
-1. Install the `conda` package manager as part of the Anaconda Distribution from [here](https://www.anaconda.com/distribution/)
+1. Install the `mamba` package manager as part of the [Miniforge or Mambaforge distributions](https://github.com/conda-forge/miniforge) (an alternative to the [Anaconda Distribution](https://www.anaconda.com/distribution/))
 
 2. Set up conda environment:
 
@@ -266,8 +266,8 @@ Development of new toolkit features generally proceeds in the following stages:
     git clone https://github.com/openforcefield/openff-toolkit
     cd openff-toolkit/
     # Create a conda environment with dependencies from env/YAML file
-    conda env create -n openff-dev -f devtools/conda-envs/test_env.yaml
-    conda activate openff-dev
+    mamba env create -n openff-dev -f devtools/conda-envs/test_env.yaml
+    mamba activate openff-dev
     # Perform editable/dirty dev install
     pip install -e .
     ```
@@ -287,8 +287,8 @@ To add the documentation dependencies to your existing `openff-dev` Conda enviro
 
 ```shell
 # Add the documentation requirements to your Conda environment
-conda env update --name openff-dev --file docs/environment.yml
-conda install --name openff-dev -c conda-forge sphinx-autobuild
+mamba env update --name openff-dev --file docs/environment.yml
+mamba install --name openff-dev -c conda-forge sphinx-autobuild
 ```
 
 To build the documentation from scratch:
@@ -296,7 +296,7 @@ To build the documentation from scratch:
 ```shell
 # Build the documentation
 # From the openff-toolkit root directory
-conda activate openff-dev
+mamba activate openff-dev
 cd docs
 make html
 # Documentation can be found in docs/_build/html/index.html
@@ -308,7 +308,7 @@ To watch the source directory for changes and automatically rebuild the document
 # Host the docs on a local HTTP server and rebuild when a source file is changed
 # Works best when the docs have already been built
 # From the openff-toolkit root directory
-conda activate openff-dev
+mamba activate openff-dev
 sphinx-autobuild docs docs/_build/html --watch openff
 # Then navigate your web browser to http://localhost:8000
 ```
@@ -335,9 +335,10 @@ These checks will use the most recent versions of each linter.
 To ensure that changes follow these standards, you can install and run these tools locally:
 
 ```shell
-conda install black isort -c conda-forge
+mamba install black isort flake8 -c conda-forge
 black openff
 isort openff
+flake8 openff
 ```
 
 Anything not covered above is currently up to personal preference, but this may change as new linters are added.
@@ -349,16 +350,28 @@ The [`pre-commit`](https://pre-commit.com/) tool can _optionally_ be used to aut
 To use `pre-commit` locally, first install it:
 
 ```shell
-conda conda install pre-commit -c conda-forge  # also available via pip
+mamba install pre-commit -c conda-forge  # also available via pip
 ```
 
 Then, install the pre-commit hooks (note that it installs the linters into an isolated virtual environment, not the current conda environment):
 
-```
+```shell
 pre-commit install
 ```
 
 Hooks will now run automatically before commits. Once installed, they should run in a total of a few seconds.
+
+You can also manually run all hooks outside of commit time with
+
+```shell
+pre-commit run
+```
+
+or an individual hook by name, i.e.
+
+```shell
+pre-commit run flake8
+```
 
 If `pre-commit` is not used by the developer and style issues are found, a `pre-commit.ci` bot may commit directly to a PR to make these fixes. This bot should only ever alter styl and never make functional changes to code.
 
@@ -399,6 +412,6 @@ The CI matrix is currently as follows:
 +-----------------------+------------+-----------+-------------+------------+-----------+-------------+
 | Python 3.11           | **Test**   | Skip      | Skip        | **Test**   | Skip      | Skip        |
 +-----------------------+------------+-----------+-------------+------------+-----------+-------------+
-| Python 3.12 and newer | Pending official releases and upstream support
+| Python 3.12 and newer | Pending official releases and upstream support                              | 
 +-----------------------+------------+-----------+-------------+------------+-----------+-------------+
 :::

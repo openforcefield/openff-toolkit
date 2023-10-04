@@ -27,7 +27,7 @@ Please cite the OpenFF Toolkit using the [Zenodo record](https://zenodo.org/reco
 
 The Open Force Field Toolkit (`openff-toolkit`) is a Python toolkit, and supports Python 3.9 through 3.11.
 
-### Installing via conda
+### Installing via Mamba/Conda
 
 Detailed installation instructions can be found [here](https://open-forcefield-toolkit.readthedocs.io/en/stable/installation.html).
 

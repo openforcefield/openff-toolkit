@@ -1722,16 +1722,18 @@ class TestvdWHandler:
         assert vdw_handler.get_parameter({"smirks": "[#1:1]"})[0].id == "n00"
 
     def test_set_invalid_scale_factor(self):
+        import random
+
+        factors = {index: random.random() for index in (2, 3, 5)}
+
         handler = vdWHandler(version=0.4)
 
-        with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale12"):
-            handler.scale12 = 0.1
-
-        with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale13"):
-            handler.scale13 = 0.1
-
-        with pytest.raises(SMIRNOFFSpecError, match="unable to handle scale15"):
-            handler.scale15 = 0.1
+        for factor, value in factors.items():
+            with pytest.raises(
+                SMIRNOFFSpecError,
+                match=f"unable to handle scale1{factor}.*1-{factor} scaling was {value}",
+            ):
+                setattr(handler, f"scale1{factor}", value)
 
 
 class TestvdWHandlerUpConversion:

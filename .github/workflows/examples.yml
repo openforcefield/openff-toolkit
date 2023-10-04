@@ -41,7 +41,7 @@ jobs:
       NB_ARGS: -v --nbval-lax --ignore=examples/deprecated --durations=20
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
@@ -87,7 +87,7 @@ jobs:
 
       - name: Remove undesired toolkits
         run: |
-          # If openmmforcefields is included in examples/environment.yaml,
+          # If openmmforcefields is included in either environment file,
           # remove RDKit and AmberTools brought in by it. Currently it's not included,
           # so don't remove it.
           if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then

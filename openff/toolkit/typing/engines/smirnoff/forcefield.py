@@ -1210,7 +1210,7 @@ class ForceField:
         """
         from openff.interchange import Interchange  # type: ignore[import]
 
-        from openff.toolkit.utils.toolkit_registry import _toolkit_registry_manager
+        from openff.toolkit.utils.toolkit_registry import toolkit_registry_manager
 
         if toolkit_registry is not None:
             used_registry = toolkit_registry
@@ -1219,7 +1219,7 @@ class ForceField:
 
             used_registry = GLOBAL_TOOLKIT_REGISTRY
 
-        with _toolkit_registry_manager(used_registry):
+        with toolkit_registry_manager(used_registry):
             return Interchange.from_smirnoff(
                 force_field=self,
                 topology=topology,
@@ -1275,7 +1275,7 @@ class ForceField:
             for tag, parameter_handler in self._parameter_handlers.items():
                 param_is_list = False
 
-                if type(parameter_handler) == VirtualSiteHandler:
+                if type(parameter_handler) is VirtualSiteHandler:
                     param_is_list = True
 
                 matches = parameter_handler.find_matches(top_mol)

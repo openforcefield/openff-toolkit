@@ -4551,6 +4551,50 @@ class TestToolkitRegistry:
 
 
 @requires_openeye
+@requires_ambertools
+@requires_rdkit
+class TestToolkitRegistryManager:
+    def test_openeye_registry(self):
+        from openff.toolkit.utils.toolkit_registry import toolkit_registry_manager
+
+        openeye_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
+
+        with toolkit_registry_manager(openeye_registry):
+            assert "OpenEye" in str(GLOBAL_TOOLKIT_REGISTRY)
+            assert "RDKit" not in str(GLOBAL_TOOLKIT_REGISTRY)
+
+            create_ethanol().assign_partial_charges(
+                partial_charge_method="am1bccelf10",
+            )
+
+    def test_no_openeye_registry(self):
+        from openff.toolkit.utils.toolkit_registry import toolkit_registry_manager
+
+        no_openeye_registry = ToolkitRegistry(
+            toolkit_precedence=[
+                RDKitToolkitWrapper,
+                AmberToolsToolkitWrapper,
+            ]
+        )
+
+        with toolkit_registry_manager(no_openeye_registry):
+            assert "OpenEye" not in str(GLOBAL_TOOLKIT_REGISTRY)
+            assert "RDKit" in str(GLOBAL_TOOLKIT_REGISTRY)
+
+            with pytest.raises(
+                ValueError,
+                match="No registered toolkits",
+            ):
+                create_ethanol().assign_partial_charges(
+                    partial_charge_method="am1bccelf10",
+                )
+
+            create_ethanol().assign_partial_charges(
+                partial_charge_method="am1bcc",
+            )
+
+
+@requires_openeye
 def test_license_check(monkeypatch):
     def MockIsLicensed():
         return False
