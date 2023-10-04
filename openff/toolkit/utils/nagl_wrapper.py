@@ -53,12 +53,15 @@ class NAGLToolkitWrapper(ToolkitWrapper):
     def assign_partial_charges(
         self,
         molecule: "Molecule",
-        partial_charge_method: str = "_nagl_am1bccelf10",
+        partial_charge_method: str,
         use_conformers: Optional[List["Quantity"]] = None,
         strict_n_conformers: bool = False,
         normalize_partial_charges: bool = True,
         _cls: Optional[Type["FrozenMolecule"]] = None,
     ):
+        from openff.nagl import GNNModel
+        from openff.nagl_models import validate_nagl_model_path
+
         if _cls is None:
             from openff.toolkit.topology.molecule import Molecule
 
@@ -82,39 +85,27 @@ class NAGLToolkitWrapper(ToolkitWrapper):
                 stacklevel=2,
             )
 
-        # TODO: Determine how model selection relates to `partial_charge_method` argument
-        if partial_charge_method == "_nagl_am1bccelf10":
-            import pathlib
-
-            from openff.nagl import GNNModel
-            from openff.nagl_models import validate_nagl_model_path
-
-            model_name = "openff-gnn-am1bcc-0.1.0-rc.1.pt"
-            _only_model = validate_nagl_model_path(model_name)
-
-            # This variable is not exposed so it cannot be tested
-            if not pathlib.Path(_only_model).exists():
-                raise FileNotFoundError(f"Could not find model {_only_model.name}")
-
-            model = GNNModel.load(_only_model, eval_mode=True)
-            charges = model.compute_property(
-                molecule,
-                as_numpy=True,
-                readout_name="am1bcc_charges",
-                check_domains=True,
-                # if False, only warns
-                error_if_unsupported=True,
-            )
-            molecule.partial_charges = Quantity(
-                charges.astype(float),
-                unit.elementary_charge,
-            )
-
-        else:
+        try:
+            model_path = validate_nagl_model_path(model=partial_charge_method)
+        except FileNotFoundError as error:
             raise ChargeMethodUnavailableError(
                 f"Charge model {partial_charge_method} not supported by "
                 f"{self.__class__.__name__}."
-            )
+            ) from error
+
+        model = GNNModel.load(model_path, eval_mode=True)
+        charges = model.compute_property(
+            molecule,
+            as_numpy=True,
+            readout_name="am1bcc_charges",
+            check_domains=True,
+            error_if_unsupported=True,
+        )
+
+        molecule.partial_charges = Quantity(
+            charges.astype(float),
+            unit.elementary_charge,
+        )
 
         if normalize_partial_charges:
             molecule._normalize_partial_charges()

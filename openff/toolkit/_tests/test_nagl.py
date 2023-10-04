@@ -1,7 +1,9 @@
+import pathlib
 import re
 
 import numpy
 import pytest
+from openff.nagl_models import list_available_nagl_models
 from openff.units import unit
 from openff.utilities import has_package, skip_if_missing
 
@@ -21,6 +23,8 @@ from openff.toolkit.utils.exceptions import (
 from openff.toolkit.utils.nagl_wrapper import NAGLToolkitWrapper
 from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 
+_DEFAULT_MODEL = "openff-gnn-am1bcc-0.1.0-rc.1.pt"
+
 
 @skip_if_missing("openff.nagl")
 class TestNAGLToolkitWrapper:
@@ -39,7 +43,11 @@ class TestNAGLToolkitWrapper:
             create_cyclohexane,
         ],
     )
-    def test_assign_partial_charges_basic(self, molecule_function):
+    @pytest.mark.parametrize(
+        "nagl_model",
+        [pathlib.Path(file).name for file in list_available_nagl_models()],
+    )
+    def test_assign_partial_charges_basic(self, molecule_function, nagl_model):
         molecule = molecule_function()
 
         molecule.assign_partial_charges(
@@ -52,7 +60,7 @@ class TestNAGLToolkitWrapper:
         molecule = molecule_function()
 
         molecule.assign_partial_charges(
-            partial_charge_method="_nagl_am1bccelf10",
+            partial_charge_method=nagl_model,
             toolkit_registry=NAGLToolkitWrapper(),
         )
 
@@ -74,7 +82,7 @@ class TestNAGLToolkitWrapper:
 
         for molecule in [forward, reverse]:
             molecule.assign_partial_charges(
-                partial_charge_method="_nagl_am1bccelf10",
+                partial_charge_method=_DEFAULT_MODEL,
                 toolkit_registry=NAGLToolkitWrapper(),
             )
 
@@ -93,7 +101,7 @@ class TestNAGLToolkitWrapper:
             match="optional argument.*use_conformers",
         ):
             molecule.assign_partial_charges(
-                partial_charge_method="_nagl_am1bccelf10",
+                partial_charge_method=_DEFAULT_MODEL,
                 toolkit_registry=NAGLToolkitWrapper(),
                 use_conformers=[molecule.conformers[-1]],
             )
@@ -103,7 +111,7 @@ class TestNAGLToolkitWrapper:
             match="optional argument.*strict_n_conformers",
         ):
             molecule.assign_partial_charges(
-                partial_charge_method="_nagl_am1bccelf10",
+                partial_charge_method=_DEFAULT_MODEL,
                 toolkit_registry=NAGLToolkitWrapper(),
                 strict_n_conformers=1,
             )
@@ -122,7 +130,7 @@ class TestNAGLToolkitWrapper:
         si = Molecule.from_smiles("[Si+4]")
         with pytest.raises(ValueError, match="Molecule contains forbidden element 14"):
             si.assign_partial_charges(
-                partial_charge_method="_nagl_am1bccelf10",
+                partial_charge_method=_DEFAULT_MODEL,
                 toolkit_registry=NAGLToolkitWrapper(),
             )
 
@@ -131,7 +139,7 @@ class TestNAGLToolkitWrapper:
         err = re.escape("Molecule contains forbidden SMARTS pattern [#17:1]#,:,=[*:2]")
         with pytest.raises(ValueError, match=err):
             mol.assign_partial_charges(
-                partial_charge_method="_nagl_am1bccelf10",
+                partial_charge_method=_DEFAULT_MODEL,
                 toolkit_registry=NAGLToolkitWrapper(),
             )
 
