@@ -2441,7 +2441,7 @@ class Topology(Serializable):
         >>> from openff.toolkit.utils.utils import get_data_file_path
         >>> pdb_filename = get_data_file_path("systems/test_systems/T4_lysozyme_water_ions.pdb")
         >>> topology = Topology.from_pdb(pdb_filename)
-        >>> topology.visualize()
+        >>> topology.visualize()  # doctest: +SKIP
 
         """
         import nglview

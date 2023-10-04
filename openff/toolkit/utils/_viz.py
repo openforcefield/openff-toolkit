@@ -35,8 +35,8 @@ class MoleculeNGLViewTrajectory(Structure, Trajectory):
     -------
     >>> import nglview as nv
     >>>
-    >>> mol = Molecule.from_polymer_pdb(pdb_filename)
-    >>> nv.NGLWidget(MoleculeNGLViewTrajectory(mol))
+    >>> mol = Molecule.from_polymer_pdb("file.pdb")  # doctest: +SKIP
+    >>> nv.NGLWidget(MoleculeNGLViewTrajectory(mol))  # doctest: +SKIP
     """
 
     def __init__(
@@ -86,8 +86,8 @@ class TopologyNGLViewStructure(Structure):
     -------
     >>> import nglview as nv
     >>>
-    >>> top = Topology.from_pdb(pdb_filename)
-    >>> nv.NGLWidget(TopologyNGLViewStructure(top))
+    >>> top = Topology.from_pdb("file.pdb")  # doctest: +SKIP
+    >>> nv.NGLWidget(TopologyNGLViewStructure(top))  # doctest: +SKIP
     """
 
     def __init__(
