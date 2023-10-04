@@ -209,9 +209,13 @@ class SMIRKSParsingError(OpenFFToolkitException):
     """
 
 
-class SMARTSParsingError(OpenFFToolkitException, ValueError):
+class ChemicalEnvironmentParsingError(
+    OpenFFToolkitException,
+    ValueError,
+    SMIRKSParsingError,
+):
     """
-    Exception for when SMARTS are not parseable by a wrapped toolkit
+    Exception for when SMARTS/SMIRKS are not parseable by a wrapped toolkit
     """
 
 

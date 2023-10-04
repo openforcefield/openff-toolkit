@@ -32,6 +32,7 @@ from openff.toolkit.topology.molecule import Atom, Molecule
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
+    ChemicalEnvironmentParsingError,
     ConformerGenerationError,
     InChIParseError,
     IncorrectNumConformersError,
@@ -40,7 +41,6 @@ from openff.toolkit.utils.exceptions import (
     InvalidToolkitError,
     NotAttachedToMoleculeError,
     RadicalsNotSupportedError,
-    SMARTSParsingError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
@@ -2029,7 +2029,7 @@ class TestOpenEyeToolkitWrapper:
 
     def test_find_matches_bad_smarts(self):
         with pytest.raises(
-            SMARTSParsingError,
+            ChemicalEnvironmentParsingError,
             match="foobar",
         ):
             OpenEyeToolkitWrapper().find_smarts_matches(
@@ -3327,7 +3327,7 @@ class TestRDKitToolkitWrapper:
 
     def test_find_matches_bad_smarts(self):
         with pytest.raises(
-            SMARTSParsingError,
+            ChemicalEnvironmentParsingError,
             match="foobar",
         ):
             RDKitToolkitWrapper().find_smarts_matches(

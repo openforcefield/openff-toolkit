@@ -2874,12 +2874,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         .. notes ::
 
-           * Raises ``SMARTSParsingError`` if ``smarts`` query is malformed
+           * Raises ``ChemicalEnvironmentParsingError`` if ``smarts`` query is malformed
 
         """
         from rdkit import Chem
 
-        from openff.toolkit.utils.exceptions import SMARTSParsingError
+        from openff.toolkit.utils.exceptions import ChemicalEnvironmentParsingError
 
         # This code is part of a possible performance optimization that hasn't been validated
         # for production use yet.
@@ -2916,7 +2916,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Set up query.
         qmol = Chem.MolFromSmarts(smarts)  # cannot catch the error
         if qmol is None:
-            raise SMARTSParsingError(
+            raise ChemicalEnvironmentParsingError(
                 f'RDKit could not parse the SMARTS string "{smarts}"'
             )
 

@@ -2721,20 +2721,20 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
            * Raises ``LicenseError`` if valid OpenEye tools license is not found, rather than
                causing program to terminate
-           * Raises ``SMARTSParsingError`` if ``smarts`` query is malformed
+           * Raises ``ChemicalEnvironmentParsingError`` if ``smarts`` query is malformed
 
         """
         from openeye import oechem
         from openeye.oechem import OESubSearch
 
-        from openff.toolkit.utils.exceptions import SMARTSParsingError
+        from openff.toolkit.utils.exceptions import ChemicalEnvironmentParsingError
 
         # Make a copy of molecule so we don't influence original (probably safer than deepcopy per C Bayly)
         mol = oechem.OEMol(oemol)
         # Set up query
         qmol = oechem.OEQMol()
         if not oechem.OEParseSmarts(qmol, smarts):
-            raise SMARTSParsingError(
+            raise ChemicalEnvironmentParsingError(
                 f'OpenEye could not parse the SMARTS string "{smarts}"'
             )
 
