@@ -2,7 +2,6 @@
 Tests for Topology
 
 """
-
 import itertools
 import re
 from copy import deepcopy
@@ -12,6 +11,7 @@ import pytest
 from openff.units import unit
 from openff.units.openmm import from_openmm
 from openff.units.units import Quantity
+from openff.utilities import skip_if_missing
 from openmm import app
 
 from openff.toolkit._tests.create_molecules import (
@@ -1702,6 +1702,22 @@ class TestTopology:
             ("None", "6", " ", "NME"),
         ]
         assert len(chains) == 2
+
+
+@skip_if_missing("nglview")
+class TestTopologyVisaulization:
+    def test_visualize_basic(self):
+        import nglview
+
+        water = Molecule.from_smiles("O")
+        alkane = Molecule.from_smiles(10 * "C")
+
+        water.generate_conformers(n_conformers=1)
+        alkane.generate_conformers(n_conformers=1)
+        alkane.conformers[0] += Quantity([0, 0, 5], unit.angstrom)
+        view = alkane.visualize("nglview")
+
+        assert isinstance(view, nglview.NGLWidget)
 
 
 class TestAddTopology:
