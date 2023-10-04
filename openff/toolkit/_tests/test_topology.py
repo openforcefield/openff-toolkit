@@ -1711,15 +1711,13 @@ class TestTopologyVisaulization:
     def test_visualize_basic(self):
         import nglview
 
-        water = Molecule.from_smiles("O")
-        alkane = Molecule.from_smiles(10 * "C")
+        topology = Topology.from_pdb(
+            get_data_file_path(
+                "systems/test_systems/T4_lysozyme_water_ions.pdb",
+            )
+        )
 
-        water.generate_conformers(n_conformers=1)
-        alkane.generate_conformers(n_conformers=1)
-        alkane.conformers[0] += Quantity([0, 0, 5], unit.angstrom)
-        view = alkane.visualize("nglview")
-
-        assert isinstance(view, nglview.NGLWidget)
+        assert isinstance(topology.visualize(), nglview.NGLWidget)
 
     def test_write_sdf_basic(self):
         water = create_water()

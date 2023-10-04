@@ -2419,7 +2419,7 @@ class Topology(Serializable):
     @requires_package("nglview")
     def visualize(self, ensure_correct_connectivity: bool = False) -> "NGLWidget":
         """
-        Visualize the trajectory with NGLView.
+        Visualize with NGLView.
 
         Requires all molecules in this topology have positions.
 
@@ -2431,7 +2431,7 @@ class Topology(Serializable):
         Parameters
         ==========
 
-        ensure_correct_connectivity
+        ensure_correct_connectivity: bool, default=False
             If ``True``, the visualization will be guaranteed to reflect the
             connectivity in the ``Topology``. Note that this will severely
             degrade performance, especially for topologies with many atoms.
