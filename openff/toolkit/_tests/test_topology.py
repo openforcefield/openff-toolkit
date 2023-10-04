@@ -15,9 +15,11 @@ from openff.utilities import skip_if_missing
 from openmm import app
 
 from openff.toolkit._tests.create_molecules import (
+    create_ammonia,
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
+    create_water,
     cyx_hierarchy_added,
     dipeptide,
     dipeptide_hierarchy_added,
@@ -1718,6 +1720,18 @@ class TestTopologyVisaulization:
         view = alkane.visualize("nglview")
 
         assert isinstance(view, nglview.NGLWidget)
+
+    def test_write_sdf_basic(self):
+        water = create_water()
+        ammonia = create_ammonia()
+
+        water.generate_conformers()
+        ammonia.generate_conformers()
+
+        Topology.from_molecules([water, ammonia]).to_file("tmp.sdf", file_format="sdf")
+
+        # Just ensure the (multi-molecule) SDF file can be parsed somewhat sanely
+        assert len(Molecule.from_file("tmp.sdf")) == 2
 
 
 class TestAddTopology:
