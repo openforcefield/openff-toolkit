@@ -14,14 +14,13 @@ if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import FrozenMolecule, Molecule
 
 
-__all__ = ("_NAGLToolkitWrapper",)
+__all__ = ("NAGLToolkitWrapper",)
 
 
-class _NAGLToolkitWrapper(ToolkitWrapper):
+class NAGLToolkitWrapper(ToolkitWrapper):
     _toolkit_name = "OpenFF NAGL"
     _toolkit_installation_instructions = (
-        "Installation instructions are in flux. See for updates: "
-        "https://github.com/openforcefield/openff-nagl#installation"
+        "See https://docs.openforcefield.org/projects/nagl/en/latest/installation.html"
     )
 
     def __init__(self):
@@ -67,7 +66,7 @@ class _NAGLToolkitWrapper(ToolkitWrapper):
 
         if use_conformers:
             warnings.warn(
-                "`_NAGLToolkitWrapper.assign_partial_charges` was passed optional argument "
+                "`NAGLToolkitWrapper.assign_partial_charges` was passed optional argument "
                 "`use_conformers` which will not be used. OpenFF NAGL does not generate "
                 "conformers as part of assigning partial charges.",
                 UserWarning,
@@ -76,7 +75,7 @@ class _NAGLToolkitWrapper(ToolkitWrapper):
 
         if strict_n_conformers:
             warnings.warn(
-                "`_NAGLToolkitWrapper.assign_partial_charges` was passed optional argument "
+                "`NAGLToolkitWrapper.assign_partial_charges` was passed optional argument "
                 "`strict_n_conformers` which will not be used. OpenFF NAGL does not generate "
                 "conformers as part of assigning partial charges.",
                 UserWarning,

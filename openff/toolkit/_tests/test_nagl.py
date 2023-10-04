@@ -14,11 +14,11 @@ from openff.toolkit._tests.create_molecules import (
     create_reversed_ethanol,
 )
 from openff.toolkit._tests.utils import requires_openeye
-from openff.toolkit.utils._nagl_wrapper import _NAGLToolkitWrapper
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ToolkitUnavailableException,
 )
+from openff.toolkit.utils.nagl_wrapper import NAGLToolkitWrapper
 from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 
 
@@ -27,7 +27,7 @@ class TestNAGLToolkitWrapper:
     def test_version(self):
         from openff.nagl import __version__ as parsed_version
 
-        assert parsed_version == _NAGLToolkitWrapper()._toolkit_version
+        assert parsed_version == NAGLToolkitWrapper()._toolkit_version
 
     @requires_openeye
     @pytest.mark.parametrize(
@@ -53,7 +53,7 @@ class TestNAGLToolkitWrapper:
 
         molecule.assign_partial_charges(
             partial_charge_method="_nagl_am1bccelf10",
-            toolkit_registry=_NAGLToolkitWrapper(),
+            toolkit_registry=NAGLToolkitWrapper(),
         )
 
         assert molecule.partial_charges is not None
@@ -75,7 +75,7 @@ class TestNAGLToolkitWrapper:
         for molecule in [forward, reverse]:
             molecule.assign_partial_charges(
                 partial_charge_method="_nagl_am1bccelf10",
-                toolkit_registry=_NAGLToolkitWrapper(),
+                toolkit_registry=NAGLToolkitWrapper(),
             )
 
         numpy.testing.assert_allclose(
@@ -94,7 +94,7 @@ class TestNAGLToolkitWrapper:
         ):
             molecule.assign_partial_charges(
                 partial_charge_method="_nagl_am1bccelf10",
-                toolkit_registry=_NAGLToolkitWrapper(),
+                toolkit_registry=NAGLToolkitWrapper(),
                 use_conformers=[molecule.conformers[-1]],
             )
 
@@ -104,7 +104,7 @@ class TestNAGLToolkitWrapper:
         ):
             molecule.assign_partial_charges(
                 partial_charge_method="_nagl_am1bccelf10",
-                toolkit_registry=_NAGLToolkitWrapper(),
+                toolkit_registry=NAGLToolkitWrapper(),
                 strict_n_conformers=1,
             )
 
@@ -115,7 +115,7 @@ class TestNAGLToolkitWrapper:
         ):
             create_ethanol().assign_partial_charges(
                 partial_charge_method="hartree_fock",
-                toolkit_registry=_NAGLToolkitWrapper(),
+                toolkit_registry=NAGLToolkitWrapper(),
             )
 
     def test_unsupported_molecule_element(self):
@@ -123,7 +123,7 @@ class TestNAGLToolkitWrapper:
         with pytest.raises(ValueError, match="Molecule contains forbidden element 14"):
             si.assign_partial_charges(
                 partial_charge_method="_nagl_am1bccelf10",
-                toolkit_registry=_NAGLToolkitWrapper(),
+                toolkit_registry=NAGLToolkitWrapper(),
             )
 
     def test_unsupported_molecule_bond(self):
@@ -132,7 +132,7 @@ class TestNAGLToolkitWrapper:
         with pytest.raises(ValueError, match=err):
             mol.assign_partial_charges(
                 partial_charge_method="_nagl_am1bccelf10",
-                toolkit_registry=_NAGLToolkitWrapper(),
+                toolkit_registry=NAGLToolkitWrapper(),
             )
 
 
@@ -142,11 +142,11 @@ class TestNAGLToolkitWrapper:
 )
 class TestNoNAGLToolkitWrapper:
     def test_nagl_toolkit_wrapper_unavailable(self):
-        assert not _NAGLToolkitWrapper.is_available()
+        assert not NAGLToolkitWrapper.is_available()
 
     def test_init_unavailable(self):
         with pytest.raises(
             ToolkitUnavailableException,
             match="OpenFF NAGL is not available",
         ):
-            _NAGLToolkitWrapper()
+            NAGLToolkitWrapper()

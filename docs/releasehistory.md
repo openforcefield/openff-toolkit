@@ -21,6 +21,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### New features
 
+- [PR #1733](https://github.com/openforcefield/openff-toolkit/pull/1733): Makes `NAGLToolkitWrapper` and its associated module public.
 - [PR #1698](https://github.com/openforcefield/openff-toolkit/pull/1698): Makes `openff.toolkit.utils.toolkit_registry.toolkit_registry_manager` public.
 - [PR #1662](https://github.com/openforcefield/openff-toolkit/pull/1662): Adds hierarchy scheme iterators to `Topology`, i.e. `Topology.residues`, when schemes of the same iterator name are defines on all constituent `Molecule`s.
 - [PR #1700](https://github.com/openforcefield/openff-toolkit/pull/1700): Use `openff-nagl` v0.3.0.
