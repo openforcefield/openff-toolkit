@@ -142,7 +142,7 @@ jobs:
             NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
             NB_ARGS+=" --ignore=examples/toolkit_showcase"
             NB_ARGS+=" --ignore=examples/using_smirnoff_with_amber_protein_forcefield"
-            NB_ARGS+=" --ignore=examples/SMIRNOFF_simulation.ipynb"
+            NB_ARGS+=" --ignore=examples/SMIRNOFF_simulation"
           fi
 
           python -m pytest $PYTEST_ARGS $NB_ARGS examples
