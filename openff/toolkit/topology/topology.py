@@ -58,6 +58,7 @@ from openff.toolkit.utils.exceptions import (
     InvalidAromaticityModelError,
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
+    MissingConformersError,
     MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
     NotBondedError,
@@ -2459,7 +2460,7 @@ class Topology(Serializable):
             )
 
         if self.get_positions() is None:
-            raise ValueError(
+            raise MissingConformersError(
                 "All molecules in this topology must have positions for it to be visualized in a widget."
             )
 

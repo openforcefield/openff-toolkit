@@ -62,6 +62,7 @@ from openff.toolkit.utils.exceptions import (
     IncompatibleUnitError,
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
+    MissingConformersError,
     MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
     NonUniqueSubstructureName,
@@ -1719,6 +1720,32 @@ class TestTopologyVisaulization:
         )
 
         assert isinstance(topology.visualize(), nglview.NGLWidget)
+
+    @requires_rdkit
+    @skip_if_missing("nglview")
+    def test_missing_positions(self):
+        import nglview
+
+        water = create_water()
+        ammonia = create_ammonia()
+
+        with pytest.raises(MissingConformersError):
+            water.to_topology().visualize()
+
+        with pytest.raises(MissingConformersError):
+            Topology.from_molecules([water, ammonia]).visualize()
+
+        water.generate_conformers()
+
+        with pytest.raises(MissingConformersError):
+            Topology.from_molecules([water, ammonia]).visualize()
+
+        ammonia.generate_conformers()
+
+        assert isinstance(
+            Topology.from_molecules([water, ammonia]).visualize(),
+            nglview.NGLWidget,
+        )
 
     @requires_rdkit
     def test_write_sdf_basic(self):
