@@ -91,6 +91,15 @@ def quantities_allclose(quantity1, quantity2, **kwargs):
     return np.allclose(quantity1, quantity2, **kwargs)
 
 
+@requires_package("openmm")
+def get_nonbonded_force(system: "openmm.System") -> "openmm.NonbondedForce":
+    import openmm
+
+    for force in system.getForces():
+        if type(force) is openmm.NonbondedForce:
+            return force
+
+
 def get_context_potential_energy(
     context, positions, box_vectors=None, by_force_group=True
 ):
@@ -1507,9 +1516,7 @@ def evaluate_molecules_off(molecules, forcefield, minimize=False):
 @requires_package("openmm")
 def get_14_scaling_factors(omm_sys: "openmm.System") -> Tuple[List, List]:
     """Find the 1-4 scaling factors as they are applied to an OpenMM System"""
-    nonbond_force = [
-        f for f in omm_sys.getForces() if type(f) == openmm.NonbondedForce
-    ][0]
+    nonbond_force = get_nonbonded_force(omm_sys)
 
     vdw_14 = list()
     coul_14 = list()
@@ -1543,11 +1550,11 @@ def compare_partial_charges(
     n_particles = system1.getNumParticles()
 
     for force1 in system1.getForces():
-        if type(force1) == openmm.NonbondedForce:
+        if type(force1) is openmm.NonbondedForce:
             charges1 = [force1.getParticleParameters(i)[0] for i in range(n_particles)]
 
     for force2 in system2.getForces():
-        if type(force2) == openmm.NonbondedForce:
+        if type(force2) is openmm.NonbondedForce:
             charges2 = [force2.getParticleParameters(i)[0] for i in range(n_particles)]
 
     assert charges1 == charges2, [(x - y) for x, y in zip(charges1, charges2)]

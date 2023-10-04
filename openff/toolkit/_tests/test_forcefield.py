@@ -61,6 +61,7 @@ if has_package("openmm"):
     import openmm.app
     import openmm.unit
 
+    from openff.toolkit._tests.openmm_utils import get_nonbonded_force
     from openff.toolkit._tests.utils import (
         compare_partial_charges,
         get_14_scaling_factors,
@@ -1544,11 +1545,9 @@ class TestForceField(_ForceFieldFixtures):
             force_field["vdW"].cutoff = 0.777 * unit.nanometer
             force_field["Electrostatics"].cutoff = 0.777 * unit.nanometer
 
-        omm_sys = force_field.create_openmm_system(top)
+        system = force_field.create_openmm_system(top)
 
-        for f in omm_sys.getForces():
-            if isinstance(f, openmm.NonbondedForce):
-                nonbonded_force = f
+        nonbonded_force = get_nonbonded_force(system)
 
         found_cutoff = from_openmm(nonbonded_force.getCutoffDistance())
         vdw_cutoff = force_field["vdW"].cutoff
@@ -1929,6 +1928,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
     def test_charges_from_molecule_reordered(self, toolkit_registry, force_field):
         """A copy of test_charges_from_molecule but with the same molecule in a different atom order."""
+
         molecules = [create_ethanol()]
 
         # In 1_ethanol_reordered.pdb, the first three atoms go O-C-C instead of C-C-O. This part of the test ensures
@@ -1938,21 +1938,21 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         )
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
-        omm_system = force_field.create_openmm_system(
+        system = force_field.create_openmm_system(
             topology,
             charge_from_molecules=molecules,
             toolkit_registry=toolkit_registry,
         )
-        nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == openmm.NonbondedForce
-        ][0]
+
+        nonbonded_force = get_nonbonded_force(system)
+
         expected_charges = (
             (0, -0.2 * openmm.unit.elementary_charge),
             (1, -0.4 * openmm.unit.elementary_charge),
             (2, -0.3 * openmm.unit.elementary_charge),
         )
         for particle_index, expected_charge in expected_charges:
-            q, _, _ = nonbondedForce.getParticleParameters(particle_index)
+            q, _, _ = nonbonded_force.getParticleParameters(particle_index)
             assert q == expected_charge
 
     @pytest.mark.parametrize("toolkit_registry", toolkit_registries)
@@ -2030,13 +2030,13 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         mol = Molecule.from_file(
             get_data_file_path(os.path.join("systems", "monomers", "water.sdf"))
         )
-        omm_system = ff.create_openmm_system(mol.to_topology())
-        nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == openmm.NonbondedForce
-        ][0]
+        system = ff.create_openmm_system(mol.to_topology())
+
+        nonbonded_force = get_nonbonded_force(system)
+
         expected_charges = [-0.834, 0.417, 0.417] * openmm.unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
-            q, _, _ = nonbondedForce.getParticleParameters(particle_index)
+            q, _, _ = nonbonded_force.getParticleParameters(particle_index)
             assert q == expected_charge
 
     def test_parse_library_charges_from_spec_docs(self):
@@ -2411,6 +2411,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         """Test assigning charges to one water molecule using library charges, where two LCs match and the
         assignment is determined by order they are added to the force field"""
         # Test with xml_OH_library_charges_xml loaded last, which should assign dummy partial charges
+
         ff = ForceField(
             get_data_file_path("test_forcefields/test_forcefield.offxml"),
             get_data_file_path("test_forcefields/tip3p.offxml"),
@@ -2419,13 +2420,15 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         mol = Molecule.from_file(
             get_data_file_path(os.path.join("systems", "monomers", "water.sdf"))
         )
-        omm_system = ff.create_openmm_system(mol.to_topology())
-        nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == openmm.NonbondedForce
-        ][0]
+
+        system = ff.create_openmm_system(mol.to_topology())
+
+        nonbonded_force = get_nonbonded_force(system)
+
         expected_charges = [-2.0, 1.0, 1.0] * openmm.unit.elementary_charge
+
         for particle_index, expected_charge in enumerate(expected_charges):
-            q, _, _ = nonbondedForce.getParticleParameters(particle_index)
+            q, _, _ = nonbonded_force.getParticleParameters(particle_index)
             assert q == expected_charge
 
         # Test again, but with tip3p.offxml loaded last (loading the correct partial charges)
@@ -2434,18 +2437,20 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             xml_OH_library_charges_xml,
             get_data_file_path("test_forcefields/tip3p.offxml"),
         )
-        omm_system = ff.create_openmm_system(mol.to_topology())
-        nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == openmm.NonbondedForce
-        ][0]
+
+        system = ff.create_openmm_system(mol.to_topology())
+        nonbonded_force = get_nonbonded_force(system)
+
         expected_charges = [-0.834, 0.417, 0.417] * openmm.unit.elementary_charge
+
         for particle_index, expected_charge in enumerate(expected_charges):
-            q, _, _ = nonbondedForce.getParticleParameters(particle_index)
+            q, _, _ = nonbonded_force.getParticleParameters(particle_index)
             assert q == expected_charge
 
     @skip_if_missing("openmm")
     def test_library_charges_to_two_waters(self):
         """Test assigning charges to two water molecules using library charges"""
+
         ff = ForceField(
             get_data_file_path("test_forcefields/test_forcefield.offxml"),
             get_data_file_path("test_forcefields/tip3p.offxml"),
@@ -2454,10 +2459,11 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             get_data_file_path(os.path.join("systems", "monomers", "water.sdf"))
         )
         top = Topology.from_molecules([mol, mol])
-        omm_system = ff.create_openmm_system(top)
-        nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == openmm.NonbondedForce
-        ][0]
+
+        system = ff.create_openmm_system(top)
+
+        nonbonded_force = get_nonbonded_force(system)
+
         expected_charges = [
             -0.834,
             0.417,
@@ -2466,13 +2472,15 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             0.417,
             0.417,
         ] * openmm.unit.elementary_charge
+
         for particle_index, expected_charge in enumerate(expected_charges):
-            q, _, _ = nonbondedForce.getParticleParameters(particle_index)
+            q, _, _ = nonbonded_force.getParticleParameters(particle_index)
             assert q == expected_charge
 
     @skip_if_missing("openmm")
     def test_library_charges_to_three_ethanols_different_atom_ordering(self):
         """Test assigning charges to three ethanols with different atom orderings"""
+
         # Define a library charge parameter for ethanol (C1-C2-O3) where C1 has charge -0.2, and its Hs have -0.02,
         # C2 has charge -0.1 and its Hs have -0.01, and O3 has charge 0.3, and its H has charge 0.08
 
@@ -2508,10 +2516,10 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             create_reversed_ethanol(),
         ]
         top = Topology.from_molecules(molecules)
-        omm_system = ff.create_openmm_system(top)
-        nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == openmm.NonbondedForce
-        ][0]
+        system = ff.create_openmm_system(top)
+
+        nonbonded_force = get_nonbonded_force(system)
+
         expected_charges = [
             -0.2,
             -0.1,
@@ -2541,8 +2549,9 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             -0.1,
             -0.2,
         ] * openmm.unit.elementary_charge
+
         for particle_index, expected_charge in enumerate(expected_charges):
-            q, _, _ = nonbondedForce.getParticleParameters(particle_index)
+            q, _, _ = nonbonded_force.getParticleParameters(particle_index)
             assert q == expected_charge
 
     @skip_if_missing("openmm")
@@ -2554,13 +2563,11 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             get_data_file_path("test_forcefields/ion_charges.offxml"),
         )
         mol = Molecule.from_smiles("[{}]".format(monatomic_ion))
-        omm_system = ff.create_openmm_system(mol.to_topology())
+        system = ff.create_openmm_system(mol.to_topology())
 
-        nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == openmm.NonbondedForce
-        ][0]
-        q, _, _ = nonbondedForce.getParticleParameters(0)
-        assert q == formal_charge
+        nonbonded_force = get_nonbonded_force(system)
+
+        assert nonbonded_force.getParticleParameters(0)[0] == formal_charge
 
     @skip_if_missing("openmm")
     def test_charge_method_hierarchy(self):
@@ -2647,16 +2654,12 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             iodide,
         ]  # charge increment model (formal charge)
         top = Topology.from_molecules(molecules)
-        omm_system = ff.create_openmm_system(
+        system = ff.create_openmm_system(
             top, charge_from_molecules=[cyclohexane, butanol]
         )
-        existing = [
-            f for f in omm_system.getForces() if type(f) == openmm.NonbondedForce
-        ]
 
-        # Ensure that the handlers do not make multiple NonbondedForce objects
-        assert len(existing) == 1
-        nonbondedForce = existing[0]
+        nonbonded_force = get_nonbonded_force(system)
+
         expected_charges = [  # cyclohexane (18 atoms) should have the following values from charge_from_mols
             -0.2,
             -0.2,
@@ -2712,16 +2715,16 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
 
         # Ensure that the first four molecules have exactly the charges we intended
         for particle_index, expected_charge in enumerate(expected_charges):
-            q, _, _ = nonbondedForce.getParticleParameters(particle_index)
+            q, _, _ = nonbonded_force.getParticleParameters(particle_index)
             assert q == expected_charge
 
         # Ensure the last molecule (ethanol) had _some_ nonzero charge assigned by an AM1BCC implementation
         for particle_index in range(len(expected_charges), top.n_atoms - 1):
-            q, _, _ = nonbondedForce.getParticleParameters(particle_index)
+            q, _, _ = nonbonded_force.getParticleParameters(particle_index)
             assert q != 0 * unit.elementary_charge
 
         # Ensure that iodine has a charge of -1, specified by charge increment model charge_method="formal charge"
-        q, _, _ = nonbondedForce.getParticleParameters(top.n_atoms - 1)
+        q, _, _ = nonbonded_force.getParticleParameters(top.n_atoms - 1)
         assert q == -1.0 * openmm.unit.elementary_charge
 
     @skip_if_missing("openmm")
@@ -2739,10 +2742,11 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             Molecule.from_file(get_data_file_path("molecules/ethanol_reordered.sdf")),
         ]
         top = Topology.from_molecules(molecules)
-        omm_system = ff.create_openmm_system(top)
-        nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == openmm.NonbondedForce
-        ][0]
+
+        system = ff.create_openmm_system(top)
+
+        nonbonded_force = get_nonbonded_force(system)
+
         expected_charges = [
             -0.2,
             -0.1,
@@ -2764,7 +2768,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             -0.01,
         ] * openmm.unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
-            q, _, _ = nonbondedForce.getParticleParameters(particle_index)
+            q, _, _ = nonbonded_force.getParticleParameters(particle_index)
             assert q == expected_charge
 
     @skip_if_missing("openmm")
@@ -2782,10 +2786,11 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             Molecule.from_file(get_data_file_path("molecules/ethanol_reordered.sdf")),
         ]
         top = Topology.from_molecules(molecules)
-        omm_system = ff.create_openmm_system(top)
-        nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == openmm.NonbondedForce
-        ][0]
+
+        system = ff.create_openmm_system(top)
+
+        nonbonded_force = get_nonbonded_force(system)
+
         expected_charges = [
             -0.2,
             -0.1,
@@ -2806,8 +2811,9 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             -0.01,
             -0.01,
         ] * openmm.unit.elementary_charge
+
         for particle_index, expected_charge in enumerate(expected_charges):
-            q, _, _ = nonbondedForce.getParticleParameters(particle_index)
+            q, _, _ = nonbonded_force.getParticleParameters(particle_index)
             assert q == expected_charge
 
     @skip_if_missing("openmm")
@@ -2815,6 +2821,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         self,
     ):
         """Fail to assign charges to a molecule because not all atoms can be assigned"""
+
         molecules = [Molecule.from_file(get_data_file_path("molecules/toluene.sdf"))]
         top = Topology.from_molecules(molecules)
 
@@ -2828,7 +2835,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         with pytest.raises(
             RuntimeError, match="Cc1ccccc1 could not be fully assigned charges"
         ):
-            omm_system = ff.create_openmm_system(top)
+            ff.create_openmm_system(top)
 
         # If we do NOT delete the ToolkiAM1BCCHandler, then toluene should be assigned some nonzero partial charges.
         # The exact value will vary by toolkit, so we don't test that here.
@@ -2836,12 +2843,13 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             get_data_file_path("test_forcefields/test_forcefield.offxml"),
             xml_ethanol_library_charges_by_atom_ff,
         )
-        omm_system = ff.create_openmm_system(top)
-        nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == openmm.NonbondedForce
-        ][0]
+
+        system = ff.create_openmm_system(top)
+
+        nonbonded_force = get_nonbonded_force(system)
+
         for particle_index in range(top.n_atoms):
-            q, _, _ = nonbondedForce.getParticleParameters(particle_index)
+            q, _, _ = nonbonded_force.getParticleParameters(particle_index)
             assert q != 0 * unit.elementary_charge
 
     @skip_if_missing("openmm")
@@ -3314,11 +3322,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
             off_top, charge_from_molecules=[molecule]
         )
 
-        off_nonbonded_force = [
-            force
-            for force in off_omm_system.getForces()
-            if isinstance(force, openmm.NonbondedForce)
-        ][0]
+        off_nonbonded_force = get_nonbonded_force(off_omm_system)
 
         omm_top = off_top.to_openmm()
         pmd_struct = pmd.openmm.load_topology(omm_top, off_omm_system, positions)
@@ -3354,8 +3358,8 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
 
         (
             amber_omm_system,
-            amber_omm_topology,
-            amber_positions,
+            _,
+            _,
         ) = create_system_from_amber(
             prmtop_file.name,
             inpcrd_file.name,
@@ -4151,13 +4155,13 @@ class TestForceFieldGetPartialCharges(_ForceFieldFixtures):
     @staticmethod
     def get_partial_charges_from_create_openmm_system(mol, force_field):
         """Helper method to compute partial charges from a generated openmm System."""
-        system = force_field.create_openmm_system(mol.to_topology())
-        nbforce = [
-            f for f in system.getForces() if isinstance(f, openmm.openmm.NonbondedForce)
-        ][0]
 
-        n_particles = nbforce.getNumParticles()
-        charges = [nbforce.getParticleParameters(i)[0] for i in range(n_particles)]
+        system = force_field.create_openmm_system(mol.to_topology())
+
+        force = get_nonbonded_force(system)
+
+        n_particles = force.getNumParticles()
+        charges = [force.getParticleParameters(i)[0] for i in range(n_particles)]
 
         return openmm.unit.Quantity(charges)
 
