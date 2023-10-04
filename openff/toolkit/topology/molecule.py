@@ -68,6 +68,7 @@ from openff.toolkit.utils.exceptions import (
     InvalidAtomMetadataError,
     InvalidBondOrderError,
     InvalidConformerError,
+    MissingConformersError,
     MissingPartialChargesError,
     MoleculeParseError,
     MultipleMoleculesInPDBError,
@@ -5425,7 +5426,13 @@ class Molecule(FrozenMolecule):
                     stacklevel=2,
                 )
 
-            if self.conformers:
+            if self.conformers is None:
+                raise MissingConformersError(
+                    "Visualizing with NGLview requires that the molecule has "
+                    f"conformers, found {self.conformers=}"
+                )
+
+            else:
                 from openff.toolkit.utils._viz import MoleculeNGLViewTrajectory
 
                 try:
@@ -5452,13 +5459,6 @@ class Molecule(FrozenMolecule):
                 )
 
                 return widget
-
-            else:
-                # TODO: More specific exception
-                raise ValueError(
-                    "Visualizing with NGLview requires that the molecule has "
-                    "conformers."
-                )
 
         if backend == "rdkit":
             if RDKIT_AVAILABLE:

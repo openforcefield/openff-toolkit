@@ -62,6 +62,7 @@ from openff.toolkit.utils.exceptions import (
     IncompatibleUnitError,
     InvalidBondOrderError,
     InvalidConformerError,
+    MissingConformersError,
     MissingPartialChargesError,
     MultipleMoleculesInPDBError,
     NotBondedError,
@@ -3703,7 +3704,7 @@ class TestMoleculeVisualization:
 
         mol = Molecule().from_smiles("CCO")
 
-        with pytest.raises(ValueError):
+        with pytest.raises(MissingConformersError):
             mol.visualize(backend="nglview")
 
         mol.generate_conformers()
