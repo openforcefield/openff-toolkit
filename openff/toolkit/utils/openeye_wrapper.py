@@ -2735,7 +2735,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         qmol = oechem.OEQMol()
         if not oechem.OEParseSmarts(qmol, smarts):
             raise ChemicalEnvironmentParsingError(
-                f'OpenEye could not parse the SMARTS string "{smarts}"'
+                f'OpenEye could not parse the SMARTS/SMIRKS string "{smarts}"'
             )
 
         # OEPrepareSearch will clobber our desired aromaticity model if we don't sync up mol

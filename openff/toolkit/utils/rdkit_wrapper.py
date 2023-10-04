@@ -2917,7 +2917,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         qmol = Chem.MolFromSmarts(smarts)  # cannot catch the error
         if qmol is None:
             raise ChemicalEnvironmentParsingError(
-                f'RDKit could not parse the SMARTS string "{smarts}"'
+                f'RDKit could not parse the SMARTS/SMIRKS string "{smarts}"'
             )
 
         # Create atom mapping for query molecule
