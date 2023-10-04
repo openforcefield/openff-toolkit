@@ -2417,7 +2417,7 @@ class Topology(Serializable):
             return False
 
     @requires_package("nglview")
-    def visualize(self, ensure_correct_connectivity=False) -> "NGLWidget":
+    def visualize(self, ensure_correct_connectivity: bool = False) -> "NGLWidget":
         """
         Visualize the trajectory with NGLView.
 
@@ -2451,6 +2451,12 @@ class Topology(Serializable):
         import nglview
 
         from openff.toolkit.utils._viz import TopologyNGLViewStructure
+
+        if ensure_correct_connectivity:
+            raise ValueError(
+                "`ensure_correct_connectivity` not (yet) implemented "
+                "(requires passing multi-molecule SDF files to NGLview)"
+            )
 
         if self.get_positions() is None:
             raise ValueError(
