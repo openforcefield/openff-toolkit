@@ -352,6 +352,10 @@ class MissingPartialChargesError(OpenFFToolkitException, ValueError):
     """Error raised when a molecule is missing partial charges in a context in which it is expected to have them."""
 
 
+class MissingConformersError(OpenFFToolkitException, ValueError):
+    """Error raised when a molecule is missing conformer(s) in a context in which it is expected to have them."""
+
+
 class UnsupportedMoleculeConversionError(OpenFFToolkitException):
     """Error raised when attempting to instantiate a Molecule with insufficient inputs."""
 

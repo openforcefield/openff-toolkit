@@ -38,6 +38,7 @@ dependencies:
   - qcelemental
   - qcportal >=0.15, <0.50.0a0
   - qcengine
+  - nglview
   - mdtraj
   - nbval
   - mypy

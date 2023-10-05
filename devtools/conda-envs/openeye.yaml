@@ -38,4 +38,5 @@ dependencies:
   - qcportal >=0.15, <0.50.0a0
   - qcengine
   - mdtraj
+  - nglview
   - parmed =3

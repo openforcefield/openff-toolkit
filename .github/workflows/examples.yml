@@ -136,12 +136,13 @@ jobs:
         run: |
           if [[ ${{ matrix.rdkit }} == false ]]; then
             NB_ARGS+=" --ignore=examples/QCArchive_interface"
+            NB_ARGS+=" --ignore=examples/visualization"
             NB_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             NB_ARGS+=" --ignore=examples/conformer_energies"
             NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
             NB_ARGS+=" --ignore=examples/toolkit_showcase"
             NB_ARGS+=" --ignore=examples/using_smirnoff_with_amber_protein_forcefield"
-            NB_ARGS+=" --ignore=examples/SMIRNOFF_simulation/run_simulation.ipynb"
+            NB_ARGS+=" --ignore=examples/SMIRNOFF_simulation"
           fi
 
           python -m pytest $PYTEST_ARGS $NB_ARGS examples
