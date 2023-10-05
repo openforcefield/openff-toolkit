@@ -25,8 +25,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1698](https://github.com/openforcefield/openff-toolkit/pull/1698): Makes `openff.toolkit.utils.toolkit_registry.toolkit_registry_manager` public.
 - [PR #1662](https://github.com/openforcefield/openff-toolkit/pull/1662): Adds hierarchy scheme iterators to `Topology`, i.e. `Topology.residues`, when schemes of the same iterator name are defines on all constituent `Molecule`s.
 - [PR #1700](https://github.com/openforcefield/openff-toolkit/pull/1700): Use `openff-nagl` v0.3.0.
+- [PR #1695](https://github.com/openforcefield/openff-toolkit/pull/1695): `ChemicalEnvironmentParsingError` is now raised when an underlying toolkit fails to parse a SMARTS/SMIRKS pattern it is given during substructure matching.
 
 ### Improved documentation and warnings
+
 - [PR #1709](https://github.com/openforcefield/openff-toolkit/pull/1709): Update molecule cookbook to use the maximally capable `Topology.from_pdb` in lieu of the more limited `Molecule.from_pdb_and_smiles` and `Molecule.from_polymer_pdb`.
 - [PR #1719](https://github.com/openforcefield/openff-toolkit/pull/1719): Remove out-of-date and unused `examples/environment.yaml` and various examples updates.  
 
