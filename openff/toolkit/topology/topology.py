@@ -2043,11 +2043,6 @@ class Topology(Serializable):
                     keepIds=keep_ids,
                 )
 
-        elif file_format.upper() in ("MOL2"):
-            raise NotImplementedError(
-                "Multi-molecule MOL2 writer not (fully) implemented."
-            )
-
         else:
             raise NotImplementedError("Topology.to_file supports only PDB")
 
