@@ -226,7 +226,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         from rdkit import Chem
 
         warnings.warn(
-            "`RDKit.from_polymer_pdb` is deprecated in favor of `Topology.from_pdb`, the recommended "
+            "`RDKitToolkitWrapper.from_polymer_pdb` is deprecated in favor of `Topology.from_pdb`, the recommended "
             "method for loading PDB files. (Note the `unique_molecules` argument.) This method will "
             "be removed in a future release of the OpenFF Toolkit.",
             stacklevel=2,
