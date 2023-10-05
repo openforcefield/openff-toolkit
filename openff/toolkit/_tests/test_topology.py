@@ -1747,19 +1747,6 @@ class TestTopologyVisaulization:
             nglview.NGLWidget,
         )
 
-    @requires_rdkit
-    def test_write_sdf_basic(self):
-        water = create_water()
-        ammonia = create_ammonia()
-
-        water.generate_conformers()
-        ammonia.generate_conformers()
-
-        Topology.from_molecules([water, ammonia]).to_file("tmp.sdf", file_format="sdf")
-
-        # Just ensure the (multi-molecule) SDF file can be parsed somewhat sanely
-        assert len(Molecule.from_file("tmp.sdf")) == 2
-
 
 class TestAddTopology:
     def test_add_basic(self):

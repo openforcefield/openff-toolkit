@@ -1946,7 +1946,7 @@ class Topology(Serializable):
         self,
         file: Union[Path, str, TextIO],
         positions: Optional[Union["OMMQuantity", Quantity, NDArray]] = None,
-        file_format: Literal["PDB", "SDF"] = "PDB",
+        file_format: Literal["PDB"] = "PDB",
         keep_ids: bool = False,
         ensure_unique_atom_names: Union[str, bool] = "residues",
     ):
@@ -1982,7 +1982,7 @@ class Topology(Serializable):
 
         file_format
             Output file format. Case insensitive. Currently only supported values
-            are ``"PDB"`` and ``"SDF"``.
+            are ``"PDB"``.
         keep_ids
             If ``True``, keep the residue and chain IDs specified in the Topology
             rather than generating new ones.
@@ -2042,23 +2042,14 @@ class Topology(Serializable):
                     file=outfile,
                     keepIds=keep_ids,
                 )
-        elif file_format.upper() in ("SDF"):
-            from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
 
-            RDKitToolkitWrapper()._write_topology(
-                topology=self,
-                positions=positions if positions is not None else self.get_positions(),
-                file_path=str(file),
-                file_format=file_format,
-            )
         elif file_format.upper() in ("MOL2"):
             raise NotImplementedError(
                 "Multi-molecule MOL2 writer not (fully) implemented."
             )
+
         else:
-            raise NotImplementedError(
-                "Topology.to_file supports only PDB and SDF formats"
-            )
+            raise NotImplementedError("Topology.to_file supports only PDB")
 
     def get_positions(self) -> Optional[Quantity]:
         """
@@ -2467,7 +2458,7 @@ class Topology(Serializable):
         widget = nglview.NGLWidget(
             TopologyNGLViewStructure(
                 topology=self,
-                ext="sdf" if ensure_correct_connectivity else "pdb",
+                ext="pdb",
             ),
             representations=[
                 dict(type="unitcell", params=dict()),
