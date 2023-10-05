@@ -6,12 +6,16 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+
+
 ## 0.14.4 
 
 ### Behavior changes
 
 - [PR #1705](https://github.com/openforcefield/openff-toolkit/pull/1705): Do not raise warning when `allow_undefined_stereo=True`.
 - [PR #1695](https://github.com/openforcefield/openff-toolkit/pull/1695): `ChemicalEnvironmentParsingError` is now raised when an underlying toolkit fails to parse a SMARTS/SMIRKS pattern it is given during substructure matching.
+- [PR #1716](https://github.com/openforcefield/openff-toolkit/pull/1716): Adds deprecation warnings to `Molecule.from_polymer_pdb`, `Molecule.from_pdb_and_smiles`, and `RDKitToolkitWrapper.from_pdb_and_smiles` instead pointing users toward `Topology.from_pdb`.
+
 
 ### Bugfixes
 

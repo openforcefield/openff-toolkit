@@ -96,12 +96,15 @@ if TYPE_CHECKING:
 
 # TODO: Can we have the `ALLOWED_*_MODELS` list automatically appear in the docstrings below?
 # TODO: Should `ALLOWED_*_MODELS` be objects instead of strings?
-# TODO: Should these be imported from `openff.toolkit.cheminformatics.aromaticity_models` and `.bondorder_models`?
 
 # TODO: Allow all OpenEye aromaticity models to be used with OpenEye names?
 #       Only support OEAroModel_MDL in RDKit version?
 
 TKR: TypeAlias = Union[ToolkitRegistry, ToolkitWrapper]
+
+
+class MoleculeDeprecationWarning(UserWarning):
+    """Warning for deprecated portions of the Molecule API."""
 
 
 class Particle(Serializable):
@@ -3930,6 +3933,13 @@ class FrozenMolecule(Serializable):
         import openmm.unit as openmm_unit
         from openmm.app import PDBFile
 
+        warnings.warn(
+            "`Molecule.from_polymer_pdb` is deprecated in favor of `Topology.from_pdb`, the recommended "
+            "method for loading PDB files. This method will be removed in a future release of the OpenFF Toolkit.",
+            MoleculeDeprecationWarning,
+            stacklevel=2,
+        )
+
         if isinstance(toolkit_registry, ToolkitWrapper):
             toolkit_registry = ToolkitRegistry([toolkit_registry])
 
@@ -4757,6 +4767,12 @@ class FrozenMolecule(Serializable):
         InvalidConformerError
             If the SMILES and PDB molecules are not isomorphic.
         """
+        warnings.warn(
+            "`Molecule.from_pdb_and_smiles` is deprecated in favor of `Topology.from_pdb`, the recommended "
+            "method for loading PDB files. This method will be removed in a future release of the OpenFF Toolkit.",
+            MoleculeDeprecationWarning,
+            stacklevel=2,
+        )
 
         toolkit = RDKitToolkitWrapper()
         return toolkit.from_pdb_and_smiles(

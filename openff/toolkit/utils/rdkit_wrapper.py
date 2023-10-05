@@ -11,6 +11,7 @@ import itertools
 import logging
 import pathlib
 import tempfile
+import warnings
 from collections import defaultdict
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
@@ -222,8 +223,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         ------
         InvalidConformerError : if the SMILES and PDB molecules are not isomorphic.
         """
-
         from rdkit import Chem
+
+        warnings.warn(
+            "`RDKitToolkitWrapper.from_polymer_pdb` is deprecated in favor of `Topology.from_pdb`, the recommended "
+            "method for loading PDB files. (Note the `unique_molecules` argument.) This method will "
+            "be removed in a future release of the OpenFF Toolkit.",
+            stacklevel=2,
+        )
 
         # Make the molecule from smiles
         offmol = self.from_smiles(
