@@ -405,7 +405,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """Validates custom substructures to adhere to monomer specifications
         Parameters
         ----------
-        custom_substructures : Dict[str, str]
+        custom_substructures : Dict[str, List[str]]
             substructures given with unique names as keys and smarts as values
         forbidden_keys : DictKeys[str]
             a list of keys that cannot overlap with the custom substructure keys
@@ -2650,13 +2650,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # TODO: Set other properties
         for name, value in molecule.properties.items():
-            if type(value) == str:
+            if type(value) is str:
                 rdmol.SetProp(name, value)
-            elif type(value) == int:
+            elif type(value) is int:
                 rdmol.SetIntProp(name, value)
-            elif type(value) == float:
+            elif type(value) is float:
                 rdmol.SetDoubleProp(name, value)
-            elif type(value) == bool:
+            elif type(value) is bool:
                 rdmol.SetBoolProp(name, value)
             else:
                 # Shove everything else into a string
@@ -2881,10 +2881,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         .. notes ::
 
-           * Raises ``ValueError`` if ``smarts`` query is malformed
+           * Raises ``ChemicalEnvironmentParsingError`` if ``smarts`` query is malformed
 
         """
         from rdkit import Chem
+
+        from openff.toolkit.utils.exceptions import ChemicalEnvironmentParsingError
 
         # This code is part of a possible performance optimization that hasn't been validated
         # for production use yet.
@@ -2921,8 +2923,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Set up query.
         qmol = Chem.MolFromSmarts(smarts)  # cannot catch the error
         if qmol is None:
-            raise ValueError(
-                'RDKit could not parse the SMIRKS string "{}"'.format(smarts)
+            raise ChemicalEnvironmentParsingError(
+                f'RDKit could not parse the SMARTS/SMIRKS string "{smarts}"'
             )
 
         # Create atom mapping for query molecule

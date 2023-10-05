@@ -203,10 +203,18 @@ class SMIRKSMismatchError(OpenFFToolkitException):
     """
 
 
-# TODO: This should be renamed to SMARTSParsingError
 class SMIRKSParsingError(OpenFFToolkitException):
     """
     Exception for when SMIRKS are not parseable for any environment
+    """
+
+
+class ChemicalEnvironmentParsingError(
+    SMIRKSParsingError,
+    ValueError,
+):
+    """
+    Exception for when SMARTS/SMIRKS are not parseable by a wrapped toolkit
     """
 
 
@@ -342,6 +350,10 @@ class MissingIndexedAttributeError(
 
 class MissingPartialChargesError(OpenFFToolkitException, ValueError):
     """Error raised when a molecule is missing partial charges in a context in which it is expected to have them."""
+
+
+class MissingConformersError(OpenFFToolkitException, ValueError):
+    """Error raised when a molecule is missing conformer(s) in a context in which it is expected to have them."""
 
 
 class UnsupportedMoleculeConversionError(OpenFFToolkitException):

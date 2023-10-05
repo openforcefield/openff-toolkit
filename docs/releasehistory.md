@@ -6,27 +6,34 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-## Current development
 
-- [PR #1716](https://github.com/openforcefield/openff-toolkit/pull/1716): Deprecates `Molecule.from_polymer_pdb`, `Molecule.from_pdb_and_smiles`, and `RDKitToolkitWrapper.from_pdb_and_smiles` in favor of `Topology.from_pdb`.
 
-### API-breaking changes
+## 0.14.4 
 
 ### Behavior changes
 
 - [PR #1705](https://github.com/openforcefield/openff-toolkit/pull/1705): Do not raise warning when `allow_undefined_stereo=True`.
+- [PR #1695](https://github.com/openforcefield/openff-toolkit/pull/1695): `ChemicalEnvironmentParsingError` is now raised when an underlying toolkit fails to parse a SMARTS/SMIRKS pattern it is given during substructure matching.
+- [PR #1716](https://github.com/openforcefield/openff-toolkit/pull/1716): Adds deprecation warnings to `Molecule.from_polymer_pdb`, `Molecule.from_pdb_and_smiles`, and `RDKitToolkitWrapper.from_pdb_and_smiles` instead pointing users toward `Topology.from_pdb`.
+
 
 ### Bugfixes
 
+- [PR #1726](https://github.com/openforcefield/openff-toolkit/pull/1726): Fix error message in setting `scale12`, `scale13`, and `scale15` attributes.
+- [PR #1728](https://github.com/openforcefield/openff-toolkit/pull/1728): Adds support for loading deprotonated cysteine (sometimes labeled as "CYM") residues in `Topology.from_pdb`
+
 ### New features
 
+- [PR #1733](https://github.com/openforcefield/openff-toolkit/pull/1733): Makes `NAGLToolkitWrapper` and its associated module public.
 - [PR #1698](https://github.com/openforcefield/openff-toolkit/pull/1698): Makes `openff.toolkit.utils.toolkit_registry.toolkit_registry_manager` public.
 - [PR #1662](https://github.com/openforcefield/openff-toolkit/pull/1662): Adds hierarchy scheme iterators to `Topology`, i.e. `Topology.residues`, when schemes of the same iterator name are defines on all constituent `Molecule`s.
 - [PR #1700](https://github.com/openforcefield/openff-toolkit/pull/1700): Use `openff-nagl` v0.3.0.
+- [PR #1623](https://github.com/openforcefield/openff-toolkit/pull/1623): Adds `Topology.visualize`.
 
 ### Improved documentation and warnings
-- [PR #1709](https://github.com/openforcefield/openff-toolkit/pull/1709): Update molecule cookbook to use the maximally capable `Topology.from_pdb` in lieu of the more limited `Molecule.from_pdb_and_smiles` and `Molecule.from_polymer_pdb`.
 
+- [PR #1709](https://github.com/openforcefield/openff-toolkit/pull/1709): Update molecule cookbook to use the maximally capable `Topology.from_pdb` in lieu of the more limited `Molecule.from_pdb_and_smiles` and `Molecule.from_polymer_pdb`.
+- [PR #1719](https://github.com/openforcefield/openff-toolkit/pull/1719): Remove out-of-date and unused `examples/environment.yaml` and various examples updates.  
 
 ## 0.14.3
 

@@ -1275,7 +1275,7 @@ class ForceField:
             for tag, parameter_handler in self._parameter_handlers.items():
                 param_is_list = False
 
-                if type(parameter_handler) == VirtualSiteHandler:
+                if type(parameter_handler) is VirtualSiteHandler:
                     param_is_list = True
 
                 matches = parameter_handler.find_matches(top_mol)

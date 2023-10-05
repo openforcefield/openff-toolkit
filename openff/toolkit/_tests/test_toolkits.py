@@ -32,6 +32,7 @@ from openff.toolkit.topology.molecule import Atom, Molecule
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
+    ChemicalEnvironmentParsingError,
     ConformerGenerationError,
     InChIParseError,
     IncorrectNumConformersError,
@@ -2026,6 +2027,16 @@ class TestOpenEyeToolkitWrapper:
         assert len(tk.find_smarts_matches(mol, smirks, unique=True)) == 1
         assert len(tk.find_smarts_matches(mol, smirks, unique=False)) == 2
 
+    def test_find_matches_bad_smarts(self):
+        with pytest.raises(
+            ChemicalEnvironmentParsingError,
+            match="foobar",
+        ):
+            OpenEyeToolkitWrapper().find_smarts_matches(
+                create_ethanol(),
+                smarts="foobar",
+            )
+
 
 @requires_rdkit
 class TestRDKitToolkitWrapper:
@@ -3313,6 +3324,16 @@ class TestRDKitToolkitWrapper:
 
         assert len(tk.find_smarts_matches(mol, smirks, unique=True)) == 1
         assert len(tk.find_smarts_matches(mol, smirks, unique=False)) == 2
+
+    def test_find_matches_bad_smarts(self):
+        with pytest.raises(
+            ChemicalEnvironmentParsingError,
+            match="foobar",
+        ):
+            RDKitToolkitWrapper().find_smarts_matches(
+                create_ethanol(),
+                smarts="foobar",
+            )
 
     def test_to_rdkit_losing_aromaticity_(self):
         # test the example given in issue #513
