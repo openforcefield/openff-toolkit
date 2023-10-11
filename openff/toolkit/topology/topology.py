@@ -2011,13 +2011,13 @@ class Topology(Serializable):
 
         # Get positions in OpenMM format
         if isinstance(positions, openmm.unit.Quantity):
-            openmm_positions = positions
+            openmm_positions: openmm.unit.Quantity = positions
         elif isinstance(positions, Quantity):
-            openmm_positions: openmm.unit.Quantity = positions.to_openmm()
+            openmm_positions = positions.to_openmm()
         elif isinstance(positions, np.ndarray):
             openmm_positions = openmm.unit.Quantity(positions, openmm.unit.angstroms)
         elif positions is None:
-            openmm_positions: openmm.unit.Quantity = self.get_positions().to_openmm()  # type: ignore[union-attr]
+            openmm_positions = self.get_positions().to_openmm()  # type: ignore[union-attr]
         else:
             raise ValueError(f"Could not process positions of type {type(positions)}.")
 
