@@ -1314,7 +1314,7 @@ class Topology(Serializable):
     def from_openmm(
         cls,
         openmm_topology: "openmm.app.Topology",
-        unique_molecules: Optional[Iterable[FrozenMolecule]] = None,
+        unique_molecules: Iterable[FrozenMolecule],
         positions: Union[None, Quantity, "OMMQuantity"] = None,
     ) -> "Topology":
         """
@@ -1334,9 +1334,9 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        openmm_topology
+        openmm_topology: openmm.app.Topology
             The OpenMM Topology object to convert
-        unique_molecules
+        unique_molecules: Iterable[FrozenMolecule]
             An iterable containing all the unique molecules in the topology.
             This is used to identify the molecules in the OpenMM topology and
             provide any missing chemical information. Each chemical species in
@@ -1346,12 +1346,12 @@ class Topology(Serializable):
             these reference molecules to the molecules appearing in the
             topology. If bond orders are specified in the topology, these will
             be used in matching as well.
-        positions
+        positions: optional, openff.unit.Quantity or openmm.unit.Quantity
             Positions for the atoms in the new topology.
 
         Returns
         -------
-        topology
+        topology: openff.toolkit.Topology
             An OpenFF Topology object, constructed from the molecules in
             ``unique_molecules``, with the same atom order as the input topology.
 
@@ -1540,7 +1540,7 @@ class Topology(Serializable):
     def from_pdb(
         cls,
         file_path: Union[str, Path, TextIO],
-        unique_molecules: Optional[Iterable[Molecule]] = None,
+        unique_molecules: Iterable[Molecule] = tuple(),
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
         _custom_substructures: Optional[Dict[str, List[str]]] = None,
         _additional_substructures: Optional[Iterable[Molecule]] = None,
@@ -1618,9 +1618,9 @@ class Topology(Serializable):
         ----------
         file_path : str, Path, or file object
             PDB information to be passed to OpenMM PDBFile object for loading
-        unique_molecules : Iterable of Molecule. Default = None
+        unique_molecules : Iterable of Molecule. Default = tuple()
             OpenFF Molecule objects corresponding to the molecules in the input
-            PDB. See above for details.
+            PDB. Can be empty. See above for details.
         toolkit_registry : ToolkitRegistry. Default = None
             The ToolkitRegistry to use as the cheminformatics backend.
         _custom_substructures: Dict[str, List[str]], Default = {}
@@ -2120,7 +2120,7 @@ class Topology(Serializable):
     def from_mdtraj(
         cls,
         mdtraj_topology: "mdtraj.Topology",
-        unique_molecules: Optional[Iterable[FrozenMolecule]] = None,
+        unique_molecules: Iterable[FrozenMolecule],
         positions: Union[None, "OMMQuantity", Quantity] = None,
     ):
         """
@@ -2136,9 +2136,9 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        mdtraj_topology
+        mdtraj_topology: mdtraj.Topology
             The MDTraj Topology object to convert
-        unique_molecules
+        unique_molecules: Iterable[FrozenMolecule]
             An iterable containing all the unique molecules in the topology.
             This is used to identify the molecules in the MDTraj topology and
             provide any missing chemical information. Each chemical species in
@@ -2148,12 +2148,12 @@ class Topology(Serializable):
             these reference molecules to the molecules appearing in the
             topology. If bond orders are specified in the topology, these will
             be used in matching as well.
-        positions
+        positions: optional, openff.unit.Quantity or openmm.unit.Quantity
             Positions for the atoms in the new topology.
 
         Returns
         -------
-        topology
+        topology: openff.toolkit.Topology
             An OpenFF Topology object, constructed from the molecules in
             ``unique_molecules``, with the same atom order as the input topology.
 
