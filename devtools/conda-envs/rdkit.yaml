@@ -33,3 +33,7 @@ dependencies:
   - toml
   - bson
   - msgpack-python
+  - qcelemental
+  - qcportal ==0.15.8
+  - qcengine
+  - nglview

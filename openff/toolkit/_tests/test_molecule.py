@@ -62,6 +62,7 @@ from openff.toolkit.utils.exceptions import (
     IncompatibleUnitError,
     InvalidBondOrderError,
     InvalidConformerError,
+    MissingConformersError,
     MissingPartialChargesError,
     MultipleMoleculesInPDBError,
     NotBondedError,
@@ -3699,33 +3700,21 @@ class TestMoleculeVisualization:
 
     @requires_pkg("nglview")
     def test_visualize_nglview(self):
-        """Test that the visualize method returns an NGLview widget. Note that
-        nglview is not explicitly a requirement in the test environment, but
-        is likely to get pulled in with other dependencies."""
-        try:
-            import nglview
-        except ModuleNotFoundError:
-            pass
+        import nglview
 
-        # Start with a molecule without conformers
         mol = Molecule().from_smiles("CCO")
 
-        with pytest.raises(ValueError):
+        with pytest.raises(MissingConformersError):
             mol.visualize(backend="nglview")
 
-        # Add conformers
         mol.generate_conformers()
 
-        # Ensure an NGLView widget is returned
         assert isinstance(mol.visualize(backend="nglview"), nglview.NGLWidget)
 
-        # Providing other arguments is an error
-        with pytest.raises(ValueError):
-            mol.visualize(backend="nglview", width=100)
-        with pytest.raises(ValueError):
-            mol.visualize(backend="nglview", height=100)
-        with pytest.raises(ValueError):
-            mol.visualize(backend="nglview", show_all_hydrogens=False)
+        with pytest.warns(UserWarning, match="ignored.*nglview.*111"):
+            mol.visualize(backend="nglview", width=111)
+        with pytest.warns(UserWarning, match="ignored.*nglview.*222"):
+            mol.visualize(backend="nglview", height=222)
 
     @requires_pkg("IPython")
     @requires_openeye
@@ -3756,14 +3745,14 @@ class TestMoleculeVisualization:
             molecule.visualize(backend="openeye")
 
     def test_get_coordinates(self):
-        from openff.toolkit.utils.viz import _OFFTrajectoryNGLView
+        from openff.toolkit.utils._viz import MoleculeNGLViewTrajectory
 
         molecule = Molecule.from_smiles(
             "C1CC2=C3C(=CC=C2)C(=CN3C1)[C@H]4[C@@H](C(=O)NC4=O)C5=CNC6=CC=CC=C65"
         )
         molecule.generate_conformers(n_conformers=3)
 
-        trajectory = _OFFTrajectoryNGLView(molecule)
+        trajectory = MoleculeNGLViewTrajectory(molecule)
 
         # _OFFTrajectoryNGLView.get_coordinates returns a unitless array implicitly in Angstroms
         np.testing.assert_allclose(
@@ -3776,7 +3765,7 @@ class TestMoleculeVisualization:
             trajectory.get_coordinates(1), molecule.conformers[1].m
         )
 
-        with pytest.raises(IndexError, match="too high"):
+        with pytest.raises(IndexError, match="out of range"):
             trajectory.get_coordinates(100000)
 
 
@@ -4089,6 +4078,16 @@ class TestMoleculeFromPDB:
         )
         assert offmol.n_atoms == 23
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CS)C(=O)NC")
+        assert offmol.is_isomorphic_with(
+            expected_mol, atom_stereochemistry_matching=False
+        )
+
+    def test_molecule_from_pdb_mainchain_cym_dipeptide(self):
+        offmol = Molecule.from_polymer_pdb(
+            get_data_file_path("proteins/MainChain_CYM.pdb")
+        )
+        assert offmol.n_atoms == 22
+        expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C[S-])C(=O)NC")
         assert offmol.is_isomorphic_with(
             expected_mol, atom_stereochemistry_matching=False
         )

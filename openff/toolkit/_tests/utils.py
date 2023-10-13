@@ -1719,7 +1719,7 @@ def evaluate_molecules_off(molecules, forcefield, minimize=False):
 def get_14_scaling_factors(omm_sys: openmm.System) -> Tuple[List, List]:
     """Find the 1-4 scaling factors as they are applied to an OpenMM System"""
     nonbond_force = [
-        f for f in omm_sys.getForces() if type(f) == openmm.NonbondedForce
+        f for f in omm_sys.getForces() if type(f) is openmm.NonbondedForce
     ][0]
 
     vdw_14 = list()
@@ -1750,11 +1750,11 @@ def compare_partial_charges(system1, system2):
     n_particles = system1.getNumParticles()
 
     for force1 in system1.getForces():
-        if type(force1) == openmm.NonbondedForce:
+        if type(force1) is openmm.NonbondedForce:
             charges1 = [force1.getParticleParameters(i)[0] for i in range(n_particles)]
 
     for force2 in system2.getForces():
-        if type(force2) == openmm.NonbondedForce:
+        if type(force2) is openmm.NonbondedForce:
             charges2 = [force2.getParticleParameters(i)[0] for i in range(n_particles)]
 
     assert charges1 == charges2, [(x - y) for x, y in zip(charges1, charges2)]

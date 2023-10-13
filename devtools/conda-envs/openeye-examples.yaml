@@ -35,6 +35,7 @@ dependencies:
   - msgpack-python
   - qcelemental
   - qcportal ==0.15.8
+  - qcengine
   - mdtraj
   - parmed =3
   - nbval

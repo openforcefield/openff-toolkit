@@ -1904,7 +1904,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             topology, charge_from_molecules=molecules, toolkit_registry=toolkit_registry
         )
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         expected_charges = (
             (0, -0.4 * openmm_unit.elementary_charge),
@@ -1933,7 +1933,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             toolkit_registry=toolkit_registry,
         )
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         expected_charges = (
             (0, -0.2 * openmm_unit.elementary_charge),
@@ -2002,7 +2002,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             topology, charge_from_molecules=[ethanol], toolkit_registry=toolkit_registry
         )
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         expected_charges = (
             (18, -0.4 * openmm_unit.elementary_charge),
@@ -2034,7 +2034,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         )
         omm_system = ff.create_openmm_system(mol.to_topology())
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         expected_charges = [-0.834, 0.417, 0.417] * openmm_unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
@@ -2416,7 +2416,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         )
         omm_system = ff.create_openmm_system(mol.to_topology())
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         expected_charges = [-2.0, 1.0, 1.0] * openmm_unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
@@ -2431,7 +2431,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         )
         omm_system = ff.create_openmm_system(mol.to_topology())
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         expected_charges = [-0.834, 0.417, 0.417] * openmm_unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
@@ -2450,7 +2450,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         top = Topology.from_molecules([mol, mol])
         omm_system = ff.create_openmm_system(top)
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         expected_charges = [
             -0.834,
@@ -2503,7 +2503,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         top = Topology.from_molecules(molecules)
         omm_system = ff.create_openmm_system(top)
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         expected_charges = [
             -0.2,
@@ -2549,7 +2549,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         omm_system = ff.create_openmm_system(mol.to_topology())
 
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         q, _, _ = nonbondedForce.getParticleParameters(0)
         assert q == formal_charge
@@ -2641,7 +2641,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         omm_system = ff.create_openmm_system(
             top, charge_from_molecules=[cyclohexane, butanol]
         )
-        existing = [f for f in omm_system.getForces() if type(f) == NonbondedForce]
+        existing = [f for f in omm_system.getForces() if type(f) is NonbondedForce]
 
         # Ensure that the handlers do not make multiple NonbondedForce objects
         assert len(existing) == 1
@@ -2729,7 +2729,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         top = Topology.from_molecules(molecules)
         omm_system = ff.create_openmm_system(top)
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         expected_charges = [
             -0.2,
@@ -2771,7 +2771,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         top = Topology.from_molecules(molecules)
         omm_system = ff.create_openmm_system(top)
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         expected_charges = [
             -0.2,
@@ -2824,7 +2824,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         )
         omm_system = ff.create_openmm_system(top)
         nonbondedForce = [
-            f for f in omm_system.getForces() if type(f) == NonbondedForce
+            f for f in omm_system.getForces() if type(f) is NonbondedForce
         ][0]
         for particle_index in range(top.n_atoms):
             q, _, _ = nonbondedForce.getParticleParameters(particle_index)

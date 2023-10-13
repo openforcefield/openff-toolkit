@@ -11,6 +11,7 @@ import itertools
 import logging
 import pathlib
 import tempfile
+import warnings
 from collections import defaultdict
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
@@ -222,8 +223,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         ------
         InvalidConformerError : if the SMILES and PDB molecules are not isomorphic.
         """
-
         from rdkit import Chem
+
+        warnings.warn(
+            "`RDKitToolkitWrapper.from_polymer_pdb` is deprecated in favor of `Topology.from_pdb`, the recommended "
+            "method for loading PDB files. (Note the `unique_molecules` argument.) This method will "
+            "be removed in a future release of the OpenFF Toolkit.",
+            stacklevel=2,
+        )
 
         # Make the molecule from smiles
         offmol = self.from_smiles(
@@ -398,7 +405,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """Validates custom substructures to adhere to monomer specifications
         Parameters
         ----------
-        custom_substructures : Dict[str, str]
+        custom_substructures : Dict[str, List[str]]
             substructures given with unique names as keys and smarts as values
         forbidden_keys : DictKeys[str]
             a list of keys that cannot overlap with the custom substructure keys
@@ -1046,7 +1053,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             Note that not all toolkits support all formats. Check
             ToolkitWrapper.toolkit_file_read_formats for details.
         allow_undefined_stereo : bool, default=False
-            If false, raises an exception if oemol contains undefined stereochemistry.
+            If false, raises an exception if RDMol contains undefined stereochemistry.
         _cls : class
             Molecule constructor
         Returns
@@ -1135,7 +1142,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             Note that not all toolkits support all formats. Check
             ToolkitWrapper.toolkit_file_read_formats for details.
         allow_undefined_stereo : bool, default=False
-            If false, raises an exception if oemol contains undefined stereochemistry.
+            If false, raises an exception if RDMol contains undefined stereochemistry.
         _cls : class
             Molecule constructor
         Returns
@@ -1554,7 +1561,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Throw an exception/warning if there is unspecified stereochemistry.
         if not allow_undefined_stereo:
             self._detect_undefined_stereo(
-                rdmol, err_msg_prefix="Unable to make OFFMol from SMILES: "
+                rdmol,
+                err_msg_prefix="Unable to make OFFMol from SMILES: ",
             )
 
         # Add explicit hydrogens if they aren't there already
@@ -2254,11 +2262,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         Chem.AssignStereochemistry(rdmol, cleanIt=False)
 
         # Check for undefined stereochemistry.
-        self._detect_undefined_stereo(
-            rdmol,
-            raise_warning=allow_undefined_stereo,
-            err_msg_prefix="Unable to make OFFMol from RDMol: ",
-        )
+        if not allow_undefined_stereo:
+            self._detect_undefined_stereo(
+                rdmol,
+                err_msg_prefix="Unable to make OFFMol from RDMol: ",
+            )
 
         # Create a new OpenFF Molecule
         offmol = _cls()
@@ -2306,7 +2314,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 map_id = rda.GetAtomMapNum()
 
             # create a new atom
-            # atomic_number = oemol.NewAtom(rda.GetAtomicNum())
             atomic_number = rda.GetAtomicNum()
             # implicit units of elementary charge
             formal_charge = rda.GetFormalCharge()
@@ -2643,13 +2650,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # TODO: Set other properties
         for name, value in molecule.properties.items():
-            if type(value) == str:
+            if type(value) is str:
                 rdmol.SetProp(name, value)
-            elif type(value) == int:
+            elif type(value) is int:
                 rdmol.SetIntProp(name, value)
-            elif type(value) == float:
+            elif type(value) is float:
                 rdmol.SetDoubleProp(name, value)
-            elif type(value) == bool:
+            elif type(value) is bool:
                 rdmol.SetBoolProp(name, value)
             else:
                 # Shove everything else into a string
@@ -2874,10 +2881,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         .. notes ::
 
-           * Raises ``ValueError`` if ``smarts`` query is malformed
+           * Raises ``ChemicalEnvironmentParsingError`` if ``smarts`` query is malformed
 
         """
         from rdkit import Chem
+
+        from openff.toolkit.utils.exceptions import ChemicalEnvironmentParsingError
 
         # This code is part of a possible performance optimization that hasn't been validated
         # for production use yet.
@@ -2914,8 +2923,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Set up query.
         qmol = Chem.MolFromSmarts(smarts)  # cannot catch the error
         if qmol is None:
-            raise ValueError(
-                'RDKit could not parse the SMIRKS string "{}"'.format(smarts)
+            raise ChemicalEnvironmentParsingError(
+                f'RDKit could not parse the SMARTS/SMIRKS string "{smarts}"'
             )
 
         # Create atom mapping for query molecule
@@ -3151,8 +3160,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     def _detect_undefined_stereo(
         cls,
         rdmol,
-        err_msg_prefix="",
-        raise_warning=False,
+        err_msg_prefix: str = "",
     ):
         """Raise UndefinedStereochemistryError if the RDMol has undefined stereochemistry.
 
@@ -3162,8 +3170,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             The RDKit molecule.
         err_msg_prefix : str, optional
             A string to prepend to the error message (but not the warning).
-        raise_warning : bool, optional, default=False
-            If True, a warning is issued instead of an exception.
 
         Raises
         ------
@@ -3175,14 +3181,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         undefined_atom_indices = cls._find_undefined_stereo_atoms(rdmol)
         undefined_bond_indices = cls._find_undefined_stereo_bonds(rdmol)
 
-        # Build error message.
         if len(undefined_atom_indices) == 0 and len(undefined_bond_indices) == 0:
-            msg = None
-        else:
-            msg = "RDMol has unspecified stereochemistry. "
-            # The "_Name" property is not always assigned.
-            if rdmol.HasProp("_Name"):
-                msg += "RDMol name: " + rdmol.GetProp("_Name")
+            return
+
+        msg = "RDMol has unspecified stereochemistry. "
+        # The "_Name" property is not always assigned.
+        if rdmol.HasProp("_Name"):
+            msg += "RDMol name: " + rdmol.GetProp("_Name")
 
         # Details about undefined atoms.
         if len(undefined_atom_indices) > 0:
@@ -3207,13 +3212,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     symbol2=atom2.GetSymbol(),
                 )
 
-        if msg is not None:
-            if raise_warning:
-                msg = "Warning (not error because allow_undefined_stereo=True): " + msg
-                logger.warning(msg)
-            else:
-                msg = err_msg_prefix + msg
-                raise UndefinedStereochemistryError(msg)
+        raise UndefinedStereochemistryError(err_msg_prefix + msg)
 
     @staticmethod
     def _constrain_end_directions(

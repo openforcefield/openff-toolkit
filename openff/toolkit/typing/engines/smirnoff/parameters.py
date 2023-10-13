@@ -2772,13 +2772,13 @@ class vdWHandler(_NonbondedHandler):
         def __setattr__(self, name, value):
             super().__setattr__(key=name, value=value)
             if name == "rmin_half":
-                if type(value) == str:
+                if type(value) is str:
                     value = object_to_quantity(value)
                 super().__setattr__("sigma", 2.0 * value / 2 ** (1 / 6))
                 self._extra_nb_var = "sigma"
 
             if name == "sigma":
-                if type(value) == str:
+                if type(value) is str:
                     value = object_to_quantity(value)
                 super().__setattr__("rmin_half", value * 2 ** (1 / 6) / 2.0)
                 self._extra_nb_var = "rmin_half"
@@ -2859,8 +2859,8 @@ class vdWHandler(_NonbondedHandler):
     def scale12(self, attrs, new_scale12):
         if new_scale12 != 0.0:
             raise SMIRNOFFSpecError(
-                "Current OFF toolkit is unable to handle scale12 values other than 0.0. "
-                "Specified 1-2 scaling was {}".format(self.scale12)
+                "Current OpenFF toolkit is unable to handle scale12 values other than 0.0. "
+                f"Specified 1-2 scaling was {new_scale12}."
             )
         return new_scale12
 
@@ -2868,8 +2868,8 @@ class vdWHandler(_NonbondedHandler):
     def scale13(self, attrs, new_scale13):
         if new_scale13 != 0.0:
             raise SMIRNOFFSpecError(
-                "Current OFF toolkit is unable to handle scale13 values other than 0.0. "
-                "Specified 1-3 scaling was {}".format(self.scale13)
+                "Current OpenFF toolkit is unable to handle scale13 values other than 0.0. "
+                f"Specified 1-3 scaling was {new_scale13}."
             )
         return new_scale13
 
@@ -2877,8 +2877,8 @@ class vdWHandler(_NonbondedHandler):
     def scale15(self, attrs, new_scale15):
         if new_scale15 != 1.0:
             raise SMIRNOFFSpecError(
-                "Current OFF toolkit is unable to handle scale15 values other than 1.0. "
-                "Specified 1-5 scaling was {}".format(self.scale15)
+                "Current OpenFF toolkit is unable to handle scale15 values other than 1.0. "
+                f"Specified 1-5 scaling was {new_scale15}."
             )
         return new_scale15
 
@@ -2967,8 +2967,8 @@ class ElectrostaticsHandler(_NonbondedHandler):
     def scale12(self, attrs, new_scale12):
         if new_scale12 != 0.0:
             raise SMIRNOFFSpecError(
-                "Current OFF toolkit is unable to handle scale12 values other than 0.0. "
-                "Specified 1-2 scaling was {}".format(self.scale12)
+                "Current OpenFF toolkit is unable to handle scale12 values other than 0.0. "
+                f"Specified 1-2 scaling was {new_scale12}."
             )
         return new_scale12
 
@@ -2976,8 +2976,8 @@ class ElectrostaticsHandler(_NonbondedHandler):
     def scale13(self, attrs, new_scale13):
         if new_scale13 != 0.0:
             raise SMIRNOFFSpecError(
-                "Current OFF toolkit is unable to handle scale13 values other than 0.0. "
-                "Specified 1-3 scaling was {}".format(self.scale13)
+                "Current OpenFF toolkit is unable to handle scale13 values other than 0.0. "
+                f"Specified 1-3 scaling was {new_scale13}."
             )
         return new_scale13
 
@@ -2985,8 +2985,8 @@ class ElectrostaticsHandler(_NonbondedHandler):
     def scale15(self, attrs, new_scale15):
         if new_scale15 != 1.0:
             raise SMIRNOFFSpecError(
-                "Current OFF toolkit is unable to handle scale15 values other than 1.0. "
-                "Specified 1-5 scaling was {}".format(self.scale15)
+                "Current OpenFF toolkit is unable to handle scale15 values other than 1.0. "
+                f"Specified 1-5 scaling was {new_scale15}."
             )
         return new_scale15
 

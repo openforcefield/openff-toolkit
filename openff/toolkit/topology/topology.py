@@ -58,6 +58,7 @@ from openff.toolkit.utils.exceptions import (
     InvalidAromaticityModelError,
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
+    MissingConformersError,
     MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
     NotBondedError,
@@ -71,6 +72,7 @@ from openff.toolkit.utils.utils import get_data_file_path, requires_package
 if TYPE_CHECKING:
     import mdtraj
     import openmm.app
+    from nglview import NGLWidget
     from openmm.unit import Quantity as OMMQuantity
 
     from openff.toolkit.topology.molecule import Atom, Bond
@@ -1979,8 +1981,8 @@ class Topology(Serializable):
               each molecule in the topology will be used.
 
         file_format
-            Output file format. Case insensitive. Currently only supported value
-            is ``"PDB"``.
+            Output file format. Case insensitive. Currently only supported values
+            are ``"PDB"``.
         keep_ids
             If ``True``, keep the residue and chain IDs specified in the Topology
             rather than generating new ones.
@@ -2001,42 +2003,48 @@ class Topology(Serializable):
             like PDB that truncate long atom names.
 
         """
-        from openff.units.openmm import to_openmm as to_openmm_quantity
-        from openmm import app
-        from openmm import unit as openmm_unit
+        import openmm.app
+        import openmm.unit
 
         # Convert the topology to OpenMM
         openmm_top = self.to_openmm(ensure_unique_atom_names=ensure_unique_atom_names)
 
         # Get positions in OpenMM format
-        if isinstance(positions, openmm_unit.Quantity):
+        if isinstance(positions, openmm.unit.Quantity):
             openmm_positions = positions
         elif isinstance(positions, Quantity):
-            openmm_positions = to_openmm_quantity(positions)
+            openmm_positions: openmm.unit.Quantity = positions.to_openmm()
         elif isinstance(positions, np.ndarray):
-            openmm_positions = openmm_unit.Quantity(positions, openmm_unit.angstroms)
+            openmm_positions = openmm.unit.Quantity(positions, openmm.unit.angstroms)
         elif positions is None:
-            openmm_positions = to_openmm_quantity(self.get_positions())
+            openmm_positions: openmm.unit.Quantity = self.get_positions().to_openmm()  # type: ignore[union-attr]
         else:
             raise ValueError(f"Could not process positions of type {type(positions)}.")
 
-        # Make sure the desired file format is PDB
-        if file_format.upper() != "PDB":
-            raise NotImplementedError("Topology.to_file supports only PDB format")
+        if file_format.upper() == "PDB":
+            import openmm
 
-        # Write PDB file
-        ctx_manager: Union[nullcontext[TextIO], TextIO]  # MyPy needs some help here
-        if isinstance(file, (str, Path)):
-            ctx_manager = open(file, "w")
-        else:
-            ctx_manager = nullcontext(file)
-        with ctx_manager as outfile:
-            app.PDBFile.writeFile(
-                topology=openmm_top,
-                positions=openmm_positions,
-                file=outfile,
-                keepIds=keep_ids,
+            # Convert the topology to OpenMM
+            openmm_top = self.to_openmm(
+                ensure_unique_atom_names=ensure_unique_atom_names
             )
+
+            # Write PDB file
+            ctx_manager: Union[nullcontext[TextIO], TextIO]  # MyPy needs some help here
+            if isinstance(file, (str, Path)):
+                ctx_manager = open(file, "w")
+            else:
+                ctx_manager = nullcontext(file)
+            with ctx_manager as outfile:
+                openmm.app.PDBFile.writeFile(
+                    topology=openmm_top,
+                    positions=openmm_positions,
+                    file=outfile,
+                    keepIds=keep_ids,
+                )
+
+        else:
+            raise NotImplementedError("Topology.to_file supports only PDB")
 
     def get_positions(self) -> Optional[Quantity]:
         """
@@ -2394,6 +2402,75 @@ class Topology(Serializable):
             return self._constrained_atom_pairs[(iatom, jatom)]
         else:
             return False
+
+    @requires_package("nglview")
+    def visualize(self, ensure_correct_connectivity: bool = False) -> "NGLWidget":
+        """
+        Visualize with NGLView.
+
+        Requires all molecules in this topology have positions.
+
+        NGLView is a 3D molecular visualization library for use in Jupyter
+        notebooks. Note that for performance reasons, by default the
+        visualized connectivity is inferred from positions and may not reflect
+        the connectivity in the ``Topology``.
+
+        Parameters
+        ==========
+
+        ensure_correct_connectivity: bool, default=False
+            If ``True``, the visualization will be guaranteed to reflect the
+            connectivity in the ``Topology``. Note that this will severely
+            degrade performance, especially for topologies with many atoms.
+
+        Examples
+        ========
+
+        Visualize a complex PDB file
+
+        >>> from openff.toolkit import Topology
+        >>> from openff.toolkit.utils.utils import get_data_file_path
+        >>> pdb_filename = get_data_file_path("systems/test_systems/T4_lysozyme_water_ions.pdb")
+        >>> topology = Topology.from_pdb(pdb_filename)
+        >>> topology.visualize()  # doctest: +SKIP
+
+        """
+        import nglview
+
+        from openff.toolkit.utils._viz import TopologyNGLViewStructure
+
+        if ensure_correct_connectivity:
+            raise ValueError(
+                "`ensure_correct_connectivity` not (yet) implemented "
+                "(requires passing multi-molecule SDF files to NGLview)"
+            )
+
+        if self.get_positions() is None:
+            raise MissingConformersError(
+                "All molecules in this topology must have positions for it to be visualized in a widget."
+            )
+
+        widget = nglview.NGLWidget(
+            TopologyNGLViewStructure(
+                topology=self,
+                ext="pdb",
+            ),
+            representations=[
+                dict(type="unitcell", params=dict()),
+            ],
+        )
+
+        widget.add_representation("line", sele="water")
+        widget.add_representation("spacefill", sele="ion")
+        widget.add_representation("cartoon", sele="protein")
+        widget.add_representation(
+            "licorice",
+            sele="not water and not ion and not protein",
+            radius=0.25,
+            multipleBond=bool(ensure_correct_connectivity),
+        )
+
+        return widget
 
     def hierarchy_iterator(
         self,
