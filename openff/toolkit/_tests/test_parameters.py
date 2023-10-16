@@ -1735,6 +1735,17 @@ class TestvdWHandler:
             ):
                 setattr(handler, f"scale1{factor}", value)
 
+    def test_initialize_ewald3d(self):
+        handler = vdWHandler(version=0.5, periodic_method="Ewald3D")
+        assert handler.periodic_method == "Ewald3D"
+
+    def test_unsupported_method(self):
+        with pytest.raises(
+            SMIRNOFFSpecError,
+            match="LJPME.*following values are supported.*(?!LJPME.)",
+        ):
+            vdWHandler(version=0.5, periodic_method="LJPME")
+
 
 class TestvdWHandlerUpConversion:
     """
