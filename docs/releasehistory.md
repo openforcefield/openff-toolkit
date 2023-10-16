@@ -18,6 +18,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Improved documentation and warnings
 
+## Current development
+
+- [PR #1731](https://github.com/openforcefield/openff-toolkit/pull/1731): Suppot SMIRNOFF vdW version 0.5.
 
 ## 0.14.4 
 
