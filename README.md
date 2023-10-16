@@ -21,7 +21,7 @@ The toolkit currently covers two main areas we have committed to stably maintain
 
 ## How to cite
 
-Please cite the OpenFF Toolkit using the [Zenodo record](https://zenodo.org/record/7506404) of the [latest release](https://zenodo.org/record/7506404) or the version that was used. The BibTeX reference of the latest release can be found [here](https://zenodo.org/record/7506404/export/hx#.Y7cYbOzMKrM).
+Please cite the OpenFF Toolkit using the [Zenodo record](https://zenodo.org/record/8412072) of the [latest release](https://zenodo.org/record/8412072) or the version that was used. The BibTeX reference of the latest release can be found [here](https://zenodo.org/record/8412072/export/hx#.Y7cYbOzMKrM).
 
 ## Installation
 
