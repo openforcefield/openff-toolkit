@@ -40,6 +40,12 @@ def test_readme_links(readme_link):
         pytest.skip("DOI links are behind DDoS protection and do not resolve")
     if "codecov.io" in readme_link:
         pytest.skip("Codecov website DOI also may be behind DDoS protection")
+    if "export" in readme_link:
+        # October 2023 Zenodo upgrade seems to have broken this link - although
+        # it is still accessible from the web UI (go to the landing page of a
+        # record, Export section (select BibTeX in drop-down) and click "Export"
+        # button will bring you to this link.
+        pytest.skip("Seems to be a Zenodo regression in bibtex link")
 
     # Try to connect 5 times, keeping track of exceptions so useful feedback can be provided.
     success = False
