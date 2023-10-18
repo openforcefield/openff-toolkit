@@ -2883,6 +2883,7 @@ class TestMolecule:
         with pytest.warns(AtomMappingWarning):
             Molecule.from_smiles("[H:2][O:1][H:3]")
 
+    @requires_openeye
     def test_smiles_with_partial_map_no_warning(
         self,
     ):
