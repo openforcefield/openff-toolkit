@@ -20,9 +20,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+- [PR #1747](https://github.com/openforcefield/openff-toolkit/pull/1747): Warns if a SMILES with full atom mappings is passed to `Moleucle.from_smiles`, which does not use the atom map for atom ordering (`Molecule.from_mapped_smiles` does).
 - [PR #1731](https://github.com/openforcefield/openff-toolkit/pull/1731): Suppot SMIRNOFF vdW version 0.5.
 
-## 0.14.4 
+## 0.14.4
 
 ### Behavior changes
 

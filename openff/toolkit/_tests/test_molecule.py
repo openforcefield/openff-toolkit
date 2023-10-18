@@ -17,6 +17,7 @@ import os
 import pathlib
 import pickle
 import re
+import warnings
 from tempfile import NamedTemporaryFile
 from unittest.mock import Mock
 
@@ -56,6 +57,7 @@ from openff.toolkit.topology.molecule import (
 )
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import (
+    AtomMappingWarning,
     HierarchyIteratorNameConflictError,
     IncompatibleShapeError,
     IncompatibleTypeError,
@@ -2874,6 +2876,24 @@ class TestMolecule:
             match="The mapped smiles does not contain enough indexes",
         ):
             Molecule.from_mapped_smiles("[Cl:1][Cl]", toolkit_registry=toolkit_class())
+
+    def test_smiles_with_full_map_warning(
+        self,
+    ):
+        with pytest.warns(AtomMappingWarning):
+            Molecule.from_smiles("[H:2][O:1][H:3]")
+
+    @requires_openeye
+    def test_smiles_with_partial_map_no_warning(
+        self,
+    ):
+        """Ensure the 'do you mean from_mapped_smiles?' warning is not emitted with a partial map"""
+        with warnings.catch_warnings():
+            # This turns warnings into exceptions - one way of implementing
+            # "ensure there is not a warning raised"
+            warnings.simplefilter("error")
+
+            Molecule.from_smiles("H[O:1]H")
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_n_atoms(self, molecule):
