@@ -101,6 +101,11 @@ class SMILESParseError(OpenFFToolkitException, ValueError):
     """The record could not be parsed into the given format"""
 
 
+# TODO: Should warnings inherit from a sort of OpenFFToolkitWarning?
+class AtomMappingWarning(UserWarning):
+    """A warning when dealing with atom maping or indices."""
+
+
 class InChIParseError(MoleculeParseError, RuntimeError):
     """The InChI record could not be parsed."""
 

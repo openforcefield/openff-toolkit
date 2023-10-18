@@ -2798,7 +2798,7 @@ class vdWHandler(_NonbondedHandler):
 
     _TAGNAME = "vdW"  # SMIRNOFF tag name to process
     _INFOTYPE = vdWType  # info type to store
-    _MAX_SUPPORTED_SECTION_VERSION = Version("0.4")
+    _MAX_SUPPORTED_SECTION_VERSION = Version("0.5")
 
     potential = ParameterAttribute(
         default="Lennard-Jones-12-6", converter=_allow_only(["Lennard-Jones-12-6"])
@@ -2815,14 +2815,14 @@ class vdWHandler(_NonbondedHandler):
     cutoff = ParameterAttribute(default=9.0 * unit.angstroms, unit=unit.angstrom)
     switch_width = ParameterAttribute(default=1.0 * unit.angstroms, unit=unit.angstrom)
     periodic_method = ParameterAttribute(
-        default="cutoff", converter=_allow_only(["cutoff", "no-cutoff"])
+        default="cutoff", converter=_allow_only(["cutoff", "no-cutoff", "Ewald3D"])
     )
     nonperiodic_method = ParameterAttribute(
         default="no-cutoff", converter=_allow_only(["cutoff", "no-cutoff"])
     )
 
     def __init__(self, **kwargs):
-        if kwargs.get("version") == 0.4:
+        if Version(str(kwargs.get("version"))) > Version("0.3"):
             if "method" in kwargs:
                 raise SMIRNOFFSpecError(
                     "`method` attribute has been removed in version 0.4 of the vdW tag. Use "
