@@ -5381,7 +5381,10 @@ class Molecule(FrozenMolecule):
     @overload
     def visualize(
         self,
-        backend: Literal["rdkit"],
+        backend: Literal["rdkit"] = ...,
+        width: int = ...,
+        height: int = ...,
+        show_all_hydrogens: bool = ...,
     ) -> "IPython.display.SVG":
         ...
 
@@ -5389,6 +5392,9 @@ class Molecule(FrozenMolecule):
     def visualize(
         self,
         backend: Literal["openeye"],
+        width: int = ...,
+        height: int = ...,
+        show_all_hydrogens: bool = ...,
     ) -> "IPython.display.Image":
         ...
 
@@ -5401,30 +5407,30 @@ class Molecule(FrozenMolecule):
 
     def visualize(
         self,
-        backend: str = "rdkit",
-        width: int = 500,
-        height: int = 300,
-        show_all_hydrogens: bool = True,
+        backend="rdkit",
+        width=500,
+        height=300,
+        show_all_hydrogens=True,
     ) -> Union["IPython.display.SVG", "IPython.display.Image", "nglview.NGLWidget"]:
         """
         Render a visualization of the molecule in Jupyter
 
         Parameters
         ----------
-        backend : str, optional, default='rdkit'
+        backend
             The visualization engine to use. Choose from:
 
-            - ``"rdkit"``
+            - ``"rdkit"`` (default)
             - ``"openeye"``
             - ``"nglview"`` (requires conformers)
 
-        width : int, default=500
+        width
             Width of the generated representation (only applicable to
             ``backend="openeye"`` or ``backend="rdkit"``)
-        height : int, default=300
+        height
             Width of the generated representation (only applicable to
             ``backend="openeye"`` or ``backend="rdkit"``)
-        show_all_hydrogens : bool, default=True
+        show_all_hydrogens
             Whether to explicitly depict all hydrogen atoms. (only applicable to
             ``backend="openeye"`` or ``backend="rdkit"``)
 
