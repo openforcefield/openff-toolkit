@@ -2411,9 +2411,9 @@ class Topology(Serializable):
         Requires that all molecules in this topology have positions.
 
         NGLView is a 3D molecular visualization library for use in Jupyter
-        notebooks. Note that the visualized connectivity does not include bond
-        order information and may, in strained conformations, include bonds not
-        present in the topology.
+        notebooks. Note that the visualized molecule may, in strained
+        conformations, include bonds not present in the topology. Rendering
+        multiple bonds additionally requires RDKit.
 
         Examples
         ========
