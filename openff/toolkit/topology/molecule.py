@@ -5427,22 +5427,16 @@ class Molecule(FrozenMolecule):
             - ``"nglview"`` (requires conformers)
 
         width
-            Width of the generated representation (only applicable to
+            Width of the generated representation in pixels (only applicable to
             ``backend="openeye"`` or ``backend="rdkit"``)
         height
-            Width of the generated representation (only applicable to
+            Width of the generated representation in pixels (only applicable to
             ``backend="openeye"`` or ``backend="rdkit"``)
         show_all_hydrogens
             Whether to explicitly depict all hydrogen atoms.
 
         Returns
         -------
-        object
-            Depending on the backend chosen:
-
-            - rdkit → IPython.core.display.SVG
-            - openeye → IPython.core.display.Image
-            - nglview → nglview.NGLWidget
 
         """
         import inspect
@@ -5463,43 +5457,42 @@ class Molecule(FrozenMolecule):
             ):
                 warnings.warn(
                     f"Arguments `width` and `height` are ignored with {backend=}."
-                    f"Found non-default values {width=} and {height=}",
+                    + f"Found non-default values {width=} and {height=}",
                     stacklevel=2,
                 )
 
             if self.conformers is None:
                 raise MissingConformersError(
                     "Visualizing with NGLview requires that the molecule has "
-                    f"conformers, found {self.conformers=}"
+                    + f"conformers, found {self.conformers=}"
                 )
 
-            else:
-                from openff.toolkit.utils._viz import MoleculeNGLViewTrajectory
+            from openff.toolkit.utils._viz import MoleculeNGLViewTrajectory
 
-                try:
-                    widget = nv.NGLWidget(
-                        MoleculeNGLViewTrajectory(
-                            molecule=self,
-                            ext="MOL2",
-                        )
+            try:
+                widget = nv.NGLWidget(
+                    MoleculeNGLViewTrajectory(
+                        molecule=self,
+                        ext="MOL2",
                     )
-                except ValueError:
-                    widget = nv.NGLWidget(
-                        MoleculeNGLViewTrajectory(
-                            molecule=self,
-                            ext="PDB",
-                        )
+                )
+            except ValueError:
+                widget = nv.NGLWidget(
+                    MoleculeNGLViewTrajectory(
+                        molecule=self,
+                        ext="PDB",
                     )
-
-                widget.clear_representations()
-                widget.add_representation(
-                    "licorice",
-                    sele="*" if show_all_hydrogens else "NOT hydrogen",
-                    radius=0.25,
-                    multipleBond=True,
                 )
 
-                return widget
+            widget.clear_representations()
+            widget.add_representation(
+                "licorice",
+                sele="*" if show_all_hydrogens else "NOT hydrogen",
+                radius=0.25,
+                multipleBond=True,
+            )
+
+            return widget
 
         if backend == "rdkit":
             if RDKIT_AVAILABLE:
@@ -5529,8 +5522,8 @@ class Molecule(FrozenMolecule):
             else:
                 warnings.warn(
                     "RDKit was requested as a visualization backend but "
-                    "it was not found to be installed. Falling back to "
-                    "trying to use OpenEye for visualization.",
+                    + "it was not found to be installed. Falling back to "
+                    + "trying to use OpenEye for visualization.",
                     stacklevel=2,
                 )
                 backend = "openeye"
