@@ -5402,6 +5402,8 @@ class Molecule(FrozenMolecule):
     def visualize(
         self,
         backend: Literal["nglview"],
+        *,
+        show_all_hydrogens: bool = ...,
     ) -> "nglview.NGLWidget":
         ...
 
@@ -5431,8 +5433,7 @@ class Molecule(FrozenMolecule):
             Width of the generated representation (only applicable to
             ``backend="openeye"`` or ``backend="rdkit"``)
         show_all_hydrogens
-            Whether to explicitly depict all hydrogen atoms. (only applicable to
-            ``backend="openeye"`` or ``backend="rdkit"``)
+            Whether to explicitly depict all hydrogen atoms.
 
         Returns
         -------
