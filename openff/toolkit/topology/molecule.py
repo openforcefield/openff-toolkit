@@ -90,7 +90,7 @@ from openff.toolkit.utils.toolkits import (
 from openff.toolkit.utils.utils import get_data_file_path, requires_package
 
 if TYPE_CHECKING:
-    import IPython.display
+    import IPython.core.display
     import nglview
 
     from openff.toolkit.topology._mm_molecule import _SimpleAtom, _SimpleMolecule
@@ -5385,7 +5385,7 @@ class Molecule(FrozenMolecule):
         width: int = ...,
         height: int = ...,
         show_all_hydrogens: bool = ...,
-    ) -> "IPython.display.SVG":
+    ) -> "IPython.core.display.SVG":
         ...
 
     @overload
@@ -5395,7 +5395,7 @@ class Molecule(FrozenMolecule):
         width: int = ...,
         height: int = ...,
         show_all_hydrogens: bool = ...,
-    ) -> "IPython.display.Image":
+    ) -> "IPython.core.display.Image":
         ...
 
     @overload
@@ -5411,7 +5411,7 @@ class Molecule(FrozenMolecule):
         width=500,
         height=300,
         show_all_hydrogens=True,
-    ) -> Union["IPython.display.SVG", "IPython.display.Image", "nglview.NGLWidget"]:
+    ):
         """
         Render a visualization of the molecule in Jupyter
 
@@ -5439,8 +5439,8 @@ class Molecule(FrozenMolecule):
         object
             Depending on the backend chosen:
 
-            - rdkit → IPython.display.SVG
-            - openeye → IPython.display.Image
+            - rdkit → IPython.core.display.SVG
+            - openeye → IPython.core.display.Image
             - nglview → nglview.NGLWidget
 
         """
@@ -5502,7 +5502,7 @@ class Molecule(FrozenMolecule):
 
         if backend == "rdkit":
             if RDKIT_AVAILABLE:
-                from IPython.display import SVG
+                from IPython.core.display import SVG
                 from rdkit.Chem.Draw import (  # type: ignore[import]
                     rdDepictor,
                     rdMolDraw2D,
@@ -5535,7 +5535,7 @@ class Molecule(FrozenMolecule):
                 backend = "openeye"
         if backend == "openeye":
             if OPENEYE_AVAILABLE:
-                from IPython.display import Image
+                from IPython.core.display import Image
                 from openeye import oedepict
 
                 oemol = self.to_openeye()
