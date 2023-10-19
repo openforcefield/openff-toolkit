@@ -2438,10 +2438,7 @@ class Topology(Serializable):
             )
 
         widget = nglview.NGLWidget(
-            TopologyNGLViewStructure(
-                topology=self,
-                ext="pdb",
-            ),
+            TopologyNGLViewStructure(topology=self),
             representations=[
                 dict(type="unitcell", params=dict()),
             ],
