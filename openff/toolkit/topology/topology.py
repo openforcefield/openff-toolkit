@@ -2454,6 +2454,7 @@ class Topology(Serializable):
             "licorice",
             sele="not water and not ion and not protein",
             radius=0.25,
+            multipleBond=True,
         )
 
         return widget
