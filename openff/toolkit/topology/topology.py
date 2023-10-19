@@ -2404,24 +2404,16 @@ class Topology(Serializable):
             return False
 
     @requires_package("nglview")
-    def visualize(self, ensure_correct_connectivity: bool = False) -> "NGLWidget":
+    def visualize(self) -> "NGLWidget":
         """
         Visualize with NGLView.
 
-        Requires all molecules in this topology have positions.
+        Requires that all molecules in this topology have positions.
 
         NGLView is a 3D molecular visualization library for use in Jupyter
-        notebooks. Note that for performance reasons, by default the
-        visualized connectivity is inferred from positions and may not reflect
-        the connectivity in the ``Topology``.
-
-        Parameters
-        ==========
-
-        ensure_correct_connectivity: bool, default=False
-            If ``True``, the visualization will be guaranteed to reflect the
-            connectivity in the ``Topology``. Note that this will severely
-            degrade performance, especially for topologies with many atoms.
+        notebooks. Note that the visualized connectivity does not include bond
+        order information and may, in strained conformations, include bonds not
+        present in the topology.
 
         Examples
         ========
@@ -2439,15 +2431,10 @@ class Topology(Serializable):
 
         from openff.toolkit.utils._viz import TopologyNGLViewStructure
 
-        if ensure_correct_connectivity:
-            raise ValueError(
-                "`ensure_correct_connectivity` not (yet) implemented "
-                "(requires passing multi-molecule SDF files to NGLview)"
-            )
-
         if self.get_positions() is None:
             raise MissingConformersError(
-                "All molecules in this topology must have positions for it to be visualized in a widget."
+                "All molecules in this topology must have positions for it to "
+                + "be visualized in a widget."
             )
 
         widget = nglview.NGLWidget(
@@ -2467,7 +2454,6 @@ class Topology(Serializable):
             "licorice",
             sele="not water and not ion and not protein",
             radius=0.25,
-            multipleBond=bool(ensure_correct_connectivity),
         )
 
         return widget
