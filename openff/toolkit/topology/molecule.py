@@ -5415,7 +5415,10 @@ class Molecule(FrozenMolecule):
         show_all_hydrogens=True,
     ):
         """
-        Render a visualization of the molecule in Jupyter
+        Render a visualization of the molecule in Jupyter.
+
+        Note that the ``"nglview"`` backend may, in strained conformations,
+        include bonds not present in the topology.
 
         Parameters
         ----------
