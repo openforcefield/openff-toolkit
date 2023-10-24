@@ -224,12 +224,12 @@ class ForceField:
     def __init__(
         self,
         *sources,
-        aromaticity_model=DEFAULT_AROMATICITY_MODEL,
+        aromaticity_model: str = DEFAULT_AROMATICITY_MODEL,
         parameter_handler_classes=None,
         parameter_io_handler_classes=None,
-        disable_version_check=False,
-        allow_cosmetic_attributes=False,
-        load_plugins=False,
+        disable_version_check: bool = False,
+        allow_cosmetic_attributes: bool = False,
+        load_plugins: bool = False,
     ):
         """Create a new :class:`ForceField` object from one or more SMIRNOFF parameter definition files.
 

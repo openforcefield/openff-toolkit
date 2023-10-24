@@ -1794,7 +1794,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
     version = ParameterAttribute()
 
-    @version.converter
+    @version.converter  # type: ignore[no-redef]
     def version(self, attr, new_version):
         """
         Raise a parsing exception if the given section version is unsupported.
@@ -2798,7 +2798,7 @@ class vdWHandler(_NonbondedHandler):
 
     _TAGNAME = "vdW"  # SMIRNOFF tag name to process
     _INFOTYPE = vdWType  # info type to store
-    _MAX_SUPPORTED_SECTION_VERSION = Version("0.4")
+    _MAX_SUPPORTED_SECTION_VERSION = Version("0.5")
 
     potential = ParameterAttribute(
         default="Lennard-Jones-12-6", converter=_allow_only(["Lennard-Jones-12-6"])
@@ -2815,14 +2815,14 @@ class vdWHandler(_NonbondedHandler):
     cutoff = ParameterAttribute(default=9.0 * unit.angstroms, unit=unit.angstrom)
     switch_width = ParameterAttribute(default=1.0 * unit.angstroms, unit=unit.angstrom)
     periodic_method = ParameterAttribute(
-        default="cutoff", converter=_allow_only(["cutoff", "no-cutoff"])
+        default="cutoff", converter=_allow_only(["cutoff", "no-cutoff", "Ewald3D"])
     )
     nonperiodic_method = ParameterAttribute(
         default="no-cutoff", converter=_allow_only(["cutoff", "no-cutoff"])
     )
 
     def __init__(self, **kwargs):
-        if kwargs.get("version") == 0.4:
+        if Version(str(kwargs.get("version"))) > Version("0.3"):
             if "method" in kwargs:
                 raise SMIRNOFFSpecError(
                     "`method` attribute has been removed in version 0.4 of the vdW tag. Use "
@@ -2855,7 +2855,7 @@ class vdWHandler(_NonbondedHandler):
 
     # TODO: Use _allow_only when ParameterAttribute will support multiple converters
     #       (it'll be easy when we switch to use the attrs library)
-    @scale12.converter
+    @scale12.converter  # type: ignore[no-redef]
     def scale12(self, attrs, new_scale12):
         if new_scale12 != 0.0:
             raise SMIRNOFFSpecError(
@@ -2864,7 +2864,7 @@ class vdWHandler(_NonbondedHandler):
             )
         return new_scale12
 
-    @scale13.converter
+    @scale13.converter  # type: ignore[no-redef]
     def scale13(self, attrs, new_scale13):
         if new_scale13 != 0.0:
             raise SMIRNOFFSpecError(
@@ -2873,7 +2873,7 @@ class vdWHandler(_NonbondedHandler):
             )
         return new_scale13
 
-    @scale15.converter
+    @scale15.converter  # type: ignore[no-redef]
     def scale15(self, attrs, new_scale15):
         if new_scale15 != 1.0:
             raise SMIRNOFFSpecError(
@@ -2963,7 +2963,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
 
     # TODO: Use _allow_only when ParameterAttribute will support multiple converters
     #       (it'll be easy when we switch to use the attrs library)
-    @scale12.converter
+    @scale12.converter  # type: ignore[no-redef]
     def scale12(self, attrs, new_scale12):
         if new_scale12 != 0.0:
             raise SMIRNOFFSpecError(
@@ -2972,7 +2972,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             )
         return new_scale12
 
-    @scale13.converter
+    @scale13.converter  # type: ignore[no-redef]
     def scale13(self, attrs, new_scale13):
         if new_scale13 != 0.0:
             raise SMIRNOFFSpecError(
@@ -2981,7 +2981,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             )
         return new_scale13
 
-    @scale15.converter
+    @scale15.converter  # type: ignore[no-redef]
     def scale15(self, attrs, new_scale15):
         if new_scale15 != 1.0:
             raise SMIRNOFFSpecError(
@@ -2990,7 +2990,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
             )
         return new_scale15
 
-    @switch_width.converter
+    @switch_width.converter  # type: ignore[no-redef]
     def switch_width(self, attr, new_switch_width):
         if new_switch_width not in [0.0 * unit.angstrom, None, "None", "none"]:
             raise SMIRNOFFSpecUnimplementedError(
@@ -3000,7 +3000,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 "important to you, please raise an issue at https://github.com/openforcefield/openff-toolkit/issues."
             )
 
-    @periodic_potential.converter
+    @periodic_potential.converter  # type: ignore[no-redef]
     def periodic_potential(self, attr, new_value):
         if new_value in ["PME", "Ewald3D-ConductingBoundary"]:
             return "Ewald3D-ConductingBoundary"
@@ -3013,7 +3013,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 "Failed to process unexpected periodic potential value: {new_value}"
             )
 
-    @solvent_dielectric.converter
+    @solvent_dielectric.converter  # type: ignore[no-redef]
     def solvent_dielectric(self, attr, new_value):
         if new_value is not None:
             raise SMIRNOFFSpecUnimplementedError(
@@ -3440,7 +3440,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
             raise NotImplementedError()
 
-        @outOfPlaneAngle.converter
+        @outOfPlaneAngle.converter  # type: ignore[no-redef]
         def outOfPlaneAngle(self, attr, value):
             if value == "None":
                 return
@@ -3456,7 +3456,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
             return value
 
-        @inPlaneAngle.converter
+        @inPlaneAngle.converter  # type: ignore[no-redef]
         def inPlaneAngle(self, attr, value):
             if value == "None":
                 return

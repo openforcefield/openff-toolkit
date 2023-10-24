@@ -58,6 +58,7 @@ from typing_extensions import TypeAlias
 
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
+    AtomMappingWarning,
     BondExistsError,
     HierarchyIteratorNameConflictError,
     HierarchySchemeNotFoundException,
@@ -1880,6 +1881,17 @@ class FrozenMolecule(Serializable):
                 f"Got {type(toolkit_registry)}"
             )
 
+        if "atom_map" in molecule._properties:
+            if len(molecule._properties["atom_map"]) == molecule.n_atoms:
+                warnings.warn(
+                    "Warning! Fully mapped SMILES pattern passed to `from_smiles`. The atom map is "
+                    "stored as a property in `Molecule._properties`, but these indices are NOT "
+                    "used to determine atom ordering. To use these indices for atom ordering, use "
+                    "`Molecule.from_mapped_smiles`.",
+                    AtomMappingWarning,
+                    stacklevel=2,
+                )
+
         return molecule
 
     def _is_exactly_the_same_as(self, other):
@@ -2091,7 +2103,7 @@ class FrozenMolecule(Serializable):
                 # Molecule class instance
                 if strip_pyrimidal_n_atom_stereo:
                     # Make a copy of the molecule so we don't modify the original
-                    data: FrozenMolecule = deepcopy(data)
+                    data = deepcopy(data)
                     data.strip_atom_stereochemistry(
                         SMARTS, toolkit_registry=toolkit_registry
                     )
@@ -2703,16 +2715,14 @@ class FrozenMolecule(Serializable):
                 f"Expected ToolkitRegistry or ToolkitWrapper. Got {type(toolkit_registry)}."
             )
 
-    def _invalidate_cached_properties(self):
+    def _invalidate_cached_properties(self) -> None:
         """
         Indicate that the chemical entity has been altered.
         """
-        # if hasattr(self, '_cached_properties'):
-        #    delattr(self, '_cached_properties')
         self._conformers = None
         self._partial_charges = None
-        self._propers = None
-        self._impropers = None
+        self._propers: set[tuple[Atom, Atom, Atom, Atom]] = set()
+        self._impropers: set[tuple[Atom, Atom, Atom, Atom]] = set()
 
         self._hill_formula = None
         self._cached_smiles = dict()
@@ -3159,18 +3169,12 @@ class FrozenMolecule(Serializable):
     def n_propers(self) -> int:
         """Number of proper torsions in the molecule."""
         self._construct_torsions()
-        assert (
-            self._propers is not None
-        ), "_construct_torsions always sets _propers to a set"
         return len(self._propers)
 
     @property
     def n_impropers(self) -> int:
         """Number of possible improper torsions in the molecule."""
         self._construct_torsions()
-        assert (
-            self._impropers is not None
-        ), "_construct_torsions always sets _impropers to a set"
         return len(self._impropers)
 
     @property
@@ -3766,7 +3770,7 @@ class FrozenMolecule(Serializable):
 
         if file_format is None:
             if isinstance(file_path, pathlib.Path):
-                file_path: str = file_path.as_posix()
+                file_path: str = file_path.as_posix()  # type: ignore[no-redef]
             if not isinstance(file_path, str):
                 raise ValueError(
                     "If providing a file-like object for reading molecules, the format must be specified"
@@ -4534,12 +4538,18 @@ class FrozenMolecule(Serializable):
 
         # create the molecule from the smiles and check we have the right number of indexes
         # in the mapped SMILES
+        warnings.filterwarnings("ignore", category=AtomMappingWarning)
+
         offmol = cls.from_smiles(
             mapped_smiles,
             hydrogens_are_explicit=True,
             toolkit_registry=toolkit_registry,
             allow_undefined_stereo=allow_undefined_stereo,
         )
+
+        # https://stackoverflow.com/a/53763710
+        # this might be better: https://docs.python.org/3/library/warnings.html#warnings.catch_warnings
+        warnings.filterwarnings("default", category=AtomMappingWarning)
 
         # check we found some mapping and remove it as we do not want to expose atom maps
         try:
@@ -5047,7 +5057,7 @@ class FrozenMolecule(Serializable):
                         else:
                             self._angles.add((atom3, atom2, atom1))
 
-    def _construct_torsions(self):
+    def _construct_torsions(self) -> None:
         """
         Construct sets containing the atoms improper and proper torsions
 
@@ -5056,8 +5066,9 @@ class FrozenMolecule(Serializable):
         if not hasattr(self, "_torsions"):
             self._construct_bonded_atoms_list()
 
-            self._propers: set[tuple[Atom]] = set()
-            self._impropers: set[tuple[Atom]] = set()
+            self._propers = set()
+            self._impropers = set()
+
             for atom1 in self._atoms:
                 for atom2 in self._bonded_atoms[atom1]:
                     for atom3 in self._bonded_atoms[atom2]:
@@ -5088,7 +5099,7 @@ class FrozenMolecule(Serializable):
 
             self._torsions = self._propers | self._impropers
 
-    def _construct_bonded_atoms_list(self):
+    def _construct_bonded_atoms_list(self) -> None:
         """
         Construct list of all atoms each atom is bonded to.
 
