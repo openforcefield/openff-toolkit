@@ -14,14 +14,15 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+- [PR #1740](https://github.com/openforcefield/openff-toolkit/pull/1740): Updates for Mypy 1.6.
+
 ### New features
+
+- [PR #1731](https://github.com/openforcefield/openff-toolkit/pull/1731): Suppot SMIRNOFF vdW version 0.5.
 
 ### Improved documentation and warnings
 
-## Current development
-
 - [PR #1747](https://github.com/openforcefield/openff-toolkit/pull/1747): Warns if a SMILES with full atom mappings is passed to `Moleucle.from_smiles`, which does not use the atom map for atom ordering (`Molecule.from_mapped_smiles` does).
-- [PR #1731](https://github.com/openforcefield/openff-toolkit/pull/1731): Suppot SMIRNOFF vdW version 0.5.
 
 ## 0.14.4
 
