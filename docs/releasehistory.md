@@ -6,7 +6,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+## Current development
 
+### Bugfixes
+- [PR #1740](https://github.com/openforcefield/openff-toolkit/pull/1740): Updates for Mypy 1.6.
 
 ## 0.14.4 
 
