@@ -58,6 +58,7 @@ from typing_extensions import TypeAlias
 
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
+    AtomMappingWarning,
     BondExistsError,
     HierarchyIteratorNameConflictError,
     HierarchySchemeNotFoundException,
@@ -1879,6 +1880,17 @@ class FrozenMolecule(Serializable):
                 "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. "
                 f"Got {type(toolkit_registry)}"
             )
+
+        if "atom_map" in molecule._properties:
+            if len(molecule._properties["atom_map"]) == molecule.n_atoms:
+                warnings.warn(
+                    "Warning! Fully mapped SMILES pattern passed to `from_smiles`. The atom map is "
+                    "stored as a property in `Molecule._properties`, but these indices are NOT "
+                    "used to determine atom ordering. To use these indices for atom ordering, use "
+                    "`Molecule.from_mapped_smiles`.",
+                    AtomMappingWarning,
+                    stacklevel=2,
+                )
 
         return molecule
 
@@ -4526,12 +4538,18 @@ class FrozenMolecule(Serializable):
 
         # create the molecule from the smiles and check we have the right number of indexes
         # in the mapped SMILES
+        warnings.filterwarnings("ignore", category=AtomMappingWarning)
+
         offmol = cls.from_smiles(
             mapped_smiles,
             hydrogens_are_explicit=True,
             toolkit_registry=toolkit_registry,
             allow_undefined_stereo=allow_undefined_stereo,
         )
+
+        # https://stackoverflow.com/a/53763710
+        # this might be better: https://docs.python.org/3/library/warnings.html#warnings.catch_warnings
+        warnings.filterwarnings("default", category=AtomMappingWarning)
 
         # check we found some mapping and remove it as we do not want to expose atom maps
         try:
