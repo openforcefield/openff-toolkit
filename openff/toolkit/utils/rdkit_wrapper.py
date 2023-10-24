@@ -1065,7 +1065,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         from rdkit import Chem
 
         if isinstance(file_path, pathlib.Path):
-            file_path: str = file_path.as_posix()
+            file_path: str = file_path.as_posix()  # type: ignore[no-redef]
 
         file_format = normalize_file_format(file_format)
 
