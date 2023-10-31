@@ -13,7 +13,7 @@ dependencies:
   - cached-property
   - xmltodict
   - python-constraint
-  - openmm =8.1
+  - openmm ==8.1.0beta
   - openff-forcefields >=2023.05.1
   - smirnoff99Frosst
   - openff-units =0.2.0
