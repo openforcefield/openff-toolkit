@@ -1,5 +1,6 @@
 name: openff-toolkit-test-rdkit
 channels:
+  - conda-forge/label/openmm_rc
   - conda-forge
 dependencies:
     # Base depends
@@ -12,7 +13,7 @@ dependencies:
   - cached-property
   - xmltodict
   - python-constraint
-  - openmm >=7.6
+  - openmm =8.1
   - openff-forcefields >=2023.05.1
   - smirnoff99Frosst
   - openff-units =0.2.0
