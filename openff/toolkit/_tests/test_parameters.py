@@ -2448,6 +2448,7 @@ class TestVirtualSiteHandler:
         matches = vsite_handler.find_matches(molecule.to_topology())
         assert len(matches) == 1
 
+
 class TestLibraryChargeHandler:
     def test_create_library_charge_handler(self):
         """Test creation of an empty LibraryChargeHandler"""
