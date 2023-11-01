@@ -3702,7 +3702,15 @@ class VirtualSiteHandler(_NonbondedHandler):
         matches_by_parent: Dict = defaultdict(lambda: defaultdict(list))
 
         for parameter in self._parameters:
+            # Filter for redundant matches caused by non-tagged atoms
+            # See https://github.com/openforcefield/openff-toolkit/issues/1739
+            seen_topology_atom_indices = set()
             for match in entity.chemical_environment_matches(parameter.smirks):
+                if match.topology_atom_indices in seen_topology_atom_indices:
+                    continue
+                else:
+                    seen_topology_atom_indices.add(match.topology_atom_indices)
+
                 parent_index = match.topology_atom_indices[parameter.parent_index]
 
                 matches_by_parent[parent_index][parameter.name].append(
