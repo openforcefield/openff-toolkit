@@ -118,8 +118,8 @@ site parameters. Let us consider 4-, 5-, and 6-point water models:
 
 ## Ordering of atoms and virtual sites
 
-The toolkit handles the orders the atoms and virtual sites in a topology in a
-specific manner for internal convenience.
+The OpenFF Toolkit and Interchange currently add all new virtual particles to the "end" of a Topology, 
+such that the particle indices of all newly-created virtual particles are higher than index of the last atom.
 
 In addition, due to the fact that a virtual site may contain multiple particles coupled 
 to single parameters, the toolkit makes a distinction between a virtual *site*, and a virtual 

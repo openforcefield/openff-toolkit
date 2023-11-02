@@ -15,6 +15,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Bugfixes
 
 - [PR #1740](https://github.com/openforcefield/openff-toolkit/pull/1740): Updates for Mypy 1.6.
+- [PR #1756](https://github.com/openforcefield/openff-toolkit/pull/1756): Fixes issue [#1739](https://github.com/openforcefield/openff-toolkit/issues/1739), where virtual sites would be double-created under some circumstances.
 
 ### New features
 
