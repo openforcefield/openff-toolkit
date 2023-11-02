@@ -1861,6 +1861,23 @@ class TestForceField(_ForceFieldFixtures):
 
         assert force_field["bogus"] is not None
 
+    def test_handy_handler_creation():
+        """See issue #1757"""
+        for key in [
+            "vdW",
+            "Electrostatics",
+            "ToolkitAM1BCC",
+            "LibraryCharges",
+            "ChargeIncrementModel",
+            "Bonds",
+            "Angles",
+            "ProperTorsions",
+            "ImproperTorsions",
+            "VirtualSites",
+            "GBSA",
+        ]:
+            ForceField().get_parameter_handler(key)
+
 
 class TestForceFieldPluginLoading:
     def test_handlers_tracked_if_already_loaded(self):
