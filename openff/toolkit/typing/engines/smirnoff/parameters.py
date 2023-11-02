@@ -2822,7 +2822,9 @@ class vdWHandler(_NonbondedHandler):
     )
 
     def __init__(self, **kwargs):
-        if Version(str(kwargs.get("version"))) > Version("0.3"):
+        if kwargs.get("version") is None:
+            kwargs["version"] = 0.5
+        elif Version(str(kwargs.get("version"))) > Version("0.3"):
             if "method" in kwargs:
                 raise SMIRNOFFSpecError(
                     "`method` attribute has been removed in version 0.4 of the vdW tag. Use "
