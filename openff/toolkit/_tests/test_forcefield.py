@@ -1861,7 +1861,7 @@ class TestForceField(_ForceFieldFixtures):
 
         assert force_field["bogus"] is not None
 
-    def test_handy_handler_creation():
+    def test_handy_handler_creation(self):
         """See issue #1757"""
         for key in [
             "vdW",
