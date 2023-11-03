@@ -18,7 +18,7 @@ dependencies:
   - openff-amber-ff-ports >=0.0.3
   - openff-units =0.2.0
   - openff-utilities >=0.1.5
-  - openff-interchange-base ==0.3.17
+  - openff-interchange-base ==0.3.14
   - openff-nagl ==0.3.2
   - typing_extensions
     # Toolkit-specific
