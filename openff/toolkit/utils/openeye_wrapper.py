@@ -472,7 +472,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         from openeye import oechem
 
         if isinstance(file_path, pathlib.Path):
-            file_path: str = file_path.as_posix()
+            file_path: str = file_path.as_posix()  # type: ignore[no-redef]
 
         oeformat = get_oeformat(file_format)
         ifs = oechem.oemolistream(file_path)
