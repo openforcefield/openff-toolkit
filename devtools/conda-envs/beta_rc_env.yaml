@@ -20,7 +20,7 @@ dependencies:
   - smirnoff99Frosst
   - openff-units =0.2.0
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.3.16
+  - openff-interchange-base >=0.3.17
   - openff-nagl-base ==0.3.0
   - openff-nagl-models ==0.1.0
     # Toolkit-specific
