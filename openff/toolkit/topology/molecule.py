@@ -54,6 +54,7 @@ import numpy as np
 from openff.units import Quantity, unit
 from openff.units.elements import MASSES, SYMBOLS
 from openff.utilities.exceptions import MissingOptionalDependencyError
+from openff.utilities.utilities import has_package
 from typing_extensions import TypeAlias
 
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
@@ -94,6 +95,21 @@ if TYPE_CHECKING:
     import nglview
 
     from openff.toolkit.topology._mm_molecule import _SimpleAtom, _SimpleMolecule
+
+if has_package("qcportal"):
+    import qcportal
+
+    QCA_LIKE: TypeAlias = Union[
+        dict,
+        qcportal.optimization.dataset_models.OptimizationDatasetNewEntry,
+        qcportal.torsiondrive.dataset_models.TorsiondriveDatasetNewEntry,
+        qcportal.manybody.dataset_models.ManybodyDatasetNewEntry,
+        qcportal.reaction.dataset_models.ReactionDatasetNewEntry,
+        qcportal.singlepoint.dataset_models.SinglepointDatasetNewEntry,
+        qcportal.gridoptimization.dataset_models.GridoptimizationDatasetNewEntry,
+    ]
+else:
+    QCA_LIKE = Any
 
 # TODO: Can we have the `ALLOWED_*_MODELS` list automatically appear in the docstrings below?
 # TODO: Should `ALLOWED_*_MODELS` be objects instead of strings?
@@ -4576,10 +4592,10 @@ class FrozenMolecule(Serializable):
     @requires_package("qcelemental")
     def from_qcschema(
         cls,
-        qca_record,
-        client=None,
+        qca_record: QCA_LIKE,
+        client: Optional["qcportal.PortalClient"] = None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-        allow_undefined_stereo=False,
+        allow_undefined_stereo: bool = False,
     ):
         """
         Create a Molecule from a QCArchive molecule record or dataset entry
@@ -4599,7 +4615,7 @@ class FrozenMolecule(Serializable):
             A QCArchive molecule record or dataset entry.
 
         client : optional, default=None,
-            A qcportal.FractalClient instance to use for fetching an initial geometry.
+            A qcportal.PortalClient instance to use for fetching an initial geometry.
             Only used if ``qca_record`` is a dataset entry.
 
         toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
@@ -4653,15 +4669,14 @@ class FrozenMolecule(Serializable):
         InvalidConformerError
             Silent error, if the conformer could not be attached.
         """
-
-        # We can accept the Dataset entry record or the dict with JSON encoding
-        # lets get it all in the dict rep
+        # Process entry as dict; convert if necessary
         if not isinstance(qca_record, dict):
             try:
-                qca_record = qca_record.dict(encoding="json")
+                qca_record = qca_record.dict()
             except AttributeError:
                 raise AttributeError(
-                    "The object passed could not be converted to a dict with json encoding"
+                    f"The input object (type {type(qca_record)=} "
+                    "passed could not be converted to a dict."
                 )
 
         # identify if this is a dataset entry
@@ -4674,18 +4689,22 @@ class FrozenMolecule(Serializable):
                 # collect the input molecules
                 try:
                     input_mols = client.query_molecules(
-                        id=qca_record["initial_molecules"]
+                        molecule_hash=qca_record["initial_molecules"]["identifiers"][
+                            "molecule_hash"
+                        ]
                     )
                 except KeyError:
                     # this must be an optimisation record
                     input_mols = client.query_molecules(
-                        id=qca_record["initial_molecule"]
+                        molecule_hash=qca_record["initial_molecule"]["identifiers"][
+                            "molecule_hash"
+                        ]
                     )
-                except AttributeError:
+                except AttributeError as error:
                     raise AttributeError(
-                        "The provided client can not query molecules, make sure it is an instance of"
-                        "qcportal.client.FractalClient() with the correct address."
-                    )
+                        "The provided client failed to query molecules, make sure it is an instance of"
+                        "`qcportal.PortalClient` and pointed to the correct address."
+                    ) from error
             else:
                 input_mols = []
 

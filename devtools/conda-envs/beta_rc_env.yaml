@@ -37,7 +37,7 @@ dependencies:
   - bson
   - msgpack-python
   - qcelemental
-  - qcportal >=0.15, <0.50.0a0
+  - qcportal >=0.50
   - qcengine
   - nglview
   - mdtraj

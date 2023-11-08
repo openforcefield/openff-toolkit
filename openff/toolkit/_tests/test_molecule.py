@@ -2716,10 +2716,10 @@ class TestMolecule:
     @pytest.mark.parametrize("input_data", client_examples)
     def test_from_qcschema_with_client(self, input_data):
         """For each of the examples try and make a offmol using the instance and dict and check they match"""
+        import qcportal
 
-        import qcportal as ptl
+        client = qcportal.PortalClient()
 
-        client = ptl.FractalClient()
         ds = client.get_collection(input_data["dataset"], input_data["name"])
         entry = ds.get_entry(input_data["index"])
         # now make the molecule from the record instance with and without the geometry
