@@ -2670,42 +2670,42 @@ class TestMolecule:
 
     client_examples = [
         {
-            "dataset": "TorsionDriveDataset",
+            "dataset": "torsiondrive",
             "name": "Fragment Stability Benchmark",
             "index": "CC(=O)Nc1cc2c(cc1OC)nc[n:4][c:3]2[NH:2][c:1]3ccc(c(c3)Cl)F",
         },
         {
-            "dataset": "TorsionDriveDataset",
+            "dataset": "torsiondrive",
             "name": "OpenFF Fragmenter Phenyl Benchmark",
             "index": "c1c[ch:1][c:2](cc1)[c:3](=[o:4])o",
         },
         {
-            "dataset": "TorsionDriveDataset",
+            "dataset": "torsiondrive",
             "name": "OpenFF Full TorsionDrive Benchmark 1",
             "index": "0",
         },
         {
-            "dataset": "TorsionDriveDataset",
+            "dataset": "torsiondrive",
             "name": "OpenFF Group1 Torsions",
             "index": "c1c[ch:1][c:2](cc1)[ch2:3][c:4]2ccccc2",
         },
         {
-            "dataset": "OptimizationDataset",
+            "dataset": "optimization",
             "name": "Kinase Inhibitors: WBO Distributions",
             "index": "cc1ccc(cc1nc2nccc(n2)c3cccnc3)nc(=o)c4ccc(cc4)cn5ccn(cc5)c-0",
         },
         {
-            "dataset": "OptimizationDataset",
+            "dataset": "optimization",
             "name": "SMIRNOFF Coverage Set 1",
             "index": "coc(o)oc-0",
         },
         {
-            "dataset": "GridOptimizationDataset",
+            "dataset": "gridoptimization",
             "name": "OpenFF Trivalent Nitrogen Set 1",
             "index": "b1(c2c(ccs2)-c3ccsc3n1)c4c(c(c(c(c4f)f)f)f)f",
         },
         {
-            "dataset": "GridOptimizationDataset",
+            "dataset": "gridoptimization",
             "name": "OpenFF Trivalent Nitrogen Set 1",
             "index": "C(#N)N",
         },
@@ -2718,12 +2718,12 @@ class TestMolecule:
         """For each of the examples try and make a offmol using the instance and dict and check they match"""
         import qcportal
 
-        client = qcportal.PortalClient()
+        client = qcportal.PortalClient("https://api.qcarchive.molssi.org:443")
 
-        ds = client.get_collection(input_data["dataset"], input_data["name"])
+        ds = client.get_dataset(input_data["dataset"], input_data["name"])
         entry = ds.get_entry(input_data["index"])
         # now make the molecule from the record instance with and without the geometry
-        mol_from_dict = Molecule.from_qcschema(entry.dict(encoding="json"))
+        mol_from_dict = Molecule.from_qcschema(entry)
         # make the molecule again with the geometries attached
         mol_from_instance = Molecule.from_qcschema(entry, client)
         if hasattr(entry, "initial_molecules"):
@@ -2745,14 +2745,18 @@ class TestMolecule:
         Checking whether qca_mol and mol created from/to qcschema are the same or not"""
 
         # get a molecule qcschema
-        import qcportal as ptl
+        import qcportal
 
-        client = ptl.FractalClient()
-        ds = client.get_collection("OptimizationDataset", "SMIRNOFF Coverage Set 1")
+        client = qcportal.PortalClient("https://api.qcarchive.molssi.org:443")
+
+        ds = client.get_dataset("optimization", "SMIRNOFF Coverage Set 1")
+
         # grab an entry from the optimization data set
         entry = ds.get_entry("coc(o)oc-0")
+
         # now make the molecule from the record instance with the geometry
         mol = Molecule.from_qcschema(entry, client)
+
         # now grab the initial molecule record
         qca_mol = client.query_molecules(id=entry.initial_molecule)[0]
         # mow make sure the majority of the qcschema attributes are the same
@@ -2807,17 +2811,16 @@ class TestMolecule:
     def test_qcschema_round_trip_raise_error(self):
         """Test making a molecule from qcschema,
         reaching inner except block where everything fails"""
+        import qcportal
 
-        # get a molecule qcschema
-        import qcportal as ptl
+        client = qcportal.PortalClient("https://api.qcarchive.molssi.org:443")
 
-        client = ptl.FractalClient()
-        ds = client.get_collection(
-            "TorsionDriveDataset", "OpenFF-benchmark-ligand-fragments-v1.0"
+        ds = client.get_dataset(
+            "torsionDriveDataset", "OpenFF-benchmark-ligand-fragments-v1.0"
         )
         # grab an entry from the torsiondrive data set
         entry = ds.get_entry(
-            "[H]c1[c:1]([c:2](c(c(c1[H])N([H])C(=O)[H])[H])[C:3]2=C(C(=C([S:4]2)[H])OC([H])([H])[H])Br)[H]"
+            "[H]c1[c:1]([c:2](c(c(c1[H])N([H])C(=O)[H])[H])[C:3]2=C(C(=C([S:4]2)[H])OC([H])([H])[H])Br)[H]".lower()
         )
         del entry.attributes["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
         # now make the molecule from the record instance with the geometry
@@ -4409,21 +4412,30 @@ class TestMoleculeSubclass:
     @pytest.mark.flaky(reruns=5)
     def test_molecule_subclass_from_qcschema(self):
         """Ensure that the right type of object is returned when running MyMol.from_qcschema"""
-        import qcportal as ptl
+        import qcportal
 
-        client = ptl.FractalClient()
+        client = qcportal.FractalClient("https://api.qcarchive.molssi.org:443")
+
         ds = client.get_collection(
-            "TorsionDriveDataset", "Fragment Stability Benchmark"
+            "torsiondrive",
+            "Fragment Stability Benchmark",
         )
+
         entry = ds.get_entry(
-            "CC(=O)Nc1cc2c(cc1OC)nc[n:4][c:3]2[NH:2][c:1]3ccc(c(c3)Cl)F"
+            "CC(=O)Nc1cc2c(cc1OC)nc[n:4][c:3]2[NH:2][c:1]3ccc(c(c3)Cl)F".lower()
         )
+
         # now make the molecule from the record instance with and without the geometry
-        mol = MyMol.from_qcschema(entry.dict(encoding="json"))
+        mol = MyMol.from_qcschema(entry)
+
         assert isinstance(mol, MyMol)
+
         # Make from object, which will include geometry
         mol = MyMol.from_qcschema(entry, client)
+
         assert isinstance(mol, MyMol)
+
+        assert mol.n_conformers > 0
 
     def test_molecule_subclass_from_topology(self):
         """Ensure that the right type of object is returned when running MyMol.from_topology"""
