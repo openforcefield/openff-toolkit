@@ -4634,18 +4634,18 @@ class FrozenMolecule(Serializable):
         --------
         Get Molecule from a QCArchive molecule record:
 
-        >>> from qcportal import FractalClient
-        >>> client = FractalClient()
+        >>> from qcportal import PortalClient
+        >>> client = PortalClient()
         >>> offmol = Molecule.from_qcschema(
         ...     client.query_molecules(molecular_formula="C7H12N2O4")[0]
         ... )
 
         Get Molecule from a QCArchive optimization entry:
 
-        >>> from qcportal import FractalClient
-        >>> client = FractalClient()
+        >>> from qcportal import PortalClient
+        >>> client = PortalClient()
         >>> optds = client.get_collection(
-        ...     "OptimizationDataset",
+        ...     "optimization",
         ...     "SMIRNOFF Coverage Set 1"
         ... )
         >>> offmol = Molecule.from_qcschema(optds.get_entry('coc(o)oc-0'))

@@ -2787,15 +2787,16 @@ class TestMolecule:
          and then reading that again using from_qcschema"""
 
         # get a molecule qcschema
-        import qcportal as ptl
+        import qcportal
 
-        client = ptl.FractalClient()
+        client = qcportal.PortalClient("https://api.qcarchive.molssi.org:443")
+
         ds = client.get_collection(
-            "TorsionDriveDataset", "OpenFF-benchmark-ligand-fragments-v1.0"
+            "torsiondrive", "OpenFF-benchmark-ligand-fragments-v1.0"
         )
         # grab an entry from the torsiondrive data set
         entry = ds.get_entry(
-            "[H]c1[c:1]([c:2](c(c(c1[H])N([H])C(=O)[H])[H])[C:3]2=C(C(=C([S:4]2)[H])OC([H])([H])[H])Br)[H]"
+            "[H]c1[c:1]([c:2](c(c(c1[H])N([H])C(=O)[H])[H])[C:3]2=C(C(=C([S:4]2)[H])OC([H])([H])[H])Br)[H]".lower()
         )
         # now make the molecule from the record instance with the geometry
         mol_qca_record = Molecule.from_qcschema(entry, client)
@@ -2816,7 +2817,7 @@ class TestMolecule:
         client = qcportal.PortalClient("https://api.qcarchive.molssi.org:443")
 
         ds = client.get_dataset(
-            "torsionDriveDataset", "OpenFF-benchmark-ligand-fragments-v1.0"
+            "torsiondrive", "OpenFF-benchmark-ligand-fragments-v1.0"
         )
         # grab an entry from the torsiondrive data set
         entry = ds.get_entry(
@@ -2835,9 +2836,9 @@ class TestMolecule:
          and then reading that again using from_qcschema"""
 
         # get a molecule qcschema
-        import qcportal as ptl
+        import qcportal
 
-        client = ptl.FractalClient()
+        client = qcportal.PortalClient("https://api.qcarchive.molssi.org:443")
 
         record = client.query_molecules(molecular_formula="C16H20N3O5")[0]
 
