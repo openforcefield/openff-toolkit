@@ -37,7 +37,7 @@ jobs:
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openff
-      PYTEST_ARGS: -r -vx fE --tb=short -nauto
+      PYTEST_ARGS: -r fE -v -x --tb=short -nauto
       NB_ARGS: --nbval-lax --dist-loadscope --ignore=examples/deprecated
 
     steps:
