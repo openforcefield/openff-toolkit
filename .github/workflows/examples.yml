@@ -38,7 +38,7 @@ jobs:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openff
       PYTEST_ARGS: -r fE --tb=short
-      NB_ARGS: -v --nbval-lax --ignore=examples/deprecated --durations=20
+      NB_ARGS: -vx --nbval-lax --ignore=examples/deprecated --durations=20
 
     steps:
       - uses: actions/checkout@v4
