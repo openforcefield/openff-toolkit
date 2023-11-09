@@ -145,4 +145,9 @@ jobs:
             NB_ARGS+=" --ignore=examples/toolkit_showcase"
           fi
 
+          # GROMACS builds are not stable on macOS + GHA
+          if [[ ${{ matrix.os }} == macos-latest ]]; then
+            NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs/"
+          fi
+
           python -m pytest $PYTEST_ARGS $NB_ARGS examples
