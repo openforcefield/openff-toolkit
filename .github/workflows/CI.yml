@@ -119,7 +119,7 @@ jobs:
           fi
 
       - name: Install NAGL on Python <3.12
-        if: ${{ matrix.python-version != "3.12" }}
+        if: ${{ matrix.python-version != '3.12' }}
         run: micromamba install "openff-nagl ==0.3.2" --yes
 
       - name: Environment Information

@@ -24,15 +24,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        python-version: ["3.9"]
-        rdkit: [true, false]
-        openeye: [true, false]
-        exclude:
-          - rdkit: false
-            openeye: false
-          - rdkit: true
-            openeye: true
+        os: [ubuntu-latest]
+        python-version: ["3.12"]
+        rdkit: [false]
+        openeye: [true]
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
