@@ -29,7 +29,6 @@ dependencies:
   - rdkit
     # Test-only/optional/dev/typing/examples
   - pytest
-  - pytest-cov
   - pytest-xdist
   - pytest-rerunfailures
   - pyyaml
@@ -43,4 +42,4 @@ dependencies:
   - mdtraj
   - pdbfixer
   - openmmforcefields >=0.11.2
-  - gromacs >=2021=nompi*
+  - gromacs =2023.3=nompi_*_101
