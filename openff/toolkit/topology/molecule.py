@@ -54,7 +54,6 @@ import numpy as np
 from openff.units import Quantity, unit
 from openff.units.elements import MASSES, SYMBOLS
 from openff.utilities.exceptions import MissingOptionalDependencyError
-from openff.utilities.utilities import has_package
 from typing_extensions import TypeAlias
 
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
@@ -96,20 +95,6 @@ if TYPE_CHECKING:
 
     from openff.toolkit.topology._mm_molecule import _SimpleAtom, _SimpleMolecule
 
-if has_package("qcportal"):
-    import qcportal
-
-    QCA_LIKE: TypeAlias = Union[
-        dict,
-        qcportal.optimization.dataset_models.OptimizationDatasetNewEntry,
-        qcportal.torsiondrive.dataset_models.TorsiondriveDatasetNewEntry,
-        qcportal.manybody.dataset_models.ManybodyDatasetNewEntry,
-        qcportal.reaction.dataset_models.ReactionDatasetNewEntry,
-        qcportal.singlepoint.dataset_models.SinglepointDatasetNewEntry,
-        qcportal.gridoptimization.dataset_models.GridoptimizationDatasetNewEntry,
-    ]
-else:
-    QCA_LIKE = Any
 
 # TODO: Can we have the `ALLOWED_*_MODELS` list automatically appear in the docstrings below?
 # TODO: Should `ALLOWED_*_MODELS` be objects instead of strings?
@@ -4592,8 +4577,8 @@ class FrozenMolecule(Serializable):
     @requires_package("qcelemental")
     def from_qcschema(
         cls,
-        qca_record: QCA_LIKE,
-        client: Optional["qcportal.PortalClient"] = None,
+        qca_record,
+        client=None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
         allow_undefined_stereo: bool = False,
     ):
