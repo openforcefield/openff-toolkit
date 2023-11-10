@@ -73,17 +73,10 @@ jobs:
           create-args: >-
             python=${{ matrix.python-version }}
 
-      - name: Additional info about the build
-        run: |
-          uname -a
-          df -h
-          ulimit -a
-
       - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
         env:
           OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
-        run: |
-          echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
+        run: echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
 
       - name: Install package
         run: |
@@ -96,14 +89,13 @@ jobs:
           python -m pip install .
 
       - name: Install test plugins
-        run: |
-          python -m pip install utilities/test_plugins
+        run: python -m pip install utilities/test_plugins
 
       - name: Remove undesired toolkits
         run: |
           if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
             for cpkg in ${{ env.PACKAGES_TO_REMOVE }}; do
-              if [[ $(conda list | grep $cpkg) ]]; then micromamba remove --force $cpkg --yes ; fi
+              if [[ $(mamba list | grep $cpkg) ]]; then micromamba remove --force $cpkg --yes ; fi
             done
           fi
 
@@ -126,10 +118,12 @@ jobs:
             done
           fi
 
+      - name: Install NAGL on Python <3.12
+        if: ${{ matrix.python-version != "3.12" }}
+        run: micromamba install "openff-nagl ==0.3.2" --yes
+
       - name: Environment Information
-        run: |
-          conda info
-          conda list
+        run: mamba info && mamba list
 
       - name: Check links
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
@@ -151,18 +145,20 @@ jobs:
 
       - name: Run code snippets in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: |
-          pytest -v --no-cov --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
+        run: pytest -v --no-cov --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
 
       - name: Run notebooks in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: |
-          pytest -v --no-cov --nbval --ignore docs/_build/ docs/
+        run: pytest -v --no-cov --nbval --ignore docs/_build/ docs/
 
       - name: Run examples in docstrings
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: |
-          pytest -v --no-cov --doctest-modules --ignore=openff/toolkit/_tests/ --ignore=openff/toolkit/data/ --ignore=openff/toolkit/utils/utils.py openff/
+          pytest -v --no-cov --doctest-modules \
+            --ignore=openff/toolkit/_tests/ \
+            --ignore=openff/toolkit/data/
+            --ignore=openff/toolkit/utils/utils.py \
+            openff/
 
       - name: Codecov
         uses: codecov/codecov-action@v3
