@@ -2822,7 +2822,9 @@ class vdWHandler(_NonbondedHandler):
     )
 
     def __init__(self, **kwargs):
-        if Version(str(kwargs.get("version"))) > Version("0.3"):
+        if kwargs.get("version") is None:
+            kwargs["version"] = 0.5
+        elif Version(str(kwargs.get("version"))) > Version("0.3"):
             if "method" in kwargs:
                 raise SMIRNOFFSpecError(
                     "`method` attribute has been removed in version 0.4 of the vdW tag. Use "
@@ -3702,7 +3704,15 @@ class VirtualSiteHandler(_NonbondedHandler):
         matches_by_parent: Dict = defaultdict(lambda: defaultdict(list))
 
         for parameter in self._parameters:
+            # Filter for redundant matches caused by non-tagged atoms
+            # See https://github.com/openforcefield/openff-toolkit/issues/1739
+            seen_topology_atom_indices = set()
             for match in entity.chemical_environment_matches(parameter.smirks):
+                if match.topology_atom_indices in seen_topology_atom_indices:
+                    continue
+                else:
+                    seen_topology_atom_indices.add(match.topology_atom_indices)
+
                 parent_index = match.topology_atom_indices[parameter.parent_index]
 
                 matches_by_parent[parent_index][parameter.name].append(
