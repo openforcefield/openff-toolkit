@@ -103,11 +103,11 @@ class TopologyNGLViewStructure(Structure):
     def get_structure_string(self):
         with StringIO() as f:
             if RDKIT_AVAILABLE:
-                from rdkit.Chem.rdmolfiles import PDBWriter
+                from rdkit.Chem.rdmolfiles import PDBWriter  # type: ignore
 
                 write_box_vectors(f, self.topology)
 
-                writer = PDBWriter(f)
+                writer: PDBWriter = PDBWriter(f)
                 for mol in self.topology.molecules:
                     writer.write(mol.to_rdkit())
 
