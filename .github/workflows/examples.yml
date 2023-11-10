@@ -26,8 +26,8 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         python-version: ["3.12"]
-        rdkit: [false]
-        openeye: [true]
+        rdkit: [true]
+        openeye: [false]
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
