@@ -2840,7 +2840,7 @@ class TestMolecule:
 
         client = qcportal.PortalClient("https://api.qcarchive.molssi.org:443")
 
-        record = client.query_molecules(molecular_formula="C16H20N3O5")[0]
+        record = [*client.query_molecules(molecular_formula="C16H20N3O5")][0]
 
         # now make the molecule from the record instance with the geometry
         mol_qca_record = Molecule.from_qcschema(record, client)
@@ -4415,7 +4415,7 @@ class TestMoleculeSubclass:
         """Ensure that the right type of object is returned when running MyMol.from_qcschema"""
         import qcportal
 
-        client = qcportal.FractalClient("https://api.qcarchive.molssi.org:443")
+        client = qcportal.PortalClient("https://api.qcarchive.molssi.org:443")
 
         ds = client.get_collection(
             "torsiondrive",
