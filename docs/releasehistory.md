@@ -14,7 +14,16 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+### New features
+
+### Improved documentation and warnings
+
+## 0.14.5
+
+### Bugfixes
+
 - [PR #1740](https://github.com/openforcefield/openff-toolkit/pull/1740): Updates for Mypy 1.6.
+- [PR #1749](https://github.com/openforcefield/openff-toolkit/pull/1749): Updates versioneer for Python 3.12 compatibility.
 - [PR #1756](https://github.com/openforcefield/openff-toolkit/pull/1756): Fixes issue [#1739](https://github.com/openforcefield/openff-toolkit/issues/1739), where virtual sites would be double-created under some circumstances.
 
 ### New features
@@ -24,6 +33,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Improved documentation and warnings
 
 - [PR #1747](https://github.com/openforcefield/openff-toolkit/pull/1747): Warns if a SMILES with full atom mappings is passed to `Moleucle.from_smiles`, which does not use the atom map for atom ordering (`Molecule.from_mapped_smiles` does).
+- [PR #1743](https://github.com/openforcefield/openff-toolkit/pull/1743): Uses a longer stride in OpenMM DCD reporter in the toolkit showcase and should better utilize GPU resources, if available.
+- [PR #1744](https://github.com/openforcefield/openff-toolkit/pull/1744): Updates the virtual site notebook to use new Interchange behavior.
 
 ## 0.14.4
 
