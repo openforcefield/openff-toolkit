@@ -39,12 +39,14 @@ from typing import (
     Generator,
     Iterable,
     List,
+    Literal,
     Optional,
     Sequence,
     Set,
     TextIO,
     Tuple,
     Union,
+    overload,
 )
 
 import networkx as nx
@@ -56,6 +58,7 @@ from typing_extensions import TypeAlias
 
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
+    AtomMappingWarning,
     BondExistsError,
     HierarchyIteratorNameConflictError,
     HierarchySchemeNotFoundException,
@@ -66,6 +69,7 @@ from openff.toolkit.utils.exceptions import (
     InvalidAtomMetadataError,
     InvalidBondOrderError,
     InvalidConformerError,
+    MissingConformersError,
     MissingPartialChargesError,
     MoleculeParseError,
     MultipleMoleculesInPDBError,
@@ -86,16 +90,22 @@ from openff.toolkit.utils.toolkits import (
 from openff.toolkit.utils.utils import get_data_file_path, requires_package
 
 if TYPE_CHECKING:
+    import IPython.display
+    import nglview
+
     from openff.toolkit.topology._mm_molecule import _SimpleAtom, _SimpleMolecule
 
 # TODO: Can we have the `ALLOWED_*_MODELS` list automatically appear in the docstrings below?
 # TODO: Should `ALLOWED_*_MODELS` be objects instead of strings?
-# TODO: Should these be imported from `openff.toolkit.cheminformatics.aromaticity_models` and `.bondorder_models`?
 
 # TODO: Allow all OpenEye aromaticity models to be used with OpenEye names?
 #       Only support OEAroModel_MDL in RDKit version?
 
 TKR: TypeAlias = Union[ToolkitRegistry, ToolkitWrapper]
+
+
+class MoleculeDeprecationWarning(UserWarning):
+    """Warning for deprecated portions of the Molecule API."""
 
 
 class Particle(Serializable):
@@ -1871,6 +1881,17 @@ class FrozenMolecule(Serializable):
                 f"Got {type(toolkit_registry)}"
             )
 
+        if "atom_map" in molecule._properties:
+            if len(molecule._properties["atom_map"]) == molecule.n_atoms:
+                warnings.warn(
+                    "Warning! Fully mapped SMILES pattern passed to `from_smiles`. The atom map is "
+                    "stored as a property in `Molecule._properties`, but these indices are NOT "
+                    "used to determine atom ordering. To use these indices for atom ordering, use "
+                    "`Molecule.from_mapped_smiles`.",
+                    AtomMappingWarning,
+                    stacklevel=2,
+                )
+
         return molecule
 
     def _is_exactly_the_same_as(self, other):
@@ -2082,7 +2103,7 @@ class FrozenMolecule(Serializable):
                 # Molecule class instance
                 if strip_pyrimidal_n_atom_stereo:
                     # Make a copy of the molecule so we don't modify the original
-                    data: FrozenMolecule = deepcopy(data)
+                    data = deepcopy(data)
                     data.strip_atom_stereochemistry(
                         SMARTS, toolkit_registry=toolkit_registry
                     )
@@ -2694,16 +2715,14 @@ class FrozenMolecule(Serializable):
                 f"Expected ToolkitRegistry or ToolkitWrapper. Got {type(toolkit_registry)}."
             )
 
-    def _invalidate_cached_properties(self):
+    def _invalidate_cached_properties(self) -> None:
         """
         Indicate that the chemical entity has been altered.
         """
-        # if hasattr(self, '_cached_properties'):
-        #    delattr(self, '_cached_properties')
         self._conformers = None
         self._partial_charges = None
-        self._propers = None
-        self._impropers = None
+        self._propers: set[tuple[Atom, Atom, Atom, Atom]] = set()
+        self._impropers: set[tuple[Atom, Atom, Atom, Atom]] = set()
 
         self._hill_formula = None
         self._cached_smiles = dict()
@@ -3150,18 +3169,12 @@ class FrozenMolecule(Serializable):
     def n_propers(self) -> int:
         """Number of proper torsions in the molecule."""
         self._construct_torsions()
-        assert (
-            self._propers is not None
-        ), "_construct_torsions always sets _propers to a set"
         return len(self._propers)
 
     @property
     def n_impropers(self) -> int:
         """Number of possible improper torsions in the molecule."""
         self._construct_torsions()
-        assert (
-            self._impropers is not None
-        ), "_construct_torsions always sets _impropers to a set"
         return len(self._impropers)
 
     @property
@@ -3757,7 +3770,7 @@ class FrozenMolecule(Serializable):
 
         if file_format is None:
             if isinstance(file_path, pathlib.Path):
-                file_path: str = file_path.as_posix()
+                file_path: str = file_path.as_posix()  # type: ignore[no-redef]
             if not isinstance(file_path, str):
                 raise ValueError(
                     "If providing a file-like object for reading molecules, the format must be specified"
@@ -3923,6 +3936,13 @@ class FrozenMolecule(Serializable):
 
         import openmm.unit as openmm_unit
         from openmm.app import PDBFile
+
+        warnings.warn(
+            "`Molecule.from_polymer_pdb` is deprecated in favor of `Topology.from_pdb`, the recommended "
+            "method for loading PDB files. This method will be removed in a future release of the OpenFF Toolkit.",
+            MoleculeDeprecationWarning,
+            stacklevel=2,
+        )
 
         if isinstance(toolkit_registry, ToolkitWrapper):
             toolkit_registry = ToolkitRegistry([toolkit_registry])
@@ -4518,12 +4538,18 @@ class FrozenMolecule(Serializable):
 
         # create the molecule from the smiles and check we have the right number of indexes
         # in the mapped SMILES
+        warnings.filterwarnings("ignore", category=AtomMappingWarning)
+
         offmol = cls.from_smiles(
             mapped_smiles,
             hydrogens_are_explicit=True,
             toolkit_registry=toolkit_registry,
             allow_undefined_stereo=allow_undefined_stereo,
         )
+
+        # https://stackoverflow.com/a/53763710
+        # this might be better: https://docs.python.org/3/library/warnings.html#warnings.catch_warnings
+        warnings.filterwarnings("default", category=AtomMappingWarning)
 
         # check we found some mapping and remove it as we do not want to expose atom maps
         try:
@@ -4751,6 +4777,12 @@ class FrozenMolecule(Serializable):
         InvalidConformerError
             If the SMILES and PDB molecules are not isomorphic.
         """
+        warnings.warn(
+            "`Molecule.from_pdb_and_smiles` is deprecated in favor of `Topology.from_pdb`, the recommended "
+            "method for loading PDB files. This method will be removed in a future release of the OpenFF Toolkit.",
+            MoleculeDeprecationWarning,
+            stacklevel=2,
+        )
 
         toolkit = RDKitToolkitWrapper()
         return toolkit.from_pdb_and_smiles(
@@ -5025,7 +5057,7 @@ class FrozenMolecule(Serializable):
                         else:
                             self._angles.add((atom3, atom2, atom1))
 
-    def _construct_torsions(self):
+    def _construct_torsions(self) -> None:
         """
         Construct sets containing the atoms improper and proper torsions
 
@@ -5034,8 +5066,9 @@ class FrozenMolecule(Serializable):
         if not hasattr(self, "_torsions"):
             self._construct_bonded_atoms_list()
 
-            self._propers: set[tuple[Atom]] = set()
-            self._impropers: set[tuple[Atom]] = set()
+            self._propers = set()
+            self._impropers = set()
+
             for atom1 in self._atoms:
                 for atom2 in self._bonded_atoms[atom1]:
                     for atom3 in self._bonded_atoms[atom2]:
@@ -5066,7 +5099,7 @@ class FrozenMolecule(Serializable):
 
             self._torsions = self._propers | self._impropers
 
-    def _construct_bonded_atoms_list(self):
+    def _construct_bonded_atoms_list(self) -> None:
         """
         Construct list of all atoms each atom is bonded to.
 
@@ -5338,13 +5371,34 @@ class Molecule(FrozenMolecule):
 
         return self._add_conformer(coordinates)
 
+    @overload
     def visualize(
         self,
-        backend="rdkit",
-        width=None,
-        height=None,
-        show_all_hydrogens=True,
-    ):
+        backend: Literal["rdkit"],
+    ) -> "IPython.display.SVG":
+        ...
+
+    @overload
+    def visualize(
+        self,
+        backend: Literal["openeye"],
+    ) -> "IPython.display.Image":
+        ...
+
+    @overload
+    def visualize(
+        self,
+        backend: Literal["nglview"],
+    ) -> "nglview.NGLWidget":
+        ...
+
+    def visualize(
+        self,
+        backend: str = "rdkit",
+        width: int = 500,
+        height: int = 300,
+        show_all_hydrogens: bool = True,
+    ) -> Union["IPython.display.SVG", "IPython.display.Image", "nglview.NGLWidget"]:
         """
         Render a visualization of the molecule in Jupyter
 
@@ -5357,15 +5411,15 @@ class Molecule(FrozenMolecule):
             - ``"openeye"``
             - ``"nglview"`` (requires conformers)
 
-        width : int, optional, default=500
+        width : int, default=500
             Width of the generated representation (only applicable to
-            ``backend=openeye`` or ``backend=rdkit``)
-        height : int, optional, default=300
+            ``backend="openeye"`` or ``backend="rdkit"``)
+        height : int, default=300
             Width of the generated representation (only applicable to
-            ``backend=openeye`` or ``backend=rdkit``)
-        show_all_hydrogens : bool, optional, default=True
+            ``backend="openeye"`` or ``backend="rdkit"``)
+        show_all_hydrogens : bool, default=True
             Whether to explicitly depict all hydrogen atoms. (only applicable to
-            ``backend=openeye`` or ``backend=rdkit``)
+            ``backend="openeye"`` or ``backend="rdkit"``)
 
         Returns
         -------
@@ -5377,6 +5431,8 @@ class Molecule(FrozenMolecule):
             - nglview → nglview.NGLWidget
 
         """
+        import inspect
+
         from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
 
         backend = backend.lower()
@@ -5387,34 +5443,49 @@ class Molecule(FrozenMolecule):
             except ImportError:
                 raise MissingOptionalDependencyError("nglview")
 
-            if width is not None or height is not None:
-                # TODO: More specific exception
-                raise ValueError(
-                    "The width, height, and show_all_hydrogens arguments do not apply to the nglview backend."
-                )
-            elif not show_all_hydrogens:
-                # TODO: More specific exception
-                # TODO: Implement this? Should be able to just strip hydrogens from the PDB
-                raise ValueError(
-                    "show_all_hydrogens=False is not supported by the nglview backend"
+            signature = inspect.signature(Molecule.visualize).parameters
+            if (width != signature["width"].default) or (
+                height != signature["height"].default
+            ):
+                warnings.warn(
+                    f"Arguments `width` and `height` are ignored with {backend=}."
+                    f"Found non-default values {width=} and {height=}",
+                    stacklevel=2,
                 )
 
-            if self.conformers:
-                from openff.toolkit.utils.viz import _OFFTrajectoryNGLView
-
-                trajectory_like = _OFFTrajectoryNGLView(self)
-                widget = nv.NGLWidget(trajectory_like)
-                return widget
-            else:
-                # TODO: More specific exception
-                raise ValueError(
+            if self.conformers is None:
+                raise MissingConformersError(
                     "Visualizing with NGLview requires that the molecule has "
-                    "conformers."
+                    f"conformers, found {self.conformers=}"
                 )
 
-        width = 500 if width is None else width
-        height = 300 if height is None else height
-        show_all_hydrogens = True if show_all_hydrogens is None else show_all_hydrogens
+            else:
+                from openff.toolkit.utils._viz import MoleculeNGLViewTrajectory
+
+                try:
+                    widget = nv.NGLWidget(
+                        MoleculeNGLViewTrajectory(
+                            molecule=self,
+                            ext="MOL2",
+                        )
+                    )
+                except ValueError:
+                    widget = nv.NGLWidget(
+                        MoleculeNGLViewTrajectory(
+                            molecule=self,
+                            ext="PDB",
+                        )
+                    )
+
+                widget.clear_representations()
+                widget.add_representation(
+                    "licorice",
+                    sele="*" if show_all_hydrogens else "NOT hydrogen",
+                    radius=0.25,
+                    multipleBond=True,
+                )
+
+                return widget
 
         if backend == "rdkit":
             if RDKIT_AVAILABLE:

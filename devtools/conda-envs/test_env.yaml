@@ -19,7 +19,7 @@ dependencies:
   - openff-units =0.2.0
   - openff-amber-ff-ports
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.3.10
+  - openff-interchange-base >=0.3.17
   - openff-nagl-base ==0.3.0
   - openff-nagl-models ==0.1.0
     # Toolkit-specific
@@ -38,6 +38,7 @@ dependencies:
   - qcelemental
   - qcportal >=0.15, <0.50.0a0
   - qcengine
+  - nglview
   - mdtraj
   - nbval
   - mypy

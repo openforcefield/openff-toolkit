@@ -11,6 +11,7 @@ import itertools
 import logging
 import pathlib
 import tempfile
+import warnings
 from collections import defaultdict
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
@@ -222,8 +223,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         ------
         InvalidConformerError : if the SMILES and PDB molecules are not isomorphic.
         """
-
         from rdkit import Chem
+
+        warnings.warn(
+            "`RDKitToolkitWrapper.from_polymer_pdb` is deprecated in favor of `Topology.from_pdb`, the recommended "
+            "method for loading PDB files. (Note the `unique_molecules` argument.) This method will "
+            "be removed in a future release of the OpenFF Toolkit.",
+            stacklevel=2,
+        )
 
         # Make the molecule from smiles
         offmol = self.from_smiles(
@@ -1058,7 +1065,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         from rdkit import Chem
 
         if isinstance(file_path, pathlib.Path):
-            file_path: str = file_path.as_posix()
+            file_path: str = file_path.as_posix()  # type: ignore[no-redef]
 
         file_format = normalize_file_format(file_format)
 
@@ -2874,10 +2881,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         .. notes ::
 
-           * Raises ``ValueError`` if ``smarts`` query is malformed
+           * Raises ``ChemicalEnvironmentParsingError`` if ``smarts`` query is malformed
 
         """
         from rdkit import Chem
+
+        from openff.toolkit.utils.exceptions import ChemicalEnvironmentParsingError
 
         # This code is part of a possible performance optimization that hasn't been validated
         # for production use yet.
@@ -2914,8 +2923,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Set up query.
         qmol = Chem.MolFromSmarts(smarts)  # cannot catch the error
         if qmol is None:
-            raise ValueError(
-                'RDKit could not parse the SMIRKS string "{}"'.format(smarts)
+            raise ChemicalEnvironmentParsingError(
+                f'RDKit could not parse the SMARTS/SMIRKS string "{smarts}"'
             )
 
         # Create atom mapping for query molecule

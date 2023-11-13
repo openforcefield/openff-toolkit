@@ -17,6 +17,7 @@ import os
 import pathlib
 import pickle
 import re
+import warnings
 from tempfile import NamedTemporaryFile
 from unittest.mock import Mock
 
@@ -56,12 +57,14 @@ from openff.toolkit.topology.molecule import (
 )
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import (
+    AtomMappingWarning,
     HierarchyIteratorNameConflictError,
     IncompatibleShapeError,
     IncompatibleTypeError,
     IncompatibleUnitError,
     InvalidBondOrderError,
     InvalidConformerError,
+    MissingConformersError,
     MissingPartialChargesError,
     MultipleMoleculesInPDBError,
     NotBondedError,
@@ -2874,6 +2877,24 @@ class TestMolecule:
         ):
             Molecule.from_mapped_smiles("[Cl:1][Cl]", toolkit_registry=toolkit_class())
 
+    def test_smiles_with_full_map_warning(
+        self,
+    ):
+        with pytest.warns(AtomMappingWarning):
+            Molecule.from_smiles("[H:2][O:1][H:3]")
+
+    @requires_openeye
+    def test_smiles_with_partial_map_no_warning(
+        self,
+    ):
+        """Ensure the 'do you mean from_mapped_smiles?' warning is not emitted with a partial map"""
+        with warnings.catch_warnings():
+            # This turns warnings into exceptions - one way of implementing
+            # "ensure there is not a warning raised"
+            warnings.simplefilter("error")
+
+            Molecule.from_smiles("H[O:1]H")
+
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_n_atoms(self, molecule):
         """Test n_atoms property"""
@@ -3699,33 +3720,21 @@ class TestMoleculeVisualization:
 
     @requires_pkg("nglview")
     def test_visualize_nglview(self):
-        """Test that the visualize method returns an NGLview widget. Note that
-        nglview is not explicitly a requirement in the test environment, but
-        is likely to get pulled in with other dependencies."""
-        try:
-            import nglview
-        except ModuleNotFoundError:
-            pass
+        import nglview
 
-        # Start with a molecule without conformers
         mol = Molecule().from_smiles("CCO")
 
-        with pytest.raises(ValueError):
+        with pytest.raises(MissingConformersError):
             mol.visualize(backend="nglview")
 
-        # Add conformers
         mol.generate_conformers()
 
-        # Ensure an NGLView widget is returned
         assert isinstance(mol.visualize(backend="nglview"), nglview.NGLWidget)
 
-        # Providing other arguments is an error
-        with pytest.raises(ValueError):
-            mol.visualize(backend="nglview", width=100)
-        with pytest.raises(ValueError):
-            mol.visualize(backend="nglview", height=100)
-        with pytest.raises(ValueError):
-            mol.visualize(backend="nglview", show_all_hydrogens=False)
+        with pytest.warns(UserWarning, match="ignored.*nglview.*111"):
+            mol.visualize(backend="nglview", width=111)
+        with pytest.warns(UserWarning, match="ignored.*nglview.*222"):
+            mol.visualize(backend="nglview", height=222)
 
     @requires_pkg("IPython")
     @requires_openeye
@@ -3749,14 +3758,14 @@ class TestMoleculeVisualization:
         molecule._ipython_display_()
 
     def test_get_coordinates(self):
-        from openff.toolkit.utils.viz import _OFFTrajectoryNGLView
+        from openff.toolkit.utils._viz import MoleculeNGLViewTrajectory
 
         molecule = Molecule.from_smiles(
             "C1CC2=C3C(=CC=C2)C(=CN3C1)[C@H]4[C@@H](C(=O)NC4=O)C5=CNC6=CC=CC=C65"
         )
         molecule.generate_conformers(n_conformers=3)
 
-        trajectory = _OFFTrajectoryNGLView(molecule)
+        trajectory = MoleculeNGLViewTrajectory(molecule)
 
         # _OFFTrajectoryNGLView.get_coordinates returns a unitless array implicitly in Angstroms
         np.testing.assert_allclose(
@@ -3769,7 +3778,7 @@ class TestMoleculeVisualization:
             trajectory.get_coordinates(1), molecule.conformers[1].m
         )
 
-        with pytest.raises(IndexError, match="too high"):
+        with pytest.raises(IndexError, match="out of range"):
             trajectory.get_coordinates(100000)
 
 
