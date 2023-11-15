@@ -23,6 +23,7 @@ dependencies:
   - openff-nagl-base ==0.3.0
   - openff-nagl-models ==0.1.0
   - typing_extensions
+  - nglview
     # Toolkit-specific
   - openeye-toolkits
     # Test-only/optional/dev/typing/examples
