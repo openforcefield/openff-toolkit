@@ -3685,7 +3685,7 @@ class TestQCArchiveInterface:
 
         client = qcportal.PortalClient("https://api.qcarchive.molssi.org:443")
 
-        record = [*client.query_molecules(molecular_formula="C16H20N3O5")][0]
+        record = [*client.query_molecules(molecular_formula="C16H20N3O5")][-1]
 
         # now make the molecule from the record instance with the geometry
         mol_qca_record = Molecule.from_qcschema(record, client)
