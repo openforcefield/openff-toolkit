@@ -2721,7 +2721,7 @@ class TestMolecule:
         client = qcportal.PortalClient("https://api.qcarchive.molssi.org:443")
 
         ds = client.get_dataset(input_data["dataset"], input_data["name"])
-        entry = ds.get_entry(input_data["index"])
+        entry = ds.get_entry(input_data["index"].lower())
         # now make the molecule from the record instance with and without the geometry
         mol_from_dict = Molecule.from_qcschema(entry)
         # make the molecule again with the geometries attached
@@ -2757,8 +2757,13 @@ class TestMolecule:
         # now make the molecule from the record instance with the geometry
         mol = Molecule.from_qcschema(entry, client)
 
-        # now grab the initial molecule record
-        qca_mol = client.query_molecules(id=entry.initial_molecule)[0]
+        # find and grab the initial molecule record
+        iterator = client.query_molecules(
+            molecule_hash=entry.initial_molecule.identifiers.molecule_hash
+        )
+
+        qca_mol = [*iterator][0]
+
         # mow make sure the majority of the qcschema attributes are the same
         # note we can not compare the full dict due to qcelemental differences
         qcschema = mol.to_qcschema()
@@ -2791,7 +2796,7 @@ class TestMolecule:
 
         client = qcportal.PortalClient("https://api.qcarchive.molssi.org:443")
 
-        ds = client.get_collection(
+        ds = client.get_dataset(
             "torsiondrive", "OpenFF-benchmark-ligand-fragments-v1.0"
         )
         # grab an entry from the torsiondrive data set
@@ -4417,7 +4422,7 @@ class TestMoleculeSubclass:
 
         client = qcportal.PortalClient("https://api.qcarchive.molssi.org:443")
 
-        ds = client.get_collection(
+        ds = client.get_dataset(
             "torsiondrive",
             "Fragment Stability Benchmark",
         )

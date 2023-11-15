@@ -95,7 +95,6 @@ if TYPE_CHECKING:
 
     from openff.toolkit.topology._mm_molecule import _SimpleAtom, _SimpleMolecule
 
-
 # TODO: Can we have the `ALLOWED_*_MODELS` list automatically appear in the docstrings below?
 # TODO: Should `ALLOWED_*_MODELS` be objects instead of strings?
 
@@ -4673,11 +4672,15 @@ class FrozenMolecule(Serializable):
                 # try and find the initial molecule conformations and attach them
                 # collect the input molecules
                 try:
-                    input_mols = client.query_molecules(
-                        molecule_hash=qca_record["initial_molecules"]["identifiers"][
-                            "molecule_hash"
-                        ]
-                    )
+                    initial_molecules: list[dict] = qca_record["initial_molecules"]
+
+                    hashes: list[str] = [
+                        molecule["identifiers"]["molecule_hash"]
+                        for molecule in initial_molecules
+                    ]
+
+                    input_mols = client.query_molecules(molecule_hash=hashes)
+
                 except KeyError:
                     # this must be an optimisation record
                     input_mols = client.query_molecules(
@@ -4691,6 +4694,8 @@ class FrozenMolecule(Serializable):
                         "`qcportal.PortalClient` and pointed to the correct address."
                     ) from error
             else:
+                # Will be a `qcportal.molecules.MoleculeQueryIterator` if queries returned anything,
+                # otherwise just make an empty iterator
                 input_mols = []
 
         # identify if this is a molecule record
