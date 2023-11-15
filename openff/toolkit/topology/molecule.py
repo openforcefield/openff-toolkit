@@ -4619,27 +4619,31 @@ class FrozenMolecule(Serializable):
         Get Molecule from a QCArchive molecule record:
 
         >>> from qcportal import PortalClient
-        >>> client = PortalClient()
+        >>> client = PortalClient("https://api.qcarchive.molssi.org:443/")
         >>> offmol = Molecule.from_qcschema(
-        ...     client.query_molecules(molecular_formula="C7H12N2O4")[0]
+        ...     [*client.query_molecules(molecular_formula="C16H20N3O5")][-1]
         ... )
+        >>> offmol.to_hill_formula()
+        'C16H20N3O5'
 
         Get Molecule from a QCArchive optimization entry:
 
         >>> from qcportal import PortalClient
-        >>> client = PortalClient()
-        >>> optds = client.get_collection(
-        ...     "optimization",
-        ...     "SMIRNOFF Coverage Set 1"
+        >>> client = PortalClient("https://api.qcarchive.molssi.org:443/")
+        >>> optimizations = client.get_dataset(
+        ...     dataset_type="optimization",
+        ...     dataset_name="SMIRNOFF Coverage Set 1",
         ... )
-        >>> offmol = Molecule.from_qcschema(optds.get_entry('coc(o)oc-0'))
+        >>> offmol = Molecule.from_qcschema(optimizations.get_entry('coc(o)oc-0'))
+        >>> offmol.to_hill_formula()
+        'C3H8O3'
 
         Same as above, but with conformer(s) from initial molecule(s) by
         providing client to database:
 
         >>> offmol = Molecule.from_qcschema(
-        ...     optds.get_entry('coc(o)oc-0'),
-        ...     client=client
+        ...     qca_record=optimizations.get_entry('coc(o)oc-0'),
+        ...     client=client,
         ... )
 
         Raises
