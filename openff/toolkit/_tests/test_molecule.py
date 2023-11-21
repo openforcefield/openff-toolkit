@@ -3694,6 +3694,18 @@ class TestMolecule:
         assert mol_source._properties is not mol_copy._properties
         assert mol_source._partial_charges is not mol_copy._partial_charges
 
+    def test_atom_mapping_does_not_cause_hash_collision(self):
+        """See issue #1772 for context."""
+        assert (
+            len(
+                {
+                    Molecule.from_mapped_smiles("[H:1][Cl:2]"): "foo",
+                    Molecule.from_mapped_smiles("[H:2][Cl:1]"): "bar",
+                }
+            )
+            == 2
+        )
+
 
 class TestMoleculeVisualization:
     @requires_pkg("IPython")
