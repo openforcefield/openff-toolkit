@@ -1178,15 +1178,16 @@ class FrozenMolecule(Serializable):
 
         return molecule_dict
 
-    def __hash__(self):
+    def __hash__(self) -> str:
         """
         Returns a hash of this molecule. Used when checking molecule uniqueness in Topology creation.
 
         Returns
         -------
-        string
+        hash: string
         """
-        return hash(self.to_smiles())
+        # useful to also make this isomeric, explicit hydrogens?
+        return hash(self.to_smiles(mapped=True))
 
     # @cached_property
     def ordered_connection_table_hash(self):
