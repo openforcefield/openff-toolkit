@@ -1406,7 +1406,7 @@ class ForceField:
         elif isinstance(val, ParameterHandler) or issubclass(val, ParameterHandler):
             raise NotImplementedError
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         """Deterministically hash a ForceField object
 
         Notable behavior:

@@ -1178,7 +1178,7 @@ class FrozenMolecule(Serializable):
 
         return molecule_dict
 
-    def __hash__(self) -> str:
+    def __hash__(self) -> int:
         """
         Returns a hash of this molecule. Used when checking molecule uniqueness in Topology creation.
 
