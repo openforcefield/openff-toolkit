@@ -30,8 +30,9 @@ from typing import Dict, Iterable, List, Tuple, Union
 
 import numpy as np
 import pint
-from openff.units import Quantity, Unit, unit
 from openff.utilities import requires_package
+
+from openff.toolkit import Quantity, Unit, unit
 
 logger = logging.getLogger(__name__)
 

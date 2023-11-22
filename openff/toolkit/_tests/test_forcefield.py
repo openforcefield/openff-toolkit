@@ -11,12 +11,12 @@ import numpy as np
 import openmm
 import pytest
 from numpy.testing import assert_almost_equal
-from openff.units import unit
 from openff.units.openmm import from_openmm, to_openmm
 from openmm import NonbondedForce, Platform, XmlSerializer, app
 from openmm import unit as openmm_unit
 from pydantic import ValidationError
 
+from openff.toolkit import unit
 from openff.toolkit._tests.create_molecules import (
     create_acetate,
     create_cyclohexane,
