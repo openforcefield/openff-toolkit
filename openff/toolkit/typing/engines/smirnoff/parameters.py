@@ -71,9 +71,10 @@ from typing import (
 )
 
 import numpy as np
+from openff.units.units import Unit
 from packaging.version import Version
 
-from openff.toolkit import Quantity, Unit, unit
+from openff.toolkit import Quantity, unit
 from openff.toolkit.topology import ImproperDict, TagSortedDict, Topology, ValenceDict
 from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.utils.collections import ValidatedDict, ValidatedList

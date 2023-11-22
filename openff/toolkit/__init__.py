@@ -41,8 +41,8 @@ __all__ = [
     "OpenEyeToolkitWrapper",
     "RDKitToolkitWrapper",
     "ToolkitRegistry",
-    "unit",
     "Quantity",
+    "unit",
 ]
 
 # Dictionary of objects to lazily import; maps the object's name to its module path
@@ -57,7 +57,8 @@ _lazy_imports_obj = {
     "OpenEyeToolkitWrapper": "openff.toolkit.utils.toolkits",
     "RDKitToolkitWrapper": "openff.toolkit.utils.toolkits",
     "ToolkitRegistry": "openff.toolkit.utils.toolkits",
-    "Quantity": "openff.units.units",
+    "Quantity": "openff.units",
+    "unit": "openff.units",
     # Remember to add new lazy imports to __all__ and the if TYPE_CHECKING imports
 }
 
