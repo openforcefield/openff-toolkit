@@ -1213,7 +1213,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         if oemol.GetTitle() != "":
             molecule.name = oemol.GetTitle()
 
-        # Attached any SD tag information we saved before OEMol(oemol) cast
+        # Attach any SD tag information we saved before casting input to new OEMol
         for key, value in existing_sd_tags.items():
             molecule._properties[key] = value
 
