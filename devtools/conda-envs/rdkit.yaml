@@ -1,6 +1,5 @@
 name: openff-toolkit-test-rdkit
 channels:
-  - conda-forge/label/openmm_rc
   - conda-forge
 dependencies:
     # Base depends

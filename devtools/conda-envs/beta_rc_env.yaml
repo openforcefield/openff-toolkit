@@ -1,6 +1,5 @@
 name: openff-toolkit-beta-rc-test
 channels:
-  - conda-forge/label/openmm_rc
   - openeye/label/rc
   - openeye
   - conda-forge
