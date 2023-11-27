@@ -1125,6 +1125,12 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         from openeye import oechem
 
+        # Save the existing SD tags, if any, since they're lost in the cast to
+        # OEMol of the input is OEGraphMol. See issue #1711
+        existing_sd_tags = {
+            pair.GetTag(): pair.GetValue() for pair in oechem.OEGetSDDataIter(oemol)
+        }
+
         oemol = oechem.OEMol(oemol)
 
         # Add explicit hydrogens if they're implicit
@@ -1207,9 +1213,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         if oemol.GetTitle() != "":
             molecule.name = oemol.GetTitle()
 
-        # Copy any attached SD tag information
-        for dp in oechem.OEGetSDDataPairs(oemol):
-            molecule._properties[dp.GetTag()] = dp.GetValue()
+        # Attached any SD tag information we saved before OEMol(oemol) cast
+        for key, value in existing_sd_tags.items():
+            molecule._properties[key] = value
 
         off_to_oe_idx = dict()  # {oemol_idx: molecule_idx}
         atom_mapping = {}
