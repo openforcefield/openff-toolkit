@@ -2103,12 +2103,18 @@ class TestMolecule:
 
             tautomers = mol.enumerate_tautomers(toolkit_registry=toolkit)
 
-            assert len(tautomers) == molecule_data["tautomers"]
-            assert mol not in tautomers
-            # check that the molecules are not isomorphic of the input
+            assert len(tautomers) == molecule_data["tautomers"] + 1
+            assert mol in tautomers
+
+            # check that only one molecule (literally the input) is isomorphic of the input
+
+            number_isomorphic = 0
             for taut in tautomers:
                 assert taut.n_conformers == 0
-                assert mol.is_isomorphic_with(taut) is False
+                if mol.is_isomorphic_with(taut):
+                    number_isomorphic += 1
+
+            assert number_isomorphic == 1
 
         else:
             pytest.skip("Required toolkit is unavailable")
@@ -2132,8 +2138,8 @@ class TestMolecule:
             tautomers = mol.enumerate_tautomers(
                 max_states=tauts_no, toolkit_registry=toolkit
             )
-            assert len(tautomers) <= tauts_no
-            assert mol not in tautomers
+            assert len(tautomers) <= tauts_no + 1
+            assert mol in tautomers
 
     @pytest.mark.parametrize(
         "toolkit_class", [RDKitToolkitWrapper, OpenEyeToolkitWrapper]
@@ -2146,7 +2152,8 @@ class TestMolecule:
             mol = Molecule.from_smiles("CC", toolkit_registry=toolkit)
 
             tautomers = mol.enumerate_tautomers(toolkit_registry=toolkit)
-            assert tautomers == []
+            assert len(tautomers) == 1
+            assert tautomers[0] == mol
 
         else:
             pytest.skip("Required toolkit is unavailable")

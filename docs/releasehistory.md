@@ -12,6 +12,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Behavior changes
 
+- [PR #17XX](https://github.com/openforcefield/openff-toolkit/pull/17XX): `Molecule.enumerate_tautomers` now includes the input molecule in the returned list.
+
 ### Bugfixes
 
 ### New features

@@ -4145,8 +4145,10 @@ class FrozenMolecule(Serializable):
             toolkit.to_file_obj(self, file_path, file_format)
 
     def enumerate_tautomers(
-        self, max_states=20, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
-    ):
+        self,
+        max_states=20,
+        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+    ) -> List["Molecule"]:
         """
         Enumerate the possible tautomers of the current molecule
 
@@ -4161,8 +4163,8 @@ class FrozenMolecule(Serializable):
 
         Returns
         -------
-        molecules: List[openff.toolkit.topology.Molecule]
-            A list of openff.toolkit.topology.Molecule instances not including the input molecule.
+        molecules: list[openff.toolkit.Molecule]
+            A list of openff.toolkit.Molecule instances including the input molecule.
         """
 
         if isinstance(toolkit_registry, ToolkitRegistry):
