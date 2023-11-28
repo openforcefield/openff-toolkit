@@ -811,8 +811,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         return offmol_w_stereo_and_aro
 
     def enumerate_protomers(
-        self, molecule: "Molecule", max_states: int = 10
-    ) -> List["Molecule"]:
+        self,
+        molecule: "Molecule",
+        max_states: int = 10,
+    ) -> list["Molecule"]:
         """
         Enumerate the formal charges of a molecule to generate different protomoers.
 
@@ -826,8 +828,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Returns
         -------
-        molecules: List[openff.toolkit.topology.Molecule],
-            A list of the protomers of the input molecules not including the input.
+        molecules: list[openff.toolkit.Molecule],
+            A list of the protomers of the input molecules including the input.
         """
 
         from openeye import oequacpac
@@ -840,12 +842,13 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         oemol = self.to_openeye(molecule=molecule)
         for protomer in oequacpac.OEEnumerateFormalCharges(oemol, options):
-            mol = self.from_openeye(
-                protomer, allow_undefined_stereo=True, _cls=molecule.__class__
+            molecules.append(
+                self.from_openeye(
+                    protomer,
+                    allow_undefined_stereo=True,
+                    _cls=molecule.__class__,
+                )
             )
-
-            if mol != molecule:
-                molecules.append(mol)
 
         return molecules
 

@@ -2153,11 +2153,12 @@ class TestMolecule:
 
     @requires_openeye
     def test_enumerating_no_protomers(self):
-        """Make sure no protomers are returned."""
+        """Make sure the input molecule is returned when there is only one protomers."""
 
         mol = Molecule.from_smiles("CC")
 
-        assert mol.enumerate_protomers() == []
+        assert len(mol.enumerate_protomers()) == 1
+        assert mol.enumerate_protomers()[0] == mol
 
     @requires_openeye
     def test_enumerating_protomers(self):
@@ -2168,14 +2169,14 @@ class TestMolecule:
         # there should be three protomers for this molecule so restrict the output
         protomers = mol.enumerate_protomers(max_states=2)
 
-        assert mol not in protomers
-        assert len(protomers) == 2
+        assert mol in protomers
+        assert len(protomers) == 3
 
         # now make sure we can generate them all
         protomers = mol.enumerate_protomers(max_states=10)
 
-        assert mol not in protomers
-        assert len(protomers) == 3
+        assert mol in protomers
+        assert len(protomers) == 4
 
         # make sure each protomer is unique
         unique_protomers = set(protomers)
