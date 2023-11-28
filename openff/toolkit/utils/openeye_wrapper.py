@@ -855,13 +855,13 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         undefined_only: bool = False,
         max_isomers: int = 20,
         rationalise: bool = True,
-    ) -> List["Molecule"]:
+    ) -> list["Molecule"]:
         """
         Enumerate the stereocenters and bonds of the current molecule.
 
         Parameters
         ----------
-        molecule: openff.toolkit.topology.Molecule
+        molecule: openff.toolkit.Molecule
             The molecule whose state we should enumerate
 
         undefined_only: bool optional, default=False
@@ -876,8 +876,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Returns
         --------
-        molecules: List[openff.toolkit.topology.Molecule]
-            A list of openff.toolkit.topology.Molecule instances
+        molecules: list[openff.toolkit.Molecule]
+            A list of openff.toolkit.Molecule instances including the input molecule.
 
         """
         from openeye import oechem, oeomega
@@ -900,14 +900,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 mol = oechem.OEMol(isomer)
                 status = omega(mol)
                 if status:
-                    isomol = self.from_openeye(mol, _cls=molecule.__class__)
-                    if isomol != molecule:
-                        molecules.append(isomol)
+                    molecules.append(self.from_openeye(mol, _cls=molecule.__class__))
 
             else:
-                isomol = self.from_openeye(isomer, _cls=molecule.__class__)
-                if isomol != molecule:
-                    molecules.append(isomol)
+                molecules.append(self.from_openeye(isomer, _cls=molecule.__class__))
 
         return molecules[:max_isomers]
 

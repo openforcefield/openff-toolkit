@@ -4188,7 +4188,7 @@ class FrozenMolecule(Serializable):
         max_isomers=20,
         rationalise=True,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-    ):
+    ) -> list["Molecule"]:
         """
         Enumerate the stereocenters and bonds of the current molecule.
 
@@ -4209,8 +4209,8 @@ class FrozenMolecule(Serializable):
 
         Returns
         --------
-        molecules: List[openff.toolkit.topology.Molecule]
-            A list of :class:`Molecule` instances not including the input molecule.
+        molecules: list[openff.toolkit.Molecule]
+            A list of :class:`Molecule` instances including the input molecule.
 
         """
 

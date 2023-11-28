@@ -2195,21 +2195,21 @@ class TestMolecule:
 
             # use the default options
             isomers = mol.enumerate_stereoisomers()
-            assert len(isomers) == 2
+            assert len(isomers) == 3
 
-            assert mol not in isomers
+            assert mol in isomers
             # make sure the input molecule is only different by bond stereo
-            for ismol in isomers:
+            for isomol in isomers:
                 assert (
                     Molecule.are_isomorphic(
                         mol,
-                        ismol,
+                        isomol,
                         return_atom_map=False,
                         bond_stereochemistry_matching=False,
                     )[0]
                     is True
                 )
-                assert mol.is_isomorphic_with(ismol) is False
+                assert mol.is_isomorphic_with(isomol) is False
 
             # make sure the isomers are different
             assert isomers[0].is_isomorphic_with(isomers[1]) is False
@@ -2233,19 +2233,19 @@ class TestMolecule:
 
             assert len(isomers) == 2
             # make sure the mol is not in the isomers and that they only differ by stereo chem
-            assert mol not in isomers
-            for ismol in isomers:
-                assert ismol.n_conformers != 0
+            assert mol in isomers
+            for isomol in isomers:
+                assert isomol.n_conformers != 0
                 assert (
                     Molecule.are_isomorphic(
                         mol,
-                        ismol,
+                        isomol,
                         return_atom_map=False,
                         atom_stereochemistry_matching=False,
                     )[0]
                     is True
                 )
-                assert mol.is_isomorphic_with(ismol) is False
+                assert mol.is_isomorphic_with(isomol) is False
 
             # make sure the two isomers are different
             assert isomers[0].is_isomorphic_with(isomers[1]) is False
