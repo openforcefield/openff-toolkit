@@ -4238,8 +4238,9 @@ class FrozenMolecule(Serializable):
 
         return molecules
 
+    # TODO: This should probably be a classmethod
     @OpenEyeToolkitWrapper.requires_toolkit()
-    def enumerate_protomers(self, max_states=10) -> list["Molecule"]:
+    def enumerate_protomers(self, max_states=10):
         """
         Enumerate the formal charges of a molecule to generate different protomoers.
 
