@@ -4144,11 +4144,12 @@ class FrozenMolecule(Serializable):
         else:
             toolkit.to_file_obj(self, file_path, file_format)
 
+    # TODO: This should probably be a class method
     def enumerate_tautomers(
         self,
         max_states=20,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-    ) -> List["Molecule"]:
+    ):
         """
         Enumerate the possible tautomers of the current molecule
 
