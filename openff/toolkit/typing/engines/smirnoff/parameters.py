@@ -1779,8 +1779,6 @@ class ParameterHandler(_ParameterAttributeHandler):
     _TAGNAME: Optional[str] = None
     # container class with type information that will be stored in self._parameters
     _INFOTYPE: Optional[Any] = None
-    # OpenMM Force class (or None if no equivalent)
-    _OPENMMTYPE: Optional[str] = None
     # list of ParameterHandler classes that must precede this, or None
     _DEPENDENCIES: Optional[Any] = None
 
@@ -2392,7 +2390,6 @@ class ConstraintHandler(ParameterHandler):
 
     _TAGNAME = "Constraints"
     _INFOTYPE = ConstraintType
-    _OPENMMTYPE = None  # don't create a corresponding OpenMM Force class
 
 
 class BondHandler(ParameterHandler):
@@ -2455,7 +2452,6 @@ class BondHandler(ParameterHandler):
 
     _TAGNAME = "Bonds"  # SMIRNOFF tag name to process
     _INFOTYPE = BondType  # class to hold force type info
-    _OPENMMTYPE = "HarmonicBondForce"
     _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
     _MAX_SUPPORTED_SECTION_VERSION = Version("0.4")
 
@@ -2552,7 +2548,6 @@ class AngleHandler(ParameterHandler):
 
     _TAGNAME = "Angles"  # SMIRNOFF tag name to process
     _INFOTYPE = AngleType  # class to hold force type info
-    _OPENMMTYPE = "HarmonicAngleForce"
     _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
 
     potential = ParameterAttribute(default="harmonic")
@@ -2605,7 +2600,6 @@ class ProperTorsionHandler(ParameterHandler):
     _TAGNAME = "ProperTorsions"  # SMIRNOFF tag name to process
     _KWARGS = ["partial_bond_orders_from_molecules"]
     _INFOTYPE = ProperTorsionType  # info type to store
-    _OPENMMTYPE = "PeriodicTorsionForce"
     _MAX_SUPPORTED_SECTION_VERSION = Version("0.4")
 
     potential = ParameterAttribute(
@@ -2673,7 +2667,6 @@ class ImproperTorsionHandler(ParameterHandler):
 
     _TAGNAME = "ImproperTorsions"  # SMIRNOFF tag name to process
     _INFOTYPE = ImproperTorsionType  # info type to store
-    _OPENMMTYPE = "PeriodicTorsionForce"
 
     potential = ParameterAttribute(
         default="k*(1+cos(periodicity*theta-phase))",
@@ -2731,8 +2724,6 @@ class ImproperTorsionHandler(ParameterHandler):
 
 class _NonbondedHandler(ParameterHandler):
     """Base class for ParameterHandlers that deal with OpenMM NonbondedForce objects."""
-
-    _OPENMMTYPE = "NonbondedForce"
 
 
 class vdWHandler(_NonbondedHandler):
@@ -3335,7 +3326,6 @@ class GBSAHandler(ParameterHandler):
 
     _TAGNAME = "GBSA"
     _INFOTYPE = GBSAType
-    _OPENMMTYPE = "GBSAOBCForce"
     # It's important that this runs AFTER partial charges are assigned to all particles, since this will need to
     # collect and assign them to the GBSA particles
     _DEPENDENCIES = [
@@ -3573,7 +3563,6 @@ class VirtualSiteHandler(_NonbondedHandler):
 
     _TAGNAME = "VirtualSites"
     _INFOTYPE = VirtualSiteType
-    _OPENMMTYPE = "NonbondedForce"
     _DEPENDENCIES = [
         ElectrostaticsHandler,
         LibraryChargeHandler,
