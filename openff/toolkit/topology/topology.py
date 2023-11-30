@@ -32,7 +32,7 @@ import numpy as np
 from networkx import Graph
 from numpy.typing import NDArray
 from openff.units import ensure_quantity
-from typing_extension import TypeAlias
+from typing_extensions import TypeAlias
 
 from openff.toolkit import Quantity, unit
 from openff.toolkit.topology import Molecule
