@@ -15,6 +15,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Bugfixes
 
 ### New features
+- [PR #1775](https://github.com/openforcefield/openff-toolkit/pull/1775): Re-exports `openff.units.unit` and `Quantity` at `openff.toolkit.unit` and `Quantity`.
+
 
 ### Improved documentation and warnings
 

@@ -11,8 +11,8 @@ from tempfile import NamedTemporaryFile
 import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
-from openff.units import Quantity, unit
 
+from openff.toolkit import Quantity, unit
 from openff.toolkit._tests.create_molecules import (
     create_acetaldehyde,
     create_acetate,

@@ -17,7 +17,8 @@ from typing import TYPE_CHECKING, Any, Optional, TypeAlias
 
 import numpy as np
 from cachetools import LRUCache, cached
-from openff.units import Quantity, unit
+
+from openff.toolkit import Quantity, unit
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import Molecule, Bond, Atom

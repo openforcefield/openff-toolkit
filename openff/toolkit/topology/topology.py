@@ -32,8 +32,9 @@ from typing import (
 import numpy as np
 from networkx import Graph
 from numpy.typing import NDArray
-from openff.units import Quantity, ensure_quantity, unit
+from openff.units import ensure_quantity
 
+from openff.toolkit import Quantity, unit
 from openff.toolkit.topology import Molecule
 from openff.toolkit.topology._mm_molecule import (
     _SimpleAtom,

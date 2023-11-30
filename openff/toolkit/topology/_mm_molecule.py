@@ -11,9 +11,9 @@ TypedMolecule TODOs
 """
 from typing import TYPE_CHECKING, Generator, NoReturn, Optional, Union
 
-from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
 
+from openff.toolkit import unit
 from openff.toolkit.topology.molecule import (
     AtomMetadataDict,
     Molecule,
@@ -24,8 +24,8 @@ from openff.toolkit.utils.utils import deserialize_numpy, serialize_numpy
 
 if TYPE_CHECKING:
     import networkx as nx
-    from openff.units.unit import Quantity
 
+    from openff.toolkit import Quantity
     from openff.toolkit.topology.molecule import FrozenMolecule
 
 

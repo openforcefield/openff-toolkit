@@ -17,9 +17,9 @@ from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 from cachetools import LRUCache, cached
-from openff.units import Quantity, unit
 from openff.units.elements import SYMBOLS
 
+from openff.toolkit import Quantity, unit
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.constants import (
     ALLOWED_AROMATICITY_MODELS,

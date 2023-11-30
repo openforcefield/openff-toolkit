@@ -2,8 +2,7 @@ import importlib
 import warnings
 from typing import TYPE_CHECKING, Optional, Type
 
-from openff.units import Quantity, unit
-
+from openff.toolkit import Quantity, unit
 from openff.toolkit.utils.base_wrapper import ToolkitWrapper
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,

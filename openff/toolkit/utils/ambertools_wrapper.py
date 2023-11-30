@@ -11,8 +11,8 @@ from shutil import which
 from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
-from openff.units import Quantity, unit
 
+from openff.toolkit import Quantity, unit
 from openff.toolkit.utils import base_wrapper, rdkit_wrapper
 from openff.toolkit.utils.exceptions import (
     AntechamberNotFoundError,

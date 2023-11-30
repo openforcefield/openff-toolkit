@@ -8,10 +8,10 @@ from inspect import isabstract, isclass
 import numpy
 import pytest
 from numpy.testing import assert_almost_equal
-from openff.units import unit
 from packaging.version import Version
 
 import openff.toolkit.typing.engines.smirnoff.parameters
+from openff.toolkit import unit
 from openff.toolkit._tests.mocking import VirtualSiteMocking
 from openff.toolkit._tests.utils import does_not_raise
 from openff.toolkit.topology import Molecule, Topology

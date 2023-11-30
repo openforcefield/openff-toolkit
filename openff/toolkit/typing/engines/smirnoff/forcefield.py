@@ -55,8 +55,8 @@ from openff.toolkit.utils.utils import (
 
 if TYPE_CHECKING:
     import openmm
-    from openff.units import Quantity
 
+    from openff.toolkit import Quantity
     from openff.toolkit.topology import Molecule, Topology
     from openff.toolkit.utils.base_wrapper import ToolkitWrapper
     from openff.toolkit.utils.toolkit_registry import ToolkitRegistry
@@ -185,7 +185,7 @@ class ForceField:
 
     Retrieve the vdW parameters by SMIRKS string and manipulate it:
 
-    >>> from openff.units import unit
+    >>> from openff.toolkit import unit
     >>> parameter = force_field.get_parameter_handler('vdW').parameters['[#1:1]-[#7]']
     >>> parameter.rmin_half += 0.1 * unit.angstroms
     >>> parameter.epsilon *= 1.02
@@ -1372,8 +1372,8 @@ class ForceField:
 
         """
         from openff.interchange import Interchange
-        from openff.units import unit
 
+        from openff.toolkit import unit
         from openff.toolkit.topology.molecule import Molecule
 
         if not isinstance(molecule, Molecule):
