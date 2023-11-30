@@ -6,7 +6,8 @@ Tests for utility methods
 import os
 
 import pytest
-from openff.units import unit
+
+from openff.toolkit import unit
 
 
 def test_subclasses():
