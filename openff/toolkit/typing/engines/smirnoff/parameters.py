@@ -71,9 +71,10 @@ from typing import (
 )
 
 import numpy as np
-from openff.units import Quantity, Unit, unit
+from openff.units.units import Unit
 from packaging.version import Version
 
+from openff.toolkit import Quantity, unit
 from openff.toolkit.topology import ImproperDict, TagSortedDict, Topology, ValenceDict
 from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.utils.collections import ValidatedDict, ValidatedList
@@ -277,7 +278,7 @@ class ParameterAttribute:
 
     The attribute allow automatic conversion and validation of units.
 
-    >>> from openff.units import unit
+    >>> from openff.toolkit import unit
     >>> class MyParameter:
     ...     attr_quantity = ParameterAttribute(unit=unit.angstrom)
     ...
@@ -470,7 +471,7 @@ class IndexedParameterAttribute(ParameterAttribute):
 
     Create an optional indexed attribute with unit of angstrom.
 
-    >>> from openff.units import unit
+    >>> from openff.toolkit import unit
     >>> class MyParameter:
     ...     length = IndexedParameterAttribute(default=None, unit=unit.angstrom)
     ...
@@ -545,7 +546,7 @@ class MappedParameterAttribute(ParameterAttribute):
 
     Create an optional indexed attribute with unit of angstrom.
 
-    >>> from openff.units import unit
+    >>> from openff.toolkit import unit
     >>> class MyParameter:
     ...     length = MappedParameterAttribute(default=None, unit=unit.angstrom)
     ...
@@ -621,7 +622,7 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
 
     Create an optional indexed attribute with unit of angstrom.
 
-    >>> from openff.units import unit
+    >>> from openff.toolkit import unit
     >>> class MyParameter:
     ...     length = IndexedMappedParameterAttribute(default=None, unit=unit.angstrom)
     ...
@@ -2005,7 +2006,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Given an existing parameter handler and a new parameter to add to it:
 
-        >>> from openff.units import unit
+        >>> from openff.toolkit import unit
         >>> bh = BondHandler(skip_version_check=True)
         >>> length = 1.5 * unit.angstrom
         >>> k = 100 * unit.kilocalorie / unit.mole / unit.angstrom ** 2
@@ -2085,7 +2086,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Create a parameter handler and populate it with some data.
 
-        >>> from openff.units import unit
+        >>> from openff.toolkit import unit
         >>> handler = BondHandler(skip_version_check=True)
         >>> handler.add_parameter(
         ...     {

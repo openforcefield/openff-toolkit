@@ -3,10 +3,9 @@ import re
 
 import numpy
 import pytest
-from openff.units import unit
 from openff.utilities import has_package, skip_if_missing
 
-from openff.toolkit import Molecule
+from openff.toolkit import Molecule, unit
 from openff.toolkit._tests.create_molecules import (
     create_acetaldehyde,
     create_cis_1_2_dichloroethene,
