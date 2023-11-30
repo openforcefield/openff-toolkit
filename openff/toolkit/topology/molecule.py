@@ -5865,7 +5865,7 @@ class HierarchyScheme:
         """
         Serialize this object to a basic dict of strings, ints, and floats
         """
-        return_dict: dict[str, str | Sequence[str | int | dict]] = dict()
+        return_dict: dict[str, Union[str, Sequence[Union[str, int, dict]]]] = dict()
         return_dict["uniqueness_criteria"] = self.uniqueness_criteria
         return_dict["iterator_name"] = self.iterator_name
         return_dict["hierarchy_elements"] = [

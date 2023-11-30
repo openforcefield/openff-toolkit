@@ -1208,7 +1208,7 @@ class ForceField:
             An `Interchange` object resulting from applying this `ForceField` to a `Topology`.
 
         """
-        from openff.interchange import Interchange  # type: ignore[import-untyped]
+        from openff.interchange import Interchange
 
         from openff.toolkit.utils.toolkit_registry import toolkit_registry_manager
 

@@ -1359,8 +1359,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
 
         from rdkit import Chem
-        from rdkit.Chem.MolStandardize import (
-            rdMolStandardize,  # type: ignore[import-untyped]
+        from rdkit.Chem.MolStandardize import (  # type: ignore[import-untyped]
+            rdMolStandardize,
         )
 
         enumerator = rdMolStandardize.TautomerEnumerator()
@@ -1839,8 +1839,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             is, a string message explaing why. If the conformer is not problematic, the
             second return value will be none.
         """
-        from rdkit.Chem.rdMolTransforms import (
-            GetDihedralRad,  # type: ignore[import-untyped]
+        from rdkit.Chem.rdMolTransforms import (  # type: ignore[import-untyped]
+            GetDihedralRad,
         )
 
         # Create a copy of the molecule which contains only this conformer.
