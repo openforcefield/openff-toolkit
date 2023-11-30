@@ -13,10 +13,11 @@ import re
 import tempfile
 from collections import defaultdict
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Optional, TypeAlias
+from typing import TYPE_CHECKING, Any, Optional
 
 import numpy as np
 from cachetools import LRUCache, cached
+from typing_extensions import TypeAlias
 
 from openff.toolkit import Quantity, unit
 
