@@ -42,7 +42,6 @@ from typing import (
     Sequence,
     TextIO,
     Type,
-    TypeAlias,
     TypeVar,
     Union,
     overload,
@@ -52,6 +51,7 @@ import networkx as nx
 import numpy as np
 from openff.units.elements import MASSES, SYMBOLS
 from openff.utilities.exceptions import MissingOptionalDependencyError
+from typing_extensions import TypeAlias
 
 from openff.toolkit import Quantity, unit
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
