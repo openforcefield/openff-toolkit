@@ -84,7 +84,7 @@ class Callbackable:
     summarize the different ways in which the ``callback_method``
     decorator can be used to mark a method for callback registration.
 
-    >>> class CallbackableList(Callbackable, list):
+    >>> class Callbackablelist(Callbackable, list):
     ...
     ...     @callback_method
     ...     def pop(self, *args, **kwargs):
@@ -109,7 +109,7 @@ class Callbackable:
     >>> def callback(callbackable, func_name, *args, **kwargs):
     ...     print(f'callback: {func_name}{args}')
     ...
-    >>> l = CallbackableList([1, 2, 3])
+    >>> l = Callbackablelist([1, 2, 3])
     >>> l.register_callback('__delitem__', callback=callback)
     >>> del l[2]
     callback: __delitem__(2,)

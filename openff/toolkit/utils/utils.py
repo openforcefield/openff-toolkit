@@ -26,7 +26,7 @@ __all__ = [
 import contextlib
 import functools
 import logging
-from typing import Dict, Iterable, List, Tuple, Union
+from typing import Iterable, Union
 
 import numpy as np
 import pint
@@ -101,8 +101,7 @@ def get_data_file_path(relative_path: str) -> str:
 
     _DATA_ROOT = files("openff.toolkit") / "data"
 
-    # mypy unhappy because this might not return a path, might be fixed with 3.10+
-    file_path = _DATA_ROOT / relative_path  # type: ignore[arg-type]
+    file_path = _DATA_ROOT / relative_path
 
     if not file_path.exists():  # type: ignore[attr-defined]
         raise ValueError(
@@ -208,7 +207,7 @@ def string_to_quantity(quantity_string) -> Union[str, int, float, Quantity]:
 
 
 def convert_all_strings_to_quantity(
-    smirnoff_data: Dict,
+    smirnoff_data: dict,
     ignore_keys: Iterable[str] = tuple(),
 ):
     """
@@ -312,7 +311,7 @@ def object_to_quantity(object):
 
     Returns
     -------
-    converted_object : openmm.unit.Quantity or List[openmm.unit.Quantity]
+    converted_object : openmm.unit.Quantity or list[openmm.unit.Quantity]
 
     """
     # If we can't find a custom type, we treat this as a generic iterator.
@@ -352,7 +351,7 @@ except ImportError:
     pass  # pragma: nocover
 
 
-def serialize_numpy(np_array) -> Tuple[bytes, Tuple[int]]:
+def serialize_numpy(np_array) -> tuple[bytes, tuple[int]]:
     """
     Serializes a numpy array into a big-endian bytestring and tuple representing its shape.
 
@@ -377,7 +376,7 @@ def serialize_numpy(np_array) -> Tuple[bytes, Tuple[int]]:
     return serialized, shape
 
 
-def deserialize_numpy(serialized_np: Union[bytes, List], shape: Tuple[int]):
+def deserialize_numpy(serialized_np: Union[bytes, list], shape: tuple[int]):
     """
     Deserializes a numpy array from a bytestring or list. The input, if a bytestring, is
     assumed to be in big-endian byte order.
@@ -683,7 +682,7 @@ def get_molecule_parameterIDs(molecules, forcefield):
     Parameters
     ----------
     molecules : list of openff.toolkit.topology.Molecule
-        List of molecules (with explicit hydrogens) to parse
+        list of molecules (with explicit hydrogens) to parse
     forcefield : openff.toolkit.typing.engines.smirnoff.ForceField
         The ForceField to apply
 

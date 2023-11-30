@@ -7,7 +7,6 @@ import logging
 import os
 import pathlib
 from tempfile import NamedTemporaryFile
-from typing import Dict
 
 import numpy as np
 import pytest
@@ -263,7 +262,7 @@ def formic_acid_molecule() -> Molecule:
 
 
 @pytest.fixture()
-def formic_acid_conformers() -> Dict[str, Quantity]:
+def formic_acid_conformers() -> dict[str, Quantity]:
     return {
         "cis": Quantity(
             np.array(
@@ -3055,7 +3054,7 @@ class TestRDKitToolkitWrapper:
     def test_elf_select_diverse_conformers(
         self,
         formic_acid_molecule: Molecule,
-        expected_conformer_map: Dict[int, int],
+        expected_conformer_map: dict[int, int],
         rms_tolerance: Quantity,
     ):
         """Test the greedy selection of 'diverse' ELF conformers."""

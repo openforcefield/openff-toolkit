@@ -1,6 +1,6 @@
 import importlib
 import warnings
-from typing import TYPE_CHECKING, List, Optional, Type
+from typing import TYPE_CHECKING, Optional, Type
 
 from openff.units import Quantity, unit
 
@@ -54,7 +54,7 @@ class NAGLToolkitWrapper(ToolkitWrapper):
         self,
         molecule: "Molecule",
         partial_charge_method: str,
-        use_conformers: Optional[List["Quantity"]] = None,
+        use_conformers: Optional[list["Quantity"]] = None,
         strict_n_conformers: bool = False,
         normalize_partial_charges: bool = True,
         _cls: Optional[Type["FrozenMolecule"]] = None,

@@ -57,18 +57,7 @@ import inspect
 import logging
 import re
 from collections import defaultdict
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    List,
-    Literal,
-    Optional,
-    Tuple,
-    Union,
-    cast,
-    get_args,
-)
+from typing import Any, Callable, Literal, Optional, Union, cast, get_args
 
 import numpy as np
 from openff.units import Quantity, Unit, unit
@@ -185,7 +174,7 @@ def _allow_only(allowed_values):
     allowed_values = frozenset(allowed_values)
 
     def _value_checker(instance, attr, new_value):
-        # This statement means that, in the "SMIRNOFF Data Dict" format, the string "None"
+        # This statement means that, in the "SMIRNOFF Data dict" format, the string "None"
         # and the Python None are the same thing
         if new_value == "None":
             new_value = None
@@ -207,7 +196,7 @@ def _validate_units(attr, value: Union[str, Quantity], units: Unit):
     value = object_to_quantity(value)
 
     try:
-        if not units.is_compatible_with(value.units):  # type: ignore[union-attr]
+        if not units.is_compatible_with(value.units):
             raise IncompatibleUnitError(
                 f"{attr.name}={value} should have units of {units}"
             )
@@ -1318,7 +1307,7 @@ class _ParameterAttributeHandler:
 
         Returns
         -------
-        parameter_attributes : Dict[str, ParameterAttribute]
+        parameter_attributes : dict[str, ParameterAttribute]
             A map from the name of the controlled parameter to the
             ParameterAttribute descriptor handling it.
 
@@ -1580,7 +1569,7 @@ class ParameterList(list):
 
         Returns
         -------
-        parameter_list : List[dict]
+        parameter_list :list[dict]
             A serialized representation of a ParameterList, with each ParameterType it contains converted to dict.
         """
         parameter_list = list()
@@ -1784,7 +1773,7 @@ class ParameterHandler(_ParameterAttributeHandler):
     _DEPENDENCIES: Optional[Any] = None
 
     # Kwargs to catch when create_force is called
-    _KWARGS: List[str] = []
+    _KWARGS: list[str] = []
     # the earliest version of SMIRNOFF spec that supports this ParameterHandler
     _SMIRNOFF_VERSION_INTRODUCED = 0.0
     _SMIRNOFF_VERSION_DEPRECATED = None
@@ -1854,7 +1843,7 @@ class ParameterHandler(_ParameterAttributeHandler):
                     f"0.3 SMIRNOFF spec requires each parameter section to have its own version."
                 )
 
-        # List of ParameterType objects (also behaves like an OrderedDict where keys are SMARTS).
+        # list of ParameterType objects (also behaves like an Ordereddict where keys are SMARTS).
         self._parameters = ParameterList()
 
         # Initialize ParameterAttributes and cosmetic attributes.
@@ -1912,7 +1901,7 @@ class ParameterHandler(_ParameterAttributeHandler):
     # TODO: Do we need to return these, or can we handle this internally
     @property
     def known_kwargs(self):
-        """List of kwargs that can be parsed by the function."""
+        """list of kwargs that can be parsed by the function."""
         # TODO: Should we use introspection to inspect the function signature instead?
         return set(self._KWARGS)
 
@@ -2156,7 +2145,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Returns
         ---------
-        matches : ValenceDict[Tuple[int], ParameterHandler._Match]
+        matches : ValenceDict[tuple[int], ParameterHandler._Match]
             ``matches[atom_indices]`` is the ``ParameterType`` object
             matching the tuple of atom indices in ``entity``.
         """
@@ -2308,9 +2297,9 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Parameters
         ----------
-        identical_attrs : List[str]
+        identical_attrs :list[str]
             Names of the parameters that must be checked with the equality operator.
-        tolerance_attrs : List[str]
+        tolerance_attrs :list[str]
             Names of the parameters that must be equal up to a tolerance.
         tolerance : float
             The absolute tolerance used to compare the parameters.
@@ -2718,7 +2707,7 @@ class ImproperTorsionHandler(ParameterHandler):
 
         Returns
         ---------
-        matches : ImproperDict[Tuple[int], ParameterHandler._Match]
+        matches : ImproperDict[tuple[int], ParameterHandler._Match]
             ``matches[atom_indices]`` is the ``ParameterType`` object
             matching the 4-tuple of atom indices in ``entity``.
 
@@ -3181,7 +3170,7 @@ class LibraryChargeHandler(_NonbondedHandler):
 
         Returns
         ---------
-        matches : ValenceDict[Tuple[int], ParameterHandler._Match]
+        matches : ValenceDict[tuple[int], ParameterHandler._Match]
             ``matches[atom_indices]`` is the ``ParameterType`` object
             matching the tuple of atom indices in ``entity``.
         """
@@ -3305,7 +3294,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
         Returns
         ---------
-        matches : ValenceDict[Tuple[int], ParameterHandler._Match]
+        matches : ValenceDict[tuple[int], ParameterHandler._Match]
             ``matches[atom_indices]`` is the ``ParameterType`` object
             matching the tuple of atom indices in ``entity``.
         """
@@ -3586,8 +3575,8 @@ class VirtualSiteHandler(_NonbondedHandler):
     @classmethod
     def _validate_found_match(
         cls,
-        atoms_by_index: Dict,
-        matched_indices: Tuple[int, ...],
+        atoms_by_index: dict,
+        matched_indices: tuple[int, ...],
         parameter: VirtualSiteType,
     ):
         """
@@ -3672,7 +3661,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             raise ValueError("`key` and `parameter` are mutually exclusive arguments")
 
         key = cast(
-            Tuple[str, str, str],
+            tuple[str, str, str],
             key
             if parameter is None
             else (parameter.type, parameter.smirks, parameter.name),
@@ -3691,7 +3680,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         return None
 
-    def _find_matches_by_parent(self, entity: Topology) -> Dict[int, list]:
+    def _find_matches_by_parent(self, entity: Topology) -> dict[int, list]:
         from collections import defaultdict
 
         topology_atoms = {
@@ -3701,7 +3690,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         # We need to find all the parameters that would lead to a v-site being placed
         # onto a given 'parent atom'. We only allow each parent atom to be assigned one
         # v-site with a given 'name', whereby the last parameter to be matched wins.
-        matches_by_parent: Dict = defaultdict(lambda: defaultdict(list))
+        matches_by_parent: dict = defaultdict(lambda: defaultdict(list))
 
         for parameter in self._parameters:
             # Filter for redundant matches caused by non-tagged atoms
@@ -3764,7 +3753,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         entity: Topology,
         transformed_dict_cls=dict,
         unique=False,
-    ) -> Dict[Tuple[int], List[ParameterHandler._Match]]:
+    ) -> dict[tuple[int], list[ParameterHandler._Match]]:
         assigned_matches_by_parent = self._find_matches_by_parent(entity)
         return_dict = {}
         for parent_index, assigned_parameters in assigned_matches_by_parent.items():
