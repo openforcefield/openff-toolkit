@@ -2718,6 +2718,8 @@ class FrozenMolecule(Serializable):
     def _invalidate_cached_properties(self) -> None:
         """
         Indicate that the chemical entity has been altered.
+
+        Note that this does not clear the `.properties` dictionary attribute.
         """
         self._conformers = None
         self._partial_charges = None
