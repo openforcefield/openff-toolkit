@@ -86,6 +86,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         use_conformers: Optional[List[Quantity]] = None,
         strict_n_conformers: bool = False,
         normalize_partial_charges: bool = True,
+        sqm_keywords: Optional[str] = None,
         _cls=None,
     ):
         """
@@ -117,6 +118,8 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
             Whether to offset partial charges so that they sum to the total formal charge of the molecule.
             This is used to prevent accumulation of rounding errors when the partial charge generation method has
             low precision.
+        sqm_keywords : Optional[str], default ``None``
+            Keywords to pass to sqm via antechamber's `-ek` flag on charge generation.
         _cls : class
             Molecule constructor
 
@@ -212,26 +215,33 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
             # Compute desired charges
             # TODO: Add error handling if antechamber chokes
             short_charge_method = charge_method["antechamber_keyword"]
+
+            antechamber_charge_flags = [
+                "antechamber",
+                "-i",
+                "molecule.sdf",
+                "-fi",
+                "sdf",
+                "-o",
+                "charged.mol2",
+                "-fo",
+                "mol2",
+                "-pf",
+                "yes",
+                "-dr",
+                "n",
+                "-c",
+                str(short_charge_method),
+                "-nc",
+                str(net_charge),
+            ]
+
+            # Optionally allow user defined keywords for sqm
+            if sqm_keywords is not None:
+                antechamber_charge_flags.extend(["-ek", sqm_keywords])
+
             subprocess.check_output(
-                [
-                    "antechamber",
-                    "-i",
-                    "molecule.sdf",
-                    "-fi",
-                    "sdf",
-                    "-o",
-                    "charged.mol2",
-                    "-fo",
-                    "mol2",
-                    "-pf",
-                    "yes",
-                    "-dr",
-                    "n",
-                    "-c",
-                    str(short_charge_method),
-                    "-nc",
-                    str(net_charge),
-                ],
+                antechamber_charge_flags,
                 cwd=tmpdir,
             )
             # Write out just charges
@@ -274,6 +284,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
             for index, token in enumerate(text_charges):
                 charges[index] = float(token)
             # TODO: Ensure that the atoms in charged.mol2 are in the same order as in molecule.sdf
+            # IA: Should this be passing -seq?
         charges = Quantity(charges, unit.elementary_charge)
         molecule.partial_charges = charges
 

@@ -3428,6 +3428,27 @@ class TestAmberToolsToolkitWrapper:
         assert 1e-2 > abs(charge_sum.m_as(unit.elementary_charge)) > 1e-4
         assert abs_charge_sum > 0.25 * unit.elementary_charge
 
+    def test_assign_partial_charges_am1bcc_sqm_keywords(self):
+        """Test AmberToolsToolkitWrapper assign_partial_charges() with am1bcc"""
+        sqm_keywords = (
+            "scfconv=1.d-10, ndiis_attempts=700, scfconv=1.d-10, "
+            "ndiis_attempts=700, diag_routine=0, pseudo_diag=0"
+        )
+
+        toolkit_registry = ToolkitRegistry(
+            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
+        )
+        molecule = create_ethanol()
+        molecule.assign_partial_charges(
+            partial_charge_method="am1bcc", toolkit_registry=toolkit_registry,
+            sqm_keywords=sqm_keywords,
+        )
+        charge_sum = np.sum(molecule.partial_charges)
+        abs_charge_sum = np.sum(abs(molecule.partial_charges))
+
+        assert abs(charge_sum) < 1e-10 * unit.elementary_charge
+        assert abs_charge_sum > 0.25 * unit.elementary_charge
+
     def test_assign_partial_charges_am1bcc_net_charge(self):
         """Test AmberToolsToolkitWrapper assign_partial_charges() on a molecule with a net -1 charge"""
         toolkit_registry = ToolkitRegistry(

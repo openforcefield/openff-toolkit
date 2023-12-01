@@ -2494,6 +2494,7 @@ class FrozenMolecule(Serializable):
         use_conformers: Optional[Iterable[Quantity]] = None,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         normalize_partial_charges: bool = True,
+        **kwargs,
     ):
         """
         Calculate partial atomic charges and store them in the molecule.
@@ -2625,6 +2626,7 @@ class FrozenMolecule(Serializable):
                 normalize_partial_charges=normalize_partial_charges,
                 raise_exception_types=[],
                 _cls=self.__class__,
+                **kwargs,
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit_wrapper: ToolkitWrapper = toolkit_registry
@@ -2635,6 +2637,7 @@ class FrozenMolecule(Serializable):
                 strict_n_conformers=strict_n_conformers,
                 normalize_partial_charges=normalize_partial_charges,
                 _cls=self.__class__,
+                **kwargs,
             )
         else:
             raise InvalidToolkitRegistryError(
