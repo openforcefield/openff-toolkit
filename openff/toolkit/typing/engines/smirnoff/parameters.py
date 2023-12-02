@@ -71,9 +71,10 @@ from typing import (
 )
 
 import numpy as np
-from openff.units import Quantity, Unit, unit
+from openff.units.units import Unit
 from packaging.version import Version
 
+from openff.toolkit import Quantity, unit
 from openff.toolkit.topology import ImproperDict, TagSortedDict, Topology, ValenceDict
 from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.utils.collections import ValidatedDict, ValidatedList
@@ -277,7 +278,7 @@ class ParameterAttribute:
 
     The attribute allow automatic conversion and validation of units.
 
-    >>> from openff.units import unit
+    >>> from openff.toolkit import unit
     >>> class MyParameter:
     ...     attr_quantity = ParameterAttribute(unit=unit.angstrom)
     ...
@@ -470,7 +471,7 @@ class IndexedParameterAttribute(ParameterAttribute):
 
     Create an optional indexed attribute with unit of angstrom.
 
-    >>> from openff.units import unit
+    >>> from openff.toolkit import unit
     >>> class MyParameter:
     ...     length = IndexedParameterAttribute(default=None, unit=unit.angstrom)
     ...
@@ -545,7 +546,7 @@ class MappedParameterAttribute(ParameterAttribute):
 
     Create an optional indexed attribute with unit of angstrom.
 
-    >>> from openff.units import unit
+    >>> from openff.toolkit import unit
     >>> class MyParameter:
     ...     length = MappedParameterAttribute(default=None, unit=unit.angstrom)
     ...
@@ -621,7 +622,7 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
 
     Create an optional indexed attribute with unit of angstrom.
 
-    >>> from openff.units import unit
+    >>> from openff.toolkit import unit
     >>> class MyParameter:
     ...     length = IndexedMappedParameterAttribute(default=None, unit=unit.angstrom)
     ...
@@ -1778,8 +1779,6 @@ class ParameterHandler(_ParameterAttributeHandler):
     _TAGNAME: Optional[str] = None
     # container class with type information that will be stored in self._parameters
     _INFOTYPE: Optional[Any] = None
-    # OpenMM Force class (or None if no equivalent)
-    _OPENMMTYPE: Optional[str] = None
     # list of ParameterHandler classes that must precede this, or None
     _DEPENDENCIES: Optional[Any] = None
 
@@ -2005,7 +2004,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Given an existing parameter handler and a new parameter to add to it:
 
-        >>> from openff.units import unit
+        >>> from openff.toolkit import unit
         >>> bh = BondHandler(skip_version_check=True)
         >>> length = 1.5 * unit.angstrom
         >>> k = 100 * unit.kilocalorie / unit.mole / unit.angstrom ** 2
@@ -2085,7 +2084,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Create a parameter handler and populate it with some data.
 
-        >>> from openff.units import unit
+        >>> from openff.toolkit import unit
         >>> handler = BondHandler(skip_version_check=True)
         >>> handler.add_parameter(
         ...     {
@@ -2391,7 +2390,6 @@ class ConstraintHandler(ParameterHandler):
 
     _TAGNAME = "Constraints"
     _INFOTYPE = ConstraintType
-    _OPENMMTYPE = None  # don't create a corresponding OpenMM Force class
 
 
 class BondHandler(ParameterHandler):
@@ -2454,7 +2452,6 @@ class BondHandler(ParameterHandler):
 
     _TAGNAME = "Bonds"  # SMIRNOFF tag name to process
     _INFOTYPE = BondType  # class to hold force type info
-    _OPENMMTYPE = "HarmonicBondForce"
     _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
     _MAX_SUPPORTED_SECTION_VERSION = Version("0.4")
 
@@ -2551,7 +2548,6 @@ class AngleHandler(ParameterHandler):
 
     _TAGNAME = "Angles"  # SMIRNOFF tag name to process
     _INFOTYPE = AngleType  # class to hold force type info
-    _OPENMMTYPE = "HarmonicAngleForce"
     _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
 
     potential = ParameterAttribute(default="harmonic")
@@ -2604,7 +2600,6 @@ class ProperTorsionHandler(ParameterHandler):
     _TAGNAME = "ProperTorsions"  # SMIRNOFF tag name to process
     _KWARGS = ["partial_bond_orders_from_molecules"]
     _INFOTYPE = ProperTorsionType  # info type to store
-    _OPENMMTYPE = "PeriodicTorsionForce"
     _MAX_SUPPORTED_SECTION_VERSION = Version("0.4")
 
     potential = ParameterAttribute(
@@ -2672,7 +2667,6 @@ class ImproperTorsionHandler(ParameterHandler):
 
     _TAGNAME = "ImproperTorsions"  # SMIRNOFF tag name to process
     _INFOTYPE = ImproperTorsionType  # info type to store
-    _OPENMMTYPE = "PeriodicTorsionForce"
 
     potential = ParameterAttribute(
         default="k*(1+cos(periodicity*theta-phase))",
@@ -2730,8 +2724,6 @@ class ImproperTorsionHandler(ParameterHandler):
 
 class _NonbondedHandler(ParameterHandler):
     """Base class for ParameterHandlers that deal with OpenMM NonbondedForce objects."""
-
-    _OPENMMTYPE = "NonbondedForce"
 
 
 class vdWHandler(_NonbondedHandler):
@@ -3334,7 +3326,6 @@ class GBSAHandler(ParameterHandler):
 
     _TAGNAME = "GBSA"
     _INFOTYPE = GBSAType
-    _OPENMMTYPE = "GBSAOBCForce"
     # It's important that this runs AFTER partial charges are assigned to all particles, since this will need to
     # collect and assign them to the GBSA particles
     _DEPENDENCIES = [
@@ -3572,7 +3563,6 @@ class VirtualSiteHandler(_NonbondedHandler):
 
     _TAGNAME = "VirtualSites"
     _INFOTYPE = VirtualSiteType
-    _OPENMMTYPE = "NonbondedForce"
     _DEPENDENCIES = [
         ElectrostaticsHandler,
         LibraryChargeHandler,

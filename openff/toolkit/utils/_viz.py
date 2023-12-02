@@ -2,9 +2,8 @@ import uuid
 from io import StringIO
 
 from nglview.base_adaptor import Structure, Trajectory
-from openff.units import unit
 
-from openff.toolkit import Molecule, Topology
+from openff.toolkit import Molecule, Topology, unit
 
 MOLECULE_DEFAULT_REPS = [
     dict(type="licorice", params=dict(radius=0.25, multipleBond=True))

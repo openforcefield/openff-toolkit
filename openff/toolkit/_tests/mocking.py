@@ -1,6 +1,6 @@
 import numpy
-from openff.units import Quantity, unit
 
+from openff.toolkit import Quantity, unit
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
 

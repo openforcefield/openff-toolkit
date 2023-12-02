@@ -17,10 +17,10 @@ from typing import List, Tuple
 import numpy as np
 import openmm
 import pytest
-from openff.units import unit
 from openff.units.openmm import to_openmm
 from openmm import unit as openmm_unit
 
+from openff.toolkit import unit
 from openff.toolkit.utils import (
     AmberToolsToolkitWrapper,
     OpenEyeToolkitWrapper,
