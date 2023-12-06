@@ -21,11 +21,12 @@ from typing import (
 )
 
 from openff.units.elements import MASSES, SYMBOLS
+from typing_extensions import Self
 
-from openff.toolkit import unit
+from openff.toolkit import Molecule, Quantity, unit
 from openff.toolkit.topology.molecule import (
     AtomMetadataDict,
-    Molecule,
+    HierarchyScheme,
     _atom_nums_to_hill_formula,
 )
 from openff.toolkit.utils.exceptions import UnsupportedMoleculeConversionError
@@ -34,19 +35,19 @@ from openff.toolkit.utils.utils import deserialize_numpy, serialize_numpy
 if TYPE_CHECKING:
     import networkx as nx
 
-    from openff.toolkit import Quantity
     from openff.toolkit.topology.molecule import FrozenMolecule
 
 
 class _SimpleMolecule:
-    def __init__(self):
-        self.atoms = []
-        self.bonds = []
-        self.hierarchy_schemes = dict()
-        self.conformers = None
+    def __init__(self: Self):
+        self.name = ""
+        self.atoms: list[_SimpleAtom] = list()
+        self.bonds: list[_SimpleBond] = list()
+        self.hierarchy_schemes: dict[str, HierarchyScheme] = dict()
+        self._conformers: list[Quantity] = list()
 
     def add_atom(self, atomic_number: int, **kwargs):
-        atom = _SimpleAtom(atomic_number, self, **kwargs)
+        atom = _SimpleAtom(atomic_number=atomic_number, molecule=self, **kwargs)
         self.atoms.append(atom)
 
     def add_bond(self, atom1, atom2, **kwargs):
@@ -66,9 +67,11 @@ class _SimpleMolecule:
         bond = _SimpleBond(atom1_atom, atom2_atom, **kwargs)
         self.bonds.append(bond)
 
+    @property
+    def conformers(self) -> list[Quantity]:
+        return self._conformers
+
     def add_conformer(self, conformer):
-        if self.conformers is None:
-            self.conformers = list()
         self.conformers.append(conformer)
 
     @property
@@ -81,8 +84,6 @@ class _SimpleMolecule:
 
     @property
     def n_conformers(self) -> int:
-        if self.conformers is None:
-            return 0
         return len(self.conformers)
 
     def atom(self, index):
@@ -304,17 +305,14 @@ class _SimpleMolecule:
             bond_list.append(bond.to_dict())
         molecule_dict["bonds"] = bond_list
 
-        if self.conformers is None:
-            molecule_dict["conformers"] = None
-        else:
-            molecule_dict["conformers"] = []
-            molecule_dict[
-                "conformers_unit"
-            ] = "angstrom"  # Have this defined as a class variable?
-            for conf in self.conformers:
-                conf_unitless = conf.m_as(unit.angstrom)
-                conf_serialized, conf_shape = serialize_numpy((conf_unitless))
-                molecule_dict["conformers"].append(conf_serialized)
+        molecule_dict["conformers"] = []
+        molecule_dict[
+            "conformers_unit"
+        ] = "angstrom"  # Have this defined as a class variable?
+        for conf in self.conformers:
+            conf_unitless = conf.m_as(unit.angstrom)
+            conf_serialized, conf_shape = serialize_numpy((conf_unitless))
+            molecule_dict["conformers"].append(conf_serialized)
 
         molecule_dict["hierarchy_schemes"] = dict()
         for iter_name, hier_scheme in self.hierarchy_schemes.items():
@@ -344,12 +342,12 @@ class _SimpleMolecule:
             molecule.conformers = None
         else:
             conformers_unit = molecule_dict.pop("conformers_unit")
-            molecule.conformers = list()
+            molecule._conformers = list()
             for ser_conf in conformers:
                 conformers_shape = (molecule.n_atoms, 3)
                 conformer_unitless = deserialize_numpy(ser_conf, conformers_shape)
-                conformer = unit.Quantity(conformer_unitless, conformers_unit)
-                molecule.conformers.append(conformer)
+                conformer = Quantity(conformer_unitless, conformers_unit)
+                molecule._conformers.append(conformer)
 
         hier_scheme_dicts = molecule_dict.pop("hierarchy_schemes")
         for iter_name, hierarchy_scheme_dict in hier_scheme_dicts.items():
@@ -363,7 +361,7 @@ class _SimpleMolecule:
                 )
             molecule._expose_hierarchy_scheme(iter_name)
 
-        for key, val in molecule_dict:
+        for key, val in molecule_dict.items():
             setattr(molecule, key, val)
 
         return molecule
@@ -384,7 +382,7 @@ class _SimpleMolecule:
                 atom2=mm_molecule.atom(bond.atom2_index),
             )
 
-        mm_molecule.conformers = molecule.conformers
+        mm_molecule._conformers = molecule.conformers
 
         return mm_molecule
 
@@ -482,16 +480,32 @@ class _SimpleMolecule:
 
 
 class _SimpleAtom:
-    def __init__(self, atomic_number: int, molecule=None, metadata=None, **kwargs):
+    def __init__(
+        self,
+        atomic_number: int,
+        name: str = "",
+        molecule=None,
+        metadata=None,
+        **kwargs,
+    ):
         if metadata is None:
             self.metadata = AtomMetadataDict()
         else:
             self.metadata = AtomMetadataDict(metadata)
+        self._name = name
         self._atomic_number = atomic_number
         self._molecule = molecule
         self._bonds: List[Optional[_SimpleBond]] = list()
         for key, val in kwargs.items():
             setattr(self, key, val)
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        self._name = value
 
     @property
     def atomic_number(self) -> int:

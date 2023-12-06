@@ -204,7 +204,7 @@ class Atom(Particle):
         atomic_number,
         formal_charge,
         is_aromatic,
-        name=None,
+        name: Optional[str] = None,
         molecule=None,
         stereochemistry=None,
         metadata=None,
@@ -261,7 +261,7 @@ class Atom(Particle):
         self._molecule = molecule
         # From Jeff: I'm going to assume that this is implicit in the parent Molecule's ordering of atoms
         # self._molecule_atom_index = molecule_atom_index
-        self._bonds = list()
+        self._bonds: list[Bond] = list()
 
         if metadata is None:
             self._metadata = AtomMetadataDict()
