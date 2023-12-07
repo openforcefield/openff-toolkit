@@ -23,6 +23,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Improved documentation and warnings
 
+- [PR #1786](https://github.com/openforcefield/openff-toolkit/pull/1786): Describe contributing to documentation notebooks in developers guide.
+
 ## 0.14.5
 
 ### Bugfixes
