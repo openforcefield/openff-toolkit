@@ -23,7 +23,7 @@ maxdepth: 1
 
 users/concepts
 users/molecule_cookbook
-users/pdb_cookbook
+users/pdb_cookbook/index
 users/smirnoff
 users/virtualsites
 users/developing
