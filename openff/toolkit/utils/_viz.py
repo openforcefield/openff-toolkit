@@ -4,9 +4,8 @@ from io import StringIO
 from typing import TextIO
 
 from nglview.base_adaptor import Structure, Trajectory
-from openff.units import unit
 
-from openff.toolkit import Molecule, Topology
+from openff.toolkit import Molecule, Topology, unit
 from openff.toolkit.utils.toolkits import RDKIT_AVAILABLE
 
 MOLECULE_DEFAULT_REPS = [

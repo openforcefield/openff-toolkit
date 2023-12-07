@@ -51,11 +51,11 @@ from typing import (
 
 import networkx as nx
 import numpy as np
-from openff.units import Quantity, unit
 from openff.units.elements import MASSES, SYMBOLS
 from openff.utilities.exceptions import MissingOptionalDependencyError
 from typing_extensions import TypeAlias
 
+from openff.toolkit import Quantity, unit
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
     AtomMappingWarning,
@@ -2718,6 +2718,8 @@ class FrozenMolecule(Serializable):
     def _invalidate_cached_properties(self) -> None:
         """
         Indicate that the chemical entity has been altered.
+
+        Note that this does not clear the `.properties` dictionary attribute.
         """
         self._conformers = None
         self._partial_charges = None

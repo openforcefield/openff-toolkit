@@ -9,10 +9,10 @@ from typing import Dict, List, Tuple
 import numpy
 import pytest
 from numpy.testing import assert_almost_equal
-from openff.units import unit
 from packaging.version import Version
 
 import openff.toolkit.typing.engines.smirnoff.parameters
+from openff.toolkit import unit
 from openff.toolkit._tests.mocking import VirtualSiteMocking
 from openff.toolkit._tests.utils import does_not_raise
 from openff.toolkit.topology import Molecule, Topology
@@ -2424,6 +2424,29 @@ class TestVirtualSiteHandler:
                 match="all_permutations",
                 distance=2.0 * unit.angstrom,
             )
+
+    def test_deduplicate_symmetric_matches_in_noncapturing_atoms(self):
+        """
+        Make sure we don't double-assign vsites based on symmetries in non-tagged atoms in the SMIRKS.
+        See https://github.com/openforcefield/openff-toolkit/issues/1739
+        """
+        vsite_handler = VirtualSiteHandler(skip_version_check=True)
+        vsite_handler.add_parameter(
+            parameter_kwargs={
+                "smirks": "[H][#6:2]([H])=[#8:1]",
+                "name": "EP",
+                "type": "BondCharge",
+                "distance": 7.0 * openff.units.unit.angstrom,
+                "match": "all_permutations",
+                "charge_increment1": 0.2 * openff.units.unit.elementary_charge,
+                "charge_increment2": 0.1 * openff.units.unit.elementary_charge,
+                "sigma": 1.0 * openff.units.unit.angstrom,
+                "epsilon": 2.0 * openff.units.unit.kilocalorie_per_mole,
+            }
+        )
+        molecule = openff.toolkit.Molecule.from_mapped_smiles("[H:3][C:2]([H:4])=[O:1]")
+        matches = vsite_handler.find_matches(molecule.to_topology())
+        assert len(matches) == 1
 
 
 class TestLibraryChargeHandler:
