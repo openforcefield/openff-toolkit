@@ -20,10 +20,11 @@ from typing import (
     Union,
 )
 
+from openff.models.models import DefaultModel
 from openff.units.elements import MASSES, SYMBOLS
-from typing_extensions import Self
 
 from openff.toolkit import Molecule, Quantity, unit
+from openff.toolkit._pydantic import PrivateAttr
 from openff.toolkit.topology.molecule import (
     AtomMetadataDict,
     HierarchyScheme,
@@ -39,16 +40,16 @@ if TYPE_CHECKING:
 
 
 class _SimpleMolecule:
-    def __init__(self: Self):
-        self.name = ""
-        self.atoms: list[_SimpleAtom] = list()
-        self.bonds: list[_SimpleBond] = list()
-        self.hierarchy_schemes: dict[str, HierarchyScheme] = dict()
-        self._conformers: list[Quantity] = list()
+    name: str = ""
+    atoms: list["_SimpleAtom"] = list()
+    bonds: list["_SimpleBond"] = list()
+    hierarchy_schemes: dict[str, HierarchyScheme] = dict()
+    _conformers: list[Quantity] = PrivateAttr(default_factory=list)
 
     def add_atom(self, atomic_number: int, **kwargs):
-        atom = _SimpleAtom(atomic_number=atomic_number, molecule=self, **kwargs)
-        self.atoms.append(atom)
+        self.atoms.append(
+            _SimpleAtom(atomic_number=atomic_number, molecule=self, **kwargs)
+        )
 
     def add_bond(self, atom1, atom2, **kwargs):
         if isinstance(atom1, int) and isinstance(atom2, int):
@@ -64,15 +65,14 @@ class _SimpleMolecule:
                     atom1, type(atom1), atom2, type(atom2)
                 )
             )
-        bond = _SimpleBond(atom1_atom, atom2_atom, **kwargs)
-        self.bonds.append(bond)
+        self.bonds.append(_SimpleBond(atom1=atom1_atom, atom2=atom2_atom, **kwargs))
 
     @property
     def conformers(self) -> list[Quantity]:
         return self._conformers
 
     def add_conformer(self, conformer):
-        self.conformers.append(conformer)
+        self._conformers.append(conformer)
 
     @property
     def n_atoms(self) -> int:
@@ -84,7 +84,7 @@ class _SimpleMolecule:
 
     @property
     def n_conformers(self) -> int:
-        return len(self.conformers)
+        return len(self._conformers)
 
     def atom(self, index):
         return self.atoms[index]
@@ -297,7 +297,7 @@ class _SimpleMolecule:
 
         atom_list = list()
         for atom in self.atoms:
-            atom_list.append(atom.to_dict())
+            atom_list.append(atom.dict())
         molecule_dict["atoms"] = atom_list
 
         bond_list = list()
@@ -326,7 +326,8 @@ class _SimpleMolecule:
 
         atom_dicts = molecule_dict.pop("atoms")
         for atom_dict in atom_dicts:
-            molecule.atoms.append(_SimpleAtom.from_dict(atom_dict))
+            _SimpleAtom.update_forward_refs()
+            molecule.atoms.append(_SimpleAtom.parse_obj(atom_dict))
 
         bond_dicts = molecule_dict.pop("bonds")
 
@@ -479,48 +480,12 @@ class _SimpleMolecule:
             atom.name = symbol + str(element_counts[symbol]) + "x"
 
 
-class _SimpleAtom:
-    def __init__(
-        self,
-        atomic_number: int,
-        name: str = "",
-        molecule=None,
-        metadata=None,
-        **kwargs,
-    ):
-        if metadata is None:
-            self.metadata = AtomMetadataDict()
-        else:
-            self.metadata = AtomMetadataDict(metadata)
-        self._name = name
-        self._atomic_number = atomic_number
-        self._molecule = molecule
-        self._bonds: List[Optional[_SimpleBond]] = list()
-        for key, val in kwargs.items():
-            setattr(self, key, val)
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    @name.setter
-    def name(self, value: str):
-        self._name = value
-
-    @property
-    def atomic_number(self) -> int:
-        return self._atomic_number
-
-    @atomic_number.setter
-    def atomic_number(self, value):
-        if not isinstance(value, int):
-            raise ValueError("atomic_number must be an integer")
-        if value < 0:
-            raise ValueError(
-                "atomic_number must be non-negative. An atomic number "
-                "of 0 is acceptable."
-            )
-        self._atomic_number = value
+class _SimpleAtom(DefaultModel):
+    atomic_number: int
+    name: str = ""
+    molecule: Optional[_SimpleMolecule] = None
+    bonds: list["_SimpleBond"] = list()
+    metadata: AtomMetadataDict = AtomMetadataDict
 
     @property
     def symbol(self) -> str:
@@ -530,21 +495,12 @@ class _SimpleAtom:
     def mass(self) -> "Quantity":
         return MASSES[self.atomic_number]
 
-    @property
-    def molecule(self):
-        """The ``Molecule`` this atom is part of."""
-        return self._molecule
-
-    @property
-    def bonds(self):
-        return self._bonds
-
     def add_bond(self, bond):
-        self._bonds.append(bond)
+        self.bonds.append(bond)
 
     @property
     def bonded_atoms(self):
-        for bond in self._bonds:
+        for bond in self.bonds:
             for atom in [bond.atom1, bond.atom2]:
                 if atom is not self:
                     yield atom
@@ -553,39 +509,36 @@ class _SimpleAtom:
     def molecule_atom_index(self) -> int:
         return self.molecule.atoms.index(self)
 
-    def to_dict(self) -> Dict[str, Union[Dict, str, int]]:
-        atom_dict: Dict[str, Union[Dict, str, int]] = dict()
-        atom_dict["metadata"] = dict(self.metadata)
-        atom_dict["atomic_number"] = self._atomic_number
+    def __hash__(self) -> int:
+        return hash(
+            (
+                self.atomic_number,
+                self.name,
+                self.metadata,
+            )
+        )
 
-        keys_to_skip = ["metadata", "molecule", "bonds"]
-
-        for attr_name, attr_val in self.__dict__.items():
-            if attr_name.startswith("_"):
-                continue
-            if attr_name in keys_to_skip:
-                continue
-            atom_dict[attr_name] = attr_val
-        return atom_dict
-
-    @classmethod
-    def from_dict(cls, atom_dict: Dict):
-        atom = cls(atomic_number=atom_dict["atomic_number"])
-        # TODO: Metadata
-        return atom
+    def __repr__(self) -> str:
+        return f"<_SimpleAtom(name={self.name}, atomic number={self.atomic_number})"
 
 
-class _SimpleBond:
+class _SimpleBond(DefaultModel):
+    atom1: _SimpleAtom
+    atom2: _SimpleAtom
+    _molecule: Optional[_SimpleMolecule] = PrivateAttr()
+
     def __init__(self, atom1, atom2, **kwargs):
-        self.molecule = atom1.molecule
-        self.atom1 = atom1
-        self.atom2 = atom2
+        if atom1.molecule is not atom2.molecule:
+            raise ValueError(
+                "Cannot create a bond between atoms that are not in the same molecule."
+            )
 
-        atom1.add_bond(self)
-        atom2.add_bond(self)
+        super().__init__(atom1=atom1, atom2=atom2, **kwargs)
 
-        for key, val in kwargs.items():
-            setattr(self, key, val)
+        self.atom1.add_bond(self)
+        self.atom2.add_bond(self)
+
+        self._molecule = self.atom1.molecule
 
     @property
     def atoms(self) -> List[_SimpleAtom]:
@@ -599,9 +552,5 @@ class _SimpleBond:
     def atom2_index(self) -> int:
         return self.atom2.molecule_atom_index
 
-    def to_dict(self) -> Dict:
-        bond_dict = dict()
-        bond_dict["atom1_index"] = self.atom1.molecule_atom_index
-        bond_dict["atom2_index"] = self.atom2.molecule_atom_index
-
-        return bond_dict
+    def __repr__(self):
+        return f"<_SimpleBond(atom1={self.atom1}, atom2={self.atom2})"
