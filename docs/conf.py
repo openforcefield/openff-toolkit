@@ -112,7 +112,7 @@ myst_enable_extensions = [
     "replacements",
     "deflist",
 ]
-myst_heading_anchors = 3
+myst_heading_anchors = 4
 
 # Myst NB settings
 # Never execute notebooks - this should be done by CI
