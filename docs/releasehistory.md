@@ -25,6 +25,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 - [PR #1732](https://github.com/openforcefield/openff-toolkit/pull/1732): Add documentation describing the use of PDB files with the toolkit.
 - [PR #1795](https://github.com/openforcefield/openff-toolkit/pull/1795): Add `NAGLToolkitWrapper` to API reference
+- [PR #1787](https://github.com/openforcefield/openff-toolkit/pull/1787): Make toolkit wrapper documentation more discoverable
 
 ## 0.14.5
 
