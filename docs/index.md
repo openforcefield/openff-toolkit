@@ -38,6 +38,7 @@ maxdepth: 1
 
 topology
 typing
+api/toolkits
 utils
 Exceptions <api/generated/openff.toolkit.utils.exceptions.rst>
 :::
