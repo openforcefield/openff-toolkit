@@ -487,8 +487,8 @@ The following properties have been **deprecated** and will be removed in a futur
 - `Topology.topology_atoms` (use [`Topology.atoms`](Topology.atoms) instead)
 - `Topology.n_topology_bonds` (use [`Topology.n_bonds`](Topology.n_bonds) instead)
 - `Topology.topology_bonds` (use [`Topology.bonds`](Topology.bonds) instead)
-- `Topology.n_topology_particles` (use [`Topology.n_particles`](Topology.n_particles) instead)
-- `Topology.topology_particles` (use [`Topology.particles`](Topology.particles) instead)
+- `Topology.n_topology_particles` (use `Topology.n_particles` instead)
+- `Topology.topology_particles` (use `Topology.particles` instead)
 - `Topology.reference_molecules` (use [`Topology.unique_molecules`](Topology.unique_molecules) instead)
 - `Topology.n_reference_molecules` (use [`Topology.n_unique_molecules`](Topology.n_unique_molecules) instead)
 - `Topology.n_topology_molecules` (use [`Topology.n_molecules`](Topology.n_molecules) instead)
@@ -1184,7 +1184,7 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 
 ## Earlier releases
 
-:::{eval-rst}
+```{eval-rst}
 
 0.9.1 - Minor feature and bugfix release
 ----------------------------------------
@@ -2656,4 +2656,4 @@ Previously, non-planar impropers did not behave correctly, as six-fold impropers
 To remedy this, SMIRNOFF impropers are now implemented as three-fold impropers with consistent chirality.
 However, current force fields in the SMIRNOFF format had no non-planar impropers, so this change is mainly aimed at future work.
 
-:::
+```
