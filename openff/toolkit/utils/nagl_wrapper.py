@@ -17,6 +17,12 @@ __all__ = ("NAGLToolkitWrapper",)
 
 
 class NAGLToolkitWrapper(ToolkitWrapper):
+    """NAGL toolkit wrapper for applying partial charges with a GCN model.
+
+    :external+openff.nagl:doc:`index` computes partial charges directly from the
+    molecular graph and independent of conformer coordinates using a Graph
+    Convolutional Network."""
+
     _toolkit_name = "OpenFF NAGL"
     _toolkit_installation_instructions = (
         "See https://docs.openforcefield.org/projects/nagl/en/latest/installation.html"
@@ -58,6 +64,40 @@ class NAGLToolkitWrapper(ToolkitWrapper):
         normalize_partial_charges: bool = True,
         _cls: Optional[Type["FrozenMolecule"]] = None,
     ):
+        """
+        Compute partial charges with NAGL and store in ``self.partial_charges``
+
+        .. warning :: This API is experimental and subject to change.
+
+        Parameters
+        ----------
+        molecule
+            Molecule for which partial charges are to be computed
+        partial_charge_method
+            The NAGL model to use. May be a path or the name of a model in a
+            directory from the ``openforcefield.nagl_model_path`` entry point.
+        use_conformers
+            This argument is ignored as NAGL does not generate or consider
+            coordinates during inference.
+        strict_n_conformers
+            This argument is ignored as NAGL does not generate or consider
+            coordinates during inference.
+        normalize_partial_charges : bool, default=True
+            Whether to offset partial charges so that they sum to the total
+            formal charge of the molecule. This is used to prevent accumulation
+            of rounding errors when the partial charge generation method has
+            low precision.
+        _cls : class
+            Molecule constructor
+
+        Raises
+        ------
+        ChargeMethodUnavailableError
+            if the requested charge method can not be handled by this toolkit
+
+        ChargeCalculationError
+            if the charge method is supported by this toolkit, but fails
+        """
         from openff.nagl import GNNModel
         from openff.nagl_models import validate_nagl_model_path
 

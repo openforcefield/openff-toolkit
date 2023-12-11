@@ -91,6 +91,10 @@ intersphinx_mapping = {
         "https://docs.openforcefield.org/projects/units/en/stable/",
         None,
     ),
+    "openff.nagl": (
+        "https://docs.openforcefield.org/projects/nagl/en/stable/",
+        None,
+    ),
     "openff.docs": (
         "https://docs.openforcefield.org/en/latest/",
         None,
