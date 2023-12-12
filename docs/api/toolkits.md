@@ -70,17 +70,17 @@ For example, differences in `to_smiles` functionality between OpenEye toolkits a
 be explored by selecting which toolkit(s) are and are not registered.
 
 ```python
-    >>> from openff.toolkit.utils.toolkits import OpenEyeToolkitWrapper, GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
-    >>> from openff.toolkit import Molecule
-    >>> molecule = Molecule.from_smiles('Cc1ccccc1')
-    >>> smiles_via_openeye = toolkit_registry.call('to_smiles', molecule)
-    >>> print(smiles_via_openeye)
-    [H]c1c(c(c(c(c1[H])[H])C([H])([H])[H])[H])[H]
+>>> from openff.toolkit.utils.toolkits import OpenEyeToolkitWrapper, GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
+>>> from openff.toolkit import Molecule
+>>> molecule = Molecule.from_smiles('Cc1ccccc1')
+>>> smiles_via_openeye = toolkit_registry.call('to_smiles', molecule)
+>>> print(smiles_via_openeye)
+[H]c1c(c(c(c(c1[H])[H])C([H])([H])[H])[H])[H]
 
-    >>> toolkit_registry.deregister_toolkit(OpenEyeToolkitWrapper)
-    >>> smiles_via_rdkit = toolkit_registry.call('to_smiles', molecule)
-    >>> print(smiles_via_rdkit)
-    [H][c]1[c]([H])[c]([H])[c]([C]([H])([H])[H])[c]([H])[c]1[H]
+>>> toolkit_registry.deregister_toolkit(OpenEyeToolkitWrapper)
+>>> smiles_via_rdkit = toolkit_registry.call('to_smiles', molecule)
+>>> print(smiles_via_rdkit)
+[H][c]1[c]([H])[c]([H])[c]([C]([H])([H])[H])[c]([H])[c]1[H]
 ```
 
 ```{eval-rst}
