@@ -10,6 +10,7 @@ These toolkit wrappers are generally used through a {class}`ToolkitRegistry`, wh
 >>> toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper]
 >>> [ toolkit_registry.register_toolkit(toolkit) for toolkit in toolkit_precedence if toolkit.is_available() ]
 [None, None, None]
+
 ```
 
 The toolkit wrappers can then be accessed through the registry:
@@ -19,6 +20,7 @@ The toolkit wrappers can then be accessed through the registry:
 >>> from openff.toolkit import Molecule
 >>> molecule = Molecule.from_smiles('Cc1ccccc1')
 >>> smiles = toolkit_registry.call('to_smiles', molecule)
+
 ```
 
 The order of toolkits, as specified in `toolkit_precedence` above, determines the order in which
@@ -33,6 +35,7 @@ Alternatively, the global toolkit registry (which will attempt to register any a
 >>> from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
 >>> len(toolkit_registry.registered_toolkits)
 4
+
 ```
 
 Individual toolkits can be registered or deregistered to control the backend that ToolkitRegistry calls resolve to. This can
@@ -49,6 +52,7 @@ context manager.
 >>> with toolkit_registry_manager(ToolkitRegistry([RDKitToolkitWrapper(), AmberToolsToolkitWrapper()])):
 ...     print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
 2
+
 ```
 
 To remove `ToolkitWrappers` permanently from a `ToolkitRegistry`, the `deregister_toolkit` method can be used:
@@ -64,6 +68,7 @@ To remove `ToolkitWrappers` permanently from a `ToolkitRegistry`, the `deregiste
 >>> toolkit_registry.register_toolkit(RDKitToolkitWrapper)
 >>> print(len(toolkit_registry.registered_toolkits))
 4
+
 ```
 
 For example, differences in `to_smiles` functionality between OpenEye toolkits and The RDKit can
@@ -81,6 +86,7 @@ be explored by selecting which toolkit(s) are and are not registered.
 >>> smiles_via_rdkit = toolkit_registry.call('to_smiles', molecule)
 >>> print(smiles_via_rdkit)
 [H][c]1[c]([H])[c]([H])[c]([C]([H])([H])[H])[c]([H])[c]1[H]
+
 ```
 
 ```{eval-rst}
