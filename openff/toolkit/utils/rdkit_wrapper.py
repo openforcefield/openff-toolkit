@@ -1279,13 +1279,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         undefined_only: bool = False,
         max_isomers: int = 20,
         rationalise: bool = True,
-    ) -> List["Molecule"]:
+    ) -> list["Molecule"]:
         """
         Enumerate the stereocenters and bonds of the current molecule.
 
         Parameters
         ----------
-        molecule: openff.toolkit.topology.Molecule
+        molecule: openff.toolkit.Molecule
             The molecule whose state we should enumerate
 
         undefined_only: bool optional, default=False
@@ -1299,8 +1299,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Returns
         --------
-        molecules: List[openff.toolkit.topology.Molecule]
-            A list of openff.toolkit.topology.Molecule instances
+        molecules: list[openff.toolkit.Molecule]
+            A list of openff.toolkit.Molecule instances including the input molecule.
 
         """
         from rdkit import Chem
@@ -1332,9 +1332,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # isomer has CIS/TRANS tags so convert back to E/Z
             Chem.SetDoubleBondNeighborDirections(isomer)
             Chem.AssignStereochemistry(isomer, force=True, cleanIt=True)
-            mol = self.from_rdkit(isomer, _cls=molecule.__class__)
-            if mol != molecule:
-                molecules.append(mol)
+
+            molecules.append(
+                self.from_rdkit(
+                    isomer,
+                    _cls=molecule.__class__,
+                )
+            )
 
         return molecules
 
