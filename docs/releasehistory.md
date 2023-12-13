@@ -13,6 +13,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Behavior changes
 
+- [PR #17XX](https://github.com/openforcefield/openff-toolkit/pull/17XX): `Molecule.enumerate_tautomers` now includes the input molecule in the returned list.
+
 ### Bugfixes
 
 - [PR #1778](https://github.com/openforcefield/openff-toolkit/pull/1778): Ensures SD data tags are preserved in `Molecule.from_openeye` if the input is of type `oechem.OEGraphMol`.
