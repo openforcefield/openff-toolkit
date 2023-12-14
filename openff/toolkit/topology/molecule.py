@@ -585,7 +585,7 @@ class Atom(Particle):
 #    self._neighbor2 = neighbor2
 
 # def to_dict(self):
-#    bs_dict = OrderedDict()
+#    bs_dict = dict()
 #    bs_dict['stereo_type'] = self._stereo_type
 #    bs_dict['neighbor1_index'] = self._neighbor1.molecule_atom_index
 #    bs_dict['neighbor2_index'] = self._neighbor2.molecule_atom_index

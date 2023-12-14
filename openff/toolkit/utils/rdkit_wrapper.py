@@ -383,7 +383,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     )
                     residues = [
                         list(substructure_dictionary.keys())[i] for i in res_ids
-                    ]  # fyi substruct dict is now OrderedDict
+                    ]
                     # query_ids = [int(idx) for idx in list(query_ids)]
                     match_info = dict()
                     for res_name, query_idx, query_num in zip(
