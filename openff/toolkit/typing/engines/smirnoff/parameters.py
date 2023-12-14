@@ -1853,7 +1853,7 @@ class ParameterHandler(_ParameterAttributeHandler):
                     f"0.3 SMIRNOFF spec requires each parameter section to have its own version."
                 )
 
-        # List of ParameterType objects (also behaves like an OrderedDict where keys are SMARTS).
+        # List of ParameterType objects (also behaves like a dict where keys are SMARTS).
         self._parameters = ParameterList()
 
         # Initialize ParameterAttributes and cosmetic attributes.

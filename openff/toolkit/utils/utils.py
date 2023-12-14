@@ -769,7 +769,7 @@ def sort_smirnoff_dict(data):
             sorted_dict[key] = sort_smirnoff_dict(val)
         elif isinstance(val, list):
             # Handle case of ParameterLists, which show up in
-            # the smirnoff dicts as lists of OrderedDicts or dicts
+            # the smirnoff dicts as lists of dicts
             new_parameter_list = list()
             for param in val:
                 new_parameter_list.append(sort_smirnoff_dict(param))
