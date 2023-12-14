@@ -107,7 +107,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
             If None, 'am1-mulliken' will be used.
         use_conformers : iterable of unit-wrapped numpy arrays, each
             with shape (n_atoms, 3) and dimension of distance. Optional, default = None
-            list of unit-wrapped numpy arrays to use for partial charge calculation.
+            List of unit-wrapped numpy arrays to use for partial charge calculation.
             If None, an appropriate number of conformers will be generated.
         strict_n_conformers : bool, default=False
             Whether to raise an exception if an invalid number of conformers is provided for

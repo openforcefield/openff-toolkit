@@ -1844,7 +1844,7 @@ class ParameterHandler(_ParameterAttributeHandler):
                     f"0.3 SMIRNOFF spec requires each parameter section to have its own version."
                 )
 
-        # list of ParameterType objects (also behaves like an Ordereddict where keys are SMARTS).
+        # list of ParameterType objects (also behaves like an OrderedDict where keys are SMARTS).
         self._parameters = ParameterList()
 
         # Initialize ParameterAttributes and cosmetic attributes.
@@ -1902,7 +1902,7 @@ class ParameterHandler(_ParameterAttributeHandler):
     # TODO: Do we need to return these, or can we handle this internally
     @property
     def known_kwargs(self):
-        """list of kwargs that can be parsed by the function."""
+        """List of kwargs that can be parsed by the function."""
         # TODO: Should we use introspection to inspect the function signature instead?
         return set(self._KWARGS)
 

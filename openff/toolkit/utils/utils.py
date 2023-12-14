@@ -682,7 +682,7 @@ def get_molecule_parameterIDs(molecules, forcefield):
     Parameters
     ----------
     molecules : list of openff.toolkit.topology.Molecule
-        list of molecules (with explicit hydrogens) to parse
+        List of molecules (with explicit hydrogens) to parse
     forcefield : openff.toolkit.typing.engines.smirnoff.ForceField
         The ForceField to apply
 

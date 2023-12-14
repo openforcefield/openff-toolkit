@@ -129,7 +129,7 @@ class _TransformedDict(MutableMapping):
         possible: list of tuples of int
             List of possible keys
         permutations: dict[tuple[int, ...], int]
-            dictionary of canonical orders
+            Dictionary of canonical orders
         """
         key = tuple(key)
         possible = [tuple(p) for p in possible]
@@ -936,7 +936,7 @@ class Topology(Serializable):
         Returns
         -------
         neighbors: iterator of tuple of Atom
-            tuples (len 2) of atom that are separated by ``n`` bonds.
+            Tuples (len 2) of atom that are separated by ``n`` bonds.
 
         Notes
         -----
@@ -1622,7 +1622,7 @@ class Topology(Serializable):
         toolkit_registry : ToolkitRegistry. Default = None
             The ToolkitRegistry to use as the cheminformatics backend.
         _custom_substructures: dict[str, list[str]], Default = {}
-            Experimental and unstable. dictionary where keys are the names of new substructures
+            Experimental and unstable. Dictionary where keys are the names of new substructures
             (cannot overlap with existing amino acid names) and the values are the new substructure
             entries that follow the same format as those used in the amino acid substructure library
         _additional_substructures : Iterable of Molecule, Default = None

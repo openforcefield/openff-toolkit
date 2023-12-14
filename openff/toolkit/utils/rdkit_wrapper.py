@@ -109,7 +109,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     @property
     def toolkit_file_write_formats(self) -> list[str]:
         """
-        list of file formats that this toolkit can write.
+        List of file formats that this toolkit can write.
         """
         return list(self._toolkit_file_write_formats.keys())
 
@@ -383,7 +383,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     )
                     residues = [
                         list(substructure_dictionary.keys())[i] for i in res_ids
-                    ]  # fyi substruct dict is now Ordereddict
+                    ]  # fyi substruct dict is now OrderedDict
                     # query_ids = [int(idx) for idx in list(query_ids)]
                     match_info = dict()
                     for res_name, query_idx, query_num in zip(
@@ -407,7 +407,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         ----------
         custom_substructures : dict[str, list[str]]
             substructures given with unique names as keys and smarts as values
-        forbidden_keys : dictKeys[str]
+        forbidden_keys : DictKeys[str]
             a list of keys that cannot overlap with the custom substructure keys
 
         Returns
