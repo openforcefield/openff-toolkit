@@ -26,7 +26,7 @@ import copy
 import logging
 import os
 import pathlib
-from typing import TYPE_CHECKING, Optional, Type, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 from packaging.version import Version
 
@@ -304,7 +304,7 @@ class ForceField:
             # module each come from is the safest way to know which are plugins; another
             # option is explicitly defining a set of default handlers
 
-            default_handlers: list[Type[ParameterHandler]] = [
+            default_handlers: list[type[ParameterHandler]] = [
                 handler
                 for handler in all_subclasses(ParameterHandler)
                 if handler.__module__ == internal_module

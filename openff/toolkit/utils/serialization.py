@@ -12,7 +12,7 @@ Serialization mix-in
 
 """
 import abc
-from typing import Type, TypeVar
+from typing import TypeVar
 
 from openff.toolkit.utils.utils import requires_package
 
@@ -99,7 +99,7 @@ class Serializable(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def from_dict(cls: Type[S], d: dict) -> S:
+    def from_dict(cls: type[S], d: dict) -> S:
         pass
 
     def to_json(self, indent=None) -> str:

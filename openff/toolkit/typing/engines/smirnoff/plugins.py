@@ -22,7 +22,6 @@ where in this example your package is named ``myapp`` and contains a class which
 inherits from ``ParameterHandler`` named ``CustomHandler``.
 """
 import logging
-from typing import Type
 
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 
@@ -31,7 +30,7 @@ logger = logging.getLogger(__name__)
 SUPPORTED_PLUGIN_NAMES = ["handlers"]  # io_handlers could be supported in future.
 
 
-def _load_handler_plugins(handler_name: str, expected_type) -> list[Type]:
+def _load_handler_plugins(handler_name: str, expected_type) -> list[type]:
     """Loads parameter handler plugins of a specified type which have been registered
     with the ``entrypoint`` plugin system.
 
@@ -53,7 +52,7 @@ def _load_handler_plugins(handler_name: str, expected_type) -> list[Type]:
             f"supported plugin names is: {SUPPORTED_PLUGIN_NAMES}."
         )
 
-    PluginType = Type[ParameterHandler]
+    PluginType = type[ParameterHandler]
 
     discovered_plugins: list[PluginType] = list()
 
@@ -82,7 +81,7 @@ def _load_handler_plugins(handler_name: str, expected_type) -> list[Type]:
     return valid_plugins
 
 
-def load_handler_plugins() -> list[Type[ParameterHandler]]:
+def load_handler_plugins() -> list[type[ParameterHandler]]:
     """Loads any ``ParameterHandler`` class plugins which have been registered through
     the ``entrypoint`` plugin system.
 
