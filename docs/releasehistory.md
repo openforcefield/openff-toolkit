@@ -9,16 +9,21 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ## Current development
 
 ### API-breaking changes
+- [PR #1760](https://github.com/openforcefield/openff-toolkit/pull/1760): Removes the private, unused `ParameterHandler._OPENMMTYPE` attribute.
 
 ### Behavior changes
 
 ### Bugfixes
+
+- [PR #1778](https://github.com/openforcefield/openff-toolkit/pull/1778): Ensures SD data tags are preserved in `Molecule.from_openeye` if the input is of type `oechem.OEGraphMol`.
 
 ### New features
 - [PR #1775](https://github.com/openforcefield/openff-toolkit/pull/1775): Re-exports `openff.units.unit` and `Quantity` at `openff.toolkit.unit` and `Quantity`.
 
 
 ### Improved documentation and warnings
+
+- [PR #1732](https://github.com/openforcefield/openff-toolkit/pull/1732): Add documentation describing the use of PDB files with the toolkit.
 
 ## 0.14.5
 

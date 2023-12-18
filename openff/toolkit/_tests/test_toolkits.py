@@ -549,6 +549,17 @@ class TestOpenEyeToolkitWrapper:
             == expected_output_smiles
         )
 
+    def test_sd_tags_in_graph_mol_preserved(self):
+        from openeye import oechem
+
+        graph = oechem.OEGraphMol()
+
+        oechem.OEParseSmiles(graph, "CCO")
+
+        oechem.OEAddSDData(graph, "cat", "meow")
+
+        assert Molecule.from_openeye(graph).properties["cat"] == "meow"
+
     def test_to_from_openeye_none_partial_charges(self):
         """Test to ensure that to_openeye and from_openeye correctly handle None partial charges"""
         import math
