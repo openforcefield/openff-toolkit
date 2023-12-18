@@ -14,7 +14,7 @@ def find_readme_links():
 
     Returns
     -------
-    readme_examples : List[str]
+    readme_examples : list[str]
         The list of links included in the README.md file.
     """
     readme_file_path = os.path.join(ROOT_DIR_PATH, "README.md")

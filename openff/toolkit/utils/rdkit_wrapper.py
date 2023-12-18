@@ -13,7 +13,7 @@ import pathlib
 import tempfile
 import warnings
 from collections import defaultdict
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 from cachetools import LRUCache, cached
@@ -107,7 +107,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             }
 
     @property
-    def toolkit_file_write_formats(self) -> List[str]:
+    def toolkit_file_write_formats(self) -> list[str]:
         """
         List of file formats that this toolkit can write.
         """
@@ -253,7 +253,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         logger.setLevel(prev_log_level)
 
         # check isomorphic and get the mapping if true the mapping will be
-        # Dict[offmol_index, pdbmol_index] sorted by offmol index
+        # dict[offmol_index, pdbmol_index] sorted by offmol index
         isomorphic, mapping = _cls.are_isomorphic(
             offmol,
             pdbmol,
@@ -299,7 +299,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         pdbfile,
         substructure_dictionary,
         coords_angstrom,
-        _custom_substructures: Optional[Dict[str, List[str]]] = None,
+        _custom_substructures: Optional[dict[str, list[str]]] = None,
     ):
         import json
 
@@ -352,7 +352,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # the metadata assignment and coordinate setting outside this method, so
         # as long as a chemically equivalent atom is sitting at the right index
         # in the topology when the metadata is assigned there's no difference.
-        smiles2offmol: Dict[str, Molecule] = dict()
+        smiles2offmol: dict[str, Molecule] = dict()
         for rdmol in rdmols:
             # Make a copy of the molecule to assign atom maps, since
             # otherwise the atom maps will mess with stereo assignment.
@@ -400,12 +400,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return top
 
     def _validate_custom_substructures(
-        self, custom_substructures: Dict[str, List[str]], forbidden_keys
+        self, custom_substructures: dict[str, list[str]], forbidden_keys
     ):
         """Validates custom substructures to adhere to monomer specifications
         Parameters
         ----------
-        custom_substructures : Dict[str, List[str]]
+        custom_substructures : dict[str, list[str]]
             substructures given with unique names as keys and smarts as values
         forbidden_keys : DictKeys[str]
             a list of keys that cannot overlap with the custom substructure keys
@@ -590,22 +590,22 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # If all checks pass, continue
         return
 
-    def _prepare_custom_substructures(self, custom_substructures: Dict[str, List[str]]):
+    def _prepare_custom_substructures(self, custom_substructures: dict[str, list[str]]):
         """Adds general atom names to match the format of the amino acid substructure dict
         Parameters
         ----------
-        custom_substructures : Dict[str, List[str]]
+        custom_substructures : dict[str, list[str]]
             substructures given with unique names as keys and smarts as values
         Returns
         -------
-        prepared_dict : Dict[str, Dict[str, List[str]]]
+        prepared_dict : dict[str, dict[str, list[str]]]
             a dictionary of the same type and format as the predefined toolkit
             substructures (amino acids, etc). Atom names are given the format
             "CSTM_{symbol}", including wildtypes which show as "CSTM_*"
         """
         from rdkit import Chem
 
-        prepared_dict = defaultdict[str, dict[str, List[str]]](
+        prepared_dict = defaultdict[str, dict[str, list[str]]](
             lambda: defaultdict(list)
         )
         for name, smarts_list in custom_substructures.items():
@@ -1279,7 +1279,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         undefined_only: bool = False,
         max_isomers: int = 20,
         rationalise: bool = True,
-    ) -> List["Molecule"]:
+    ) -> list["Molecule"]:
         """
         Enumerate the stereocenters and bonds of the current molecule.
 
@@ -1299,12 +1299,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Returns
         --------
-        molecules: List[openff.toolkit.topology.Molecule]
+        molecules: list[openff.toolkit.topology.Molecule]
             A list of openff.toolkit.topology.Molecule instances
 
         """
         from rdkit import Chem
-        from rdkit.Chem.EnumerateStereoisomers import (  # type: ignore[import]
+        from rdkit.Chem.EnumerateStereoisomers import (  # type: ignore[import-untyped]
             EnumerateStereoisomers,
             StereoEnumerationOptions,
         )
@@ -1340,7 +1340,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def enumerate_tautomers(
         self, molecule: "Molecule", max_states: int = 20
-    ) -> List["Molecule"]:
+    ) -> list["Molecule"]:
         """
         Enumerate the possible tautomers of the current molecule.
 
@@ -1354,12 +1354,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Returns
         -------
-        molecules: List[openff.toolkit.topology.Molecule]
+        molecules: list[openff.toolkit.topology.Molecule]
             A list of openff.toolkit.topology.Molecule instances not including the input molecule.
         """
 
         from rdkit import Chem
-        from rdkit.Chem.MolStandardize import rdMolStandardize  # type: ignore[import]
+        from rdkit.Chem.MolStandardize import (  # type: ignore[import-untyped]
+            rdMolStandardize,
+        )
 
         enumerator = rdMolStandardize.TautomerEnumerator()
         enumerator.SetMaxTautomers(max_states)
@@ -1732,7 +1734,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         self,
         molecule: "Molecule",
         partial_charge_method: Optional[str] = None,
-        use_conformers: Optional[List[Quantity]] = None,
+        use_conformers: Optional[list[Quantity]] = None,
         strict_n_conformers: bool = False,
         normalize_partial_charges: bool = True,
         _cls=None,
@@ -1819,7 +1821,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         cls,
         molecule: "Molecule",
         conformer: Quantity,
-    ) -> Tuple[bool, Optional[str]]:
+    ) -> tuple[bool, Optional[str]]:
         """A function which checks if a particular conformer is known to be problematic
         when computing ELF partial charges.
 
@@ -1837,7 +1839,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             is, a string message explaing why. If the conformer is not problematic, the
             second return value will be none.
         """
-        from rdkit.Chem.rdMolTransforms import GetDihedralRad  # type: ignore[import]
+        from rdkit.Chem.rdMolTransforms import (  # type: ignore[import-untyped]
+            GetDihedralRad,
+        )
 
         # Create a copy of the molecule which contains only this conformer.
         molecule_copy = copy.deepcopy(molecule)
@@ -1864,7 +1868,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return False, None
 
     @classmethod
-    def _elf_prune_problematic_conformers(cls, molecule: "Molecule") -> List[Quantity]:
+    def _elf_prune_problematic_conformers(cls, molecule: "Molecule") -> list[Quantity]:
         """A function which attempts to remove conformers which are known to be
         problematic when computing ELF partial charges.
 
@@ -2020,10 +2024,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     def _elf_select_diverse_conformers(
         cls,
         molecule: "Molecule",
-        ranked_conformers: List[Quantity],
+        ranked_conformers: list[Quantity],
         limit: int,
         rms_tolerance: Quantity,
-    ) -> List[Quantity]:
+    ) -> list[Quantity]:
         """Attempt to greedily select a specified number conformers which are maximally
         diverse.
 
@@ -2852,7 +2856,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         smarts: str,
         aromaticity_model: str = "OEAroModel_MDL",
         unique: bool = False,
-    ) -> List[Tuple[int, ...]]:
+    ) -> list[tuple[int, ...]]:
         """Find all sets of atoms in the provided RDKit molecule that match the provided SMARTS string.
 
         Parameters
@@ -2956,7 +2960,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         smarts: str,
         aromaticity_model: str = "OEAroModel_MDL",
         unique: bool = False,
-    ) -> List[Tuple[int, ...]]:
+    ) -> list[tuple[int, ...]]:
         """
         Find all SMARTS matches for the specified molecule, using the specified aromaticity model.
 
@@ -3069,7 +3073,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Returns
         -------
-        undefined_atom_indices : List[int]
+        undefined_atom_indices : list[int]
             A list of atom indices that are chiral centers with undefined
             stereochemistry.
 
@@ -3107,7 +3111,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Returns
         -------
-        undefined_bond_indices : List[int]
+        undefined_bond_indices : list[int]
             A list of bond indices with undefined stereochemistry.
 
         See Also
@@ -3216,7 +3220,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     @staticmethod
     def _constrain_end_directions(
-        *values: int, bond_indices: List[int], flip_direction: Dict[int, bool]
+        *values: int, bond_indices: list[int], flip_direction: dict[int, bool]
     ) -> bool:
         """A constraint applied when mapping global E/Z stereochemistry into local RDKit
         bond directions that ensures that the 'left' bonds point in opposite directions
@@ -3234,8 +3238,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     @staticmethod
     def _constrain_rank(
         *values: int,
-        bond_indices: List[int],
-        flip_direction: Dict[int, bool],
+        bond_indices: list[int],
+        flip_direction: dict[int, bool],
         expected_stereo: str,
     ) -> bool:
         """A constraint applied when mapping global E/Z stereochemistry into local RDKit
@@ -3338,8 +3342,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # Collect lists of the indices of the bonds that appear to the 'left' of
             # and 'right' of the stereogenic bond so we can constrain their directions
             # so that all 'left' bonds do not, for example, point up.
-            constraints_ab: List[int] = []
-            constraints_cd: List[int] = []
+            constraints_ab: list[int] = []
+            constraints_cd: list[int] = []
 
             for index_pair, constraints_list in [
                 ((index_a, index_b), constraints_ab) for index_a in indices_a
