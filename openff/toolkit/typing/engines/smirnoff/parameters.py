@@ -1106,7 +1106,7 @@ class _ParameterAttributeHandler:
 
         # Otherwise, forward the search to the next class in the MRO.
         try:
-            return super().__getattr__(item)
+            return super().__getattr__(item)  # type: ignore[misc]
         except AttributeError as e:
             # If this fails because the next classes in the MRO do not
             # implement __getattr__(), then raise the standard Attribute error.
@@ -1220,7 +1220,7 @@ class _ParameterAttributeHandler:
         return attr_name in self._cosmetic_attribs
 
     @staticmethod
-    def _split_attribute_index(item):
+    def _split_attribute_index(item: str) -> tuple[str, Optional[int]]:
         """Split the attribute name from the final index.
 
         For example, the method takes 'k2' and returns the tuple ('k', 1).
@@ -1232,13 +1232,15 @@ class _ParameterAttributeHandler:
         if match is None:
             return item, None
 
-        index = match.group()  # This is a str.
-        attr_name = item[: -len(index)]
+        _index: str = match.group()  # This is a str.
+        attr_name = item[: -len(_index)]
         index = int(match.group()) - 1
         return attr_name, index
 
     @staticmethod
-    def _split_attribute_index_mapping(item):
+    def _split_attribute_index_mapping(
+        item: str,
+    ) -> tuple[str, Optional[int], Optional[int]]:
         """Split the attribute name from the final index.
 
         For example, the method takes 'k1_bondorder2' and returns the tuple ('k_bondorder', 0, 2).
@@ -1257,20 +1259,23 @@ class _ParameterAttributeHandler:
 
         # process indexed component
         match_indexed = re.search(i_match, indexed)
-        index = match_indexed.group()  # This is a str.
-        attr_name = indexed[: -len(index)]
-        index = int(index) - 1
+        assert match_indexed is not None
+        _index: str = match_indexed.group()
+        attr_name = indexed[: -len(_index)]
+        index = int(_index) - 1
 
         # process mapped component
         match_mapping = re.search(i_match, mapped)
-        key = match_mapping.group()  # This is a str.
-        attr_name = f"{attr_name}_{mapped[:-len(key)]}"
-        key = int(key)  # we don't subtract 1 here, because these are keys, not indices
+        assert match_mapping is not None
+        _key: str = match_mapping.group()
+        attr_name = f"{attr_name}_{mapped[:-len(_key)]}"
+        # we don't subtract 1 here, because these are keys, not indices
+        key = int(_key)
 
         return attr_name, index, key
 
     @staticmethod
-    def _split_attribute_mapping(item):
+    def _split_attribute_mapping(item: str) -> tuple[str, Optional[int]]:
         """Split the attribute name from the and its mapping.
 
         For example, the method takes 'k_foo2' and returns the tuple ('k_foo', 2).
@@ -1285,9 +1290,9 @@ class _ParameterAttributeHandler:
         if match_mapping is None:
             return item, None
 
-        key = match_mapping.group()
-        attr_name = item[: -len(key)]
-        key = int(key)
+        _key = match_mapping.group()
+        attr_name = item[: -len(_key)]
+        key = int(_key)
 
         return attr_name, key
 
@@ -1520,7 +1525,7 @@ class ParameterList(list):
             index = self.index(item)
         super().__delitem__(index)
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: Union[int, slice, str, "ParameterType"]):  # type: ignore[override]
         """
         Retrieve item by index or SMIRKS
 
@@ -1529,15 +1534,13 @@ class ParameterList(list):
         item
             SMIRKS or numerical index of item in this ParameterList
         """
-        if type(item) is int:
-            index = item
-        elif type(item) is slice:
-            index = item
+        if type(item) in (int, slice):
+            indexable_item: Union[int, slice] = item  # type: ignore[assignment]
         elif isinstance(item, str):
-            index = self.index(item)
-        elif isinstance(item, ParameterType) or issubclass(item, ParameterType):
+            indexable_item = self.index(item)
+        elif isinstance(item, ParameterType) or issubclass(type(item), ParameterType):
             raise ParameterLookupError("Lookup by instance is not supported")
-        return super().__getitem__(index)
+        return super().__getitem__(indexable_item)
 
     # TODO: Override __setitem__ and __del__ to ensure we can slice by SMIRKS as well
     # This is needed for pickling. See https://github.com/openforcefield/openff-toolkit/issues/411
@@ -1545,7 +1548,7 @@ class ParameterList(list):
     # TODO: Is there a cleaner way (getstate/setstate perhaps?) to allow FFs to be
     #       pickled?
     def __reduce__(self):
-        return (__class__, (list(self),), self.__dict__)
+        return (__class__, (list(self),), self.__dict__)  # type: ignore[name-defined]
 
     def __contains__(self, item):
         """Check to see if either Parameter or SMIRKS is contained in parameter list.
@@ -2021,7 +2024,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         # If a dict was passed, construct it; if a ParameterType was passed, do nothing
         if parameter_kwargs:
-            new_parameter = self._INFOTYPE(**parameter_kwargs)
+            new_parameter = self._INFOTYPE(**parameter_kwargs)  # type: ignore
         elif parameter:
             new_parameter = parameter
         else:
@@ -2046,11 +2049,11 @@ class ParameterHandler(_ParameterAttributeHandler):
                 after_index = self._index_of_parameter(key=after)
 
         if None not in (before, after):
-            if after_index > before_index:
+            if after_index > before_index:  # type: ignore[operator]
                 raise ValueError("before arg must be before after arg")
 
         if after is not None:
-            self._parameters.insert(after_index + 1, new_parameter)
+            self._parameters.insert(after_index + 1, new_parameter)  # type: ignore[operator]
         elif before is not None:
             self._parameters.insert(before_index, new_parameter)
         else:
@@ -2258,7 +2261,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             "`ParameterHandler`s no longer create OpenMM forces. Use `openff-interchange` instead."
         )
 
-    def to_dict(self, discard_cosmetic_attributes: bool = False) -> dict:
+    def to_dict(self, discard_cosmetic_attributes: bool = False) -> dict:  # type: ignore[override]
         """
         Convert this ParameterHandler to a dict, compliant with the SMIRNOFF data spec.
 

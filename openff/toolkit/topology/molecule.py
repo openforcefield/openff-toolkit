@@ -3977,7 +3977,7 @@ class FrozenMolecule(Serializable):
         )
 
         if isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit_registry = ToolkitRegistry([toolkit_registry])
+            toolkit_registry = ToolkitRegistry([type(toolkit_registry)])
 
         if isinstance(file_path, (str, io.TextIOWrapper)):
             pass
@@ -4383,7 +4383,7 @@ class FrozenMolecule(Serializable):
         cls: Type[FM],
         oemol,
         allow_undefined_stereo: bool = False,
-    ) -> "Molecule":
+    ) -> "FrozenMolecule":
         """
         Create a ``Molecule`` from an OpenEye molecule.
 

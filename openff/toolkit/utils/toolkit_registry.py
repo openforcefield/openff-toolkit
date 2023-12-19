@@ -86,7 +86,7 @@ class ToolkitRegistry:
         """
         self._toolkits = list()
 
-        toolkits_to_register: list[type[ToolkitWrapper]] = list()
+        toolkit_classes_to_register: list[type[ToolkitWrapper]] = list()
 
         if _register_imported_toolkit_wrappers:
             if toolkit_precedence is None:
@@ -99,13 +99,13 @@ class ToolkitRegistry:
             all_importable_toolkit_wrappers = all_subclasses(ToolkitWrapper)
             for toolkit in toolkit_precedence:
                 if toolkit in all_importable_toolkit_wrappers:
-                    toolkits_to_register.append(toolkit)
+                    toolkit_classes_to_register.append(toolkit)
         else:
             if toolkit_precedence is not None:
-                toolkits_to_register = toolkit_precedence
+                toolkit_classes_to_register = toolkit_precedence
 
-        if toolkits_to_register:
-            for toolkit in toolkits_to_register:
+        if toolkit_classes_to_register:
+            for toolkit in toolkit_classes_to_register:
                 self.register_toolkit(
                     toolkit_wrapper=toolkit,
                     exception_if_unavailable=exception_if_unavailable,
@@ -124,7 +124,7 @@ class ToolkitRegistry:
         -------
         toolkits
         """
-        return self._toolkits
+        return list(self._toolkits)
 
     @property
     def registered_toolkit_versions(self) -> dict[str, str]:
@@ -165,9 +165,12 @@ class ToolkitRegistry:
 
         """
         # Instantiate class if class, or just add if already instantiated.
-        if isinstance(toolkit_wrapper, type):
+        if isinstance(toolkit_wrapper, ToolkitWrapper):
+            self._toolkits.append(toolkit_wrapper)
+
+        elif issubclass(toolkit_wrapper, ToolkitWrapper):
             try:
-                _toolkit_wrapper = toolkit_wrapper()  # type: ignore[assignment]
+                _toolkit_wrapper = toolkit_wrapper()
 
             # This exception can be raised by OpenEyeToolkitWrapper
             except LicenseError as license_exception:
@@ -177,19 +180,16 @@ class ToolkitRegistry:
                     logger.warning(license_exception)
                 return
             except ToolkitUnavailableException:
-                msg = "Unable to load toolkit '{}'. ".format(
-                    _toolkit_wrapper._toolkit_name
-                )
                 if exception_if_unavailable:
-                    raise ToolkitUnavailableException(msg)
+                    raise ToolkitUnavailableException(
+                        "Unable to load toolkit '{_toolkit_wrapper._toolkit_name}'. "
+                    )
                 return
 
             self._toolkits.append(_toolkit_wrapper)
 
-        elif isinstance(toolkit_wrapper, ToolkitWrapper):
-            self._toolkits.append(toolkit_wrapper)
-
-            return
+        else:
+            raise ValueError(f"Given unexpected argument {type(toolkit_wrapper)=}")
 
     def deregister_toolkit(self, toolkit_wrapper: ToolkitWrapper):
         """
@@ -434,6 +434,7 @@ def toolkit_registry_manager(toolkit_registry: Union[ToolkitRegistry, ToolkitWra
         for toolkit in context_toolkits:
             GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(toolkit)
         for toolkit in original_toolkits:
+            print(len(original_toolkits), toolkit)
             GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit)
 
 

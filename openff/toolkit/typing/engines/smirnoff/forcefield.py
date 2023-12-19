@@ -850,8 +850,8 @@ class ForceField:
 
         smirnoff_data = dict()
         smirnoff_data["SMIRNOFF"] = l1_dict
-        smirnoff_data = convert_all_quantities_to_string(smirnoff_data)
-        return smirnoff_data
+
+        return convert_all_quantities_to_string(smirnoff_data)
 
     # TODO: Should we call this "from_dict"?
     def _load_smirnoff_data(

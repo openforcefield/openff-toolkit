@@ -26,7 +26,7 @@ __all__ = [
 import contextlib
 import functools
 import logging
-from typing import TYPE_CHECKING, Iterable, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Iterable, TypeVar, Union, overload
 
 import numpy
 import numpy as np
@@ -269,9 +269,30 @@ def convert_all_strings_to_quantity(
     return obj_to_return
 
 
+@overload
 def convert_all_quantities_to_string(
-    smirnoff_data: Union[dict, list, Quantity]
-) -> Union[str, list, dict]:
+    smirnoff_data: list[Quantity],
+) -> list[str]:
+    ...
+
+
+@overload
+def convert_all_quantities_to_string(
+    smirnoff_data: dict,
+) -> Union[list[str], dict[str, Any]]:
+    ...
+
+
+@overload
+def convert_all_quantities_to_string(
+    smirnoff_data: "Quantity",
+) -> Union[str, list[str], dict[str, Any]]:
+    ...
+
+
+def convert_all_quantities_to_string(
+    smirnoff_data: Union[dict, str, Quantity, list]
+) -> Union[str, dict[str, Any], list[str]]:
     """
     Traverses a SMIRNOFF data structure, attempting to convert all
     quantities into strings.
