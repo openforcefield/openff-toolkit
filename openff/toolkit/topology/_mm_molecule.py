@@ -9,7 +9,7 @@ TypedMolecule TODOs
   deserialize a Molecule or a TypedMolecule.
 
 """
-from typing import TYPE_CHECKING, Generator, NoReturn, Optional, Union
+from typing import TYPE_CHECKING, Generator, Iterable, NoReturn, Optional, Union
 
 from openff.units.elements import MASSES, SYMBOLS
 
@@ -269,6 +269,13 @@ class _SimpleMolecule:
 
         return molecule
 
+    def add_hierarchy_scheme(
+        self,
+        uniqueness_criteria: Iterable[str],
+        iterator_name: str,
+    ) -> NoReturn:
+        raise NotImplementedError()
+
     def to_dict(self) -> dict:
         molecule_dict = dict()
         special_serialization_logic = [
@@ -344,7 +351,7 @@ class _SimpleMolecule:
 
         hier_scheme_dicts = molecule_dict.pop("hierarchy_schemes")
         for iter_name, hierarchy_scheme_dict in hier_scheme_dicts.items():
-            new_hier_scheme = cls.add_hierarchy_scheme(
+            new_hier_scheme = molecule.add_hierarchy_scheme(  # type: ignore[var-annotated]
                 hierarchy_scheme_dict["uniqueness_criteria"],
                 iter_name,
             )
@@ -464,7 +471,7 @@ class _SimpleMolecule:
         """Generate unique atom names. See `Molecule.generate_unique_atom_names`."""
         from collections import defaultdict
 
-        element_counts = defaultdict(int)
+        element_counts: defaultdict[str, int] = defaultdict(int)
         for atom in self.atoms:
             symbol = SYMBOLS[atom.atomic_number]
             element_counts[symbol] += 1
@@ -522,7 +529,7 @@ class _SimpleAtom:
     @property
     def bonded_atoms(self):
         for bond in self._bonds:
-            for atom in [bond.atom1, bond.atom2]:
+            for atom in [bond.atom1, bond.atom2]:  # type: ignore[union-attr]
                 if atom is not self:
                     yield atom
 

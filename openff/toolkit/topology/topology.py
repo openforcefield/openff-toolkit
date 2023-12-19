@@ -156,7 +156,11 @@ class ValenceDict(_TransformedDict):
         return key
 
     @classmethod
-    def index_of(cls, key, possible=None):
+    def index_of(
+        cls,
+        key: Iterable[int],
+        possible: Optional[Iterable[Iterable[int]]] = None,
+    ) -> int:
         """
         Generates a canonical ordering of the equivalent permutations of ``key`` (equivalent rearrangements of indices)
         and identifies which of those possible orderings this particular ordering is. This method is useful when
@@ -169,14 +173,14 @@ class ValenceDict(_TransformedDict):
 
         Parameters
         ----------
-        key : iterable of int
+        key
             A valid key for ValenceDict
-        possible : iterable of iterable of int, optional. default=``None``
+        possible
             A subset of the possible orderings that this match might take.
 
         Returns
         -------
-        index : int
+        index
         """
         refkey = cls.key_transform(key)
         permutations = {refkey: 0, refkey[::-1]: 1}
@@ -332,14 +336,14 @@ class ImproperDict(_TransformedDict):
 
         Parameters
         ----------
-        key : iterable of int
+        key
             A valid key for ValenceDict
-        possible : iterable of iterable of int, optional. default=``None``
+        possible
             A subset of the possible orderings that this match might take.
 
         Returns
         -------
-        index : int
+        index
         """
         key = tuple(key)
         assert len(key) == 4
@@ -360,7 +364,7 @@ class ImproperDict(_TransformedDict):
             return permutations[key]
 
     def __keytransform__(self, key):
-        return __class__.key_transform(key)
+        return __class__.key_transform(key)  # type: ignore[name-defined]
 
 
 class Topology(Serializable):
@@ -402,13 +406,15 @@ class Topology(Serializable):
 
     """
 
+    _constrained_atom_pairs: dict[tuple[int, int], Union[Quantity, bool]]
+
     def __init__(self, other=None):
         """
         Create a new Topology.
 
         Parameters
         ----------
-        other : optional, default=None
+        other
             If specified, attempt to construct a copy of the Topology from the specified object.
             This might be a Topology object, or a file that can be used to construct a Topology object
             or serialized Topology object.
@@ -478,7 +484,7 @@ class Topology(Serializable):
         return combined
 
     @property
-    def unique_molecules(self) -> Iterator[Molecule]:
+    def unique_molecules(self) -> Iterator[Union[Molecule, _SimpleMolecule]]:
         """
         Get a list of chemically unique molecules in this Topology.
 
@@ -495,18 +501,20 @@ class Topology(Serializable):
         return len(self.identical_molecule_groups)
 
     @classmethod
-    def from_molecules(cls, molecules: Union[Molecule, list[Molecule]]) -> "Topology":
+    def from_molecules(
+        cls, molecules: Union[FrozenMolecule, list[FrozenMolecule]]
+    ) -> "Topology":
         """
         Create a new Topology object containing one copy of each of the specified molecule(s).
 
         Parameters
         ----------
-        molecules : Molecule or iterable of Molecules
+        molecules
             One or more molecules to be added to the Topology
 
         Returns
         -------
-        topology : Topology
+        topology
             The Topology created from the specified molecule(s)
         """
         # Ensure that we are working with an iterable
@@ -527,7 +535,7 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        atom1, atom2 : openff.toolkit.topology.Atom or int
+        atom1, atom2
             The atoms or atom topology indices to check to ensure they are bonded
 
         """
@@ -548,7 +556,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        aromaticity_model : str
+        aromaticity_model
             Aromaticity model in use.
         """
         return self._aromaticity_model
@@ -560,7 +568,7 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        aromaticity_model : str
+        aromaticity_model
             Aromaticity model to use. One of: ['OEAroModel_MDL']
         """
         if aromaticity_model not in ALLOWED_AROMATICITY_MODELS:
@@ -577,7 +585,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        box_vectors : unit-wrapped numpy array of shape (3, 3)
+        box_vectors
             The unit-wrapped box vectors of this topology
         """
         return self._box_vectors
@@ -589,7 +597,7 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        box_vectors : unit-wrapped numpy array of shape (3, 3)
+        box_vectors
             The unit-wrapped box vectors
 
         """
@@ -629,19 +637,19 @@ class Topology(Serializable):
         self._box_vectors = box_vectors
 
     @property
-    def is_periodic(self):
+    def is_periodic(self) -> bool:
         """Return whether or not this Topology is intended to be described with periodic
         boundary conditions."""
         return self.box_vectors is not None
 
     @is_periodic.setter
-    def is_periodic(self, is_periodic):
+    def is_periodic(self, is_periodic: bool):
         """
-        Set the partial charge model used for all molecules in the topology.
+        Set whether or not this topology is periodic.
 
         Parameters
         ----------
-        is_periodic : bool
+        is_periodic
             Whether or not this Topology is periodici
 
         """
@@ -657,12 +665,12 @@ class Topology(Serializable):
             )
 
     @property
-    def constrained_atom_pairs(self) -> dict[tuple[int], Union[Quantity, bool]]:
+    def constrained_atom_pairs(self) -> dict[tuple[int, int], Union[Quantity, bool]]:
         """Returns the constrained atom pairs of the Topology
 
         Returns
         -------
-        constrained_atom_pairs : dict of tuple[int]: Union[unit.Quantity, bool]
+        constrained_atom_pairs
              dictionary of the form {(atom1_topology_index, atom2_topology_index): distance}
         """
         return self._constrained_atom_pairs
@@ -678,7 +686,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        molecules : Iterable of Molecule
+        molecules
         """
         # Yields instead of returning the list itself. This prevents user from modifying the list
         # outside the Topology's knowledge. This is essential to make sure that atom index caches
@@ -686,13 +694,13 @@ class Topology(Serializable):
         for molecule in self._molecules:
             yield molecule
 
-    def molecule(self, index):
+    def molecule(self, index: int) -> Union[Molecule, _SimpleMolecule]:
         """
         Returns the molecule with a given index in this Topology.
 
         Returns
         -------
-        molecule : openff.toolkit.topology.Molecule
+        molecule
         """
         return self._molecules[index]
 
@@ -703,7 +711,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        n_atoms : int
+        n_atoms
         """
         n_atoms = 0
         for molecule in self.molecules:
@@ -716,7 +724,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        atoms : Generator of Atom
+        atoms
         """
         for molecule in self._molecules:
             for atom in molecule.atoms:
@@ -728,11 +736,11 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        atom : openff.toolkit.topology.Atom
+        atom
 
         Returns
         -------
-        index : int
+        index
             The index of the given atom in this topology
 
         Raises
@@ -756,11 +764,11 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        molecule : openff.toolkit.topology.FrozenMolecule
+        molecule
 
         Returns
         -------
-        index : int
+        index
             The index of the given molecule in this topology
 
         Raises
@@ -780,11 +788,11 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        molecule : openff.toolkit.topology.FrozenMolecule
+        molecule
 
         Returns
         -------
-        index : int
+        index
         """
         return self.atom_index(molecule.atoms[0])
 
@@ -795,7 +803,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        n_bonds : int
+        n_bonds
         """
         n_bonds = 0
         for molecule in self.molecules:
@@ -808,7 +816,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        bonds : Iterable of Bond
+        bonds
         """
         for molecule in self.molecules:
             for bond in molecule.bonds:
@@ -877,7 +885,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        smirnoff_impropers : Generator of tuples of Atom
+        smirnoff_impropers
             An iterator of tuples, each containing the Atom objects comprising
             up a possible improper torsion. The central atom is listed second in
             each tuple.
@@ -910,7 +918,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        amber_impropers : Generator of tuples of Atom
+        amber_impropers
             An iterator of tuples, each containing the Atom objects comprising
             up a possible improper torsion. The central atom is listed first in
             each tuple.
@@ -1011,15 +1019,15 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        query : str
+        query
             SMARTS string (with one or more tagged atoms)
-        aromaticity_model : str
+        aromaticity_model
             Override the default aromaticity model for this topology and use the specified aromaticity model instead.
             Allowed values: ['MDL']
 
         Returns
         -------
-        matches : list of Topology._ChemicalEnvironmentMatch
+        matches
             A list of tuples, containing the topology indices of the matching atoms.
 
         """
@@ -1043,7 +1051,7 @@ class Topology(Serializable):
             # Find all atomsets that match this definition in the reference molecule
             # This will automatically attempt to match chemically identical atoms in
             # a canonical order within the Topology
-            mol_matches = unique_mol.chemical_environment_matches(
+            mol_matches = unique_mol.chemical_environment_matches(  # type: ignore[union-attr]
                 smarts,
                 unique=unique,
                 toolkit_registry=toolkit_registry,
@@ -1146,7 +1154,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        identical_molecules : {int: (int, {int: int})}
+        identical_molecules
             A mapping from the index of each molecule in the topology to (the
             index of the first appearance of a chemically equivalent molecule in
             the topology, and a mapping from the atom indices of this molecule
@@ -1155,7 +1163,7 @@ class Topology(Serializable):
                 unique_molecule_idx, {molecule_atom_idx, unique_molecule_atom_idx}
             )``
         """
-        identity_maps: dict[int, tuple[int, dict[int, int]]] = dict()
+        identity_maps: dict[int, tuple] = dict()
         already_matched_mols = set()
 
         for mol1_idx in range(self.n_molecules):
@@ -1205,16 +1213,22 @@ class Topology(Serializable):
         other_dict = deepcopy(other.to_dict())
         self._initialize_from_dict(other_dict)
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         from openff.toolkit.utils.utils import serialize_numpy
 
-        return_dict = dict()
+        return_dict: dict[
+            str,
+            Union[
+                None, str, bytes, bool, tuple, list[dict], dict[tuple[int, int], str]
+            ],
+        ] = dict()
+
         return_dict["aromaticity_model"] = self._aromaticity_model
-        return_dict["constrained_atom_pairs"] = dict()
-        for constrained_atom_pair, distance in self._constrained_atom_pairs.items():
-            return_dict["constrained_atom_pairs"][
-                constrained_atom_pair
-            ] = quantity_to_string(distance)
+
+        return_dict["constrained_atom_pairs"] = {
+            constrained_atom_pair: quantity_to_string(distance)
+            for constrained_atom_pair, distance in self._constrained_atom_pairs.items()
+        }
 
         if self._box_vectors is None:
             return_dict["box_vectors"] = None
@@ -1230,7 +1244,9 @@ class Topology(Serializable):
                 )
             return_dict["box_vectors"] = box_vectors_serialized
             return_dict["box_vectors_unit"] = "nanometer"
+
         return_dict["molecules"] = [mol.to_dict() for mol in self._molecules]
+
         return return_dict
 
     @classmethod
@@ -1240,12 +1256,12 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        topology_dict : dict
+        topology_dict
             A dictionary representation of the topology.
 
         Returns
         -------
-        topology : Topology
+        topology
             A Topology created from the dictionary representation
 
         """
@@ -1614,25 +1630,25 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        file_path : str, Path, or file object
+        file_path
             PDB information to be passed to OpenMM PDBFile object for loading
-        unique_molecules : Iterable of Molecule. Default = None
+        unique_molecules
             OpenFF Molecule objects corresponding to the molecules in the input
             PDB. See above for details.
-        toolkit_registry : ToolkitRegistry. Default = None
+        toolkit_registry
             The ToolkitRegistry to use as the cheminformatics backend.
         _custom_substructures: dict[str, list[str]], Default = {}
             Experimental and unstable. Dictionary where keys are the names of new substructures
             (cannot overlap with existing amino acid names) and the values are the new substructure
             entries that follow the same format as those used in the amino acid substructure library
-        _additional_substructures : Iterable of Molecule, Default = None
+        _additional_substructures
             Experimental and unstable. Molecule with atom.metadata["substructure_atom"] =
             True or False for all atoms. Currently only stable for independent, standalone
             molecules not bonded to a larger protein/molecule. (For that use _custom_substructures)
 
         Returns
         -------
-        topology : openff.toolkit.topology.Topology
+        topology
 
         Raises
         ------
@@ -1777,7 +1793,10 @@ class Topology(Serializable):
         return topology
 
     @requires_package("openmm")
-    def to_openmm(self, ensure_unique_atom_names: Union[str, bool] = "residues"):
+    def to_openmm(
+        self,
+        ensure_unique_atom_names: Union[str, bool] = "residues",
+    ) -> "openmm.app.Topology":
         """
         Create an OpenMM Topology object.
 
@@ -1813,7 +1832,7 @@ class Topology(Serializable):
 
         Returns
         -------
-        openmm_topology : openmm.app.Topology
+        openmm_topology
             An OpenMM Topology object
         """
         # TODO: MT needs to write a virtual sites section of the Interchange user guide.
@@ -1966,7 +1985,7 @@ class Topology(Serializable):
         ----------
         file
             A file-like object to write to, or a path to save the file to.
-        positions : Array with shape ``(n_atoms, 3)`` and dimensions of length
+        positions
             May be a...
 
             - ``openmm.unit.Quantity`` object which has atomic positions as a
@@ -2060,7 +2079,7 @@ class Topology(Serializable):
         conformers = []
         for molecule in self.molecules:
             try:
-                conformer = molecule.conformers[0]
+                conformer = molecule.conformers[0]  # type: ignore[index]
             except (IndexError, TypeError):
                 return None
 
@@ -2180,7 +2199,7 @@ class Topology(Serializable):
         Create an MDTraj Topology object.
         Returns
         ----------
-        mdtraj_topology : mdtraj.Topology
+        mdtraj_topology
             An MDTraj Topology object
         """
         import mdtraj as md
@@ -2192,12 +2211,12 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        i, j : int or Atom
+        i, j
             Atoms or atom indices to check
 
         Returns
         -------
-        bond : Bond
+        bond
             The bond between i and j.
 
         """
@@ -2229,12 +2248,12 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        i, j : int or Atom
+        i, j
             Atoms or atom indices to check
 
         Returns
         -------
-        is_bonded : bool
+        is_bonded
             True if atoms are bonded, False otherwise.
 
         """
@@ -2250,7 +2269,7 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        atom_topology_index : int
+        atom_topology_index
              The index of the Atom in this Topology
 
         Returns
@@ -2301,7 +2320,7 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        bond_topology_index : int
+        bond_topology_index
              The index of the Bond in this Topology
 
         Returns
@@ -2337,7 +2356,7 @@ class Topology(Serializable):
 
     def _add_molecule_keep_cache(
         self,
-        molecule: Union[Molecule, _SimpleMolecule],
+        molecule: Union[FrozenMolecule, _SimpleMolecule],
     ) -> int:
         self._molecules.append(deepcopy(molecule))
         return len(self._molecules)
@@ -2350,10 +2369,10 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        iatom, jatom : Atom
+        iatom, jatom
             Atoms to mark as constrained
             These atoms may be bonded or not in the Topology
-        distance : unit-wrapped float, optional, default=True
+        distance
             Constraint distance
             ``True`` if distance has yet to be determined
             ``False`` if constraint is to be removed
@@ -2386,12 +2405,12 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        iatom, jatom : int
+        iatom, jatom
             Indices of atoms to mark as constrained.
 
         Returns
         -------
-        distance : unit-wrapped float or bool
+        distance
             True if constrained but constraints have not yet been applied
             Distance if constraint has already been added to Topology
 

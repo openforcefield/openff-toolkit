@@ -94,7 +94,7 @@ class Serializable(abc.ABC):
     """
 
     @abc.abstractmethod
-    def to_dict(self):
+    def to_dict(self) -> dict:
         pass
 
     @classmethod
@@ -110,12 +110,12 @@ class Serializable(abc.ABC):
 
         Parameters
         ----------
-        indent : int, optional, default=None
+        indent
             If not None, will pretty-print with specified number of spaces for indentation
 
         Returns
         -------
-        serialized : str
+        serialized
             A JSON serialized representation of the object
 
         """
@@ -137,12 +137,12 @@ class Serializable(abc.ABC):
 
         Parameters
         ----------
-        serialized : str
+        serialized
             A JSON serialized representation of the object
 
         Returns
         -------
-        instance : cls
+        instance
             An instantiated object
 
         """
@@ -160,7 +160,7 @@ class Serializable(abc.ABC):
 
         Returns
         -------
-        serialized : bytes
+        serialized
             A BSON serialized representation of the objecft
 
         """
@@ -179,12 +179,12 @@ class Serializable(abc.ABC):
 
         Parameters
         ----------
-        serialized : bytes
+        serialized
             A BSON serialized representation of the object
 
         Returns
         -------
-        instance : cls
+        instance
             An instantiated object
 
         """
@@ -202,7 +202,7 @@ class Serializable(abc.ABC):
 
         Returns
         -------
-        serialized : str
+        serialized
             A TOML serialized representation of the object
 
         """
@@ -223,12 +223,12 @@ class Serializable(abc.ABC):
 
         Parameters
         ----------
-        serlialized : str
+        serlialized
             A TOML serialized representation of the object
 
         Returns
         -------
-        instance : cls
+        instance
             An instantiated object
 
         """
@@ -246,7 +246,7 @@ class Serializable(abc.ABC):
 
         Returns
         -------
-        serialized : str
+        serialized
             A YAML serialized representation of the object
 
         """
@@ -265,12 +265,12 @@ class Serializable(abc.ABC):
 
         Parameters
         ----------
-        serialized : str
+        serialized
             A YAML serialized representation of the object
 
         Returns
         -------
-        instance : cls
+        instance
             Instantiated object
 
         """
@@ -288,7 +288,7 @@ class Serializable(abc.ABC):
 
         Returns
         -------
-        serialized : bytes
+        serialized
             A MessagePack-encoded bytes serialized representation of the object
 
         """
@@ -307,12 +307,12 @@ class Serializable(abc.ABC):
 
         Parameters
         ----------
-        serialized : bytes
+        serialized
             A MessagePack-encoded bytes serialized representation
 
         Returns
         -------
-        instance : cls
+        instance
             Instantiated object.
 
         """
@@ -329,12 +329,12 @@ class Serializable(abc.ABC):
 
         Parameters
         ----------
-        indent : int, optional, default=2
+        indent
             If not None, will pretty-print with specified number of spaces for indentation
 
         Returns
         -------
-        serialized : bytes
+        serialized
             A MessagePack-encoded bytes serialized representation.
 
         """
@@ -361,12 +361,12 @@ class Serializable(abc.ABC):
 
         Parameters
         ----------
-        serialized : bytes
+        serialized
             An XML serialized representation
 
         Returns
         -------
-        instance : cls
+        instance
             Instantiated object.
 
         """
@@ -389,7 +389,7 @@ class Serializable(abc.ABC):
 
         Returns
         -------
-        serialized : str
+        serialized
             A pickled representation of the object
 
         """
@@ -410,12 +410,12 @@ class Serializable(abc.ABC):
 
         Parameters
         ----------
-        serialized : str
+        serialized
             A pickled representation of the object
 
         Returns
         -------
-        instance : cls
+        instance
             An instantiated object
 
         """

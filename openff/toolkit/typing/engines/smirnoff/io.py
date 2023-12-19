@@ -11,9 +11,8 @@ __all__ = [
     "ParameterIOHandler",
     "XMLParameterIOHandler",
 ]
-
 import logging
-from typing import Optional
+from typing import Iterable, Optional
 
 import xmltodict
 
@@ -25,7 +24,7 @@ class ParameterIOHandler:
     Base class for handling serialization/deserialization of SMIRNOFF ForceField objects
     """
 
-    _FORMAT: Optional[str] = None
+    _FORMAT: str
 
     def __init__(self):
         """
@@ -131,14 +130,14 @@ class XMLParameterIOHandler(ParameterIOHandler):
         # Parse the data in string format.
         return self.parse_string(raw_data)
 
-    def parse_string(self, data):
+    def parse_string(self, data: str) -> dict:
         """Parse a SMIRNOFF force field definition in XML format.
 
         A ``SMIRNOFFParseError`` is raised if the XML cannot be processed.
 
         Parameters
         ----------
-        data : str
+        data
             A SMIRNOFF force field definition in `the SMIRNOFF XML format
             <https://openforcefield.github.io/standards/standards/smirnoff/#xml-representation>`_.
 
@@ -170,7 +169,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
         with open(file_path, "w") as of:
             of.write(xml_string)
 
-    def to_string(self, smirnoff_data):
+    def to_string(self, smirnoff_data: dict) -> str:
         """
         Write the current force field parameter set to an XML string.
 
@@ -186,7 +185,11 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
         """
 
-        def prepend_all_keys(d, char="@", ignore_keys=frozenset()):
+        def prepend_all_keys(
+            d: dict,
+            char: Optional[str] = "@",
+            ignore_keys: Iterable[str] = frozenset(),
+        ):
             """
             Modify a dictionary in-place, prepending a specified string to each key
             that doesn't refer to a value that is list or dict.

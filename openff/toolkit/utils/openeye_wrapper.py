@@ -22,7 +22,7 @@ from typing_extensions import TypeAlias
 from openff.toolkit import Quantity, unit
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Molecule, Bond, Atom
+    from openff.toolkit.topology.molecule import FrozenMolecule, Molecule, Bond, Atom
 
 from openff.units.elements import SYMBOLS
 
@@ -58,7 +58,7 @@ logger = logging.getLogger(__name__)
 TTA: TypeAlias = tuple[tuple[Any, ...], ...]
 
 
-def get_oeformat(file_format):
+def get_oeformat(file_format: str) -> str:
     from openeye import oechem
 
     file_format = file_format.upper()
@@ -194,7 +194,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Returns
         -------
-        all_installed : bool
+        all_installed
             ``True`` if all required OpenEye tools are installed and licensed,
             ``False`` otherwise
 
@@ -222,19 +222,19 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         obj,
         allow_undefined_stereo: bool = False,
         _cls=None,
-    ) -> "Molecule":
+    ) -> "FrozenMolecule":
         """
         Convert an OEMol (or OEMol-derived object) into an openff.toolkit.topology.molecule
 
         Parameters
         ----------
-        obj : A molecule-like object
+        obj
             An object to by type-checked.
-        allow_undefined_stereo : bool, default=False
+        allow_undefined_stereo
             Whether to accept molecules with undefined stereocenters. If False,
             an exception will be raised if a molecule with undefined stereochemistry
             is passed into this function.
-        _cls : class
+        _cls
             Molecule constructor
 
         Returns
@@ -280,14 +280,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         Parameters
         ----------
-        omm_top : openmm.app.Topology
+        omm_top
             OpenMM Topology loaded from PDB
-        substructure_library : dict{str:list[str, list[str]]}
+        substructure_library
             A dictionary of substructures. substructure_library[aa_name] = list[tagged SMARTS, list[atom_names]]
 
         Returns
         -------
-        oemol : oechem.OEMol
+        oemol
             a new molecule with charges and bond order added
         """
         from openeye import oechem
@@ -358,7 +358,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             # Some advanced error reporting needs to interpret the substructure smarts to do things like
             # compare atom counts. Since OFFTK doesn't have a native class to hold fragments, we convert
             # the smarts into a sorted list of symbols to help with generating the error message.
-            resname_to_symbols_and_atomnames = {}
+            resname_to_symbols_and_atomnames: dict[str, list[tuple]] = {}
             for resname, smarts_to_atom_names in substructure_library.items():
                 resname_to_symbols_and_atomnames[resname] = list()
                 for smarts, atom_names in smarts_to_atom_names.items():
@@ -432,25 +432,25 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         file_format: str,
         allow_undefined_stereo: bool = False,
         _cls=None,
-    ) -> list["Molecule"]:
+    ) -> list["FrozenMolecule"]:
         """
         Return an openff.toolkit.topology.Molecule from a file using this toolkit.
 
         Parameters
         ----------
-        file_path : str
+        file_path
             The file to read the molecule from
-        file_format : str
+        file_format
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
-        allow_undefined_stereo : bool, default=False
+        allow_undefined_stereo
             If false, raises an exception if oemol contains undefined stereochemistry.
-        _cls : class
+        _cls
             Molecule constructor
 
         Returns
         -------
-        molecules : list[Molecule]
+        molecules
             The list of ``Molecule`` objects in the file.
 
         Raises
@@ -503,19 +503,19 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        file_obj : file-like object
+        file_obj
             The file-like object to read the molecule from
-        file_format : str
+        file_format
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for details.
-        allow_undefined_stereo : bool, default=False
+        allow_undefined_stereo
             If false, raises an exception if oemol contains undefined stereochemistry.
-        _cls : class
+        _cls
             Molecule constructor
 
         Returns
         -------
-        molecules : list[Molecule]
+        molecules
             The list of Molecule objects in the file object.
 
         Raises
@@ -541,7 +541,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : an OpenFF Molecule
+        molecule
             The molecule to write
         file_obj
             The file-like object to write to
@@ -571,7 +571,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : an OpenFF Molecule
+        molecule
             The molecule to write
         file_path
             The file path to write to.
@@ -644,12 +644,12 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        oemol : openeye.oechem.OEMolBase
+        oemol
             The molecule to process
 
         Returns
         -------
-        charges_are_present : bool
+        charges_are_present
             Whether charges are present in the SD file. This is necessary because OEAtoms
             have a default partial charge of 0.0, which makes truly zero-charge molecules
             (eg "N2", "Ar"...) indistinguishable from molecules for which partial charges
@@ -679,20 +679,20 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        oemolistream : oechem.oemolistream
+        oemolistream
             The OEMol input stream to read from.
-        allow_undefined_stereo : bool
+        allow_undefined_stereo
             If false, raises an exception if oemol contains undefined stereochemistry.
-        file_path : str, optional
+        file_path
             The path to the mol2 file. This is used exclusively to make
             the error message more meaningful when the mol2 files doesn't
             use Tripos atom types.
-        _cls : class
+        _cls
             Molecule constructor
 
         Returns
         -------
-        molecules : list[Molecule]
+        molecules
             The list of Molecule objects in the stream.
 
         """
@@ -812,8 +812,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         return offmol_w_stereo_and_aro
 
     def enumerate_protomers(
-        self, molecule: "Molecule", max_states: int = 10
-    ) -> list["Molecule"]:
+        self, molecule: "FrozenMolecule", max_states: int = 10
+    ) -> list["FrozenMolecule"]:
         """
         Enumerate the formal charges of a molecule to generate different protomoers.
 
@@ -852,11 +852,11 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def enumerate_stereoisomers(
         self,
-        molecule: "Molecule",
+        molecule: "FrozenMolecule",
         undefined_only: bool = False,
         max_isomers: int = 20,
         rationalise: bool = True,
-    ) -> list["Molecule"]:
+    ) -> list["FrozenMolecule"]:
         """
         Enumerate the stereocenters and bonds of the current molecule.
 
@@ -913,8 +913,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         return molecules[:max_isomers]
 
     def enumerate_tautomers(
-        self, molecule: "Molecule", max_states: int = 20
-    ) -> list["Molecule"]:
+        self, molecule: "FrozenMolecule", max_states: int = 20
+    ) -> list["FrozenMolecule"]:
         """
         Enumerate the possible tautomers of the current molecule
 
@@ -969,9 +969,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : openff.toolkit.topology.molecule.Molecule
+        molecule
             The loaded molecule.
-        file_path : str, optional
+        file_path
             The path to the mol2 file. This is used exclusively to make
             the error message more meaningful.
 
@@ -1008,14 +1008,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        oemol : openeye.oechem.OEMolBase
+        oemol
             The molecule of interest
-        oeatom : openeye.oechem.OEAtomBase
+        oeatom
             The atom whose stereochemistry is to be computed
 
         Returns
         -------
-        stereochemistry : str
+        stereochemistry
             'R', 'S', or None if no stereochemistry is specified or the atom is not a stereocenter
         """
         from openeye import oechem
@@ -1043,14 +1043,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        oemol : openeye.oechem.OEMolBase
+        oemol
             The molecule of interest
-        oebond : openeye.oechem.OEBondBase
+        oebond
             The bond whose stereochemistry is to be computed
 
         Returns
         -------
-        stereochemistry : str
+        stereochemistry
             'E', 'Z', or None if stereochemistry is unspecified or the bond is not a stereo bond
 
         """
@@ -1075,7 +1075,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         oemol,
         allow_undefined_stereo: bool = False,
         _cls=None,
-    ) -> "Molecule":
+    ) -> "FrozenMolecule":
         """
         Create a Molecule from an OpenEye molecule. If the OpenEye molecule has
         implicit hydrogens, this function will make them explicit.
@@ -1096,16 +1096,16 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        oemol : openeye.oechem.OEMol
+        oemol
             An OpenEye molecule
-        allow_undefined_stereo : bool, default=False
+        allow_undefined_stereo
             If false, raises an exception if oemol contains undefined stereochemistry.
-        _cls : class
+        _cls
             Molecule constructor
 
         Returns
         -------
-        molecule : openff.toolkit.topology.Molecule
+        molecule
             An OpenFF molecule
 
         Examples
@@ -1487,7 +1487,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         return oemol, off_to_oe_idx
 
     def to_openeye(
-        self, molecule: "Molecule", aromaticity_model: str = DEFAULT_AROMATICITY_MODEL
+        self,
+        molecule: "FrozenMolecule",
+        aromaticity_model: str = DEFAULT_AROMATICITY_MODEL,
     ):
         """
         Create an OpenEye molecule using the specified aromaticity model
@@ -1513,14 +1515,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : openff.toolkit.topology.molecule.Molecule object
+        molecule
             The molecule to convert to an OEMol
-        aromaticity_model : str, optional, default=DEFAULT_AROMATICITY_MODEL
+        aromaticity_model
             The aromaticity model to use
 
         Returns
         -------
-        oemol : openeye.oechem.OEMol
+        oemol
             An OpenEye molecule
 
         Examples
@@ -1605,7 +1607,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         assert None not in oemol_bonds
 
         # Retain conformations, if present
-        if molecule.n_conformers != 0:
+        if molecule._conformers is not None:
             oemol.DeleteConfs()
             for conf in molecule._conformers:
                 # OE needs a 1 x (3*n_Atoms) double array as input
@@ -1649,12 +1651,12 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        atom : openff.toolkit.topology.molecule.Atom
+        atom
             The molecule containing the atom of interest
 
         Returns
         -------
-        is_in_ring : bool
+        is_in_ring
             Whether or not the atom is in a ring.
 
         Raises
@@ -1683,12 +1685,12 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        bond : openff.toolkit.topology.molecule.Bond
+        bond
             The molecule containing the atom of interest
 
         Returns
         -------
-        is_in_ring : bool
+        is_in_ring
             Whether or not the bond of index `bond_index` is in a ring
 
         Raises
@@ -1715,7 +1717,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return is_in_ring
 
-    def _get_smiles_flavor(self, isomeric, explicit_hydrogens):
+    def _get_smiles_flavor(self, isomeric: bool, explicit_hydrogens: bool) -> int:
         from openeye import oechem
 
         # this sets up the default settings following the old DEFAULT flag
@@ -1754,13 +1756,13 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : An openff.toolkit.topology.Molecule
+        molecule
             The molecule to convert into a SMILES.
-        isomeric: bool optional, default= True
+        isomeric
             return an isomeric smiles
-        explicit_hydrogens: bool optional, default=True
+        explicit_hydrogens
             return a smiles string containing all hydrogens explicitly
-        mapped: bool optional, default=False
+        mapped
             return a explicit hydrogen mapped smiles, the atoms to be mapped can be controlled by supplying an
             atom map into the properties dictionary. If no mapping is passed all atoms will be mapped in order, else
             an atom map dictionary from the current atom index to the map id should be supplied with no duplicates.
@@ -1768,7 +1770,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Returns
         -------
-        smiles : str
+        smiles
             The SMILES of the input molecule.
         """
         from openeye import oechem
@@ -1823,10 +1825,10 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : An openff.toolkit.topology.Molecule
+        molecule
             The molecule to convert into a SMILES.
 
-        fixed_hydrogens: bool, default=False
+        fixed_hydrogens
             If a fixed hydrogen layer should be added to the InChI, if `True` this
             will produce a non standard specific InChI string of the molecule.
 
@@ -1860,16 +1862,16 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : An openff.toolkit.topology.Molecule
+        molecule
             The molecule to convert into a SMILES.
 
-        fixed_hydrogens: bool, default=False
+        fixed_hydrogens
             If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a non standard specific
             InChI string of the molecule.
 
         Returns
         --------
-        inchi_key: str
+        inchi_key
             The InChIKey representation of the molecule.
         """
 
@@ -1892,12 +1894,12 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : An openff.toolkit.topology.Molecule
+        molecule
             The molecule to convert into a SMILES.
 
         Returns
         -------
-        iupac_name : str
+        iupac_name
             IUPAC name of the molecule
 
         Examples
@@ -1917,7 +1919,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return oeiupac.OECreateIUPACName(oemol)
 
-    def canonical_order_atoms(self, molecule: "Molecule") -> "Molecule":
+    def canonical_order_atoms(self, molecule: "FrozenMolecule") -> "FrozenMolecule":
         """
         Canonical order the atoms in the molecule using the OpenEye toolkit.
 
@@ -1928,7 +1930,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
          Returns
         -------
-        molecule : openff.toolkit.topology.Molecule
+        molecule
             The input molecule, with canonically-indexed atoms and bonds.
         """
 
@@ -1972,7 +1974,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         allow_undefined_stereo: bool = False,
         _cls=None,
         name: str = "",
-    ) -> "Molecule":
+    ) -> "FrozenMolecule":
         """
         Create a Molecule from a SMILES string using the OpenEye toolkit.
 
@@ -1980,27 +1982,27 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        smiles : str
+        smiles
             The SMILES string to turn into a molecule
-        hydrogens_are_explicit : bool, default = False
+        hydrogens_are_explicit
             If False, OE will perform hydrogen addition using OEAddExplicitHydrogens
-        allow_undefined_stereo : bool, default=False
+        allow_undefined_stereo
             Whether to accept SMILES with undefined stereochemistry. If False,
             an exception will be raised if a SMILES with undefined stereochemistry
             is passed into this function.
-        _cls : class
+        _cls
             Molecule constructor
-        name : str, default=""
+        name
             An optional name for the output molecule
 
         Returns
         -------
-        molecule : openff.toolkit.topology.Molecule
+        molecule
             An OpenFF style molecule.
 
         Raises
         ------
-        RadicalsNotSupportedError : If any atoms in the OpenEye molecule contain radical electrons.
+        RadicalsNotSupportedError
         """
         from openeye import oechem
 
@@ -2040,26 +2042,26 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         allow_undefined_stereo: bool = False,
         _cls=None,
         name: str = "",
-    ) -> "Molecule":
+    ) -> "FrozenMolecule":
         """
         Construct a Molecule from a InChI representation
 
         Parameters
         ----------
-        inchi : str
+        inchi
             The InChI representation of the molecule.
-        allow_undefined_stereo : bool, default=False
+        allow_undefined_stereo
             Whether to accept InChI with undefined stereochemistry. If False,
             an exception will be raised if a InChI with undefined stereochemistry
             is passed into this function.
-        _cls : class
+        _cls
             Molecule constructor
-        name : str, default=""
+        name
             An optional name for the output molecule
 
         Returns
         -------
-        molecule : openff.toolkit.topology.Molecule
+        molecule
         """
 
         from openeye import oechem
@@ -2085,25 +2087,29 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         return molecule
 
     def from_iupac(
-        self, iupac_name: str, allow_undefined_stereo: bool = False, _cls=None, **kwargs
-    ) -> "Molecule":
+        self,
+        iupac_name: str,
+        allow_undefined_stereo: bool = False,
+        _cls=None,
+        **kwargs,
+    ) -> "FrozenMolecule":
         """
         Construct a Molecule from an IUPAC name
 
         Parameters
         ----------
-        iupac_name : str
+        iupac_name
             The IUPAC or common name of the molecule.
-        allow_undefined_stereo : bool, default=False
+        allow_undefined_stereo
             Whether to accept a molecule name with undefined stereochemistry. If False,
             an exception will be raised if a molecule name with undefined stereochemistry
             is passed into this function.
-        _cls : class
+        _cls
             Molecule constructor
 
         Returns
         -------
-        molecule : openff.toolkit.topology.Molecule
+        molecule
 
         """
         from openeye import oechem, oeiupac
@@ -2146,14 +2152,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : a :class:`Molecule`
+        molecule
             The molecule to generate conformers for.
-        n_conformers : int, default=1
+        n_conformers
             The maximum number of conformers to generate.
-        rms_cutoff : unit-wrapped float, in units of distance, optional, default=None
+        rms_cutoff
             The minimum RMS value at which two conformers are considered redundant and one is deleted.
             If None, the cutoff is set to 1 Angstrom
-        clear_existing : bool, default=True
+        clear_existing
             Whether to overwrite existing conformers for the molecule
         make_carboxylic_acids_cis: bool, default=False
             Guarantee all conformers have exclusively cis carboxylic acid groups (COOH)
@@ -2197,7 +2203,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         if clear_existing:
             molecule._conformers = list()
 
-        for conformer in molecule2._conformers:
+        for conformer in molecule2._conformers:  # type: ignore[union-attr]
             molecule._add_conformer(conformer)
 
         if make_carboxylic_acids_cis:
@@ -2321,25 +2327,25 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : openff.toolkit.topology.Molecule
+        molecule
             Molecule for which partial charges are to be computed
-        partial_charge_method : str, optional, default=None
+        partial_charge_method
             The charge model to use. One of ['amberff94', 'mmff', 'mmff94', 'am1-mulliken', 'am1bcc',
             'am1bccnosymspt', 'am1bccelf10', 'gasteiger']
             If None, 'am1-mulliken' will be used.
-        use_conformers : iterable of unit-wrapped numpy arrays, each with
+        use_conformers
             shape (n_atoms, 3) and dimension of distance. Optional, default = None
             Coordinates to use for partial charge calculation. If None, an appropriate number
             of conformers will be generated.
-        strict_n_conformers : bool, default=False
+        strict_n_conformers
             Whether to raise an exception if an invalid number of conformers is provided for the
             given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised.
-        normalize_partial_charges : bool, default=True
+        normalize_partial_charges
             Whether to offset partial charges so that they sum to the total formal charge of the molecule.
             This is used to prevent accumulation of rounding errors when the partial charge generation method has
             low precision.
-        _cls : class
+        _cls
             Molecule constructor
 
         Raises
@@ -2529,18 +2535,18 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : openff.toolkit.topology.molecule Molecule
+        molecule
             The molecule to assign wiberg bond orders to
-        bond_order_model : str, optional, default=None
+        bond_order_model
             The charge model to use. One of ['am1-wiberg', 'am1-wiberg-elf10',
             'pm3-wiberg', 'pm3-wiberg-elf10']. If None, 'am1-wiberg' will be used.
-        use_conformers : iterable of unit-wrapped np.array with shape (n_atoms, 3) and
+        use_conformers
             dimension of distance, optional, default=None
             The conformers to use for fractional bond order calculation. If None, an
             appropriate number of conformers will be generated by an available
             ToolkitWrapper. If the chosen ``bond_order_model`` is an ELF variant, the ELF
             conformer selection method will be applied to the provided conformers.
-        _cls : class
+        _cls
             Molecule constructor
         """
         from openeye import oechem, oequacpac
@@ -2647,14 +2653,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        smarts : str
+        smarts
             The tagged SMARTS to analyze
 
         Returns
         -------
-        unique_tags : tuple of int
+        unique_tags
             A sorted tuple of all unique tagged atom map indices.
-        tagged_atom_connectivity : tuple of tuples of int, shape n_tagged_bonds x 2
+        tagged_atom_connectivity
             A tuple of tuples, where each inner tuple is a pair of tagged atoms
             (tag_idx_1, tag_idx_2) which are bonded. The inner tuples are ordered
             smallest-to-largest, and the tuple of tuples is ordered lexically. The
@@ -2702,22 +2708,22 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        oemol : openeye.oechem.OEMol or similar
+        oemol
             oemol to process with the SMIRKS in order to find matches
-        smarts : str
+        smarts
             SMARTS string with any number of sequentially tagged atoms.
             If there are N tagged atoms numbered 1..N, the resulting matches will be N-tuples of
             atoms that match the corresponding tagged atoms.
-        aromaticity_model : str, optional, default="OEAroModel_MDL"
+        aromaticity_model
             The aromaticity model to use. Only OEAroModel_MDL is supported.
             Molecule is prepared with this aromaticity model prior to querying.
-        unique : bool, default=False
+        unique
             If True, only return unique matches. If False, return all matches. This is passed to
             OpenEye's ``OESubSearch`` as ``uniquematch``.
 
         Returns
         -------
-        matches : list of tuples of atoms indices within the ``oemol``
+        matches
             matches[index] is an N-tuple of atom numbers from the ``oemol``
             Matches are returned in no guaranteed order.
             # TODO: What is returned if no matches are found? An empty list, or None?
@@ -2800,13 +2806,13 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : openff.toolkit.topology.Molecule
+        molecule
             The molecule for which all specified SMARTS matches are to be located
-        smarts : str
+        smarts
             SMARTS string with optional SMIRKS-style atom tagging
-        aromaticity_model : str, optional, default="OEAroModel_MDL"
+        aromaticity_model
             The aromaticity model to use. Only OEAroModel_MDL is supported.
-        unique : bool, default=False
+        unique
             If True, only return unique matches. If False, return all matches.
 
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
