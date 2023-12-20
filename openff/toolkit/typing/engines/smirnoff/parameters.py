@@ -1419,14 +1419,17 @@ class ParameterList(list):
 
     # TODO: Allow retrieval by `id` as well
 
-    def __init__(self, input_parameter_list=None):
+    def __init__(
+        self,
+        input_parameter_list: Optional[list["ParameterType"]] = None,
+    ):
         """
         Initialize a new ParameterList, optionally providing a list of ParameterType objects
         to initially populate it.
 
         Parameters
         ----------
-        input_parameter_list: list[ParameterType], default=None
+        input_parameter_list
             A pre-existing list of ParameterType-based objects. If None, this ParameterList
             will be initialized empty.
         """

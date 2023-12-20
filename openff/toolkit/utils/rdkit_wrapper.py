@@ -623,7 +623,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             Currently invalid (bond orders and charge) Molecule
         substructure_library
             A dictionary of substructures. substructure_library[aa_name] = list[tagged SMARTS, list[atom_names]]
-        toolkit_registry = ToolkitWrapper or ToolkitRegistry. Default = None
+        toolkit_registry
             Either a ToolkitRegistry, ToolkitWrapper
 
         Returns
@@ -1285,21 +1285,21 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule: openff.toolkit.topology.Molecule
+        molecule
             The molecule whose state we should enumerate
 
-        undefined_only: bool optional, default=False
+        undefined_only
             If we should enumerate all stereocenters and bonds or only those with undefined stereochemistry
 
-        max_isomers: int optional, default=20
+        max_isomers
             The maximum amount of molecules that should be returned
 
-        rationalise: bool optional, default=True
+        rationalise
             If we should try to build and rationalise the molecule to ensure it can exist
 
         Returns
         --------
-        molecules: list[openff.toolkit.topology.Molecule]
+        molecules
             A list of openff.toolkit.topology.Molecule instances
 
         """
@@ -1346,15 +1346,15 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule: openff.toolkit.topology.Molecule
+        molecule
             The molecule whose state we should enumerate
 
-        max_states: int optional, default=20
+        max_states
             The maximum amount of molecules that should be returned
 
         Returns
         -------
-        molecules: list[openff.toolkit.topology.Molecule]
+        molecules
             A list of openff.toolkit.topology.Molecule instances not including the input molecule.
         """
 
@@ -1387,7 +1387,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule: openff.toolkit.topology.Molecule
+        molecule
             The input molecule
 
          Returns
@@ -1683,7 +1683,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             Whether to overwrite existing conformers for the molecule.
         _cls
             Molecule constructor
-        make_carboxylic_acids_cis: bool, default=False
+        make_carboxylic_acids_cis
             Guarantee all conformers have exclusively cis carboxylic acid groups (COOH)
             by rotating the proton in any trans carboxylic acids 180 degrees around the C-O bond.
 
@@ -2747,13 +2747,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         molecule
             The molecule to convert into a SMILES.
 
-        fixed_hydrogens: bool, default=False
+        fixed_hydrogens
             If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a
             non standard specific InChI string of the molecule.
 
         Returns
         --------
-        inchi: str
+        inchi
             The InChI string of the molecule.
         """
 
@@ -2779,13 +2779,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         molecule
             The molecule to convert into a SMILES.
 
-        fixed_hydrogens: bool, default=False
+        fixed_hydrogens
             If a fixed hydrogen layer should be added to the InChI, if `True` this will
             produce a non standard specific InChI string of the molecule.
 
         Returns
         --------
-        inchi_key: str
+        inchi_key
             The InChIKey representation of the molecule.
         """
 

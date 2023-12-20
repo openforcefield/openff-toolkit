@@ -260,7 +260,7 @@ class ForceField:
             This option is primarily intended for force field development.
         allow_cosmetic_attributes
             Whether to retain non-spec kwargs from data sources.
-        load_plugins: bool, optional. Default = False
+        load_plugins
             Whether to load ``ParameterHandler`` classes which have been registered
             by installed plugins.
 
@@ -637,7 +637,7 @@ class ForceField:
 
         Returns
         -------
-            registered_parameter_handlers: iterable of names of ParameterHandler objects in this ForceField
+            registered_parameter_handlers
 
         """
         return [*self._parameter_handlers.keys()]

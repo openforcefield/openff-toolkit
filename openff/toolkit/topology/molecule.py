@@ -292,7 +292,7 @@ class Atom(Particle):
 
         Parameters
         ----------
-        bond: an openff.toolkit.topology.molecule.Bond
+        bond
             A bond involving this atom
         """
 
@@ -519,7 +519,7 @@ class Atom(Particle):
 
         Parameters
         ----------
-        atom2: openff.toolkit.topology.molecule.Atom
+        atom2
             a different atom in the same molecule
 
         Returns
@@ -546,7 +546,7 @@ class Atom(Particle):
 
         Parameters
         ----------
-        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry
             :class:`ToolkitRegistry` to use to enumerate the tautomers.
 
         """
@@ -819,12 +819,12 @@ class Bond(Serializable):
 
         Parameters
         ----------
-        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry
             :class:`ToolkitRegistry` to use to enumerate the tautomers.
 
         Returns
         -------
-        is_in_ring: bool
+        is_in_ring
             Whether or not this bond is in a ring.
 
         """
@@ -1119,7 +1119,6 @@ class FrozenMolecule(Serializable):
             Tagged SMARTS with a single atom with index 1. Any matches for this atom will have any assigned
             stereocheistry information removed.
         toolkit_registry
-            default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for I/O operations
 
         """
@@ -1599,11 +1598,11 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        isomeric: bool optional, default= True
+        isomeric
             return an isomeric smiles
-        explicit_hydrogens: bool optional, default=True
+        explicit_hydrogens
             return a smiles string containing all hydrogens explicitly
-        mapped: bool optional, default=False
+        mapped
             return a explicit hydrogen mapped smiles, the atoms to be mapped can be controlled by supplying an
             atom map into the properties dictionary. If no mapping is passed all atoms will be mapped in order, else
             an atom map dictionary from the current atom index to the map id should be supplied with no duplicates.
@@ -1676,7 +1675,6 @@ class FrozenMolecule(Serializable):
             is passed into this function.
 
         toolkit_registry
-            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for InChI-to-molecule conversion
 
         name
@@ -1736,7 +1734,6 @@ class FrozenMolecule(Serializable):
             specific InChI string of the molecule.
 
         toolkit_registry
-            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for molecule-to-InChI conversion
 
         Returns
@@ -1784,7 +1781,6 @@ class FrozenMolecule(Serializable):
             InChI string of the molecule.
 
         toolkit_registry
-            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for molecule-to-InChIKey conversion
 
         Returns
@@ -2010,13 +2006,12 @@ class FrozenMolecule(Serializable):
             If ``False``, bonds' stereochemistry is ignored for the
             purpose of determining isomorphism.
 
-        strip_pyrimidal_n_atom_stereo: bool, default=True, optional
+        strip_pyrimidal_n_atom_stereo
             If ``True``, any stereochemistry defined around pyrimidal
             nitrogen stereocenters will be disregarded in the isomorphism
             check.
 
         toolkit_registry
-            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for
             removing stereochemistry from pyrimidal nitrogens.
 
@@ -2176,15 +2171,15 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        other: openff.toolkit.topology.Molecule or nx.Graph()
+        other
 
-        aromatic_matching: bool, default=True, optional
+        aromatic_matching
         compare the aromatic attributes of bonds and atoms.
 
-        formal_charge_matching: bool, default=True, optional
+        formal_charge_matching
         compare the formal charges attributes of the atoms.
 
-        bond_order_matching: bool, deafult=True, optional
+        bond_order_matching
         compare the bond order on attributes of the bonds.
 
         atom_stereochemistry_matching
@@ -2195,13 +2190,12 @@ class FrozenMolecule(Serializable):
             If ``False``, bonds' stereochemistry is ignored for the
             purpose of determining equality.
 
-        strip_pyrimidal_n_atom_stereo: bool, default=True, optional
+        strip_pyrimidal_n_atom_stereo
             If ``True``, any stereochemistry defined around pyrimidal
             nitrogen stereocenters will be disregarded in the isomorphism
             check.
 
         toolkit_registry
-            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for
             removing stereochemistry from pyrimidal nitrogens.
 
@@ -2246,7 +2240,6 @@ class FrozenMolecule(Serializable):
         Parameters
         ----------
         toolkit_registry
-            openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         n_conformers
             The maximum number of conformers to produce
@@ -2256,7 +2249,7 @@ class FrozenMolecule(Serializable):
             default value for each ``ToolkitWrapper`` (generally 1 Angstrom).
         clear_existing
             Whether to overwrite existing conformers for the molecule
-        make_carboxylic_acids_cis: bool, default=True
+        make_carboxylic_acids_cis
             Guarantee all conformers have exclusively cis carboxylic acid groups (COOH)
             by rotating the proton in any trans carboxylic acids 180 degrees around the
             C-O bond. Works around a bug in conformer generation by the OpenEye toolkit
@@ -2343,7 +2336,6 @@ class FrozenMolecule(Serializable):
         Parameters
         ----------
         toolkit_registry
-            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         """
 
@@ -2697,12 +2689,10 @@ class FrozenMolecule(Serializable):
         Parameters
         ----------
         toolkit_registry
-            openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=None
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
         bond_order_model
             The bond order model to use for fractional bond order calculation. If ``None``, ``"am1-wiberg"`` is used.
         use_conformers
-            optional, default=None
             The conformers to use for fractional bond order calculation. If ``None``, an appropriate number
             of conformers will be generated by an available ``ToolkitWrapper``.
 
@@ -2821,11 +2811,10 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        ignore_functional_groups: optional, list[str], default=None,
+        ignore_functional_groups
             A list of bond SMARTS patterns to be ignored when finding rotatable bonds.
 
-        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry
-            or openff.toolkit.utils.toolkits.ToolkitWrapperl, optional, default=None
+        toolkit_registry
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMARTS matching
 
         Returns
@@ -3037,13 +3026,13 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        coordinates: openff.unit.Quantity(np.array) with shape (n_atoms, 3) and dimension of distance
+        coordinates
             Coordinates of the new conformer, with the first dimension of the array corresponding to the atom index in
             the molecule's indexing system.
 
         Returns
         -------
-        index: int
+        index
             The index of this conformer
         """
         if coordinates.shape != (self.n_atoms, 3):
@@ -3436,7 +3425,7 @@ class FrozenMolecule(Serializable):
 
         Returns
         -------
-        neighbors: iterator of tuple of Atom
+        neighbors
             tuples (len 2) of atom that are separated by ``n`` bonds.
 
         Notes
@@ -3553,7 +3542,6 @@ class FrozenMolecule(Serializable):
         unique
             Whether to return unique matches
         toolkit_registry
-            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for chemical environment matches
 
         Returns
@@ -3617,7 +3605,6 @@ class FrozenMolecule(Serializable):
         iupac_name
             IUPAC name of molecule to be generated
         toolkit_registry
-            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for chemical environment matches
         allow_undefined_stereo
             If false, raises an exception if molecule contains undefined stereochemistry.
@@ -3778,7 +3765,6 @@ class FrozenMolecule(Serializable):
             Note that not all toolkits support all formats. Check ToolkitWrapper.toolkit_file_read_formats for your
             loaded toolkits for details.
         toolkit_registry
-            openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for file loading. If a Toolkit is passed, only
             the highest-precedence toolkit is used
         allow_undefined_stereo
@@ -4115,7 +4101,6 @@ class FrozenMolecule(Serializable):
             Format specifier, one of ['MOL2', 'MOL2H', 'SDF', 'PDB', 'SMI', 'CAN', 'TDT']
             Note that not all toolkits support all formats
         toolkit_registry
-            or openff.toolkit.utils.toolkits.ToolkitWrapper, optional, default=GLOBAL_TOOLKIT_REGISTRY
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for file writing. If a Toolkit is passed,
             only the highest-precedence toolkit is used
 
@@ -4184,16 +4169,15 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        max_states: int optional, default=20
+        max_states
             The maximum amount of molecules that should be returned
 
-        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry
-            or openff.toolkit.utils.toolkits.ToolkitWrapper, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use to enumerate the tautomers.
 
         Returns
         -------
-        molecules: list[openff.toolkit.topology.Molecule]
+        molecules
             A list of openff.toolkit.topology.Molecule instances not including the input molecule.
         """
 
@@ -4226,22 +4210,21 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        undefined_only: bool optional, default=False
+        undefined_only
             If we should enumerate all stereocenters and bonds or only those with undefined stereochemistry
 
-        max_isomers: int optional, default=20
+        max_isomers
             The maximum amount of molecules that should be returned
 
-        rationalise: bool optional, default=True
+        rationalise
             If we should try to build and rationalise the molecule to ensure it can exist
 
-        toolkit_registry: openff.toolkit.utils.toolkits.ToolkitRegistry or
-            lopenff.toolkit.utils.toolkits.ToolkitWrapper, default=GLOBAL_TOOLKIT_REGISTRY
+        toolkit_registry
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use to enumerate the stereoisomers.
 
         Returns
         --------
-        molecules: list[openff.toolkit.topology.Molecule]
+        molecules
             A list of :class:`Molecule` instances not including the input molecule.
 
         """
@@ -4277,12 +4260,12 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        max_states: int optional, default=10,
+        max_states
             The maximum number of protomer states to be returned.
 
         Returns
         -------
-        molecules: list[openff.toolkit.topology.Molecule],
+        molecules
             A list of the protomers of the input molecules not including the input.
         """
 
@@ -4796,7 +4779,7 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        file_path: str
+        file_path
             PDB file path
         smiles
             a valid smiles string for the pdb, used for stereochemistry, formal charges, and bond order
@@ -5153,7 +5136,7 @@ class FrozenMolecule(Serializable):
                 self._bonded_atoms[atom1].add(atom2)
                 self._bonded_atoms[atom2].add(atom1)
 
-    def _is_bonded(self, atom_index_1, atom_index_2):
+    def _is_bonded(self, atom_index_1: int, atom_index_2: int) -> bool:
         """Return True if atoms are bonded, False if not.
 
         Parameters
@@ -5400,7 +5383,7 @@ class Molecule(FrozenMolecule):
 
         Returns
         -------
-        index: int
+        index
             The index of this conformer
         """
 
@@ -5601,7 +5584,7 @@ class Molecule(FrozenMolecule):
         substructure_file_path
             Path to substructure library file in JSON format. Defaults to using
             built-in substructure file.
-        strict_chirality: bool, optional, default=True
+        strict_chirality
             Whether to use strict chirality symbols (stereomarks) for
             substructure matchings with SMARTS.
         """
@@ -5782,7 +5765,7 @@ def _nth_degree_neighbors_from_graphlike(
 
     Returns
     -------
-    neighbors: iterator of tuple of Atom
+    neighbors
         tuples (len 2) of atom that are separated by ``n`` bonds.
     """
     graph = graphlike.to_networkx()

@@ -66,9 +66,9 @@ class ParameterIOHandler:
 
         Parameters
         ----------
-        file_path : str
+        file_path
             The path to the file to write to.
-        smirnoff_data : dict
+        smirnoff_data
             A dictionary structured in compliance with the SMIRNOFF spec
 
         Returns
@@ -83,7 +83,7 @@ class ParameterIOHandler:
 
         Parameters
         ----------
-        smirnoff_data : dict
+        smirnoff_data
             A dictionary structured in compliance with the SMIRNOFF spec
 
         Returns
@@ -106,7 +106,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
         Parameters
         ----------
-        source : str or io.RawIOBase
+        source
             File path of file-like object implementing a ``read()`` method
             specifying a SMIRNOFF force field definition in `the SMIRNOFF XML format
             <https://openforcefield.github.io/standards/standards/smirnoff/#xml-representation>`_.
@@ -158,10 +158,10 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
         Parameters
         ----------
-        file_path : str
+        file_path
             The path to the file to be written.
             The `.offxml` or `.xml` file extension must be present.
-        smirnoff_data : dict
+        smirnoff_data
             A dict structured in compliance with the SMIRNOFF data spec.
 
         """
@@ -175,12 +175,12 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
         Parameters
         ----------
-        smirnoff_data : dict
+        smirnoff_data
             A dictionary structured in compliance with the SMIRNOFF spec
 
         Returns
         -------
-        serialized_forcefield : str
+        serialized_forcefield
             XML String representation of this force field.
 
         """
@@ -196,11 +196,11 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
             Parameters
             ----------
-            d : dict
+            d
                 Hierarchical dictionary to traverse and modify keys
-            char : string, optional. Default='@'
+            char
                 String to prepend onto each applicable dictionary key
-            ignore_keys : iterable of str
+            ignore_keys
                 A set or list of strings, indicating keys not to prepend in the data structure
 
             """

@@ -183,7 +183,7 @@ def string_to_unit(unit_string):
 
     Returns
     -------
-    output_unit: openff.units.unit.Quantity
+    output_unit
         The deserialized unit from the string
     """
     return Unit(unit_string)

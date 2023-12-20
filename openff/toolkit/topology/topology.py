@@ -2073,7 +2073,7 @@ class Topology(Serializable):
         topology. To change the positions, use :meth:`Topology.set_positions`.
 
         See Also
-        ========
+        --------
         set_positions
         """
         conformers = []
@@ -2098,14 +2098,14 @@ class Topology(Serializable):
         in the topology; it must be passed again to ``set_positions()``.
 
         Parameters
-        ==========
+        ----------
 
         array
             Positions for the topology. Should be a unit-wrapped array-like
             object with shape (n_atoms, 3) and dimensions of length.
 
         See Also
-        ========
+        --------
         get_positions
         """
         if not isinstance(array, Quantity):
@@ -2433,15 +2433,15 @@ class Topology(Serializable):
         the connectivity in the ``Topology``.
 
         Parameters
-        ==========
+        ----------
 
-        ensure_correct_connectivity: bool, default=False
+        ensure_correct_connectivity
             If ``True``, the visualization will be guaranteed to reflect the
             connectivity in the ``Topology``. Note that this will severely
             degrade performance, especially for topologies with many atoms.
 
         Examples
-        ========
+        --------
 
         Visualize a complex PDB file
 

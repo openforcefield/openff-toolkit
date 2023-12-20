@@ -3,10 +3,15 @@ Built-in ToolkitWrapper for very basic functionality. Intended for testing and n
 """
 __all__ = ("BuiltInToolkitWrapper",)
 
-from openff.toolkit import unit
+from typing import TYPE_CHECKING, Optional
+
+from openff.toolkit import Quantity, unit
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.exceptions import ChargeMethodUnavailableError
 from openff.toolkit.utils.utils import inherit_docstrings
+
+if TYPE_CHECKING:
+    from openff.toolkit.topology.molecule import FrozenMolecule
 
 
 @inherit_docstrings
@@ -31,12 +36,12 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def assign_partial_charges(
         self,
-        molecule,
-        partial_charge_method=None,
-        use_conformers=None,
-        strict_n_conformers=False,
-        normalize_partial_charges=True,
-        _cls=None,
+        molecule: "FrozenMolecule",
+        partial_charge_method: Optional[str] = None,
+        use_conformers: Optional[Quantity] = None,
+        strict_n_conformers: bool = False,
+        normalize_partial_charges: bool = True,
+        _cls: Optional[type] = None,
     ):
         """
 
@@ -48,25 +53,25 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : openff.toolkit.topology.Molecule
+        molecule
             Molecule for which partial charges are to be computed
-        partial_charge_method: str, optional, default=None
+        partial_charge_method
             The charge model to use. One of ['zeros', 'formal_charge']. If None, 'formal_charge'
             will be used.
-        use_conformers : iterable of unit-wrapped numpy arrays, each with shape
+        use_conformers
             (n_atoms, 3) and dimension of distance. Optional, default = None
             Coordinates to use for partial charge calculation. If None, an appropriate number
             of conformers will be generated.
-        strict_n_conformers : bool, default=False
+        strict_n_conformers
             Whether to raise an exception if an invalid number of conformers is provided for the
             given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised
             instead of an Exception.
-        normalize_partial_charges : bool, default=True
+        normalize_partial_charges
             Whether to offset partial charges so that they sum to the total formal charge of the molecule.
             This is used to prevent accumulation of rounding errors when the partial charge generation method has
             low precision.
-        _cls : class
+        _cls
             Molecule constructor
 
         Raises
@@ -127,9 +132,7 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
         elif partial_charge_method == "formal_charge":
             partial_charges = [float(atom.formal_charge.m) for atom in molecule.atoms]
 
-        molecule.partial_charges = unit.Quantity(
-            partial_charges, unit.elementary_charge
-        )
+        molecule.partial_charges = Quantity(partial_charges, unit.elementary_charge)
 
         if normalize_partial_charges:
             molecule._normalize_partial_charges()
