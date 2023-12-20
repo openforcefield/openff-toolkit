@@ -9,16 +9,7 @@ TypedMolecule TODOs
   deserialize a Molecule or a TypedMolecule.
 
 """
-from typing import (
-    TYPE_CHECKING,
-    Dict,
-    Generator,
-    List,
-    NoReturn,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import TYPE_CHECKING, Generator, NoReturn, Optional, Union
 
 from openff.units.elements import MASSES, SYMBOLS
 
@@ -227,7 +218,7 @@ class _SimpleMolecule:
         return self.to_hill_formula()
 
     def to_hill_formula(self) -> str:
-        atom_nums: List[int] = [atom.atomic_number for atom in self.atoms]
+        atom_nums: list[int] = [atom.atomic_number for atom in self.atoms]
 
         if min(atom_nums) < 0:
             return "INVALID"
@@ -278,7 +269,7 @@ class _SimpleMolecule:
 
         return molecule
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         molecule_dict = dict()
         special_serialization_logic = [
             "atoms",
@@ -419,7 +410,7 @@ class _SimpleMolecule:
         mol1: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"],
         mol2: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"],
         return_atom_map: bool = False,
-    ) -> Tuple[bool, Optional[Dict[int, int]]]:
+    ) -> tuple[bool, Optional[dict[int, int]]]:
         import networkx
 
         _cls = _SimpleMolecule
@@ -489,7 +480,7 @@ class _SimpleAtom:
             self.metadata = AtomMetadataDict(metadata)
         self._atomic_number = atomic_number
         self._molecule = molecule
-        self._bonds: List[Optional[_SimpleBond]] = list()
+        self._bonds: list[Optional[_SimpleBond]] = list()
         for key, val in kwargs.items():
             setattr(self, key, val)
 
@@ -539,8 +530,8 @@ class _SimpleAtom:
     def molecule_atom_index(self) -> int:
         return self.molecule.atoms.index(self)
 
-    def to_dict(self) -> Dict[str, Union[Dict, str, int]]:
-        atom_dict: Dict[str, Union[Dict, str, int]] = dict()
+    def to_dict(self) -> dict[str, Union[dict, str, int]]:
+        atom_dict: dict[str, Union[dict, str, int]] = dict()
         atom_dict["metadata"] = dict(self.metadata)
         atom_dict["atomic_number"] = self._atomic_number
 
@@ -555,7 +546,7 @@ class _SimpleAtom:
         return atom_dict
 
     @classmethod
-    def from_dict(cls, atom_dict: Dict):
+    def from_dict(cls, atom_dict: dict):
         atom = cls(atomic_number=atom_dict["atomic_number"])
         # TODO: Metadata
         return atom
@@ -574,7 +565,7 @@ class _SimpleBond:
             setattr(self, key, val)
 
     @property
-    def atoms(self) -> List[_SimpleAtom]:
+    def atoms(self) -> list[_SimpleAtom]:
         return [self.atom1, self.atom2]
 
     @property
@@ -585,7 +576,7 @@ class _SimpleBond:
     def atom2_index(self) -> int:
         return self.atom2.molecule_atom_index
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         bond_dict = dict()
         bond_dict["atom1_index"] = self.atom1.molecule_atom_index
         bond_dict["atom2_index"] = self.atom2.molecule_atom_index
