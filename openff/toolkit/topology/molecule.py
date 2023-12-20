@@ -42,7 +42,6 @@ from typing import (
     Optional,
     Sequence,
     TextIO,
-    Type,
     TypeVar,
     Union,
     overload,
@@ -312,7 +311,7 @@ class Atom(Particle):
         }
 
     @classmethod
-    def from_dict(cls: Type[A], atom_dict: dict) -> A:
+    def from_dict(cls: type[A], atom_dict: dict) -> A:
         """Create an Atom from a dict representation."""
         return cls(**atom_dict)
 
@@ -706,7 +705,7 @@ class Bond(Serializable):
         }
 
     @classmethod
-    def from_dict(cls: Type[B], molecule: FM, d: dict) -> B:  # type: ignore[override]
+    def from_dict(cls: type[B], molecule: FM, d: dict) -> B:  # type: ignore[override]
         """Create a Bond from a dict representation."""
         # TODO: This is not used anywhere (`Molecule._initialize_bonds_from_dict()` just calls grabs
         #       the two atoms and calls `Molecule._add_bond`). Remove or change that?
@@ -1655,7 +1654,7 @@ class FrozenMolecule(Serializable):
 
     @classmethod
     def from_inchi(
-        cls: Type[FM],
+        cls: type[FM],
         inchi: str,
         allow_undefined_stereo: bool = False,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
@@ -1811,7 +1810,7 @@ class FrozenMolecule(Serializable):
 
     @classmethod
     def from_smiles(
-        cls: Type[FM],
+        cls: type[FM],
         smiles: str,
         hydrogens_are_explicit: bool = False,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
@@ -3590,7 +3589,7 @@ class FrozenMolecule(Serializable):
 
     @classmethod
     def from_iupac(
-        cls: Type[FM],
+        cls: type[FM],
         iupac_name: str,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         allow_undefined_stereo: bool = False,
@@ -3684,7 +3683,7 @@ class FrozenMolecule(Serializable):
         return result
 
     @classmethod
-    def from_topology(cls: Type[FM], topology) -> FM:
+    def from_topology(cls: type[FM], topology) -> FM:
         """Return a Molecule representation of an OpenFF Topology containing a single Molecule object.
 
         Parameters
@@ -3742,7 +3741,7 @@ class FrozenMolecule(Serializable):
 
     @classmethod
     def from_file(
-        cls: Type[FM],
+        cls: type[FM],
         file_path: Union[str, pathlib.Path, TextIO],
         file_format=None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
@@ -3895,7 +3894,7 @@ class FrozenMolecule(Serializable):
     @classmethod
     @requires_package("openmm")
     def from_polymer_pdb(
-        cls: Type[FM],
+        cls: type[FM],
         file_path: Union[str, pathlib.Path, TextIO],
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
         name: str = "",
@@ -4277,7 +4276,7 @@ class FrozenMolecule(Serializable):
     @classmethod
     @RDKitToolkitWrapper.requires_toolkit()
     def from_rdkit(
-        cls: Type[FM],
+        cls: type[FM],
         rdmol,
         allow_undefined_stereo: bool = False,
         hydrogens_are_explicit: bool = False,
@@ -4363,7 +4362,7 @@ class FrozenMolecule(Serializable):
     @classmethod
     @OpenEyeToolkitWrapper.requires_toolkit()
     def from_openeye(
-        cls: Type[FM],
+        cls: type[FM],
         oemol,
         allow_undefined_stereo: bool = False,
     ) -> "FrozenMolecule":
@@ -4488,7 +4487,7 @@ class FrozenMolecule(Serializable):
 
     @classmethod
     def from_mapped_smiles(
-        cls: Type[FM],
+        cls: type[FM],
         mapped_smiles: str,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         allow_undefined_stereo: bool = False,
