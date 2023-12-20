@@ -434,7 +434,6 @@ def toolkit_registry_manager(toolkit_registry: Union[ToolkitRegistry, ToolkitWra
         for toolkit in context_toolkits:
             GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(toolkit)
         for toolkit in original_toolkits:
-            print(len(original_toolkits), toolkit)
             GLOBAL_TOOLKIT_REGISTRY.register_toolkit(toolkit)
 
 

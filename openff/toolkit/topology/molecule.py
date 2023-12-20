@@ -3078,6 +3078,7 @@ class FrozenMolecule(Serializable):
         try:
             tmp_conf[:] = coordinates
         except AttributeError as e:
+            # TODO: Make this a warning, log it, or do something other than print
             print(e)
 
         if self._conformers is None:
@@ -4741,6 +4742,7 @@ class FrozenMolecule(Serializable):
                 if "id" in mol:
                     initial_ids[mol["id"]] = offmol.n_conformers - 1
             except InvalidConformerError:
+                # TODO: Make this a warning, or log it, or something other than print
                 print(
                     "Invalid conformer for this molecule, the geometry could not be attached."
                 )
