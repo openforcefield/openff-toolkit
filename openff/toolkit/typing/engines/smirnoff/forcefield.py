@@ -586,6 +586,9 @@ class ForceField:
             registration.
 
         """
+        if not parameter_handler._TAGNAME:
+            raise ValueError("Handler's `_TAGNAME` must not be `None`.")
+
         tagname = parameter_handler._TAGNAME
         if tagname in self._parameter_handlers.keys():
             raise ParameterHandlerRegistrationError(
@@ -843,7 +846,9 @@ class ForceField:
             l1_dict["Date"] = self._date
 
         for parameter_handler in self._parameter_handlers.values():
-            handler_tag = parameter_handler._TAGNAME
+            # If _TAGNAME is None, the default value, an error should have been
+            # thrown upon registering it, so assume it is str here
+            handler_tag: str = parameter_handler._TAGNAME  # type: ignore[assignment]
             l1_dict[handler_tag] = parameter_handler.to_dict(
                 discard_cosmetic_attributes=discard_cosmetic_attributes
             )

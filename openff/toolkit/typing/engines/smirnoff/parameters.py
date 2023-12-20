@@ -1772,7 +1772,7 @@ class ParameterHandler(_ParameterAttributeHandler):
     """
 
     # str of section type handled by this ParameterHandler (XML element name for SMIRNOFF XML representation)
-    _TAGNAME: str
+    _TAGNAME: Optional[str] = None
     # container class with type information that will be stored in self._parameters
     _INFOTYPE: Optional[Any] = None
     # list of ParameterHandler classes that must precede this, or None
@@ -2568,7 +2568,7 @@ class AngleHandler(ParameterHandler):
         ------
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
-        string_attrs_to_compare = tuple("potential")
+        string_attrs_to_compare = ("potential",)
         self._check_attributes_are_equal(
             other_handler, identical_attrs=string_attrs_to_compare
         )
@@ -3291,8 +3291,8 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
 
-        int_attrs_to_compare = tuple("number_of_conformers")
-        string_attrs_to_compare = tuple("partial_charge_method")
+        int_attrs_to_compare = ("number_of_conformers",)
+        string_attrs_to_compare = ("partial_charge_method",)
 
         self._check_attributes_are_equal(
             other_handler,
@@ -3645,7 +3645,7 @@ class VirtualSiteHandler(_NonbondedHandler):
     def check_handler_compatibility(self, other_handler: "VirtualSiteHandler"):
         self._check_attributes_are_equal(
             other_handler,
-            identical_attrs=tuple("exclusion_policy"),
+            identical_attrs=("exclusion_policy",),
         )
 
     def _index_of_parameter(
