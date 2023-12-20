@@ -24,6 +24,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Improved documentation and warnings
 
 - [PR #1732](https://github.com/openforcefield/openff-toolkit/pull/1732): Add documentation describing the use of PDB files with the toolkit.
+- [PR #1796](https://github.com/openforcefield/openff-toolkit/pull/1796): Update docs tooling and fix warnings
 
 ## 0.14.5
 
