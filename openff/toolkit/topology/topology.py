@@ -1687,7 +1687,7 @@ class Topology(Serializable):
         import openmm.unit as openmm_unit
         from openmm.app import PDBFile
 
-        if isinstance(file_path, (str, io.TextIOWrapper)):
+        if isinstance(file_path, (str, io.TextIOBase)):
             pass
         elif isinstance(file_path, Path):
             file_path = file_path.as_posix()
