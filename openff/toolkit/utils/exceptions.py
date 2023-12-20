@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, DefaultDict, Dict, List, Mapping, Optional, Set, Tuple
+from typing import TYPE_CHECKING, DefaultDict, Mapping, Optional
 
 if TYPE_CHECKING:
     from openmm.app import Atom as OpenMMAtom
@@ -399,16 +399,16 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
     def __init__(
         self,
         msg: Optional[str] = None,
-        substructure_library: Optional[Dict[str, Tuple[str, List[str]]]] = None,
+        substructure_library: Optional[dict[str, tuple[str, list[str]]]] = None,
         omm_top: Optional["OpenMMTopology"] = None,
-        unassigned_bonds: Optional[List[Tuple[int, int]]] = None,
-        unassigned_atoms: Optional[List[int]] = None,
-        matches: Optional[DefaultDict[int, List[str]]] = None,
+        unassigned_bonds: Optional[list[tuple[int, int]]] = None,
+        unassigned_atoms: Optional[list[int]] = None,
+        matches: Optional[DefaultDict[int, list[str]]] = None,
     ):
         if omm_top is not None:
             self.omm_top = omm_top
-            self._atoms: List["OpenMMAtom"] = list(omm_top.atoms())
-            self._bonds: List[Tuple["OpenMMAtom", "OpenMMAtom"]] = list(omm_top.bonds())
+            self._atoms: list["OpenMMAtom"] = list(omm_top.atoms())
+            self._bonds: list[tuple["OpenMMAtom", "OpenMMAtom"]] = list(omm_top.bonds())
 
         if not (substructure_library):
             substructure_library = {}
@@ -446,7 +446,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
         else:
             return f"{chain}:{name}#{num:0>4}"
 
-    def unassigned_atoms_err(self) -> List[str]:
+    def unassigned_atoms_err(self) -> list[str]:
         if self.unassigned_atoms and self.omm_top:
             return [
                 (
@@ -463,7 +463,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
             ]
         return []
 
-    def unassigned_bonds_err(self) -> List[str]:
+    def unassigned_bonds_err(self) -> list[str]:
         if not (self.unassigned_bonds and self.unassigned_atoms and self.omm_top):
             return []
 
@@ -499,7 +499,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
             ]
         return []
 
-    def missing_hydrogens_hint(self) -> List[str]:
+    def missing_hydrogens_hint(self) -> list[str]:
         if self.omm_top and all(atom.element.symbol != "H" for atom in self._atoms):
             return [
                 "Hint: There are no hydrogens in the input. The OpenFF Toolkit "
@@ -510,7 +510,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
             ]
         return []
 
-    def unknown_residue_hint(self) -> List[str]:
+    def unknown_residue_hint(self) -> list[str]:
         if self.substructure_library and self.omm_top:
             unassigned_resnames = [
                 self._atoms[i].residue.name for i in self.unassigned_atoms
@@ -551,7 +551,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
                 ]
         return []
 
-    def multiple_chains_hint(self) -> List[str]:
+    def multiple_chains_hint(self) -> list[str]:
         # Only raise this error if we're in Molecule.from_polymer_pdb,
         # since Topology.from_pdb DOES accept multiple
         # chains. We can tell the difference because
@@ -571,14 +571,14 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
 
         return []
 
-    def assigned_residue_name_mismatch_hint(self) -> List[str]:
+    def assigned_residue_name_mismatch_hint(self) -> list[str]:
         from collections import defaultdict
 
         if not self.matches:
             return []
 
         # Construct a map from input residues to assigned resnames
-        residues: Mapping[Tuple[str, str, str], Set[str]] = defaultdict(set)
+        residues: Mapping[tuple[str, str, str], set[str]] = defaultdict(set)
         for atom in self.omm_top.atoms():
             input_resname: str = atom.residue.name
             input_resnum: str = atom.residue.id
@@ -625,14 +625,14 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
 
         return []
 
-    def mismatched_atom_names_hint(self) -> List[str]:
+    def mismatched_atom_names_hint(self) -> list[str]:
         from collections import defaultdict
 
         if not (self.omm_top and self.substructure_library):
             return []
 
         # Collect all the unassigned atoms by residue
-        unassigned_residues: Mapping[OpenMMResidue, List[OpenMMAtom]] = defaultdict(
+        unassigned_residues: Mapping[OpenMMResidue, list[OpenMMAtom]] = defaultdict(
             list
         )
         for i in self.unassigned_atoms:
