@@ -38,6 +38,7 @@ __all__ = (
     "OpenEyeToolkitWrapper",
     "RDKitToolkitWrapper",
     "AmberToolsToolkitWrapper",
+    "NAGLToolkitWrapper",
     "BuiltInToolkitWrapper",
     "ChargeMethodUnavailableError",
     "IncorrectNumConformersError",
@@ -85,6 +86,7 @@ from openff.toolkit.utils.exceptions import (
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
+from openff.toolkit.utils.nagl_wrapper import NAGLToolkitWrapper
 from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
 from openff.toolkit.utils.toolkit_registry import (
