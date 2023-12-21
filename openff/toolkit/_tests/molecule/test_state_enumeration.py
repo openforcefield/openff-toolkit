@@ -5,7 +5,7 @@ from openff.toolkit._tests.utils import requires_openeye
 from openff.toolkit.utils.toolkits import OpenEyeToolkitWrapper, RDKitToolkitWrapper
 
 
-class TestMoleculeStateEnumeration:
+class TestTautomerEnumeration:
     tautomer_data = [
         {"molecule": "Oc1c(cccc3)c3nc2ccncc12", "tautomers": 2},
         {"molecule": "CN=c1nc[nH]cc1", "tautomers": 2},
@@ -77,6 +77,8 @@ class TestMoleculeStateEnumeration:
         else:
             pytest.skip("Required toolkit is unavailable")
 
+
+class TestProtomerEnumeration:
     @requires_openeye
     def test_enumerating_no_protomers(self):
         """Make sure the input molecule is returned when there is only one protomers."""
@@ -108,6 +110,26 @@ class TestMoleculeStateEnumeration:
         unique_protomers = set(protomers)
         assert len(protomers) == len(unique_protomers)
 
+    def test_tetracarboxylic_acid(self):
+        acid = Molecule.from_smiles("C(C(=O)O)(C(=O)O)=C(C(=O)O)(C(=O)O)")
+
+        protomers = acid.enumerate_protomers()
+
+        assert len(protomers) == 16
+        assert acid in protomers
+
+    @pytest.mark.slow
+    @requires_openeye
+    def test_many_protomers(self):
+        acid = Molecule.from_smiles(5 * "C(C(=O)O)(C(=O)O)")
+
+        protomers = acid.enumerate_protomers()
+
+        assert acid in protomers
+        assert len(protomers) == 6400
+
+
+class TestStereoisomerEnumeration:
     @pytest.mark.parametrize(
         "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
     )
