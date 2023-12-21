@@ -59,10 +59,10 @@ class ValidatedList(list):
         ----------
         seq : Iterable
             A sequence of elements.
-        converter : callable or List[callable]
+        converter : callable or list[callable]
             Functions that will be used to convert each new element of
             the list.
-        validator : callable or List[callable]
+        validator : callable or list[callable]
             Functions that will be used to convert each new element of
             the list.
 
@@ -183,10 +183,10 @@ class ValidatedDict(dict):
         ----------
         mapping : Mapping
             A mapping of elements, probably a dict.
-        converter : callable or List[callable]
+        converter : callable or list[callable]
             Functions that will be used to convert each new element of
             the dict.
-        validator : callable or List[callable]
+        validator : callable or list[callable]
             Functions that will be used to convert each new element of
             the dict.
 

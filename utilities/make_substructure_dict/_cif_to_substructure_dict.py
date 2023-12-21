@@ -14,8 +14,7 @@ from rdkit import Chem
 from CifFile import ReadCif
 from openff.units.elements import SYMBOLS
 
-import openff
-from openff.toolkit.topology import Molecule
+from openff.toolkit import Molecule
 from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
 
 _SYMBOL_TO_ATOMIC_NUMBER = {v: k for k, v in SYMBOLS.items()}
@@ -169,18 +168,18 @@ class CifSubstructures:
             Atom symbol to atomic number (key, value) dictionary.
         """
         # Is this de-duplicated? i.e. can it be ["C", "C", "H"] or only ["C", "H"] ?
-        atom_symbol_list: List[str] = cif_entry["_chem_comp_atom.type_symbol"]
+        atom_symbol_list: list[str] = cif_entry["_chem_comp_atom.type_symbol"]
 
         # Is this dict a de-duplicated mapping between element symbols and atomic numbers
         # for the elements in this cif file? If so, can maybe do it in one step
         """
-        symbol_to_num_dict: Dict[str, int] = {
+        symbol_to_num_dict: dict[str, int] = {
             symbol: atomic_number for atomic_number, symbol in SYMBOLS.items() if atomic_number in
             cif_entry["_chem_comp_atom.type_symbol"]
         }
         """
 
-        symbol_to_num_dict: Dict[str, int] = {
+        symbol_to_num_dict: dict[str, int] = {
             symbol: _SYMBOL_TO_ATOMIC_NUMBER[symbol] for symbol in atom_symbol_list
         }
 
@@ -320,7 +319,7 @@ class CifSubstructures:
 
     def _get_smiles(
         self,
-        mol: openff.toolkit.topology.molecule.Molecule,
+        mol: Molecule,
         indices: list = [],
         label_indices: list = [],
         replace_quadruple_bond_with_any: bool = True,
@@ -331,7 +330,7 @@ class CifSubstructures:
 
         Parameters
         ----------
-        mol: openff.toolkit.topology.molecule.Molecule
+        mol: openff.toolkit.Molecule
             Input molecule
         indices: iterable of ints
             atom indices to include in SMARTS, indexed from 0
