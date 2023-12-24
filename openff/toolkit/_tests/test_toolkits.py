@@ -3439,7 +3439,8 @@ class TestAmberToolsToolkitWrapper:
         )
         molecule = create_ethanol()
         molecule.assign_partial_charges(
-            partial_charge_method="am1bcc", toolkit_registry=toolkit_registry,
+            partial_charge_method="am1bcc",
+            toolkit_registry=toolkit_registry,
             sqm_keywords=sqm_keywords,
         )
         charge_sum = np.sum(molecule.partial_charges)
