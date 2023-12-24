@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 from collections import defaultdict
 from shutil import which
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
 
@@ -83,7 +83,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         self,
         molecule: "Molecule",
         partial_charge_method: Optional[str] = None,
-        use_conformers: Optional[List[Quantity]] = None,
+        use_conformers: Optional[list[Quantity]] = None,
         strict_n_conformers: bool = False,
         normalize_partial_charges: bool = True,
         sqm_keywords: Optional[str] = None,
@@ -141,7 +141,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
             # Standardize method name for string comparisons
             partial_charge_method = partial_charge_method.lower()
 
-        SUPPORTED_CHARGE_METHODS: Dict[str, Dict[str, Union[int, str]]] = {
+        SUPPORTED_CHARGE_METHODS: dict[str, dict[str, Union[int, str]]] = {
             "am1bcc": {
                 "antechamber_keyword": "bcc",
                 "min_confs": 1,
@@ -406,7 +406,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         self,
         molecule: "Molecule",
         bond_order_model: Optional[str] = None,
-        use_conformers: Optional[List[str]] = None,
+        use_conformers: Optional[list[str]] = None,
         _cls=None,
     ):
         """
