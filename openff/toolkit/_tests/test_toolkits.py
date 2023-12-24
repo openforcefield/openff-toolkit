@@ -3431,7 +3431,7 @@ class TestAmberToolsToolkitWrapper:
     def test_assign_partial_charges_am1bcc_sqm_keywords(self):
         """Test AmberToolsToolkitWrapper assign_partial_charges() with am1bcc"""
         sqm_keywords = (
-            "scfconv=1.d-10, ndiis_attempts=700, scfconv=1.d-10, "
+            "qm_theory='AM1', ndiis_attempts=700, scfconv=1.d-10, "
             "ndiis_attempts=700, diag_routine=0, pseudo_diag=0"
         )
 
