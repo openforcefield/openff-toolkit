@@ -280,6 +280,10 @@ class ForceField:
         >>> offxml = '<SMIRNOFF version="0.2" aromaticity_model="OEAroModel_MDL"/>'
         >>> forcefield = ForceField(offxml)
 
+        See Also
+        --------
+        parse_sources
+
         """
         # Clear all object fields
         self._initialize()
@@ -762,8 +766,8 @@ class ForceField:
 
         Parameters
         ----------
-        sources : string or file-like object or open file handle or URL (or iterable of these)
-            A list of files defining the SMIRNOFF force field to be loaded.
+        sources : iterable of string or file-like object or open file handle or URL
+            An iterable of files defining the SMIRNOFF force field to be loaded.
             Currently, only `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/>`_
             is supported.  Each entry may be an absolute file path, a path relative to the current working directory, a
             path relative to this module's data subdirectory (for built in force fields), or an open file-like object
