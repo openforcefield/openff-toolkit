@@ -24,6 +24,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Improved documentation and warnings
 
 - [PR #1732](https://github.com/openforcefield/openff-toolkit/pull/1732): Add documentation describing the use of PDB files with the toolkit.
+- [PR #1804](https://github.com/openforcefield/openff-toolkit/pull/1804): Makes `ForceField.parse_sources` docstring consistent with implementation.
 
 ## 0.14.5
 
@@ -39,7 +40,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Improved documentation and warnings
 
-- [PR #1747](https://github.com/openforcefield/openff-toolkit/pull/1747): Warns if a SMILES with full atom mappings is passed to `Moleucle.from_smiles`, which does not use the atom map for atom ordering (`Molecule.from_mapped_smiles` does).
+- [PR #1747](https://github.com/openforcefield/openff-toolkit/pull/1747): Warns if a SMILES with full atom mappings is passed to `Molecule.from_smiles`, which does not use the atom map for atom ordering (`Molecule.from_mapped_smiles` does).
 - [PR #1743](https://github.com/openforcefield/openff-toolkit/pull/1743): Uses a longer stride in OpenMM DCD reporter in the toolkit showcase and should better utilize GPU resources, if available.
 - [PR #1744](https://github.com/openforcefield/openff-toolkit/pull/1744): Updates the virtual site notebook to use new Interchange behavior.
 
