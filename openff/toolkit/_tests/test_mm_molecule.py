@@ -1,9 +1,11 @@
+import copy
+
 import numpy as np
 import pytest
 
+from openff.toolkit import Molecule, Topology
 from openff.toolkit._tests.create_molecules import create_ethanol
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
-from openff.toolkit.topology.molecule import Molecule
 
 
 @pytest.fixture()
@@ -68,6 +70,13 @@ def molecule_with_bogus_atom():
     molecule.add_bond(0, 1)
 
     return molecule
+
+
+@pytest.fixture()
+def t4():
+    return _SimpleMolecule.from_molecule(
+        Topology.from_pdb("openff/toolkit/data/proteins/T4-protein.pdb").molecule(0)
+    )
 
 
 class TestMMMolecule:
@@ -148,6 +157,38 @@ class TestMMMolecule:
         for atom_index in range(converted.n_atoms):
             found = converted.atom(atom_index).atomic_number
             assert found == expected_atomic_numbers[atom_index]
+
+    def test_deepcopy(self, water, methane, methanol):
+        for molecule in [water, methane, methanol]:
+            molecule_copy = copy.deepcopy(molecule)
+
+            assert molecule_copy.n_atoms == molecule.n_atoms
+            assert molecule_copy.n_bonds == molecule.n_bonds
+
+            for atom, atom_copy in zip(
+                molecule.atoms,
+                molecule_copy.atoms,
+            ):
+                assert atom.atomic_number == atom_copy.atomic_number
+
+                assert atom.molecule is molecule
+                assert atom_copy.molecule is molecule_copy
+
+    @pytest.mark.slow
+    def test_deepcopy_t4(self, t4):
+        t4_copy = copy.deepcopy(t4)
+
+        assert t4_copy.n_atoms == t4.n_atoms
+        assert t4_copy.n_bonds == t4.n_bonds
+
+        for atom, atom_copy in zip(
+            t4.atoms,
+            t4_copy.atoms,
+        ):
+            assert atom.atomic_number == atom_copy.atomic_number
+
+            assert atom.molecule is t4
+            assert atom_copy.molecule is t4_copy
 
 
 class TestImpropers:
