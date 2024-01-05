@@ -471,6 +471,9 @@ class _SimpleMolecule:
 
             atom.name = symbol + str(element_counts[symbol]) + "x"
 
+    def __deepcopy__(self, memo):
+        return self.__class__.from_dict(self.to_dict())
+
 
 class _SimpleAtom:
     def __init__(self, atomic_number: int, molecule=None, metadata=None, **kwargs):
