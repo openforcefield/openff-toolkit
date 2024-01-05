@@ -25,7 +25,7 @@ from openff.toolkit.utils.utils import deserialize_numpy, serialize_numpy
 if TYPE_CHECKING:
     import networkx as nx
 
-    from openff.toolkit import Quantity
+    from openff.toolkit import Quantity, Topology
     from openff.toolkit.topology.molecule import FrozenMolecule
 
 
@@ -245,6 +245,11 @@ class _SimpleMolecule:
             )
 
         return graph
+
+    def to_topology(self) -> "Topology":
+        from openff.toolkit.topology import Topology
+
+        return Topology.from_molecules([self])
 
     def nth_degree_neighbors(self, n_degrees):
         from openff.toolkit.topology.molecule import (
