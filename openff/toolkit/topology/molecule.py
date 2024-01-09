@@ -4391,6 +4391,11 @@ class FrozenMolecule(Serializable):
         """
         Create a QCElemental Molecule.
 
+        The kekule structure of the molecule is saved in two places on the returned Molecule:
+
+        * ``extras["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
+        * ``identifiers["canonical_isomeric_explicit_hydrogen_mapped_smiles"]``
+
         .. warning :: This API is experimental and subject to change.
 
         Parameters
@@ -4457,9 +4462,9 @@ class FrozenMolecule(Serializable):
                 )
             }
         identifiers = {
-                "canonical_isomeric_explicit_hydrogen_mapped_smiles": self.to_smiles(
-                    mapped=True
-                )
+            "canonical_isomeric_explicit_hydrogen_mapped_smiles": self.to_smiles(
+                mapped=True
+            )
         }
 
         schema_dict = {
@@ -4470,7 +4475,7 @@ class FrozenMolecule(Serializable):
             "molecular_charge": charge,
             "molecular_multiplicity": multiplicity,
             "extras": extras,
-            "identifiers": identifiers
+            "identifiers": identifiers,
         }
 
         return qcel.models.Molecule.from_data(schema_dict, validate=True)
@@ -4585,21 +4590,45 @@ class FrozenMolecule(Serializable):
     def from_qcschema(
         cls,
         qca_record,
-        #client=None,
+        # client=None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
         allow_undefined_stereo: bool = False,
     ):
         """
         Create a Molecule from a QCArchive molecule record or dataset entry
-        based on attached cmiles information. A conformer will be set from its geometry.
+        based on attached cmiles information.
+
+        If this method is provided a QCElemental Molecule (or dict representation of a Molecule),
+        it will return a single-conformer OpenFF Molecule.
+
+        If this method is provided a QCFractal dataset Entry (or dict representation
+        of an Entry), it will return an OpenFF Molecule with at least one conformer, corresponding
+        to the:
+
+        * ``.molecule`` attribute of a single point entry (single conformer)
+        * ``.initial_molecule`` attribute of an optimization or grid optimization entry (single conformer)
+        * ``initial_molecules`` attribute of a torsion drive entry (one or more conformers)
+
+        If these QC molecules have their ``.id`` fields populated, the returned OpenFF Molecule  will have a
+        dict mapping QC IDs to conformer numbers (``offmol.properties["initial_molecules"]``)
+
+        The data source must also specify the kekule structure of the molecule. Currently the only
+        supported format for this is in the ``canonical_isomeric_explicit_hydrogen_mapped_smiles``
+        field, which will be taken from the following locations, if available, in the following
+        order of priority:
+
+        * The input's ``attributes`` attribute (set on Entries)
+        * The input's ``identifiers`` attribute (set on QCSchema Molecules made after QCFractal 0.50)
+        * The input's ``extras`` attribute (the information was typically set on QCSchema Molecules as part
+          of OpenFF's QC data submission pipeline before QCFractal 0.50)
 
         A QCElemental Molecule produced from ``Molecule.to_qcschema`` can be round-tripped
         through this method to produce a new, valid Molecule.
 
         Parameters
         ----------
-        qca_record : dict
-            A QCArchive molecule record or dataset entry.
+        qca_record : QCElemental Molecule, QCFractal dataset Entry subclass, or dict
+            A QCArchive molecule record or dataset entry, or dict representation of either.
 
         toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
             openff.toolkit.utils.toolkits.ToolkitWrapper, optional
@@ -4637,24 +4666,15 @@ class FrozenMolecule(Serializable):
         >>> offmol.to_hill_formula()
         'C3H8O3'
 
-        Same as above, but with conformer(s) from initial molecule(s) by
-        providing client to database:
-
-        >>> offmol = Molecule.from_qcschema(
-        ...     qca_record=optimizations.get_entry('coc(o)oc-0'),
-        ...     client=client,
-        ... )
-
         Raises
         -------
-        AttributeError
-            If the record dict can not be made from ``qca_record``, or if the
-            provided ``client`` could not retrieve the initial molecule.
-        KeyError
+        InvalidQCInputError
+            If the input record isn't suitable to be made into an OpenFF Molecule
+        MissingCMILESError
             If the record does not contain the
             ``canonical_isomeric_explicit_hydrogen_mapped_smiles``.
         InvalidConformerError
-            Silent error, if the conformer could not be attached.
+            If the conformer could not be attached.
         """
         input_type = None
         cmiles = None
@@ -4681,19 +4701,28 @@ class FrozenMolecule(Serializable):
                 # so we don't need to cast this to list
                 mol_dicts = qca_record.get("initial_molecules")
             if not mol_dicts:
-                raise InvalidQCInputError(f"Unable to find molecule information in qcschema input. {qca_record=}")
+                raise InvalidQCInputError(
+                    f"Unable to find molecule information in qcschema input. {qca_record=}"
+                )
 
         first_cmiles = None
         for mol_dict in mol_dicts:
-
             # Entries sometimes have their cmiles here
-            cmiles = qca_record.get("attributes", {}).get("canonical_isomeric_explicit_hydrogen_mapped_smiles")
+            cmiles = qca_record.get("attributes", {}).get(
+                "canonical_isomeric_explicit_hydrogen_mapped_smiles"
+            )
             if not cmiles:
-                cmiles = mol_dict.get("identifiers", {}).get("canonical_isomeric_explicit_hydrogen_mapped_smiles")
+                cmiles = mol_dict.get("identifiers", {}).get(
+                    "canonical_isomeric_explicit_hydrogen_mapped_smiles"
+                )
             if not cmiles:
-                cmiles = mol_dict.get("extras", {}).get("canonical_isomeric_explicit_hydrogen_mapped_smiles")
+                cmiles = mol_dict.get("extras", {}).get(
+                    "canonical_isomeric_explicit_hydrogen_mapped_smiles"
+                )
             if not cmiles:
-                raise MissingCMILESError(f"Unable to find CMILES in qcschema input molecule. {mol_dict=}")
+                raise MissingCMILESError(
+                    f"Unable to find CMILES in qcschema input molecule. {mol_dict=}"
+                )
             if first_cmiles is None:
                 first_cmiles = cmiles
                 offmol = cls.from_mapped_smiles(
@@ -4703,16 +4732,24 @@ class FrozenMolecule(Serializable):
                 )
             else:
                 if first_cmiles != cmiles:
-                    raise InvalidQCInputError(f"Input entry has multiple molecules records with different CMILES. "
-                                              f"{first_cmiles} != {cmiles} when iterating over molecules for "
-                                              f"input {qca_record}")
+                    raise InvalidQCInputError(
+                        f"Input entry has multiple molecule records with different CMILES. "
+                        f"{first_cmiles} != {cmiles} when iterating over molecules for "
+                        f"input {qca_record}"
+                    )
             geometry = Quantity(
                 np.array(mol_dict["geometry"], float).reshape(-1, 3), unit.bohr
             )
             offmol._add_conformer(geometry.to(unit.angstrom))
+            # If there's a QCA ID for this QC molecule, store it in the OFF molecule with reference to
+            # its corresponding conformer
+            if "id" in mol_dict.keys():
+                mol_map = offmol.properties.get("initial_molecules", dict())
+                mol_map[offmol.n_conformers - 1] = mol_dict["id"]
+                offmol.properties["initial_molecules"] = mol_map
 
-            #print(f"MISSING CMILES! entry = {entry_name}")
-            #continue
+            # print(f"MISSING CMILES! entry = {entry_name}")
+            # continue
         # else:
         #     input_type = "entry"
         #     cmiles = qca_record["attributes"][

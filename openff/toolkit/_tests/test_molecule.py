@@ -65,7 +65,7 @@ from openff.toolkit.utils.exceptions import (
     InvalidBondOrderError,
     InvalidConformerError,
     InvalidQCInputError,
-    #MissingCMILESError,
+    MissingCMILESError,
     MissingConformersError,
     MissingPartialChargesError,
     MultipleMoleculesInPDBError,
@@ -3559,8 +3559,8 @@ class TestQCArchiveInterface:
         {
             "dataset": "singlepoint",
             "name": "OpenFF multi-Br ESP Fragment Conformers v1.1",
-            "index": "c1c(cc(cc1Br)Br)Br"
-        }
+            "index": "c1c(cc(cc1Br)Br)Br",
+        },
     ]
 
     @pytest.mark.flaky(reruns=5)
@@ -3580,7 +3580,7 @@ class TestQCArchiveInterface:
         # now make the molecule from the record instance with and without the geometry
         mol_from_dict = Molecule.from_qcschema(entry)
         # make the molecule again with the geometries attached
-        mol_from_instance = Molecule.from_qcschema(entry) #, client)
+        mol_from_instance = Molecule.from_qcschema(entry)  # , client)
         if hasattr(entry, "initial_molecules"):
             assert mol_from_instance.n_conformers == len(entry.initial_molecules)
         else:
@@ -3609,7 +3609,7 @@ class TestQCArchiveInterface:
         entry = ds.get_entry("coc(o)oc-0")
 
         # now make the molecule from the record instance with the geometry
-        mol = Molecule.from_qcschema(entry) #, client)
+        mol = Molecule.from_qcschema(entry)  # , client)
 
         # find and grab the initial molecule record
         iterator = client.query_molecules(
@@ -3657,7 +3657,7 @@ class TestQCArchiveInterface:
             "[H]c1[c:1]([c:2](c(c(c1[H])N([H])C(=O)[H])[H])[C:3]2=C(C(=C([S:4]2)[H])OC([H])([H])[H])Br)[H]".lower()
         )
         # now make the molecule from the record instance with the geometry
-        mol_qca_record = Molecule.from_qcschema(entry) #, client)
+        mol_qca_record = Molecule.from_qcschema(entry)  # , client)
         off_qcschema = mol_qca_record.to_qcschema()
         mol_using_from_off_qcschema = Molecule.from_qcschema(off_qcschema)
         assert_molecule_is_equal(
@@ -3700,7 +3700,7 @@ class TestQCArchiveInterface:
         record = [*client.query_molecules(molecular_formula="C16H20N3O5")][-1]
 
         # now make the molecule from the record instance with the geometry
-        mol_qca_record = Molecule.from_qcschema(record) #, client)
+        mol_qca_record = Molecule.from_qcschema(record)  # , client)
         off_qcschema = mol_qca_record.to_qcschema()
         mol_using_from_off_qcschema = Molecule.from_qcschema(off_qcschema)
 
@@ -3709,6 +3709,14 @@ class TestQCArchiveInterface:
             mol_using_from_off_qcschema,
             "Molecule roundtrip to/from_qcschema failed",
         )
+
+        mol_dict = off_qcschema.dict()
+        del mol_dict["extras"]["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
+        del mol_dict["identifiers"][
+            "canonical_isomeric_explicit_hydrogen_mapped_smiles"
+        ]
+        with pytest.raises(MissingCMILESError):
+            Molecule.from_qcschema(mol_dict)
 
 
 class TestMoleculeVisualization:
