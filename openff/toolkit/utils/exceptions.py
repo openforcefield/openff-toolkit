@@ -121,6 +121,11 @@ class InvalidConformerError(OpenFFToolkitException):
     or any other conformer related issues.
     """
 
+class InvalidQCInputError(OpenFFToolkitException, AttributeError):
+    """
+    This error is raised when an input to Molecule.from_qcschema is invalid.
+    """
+
 
 # TODO: Remove in favor of SMILESParseError? They are used in different modules
 class SmilesParsingError(OpenFFToolkitException):
@@ -360,6 +365,9 @@ class MissingPartialChargesError(OpenFFToolkitException, ValueError):
 class MissingConformersError(OpenFFToolkitException, ValueError):
     """Error raised when a molecule is missing conformer(s) in a context in which it is expected to have them."""
 
+class MissingCMILESError(OpenFFToolkitException, KeyError):
+    """Error raised when attempting to convert an QC input to an OFF Molecule, but the CMILES can't be found
+    or isn't present."""
 
 class UnsupportedMoleculeConversionError(OpenFFToolkitException):
     """Error raised when attempting to instantiate a Molecule with insufficient inputs."""
