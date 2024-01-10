@@ -190,6 +190,17 @@ class ValenceDict(_TransformedDict):
     def __keytransform__(self, key):
         return self.key_transform(key)
 
+    def __repr__(self):
+        return f"ValenceDict({repr({k: v for k, v in self.items()})})"
+
+    def _repr_pretty_(self, p, cycle):
+        if cycle:
+            p.text("ValenceDict(...)")
+        else:
+            with p.group(2, "ValenceDict(", ")"):
+                p.breakable("")
+                p.pretty({k: v for k, v in self.items()})
+
 
 class SortedDict(_TransformedDict):
     """Enforce uniqueness of atom index tuples, without any restrictions on atom reordering."""
