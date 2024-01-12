@@ -3496,7 +3496,7 @@ class TestQCArchiveInterface:
         # test incomplete dict
         example_dict = {"name": "CH4"}
         with pytest.raises(InvalidQCInputError):
-            mol = Molecule.from_qcschema(example_dict)
+            Molecule.from_qcschema(example_dict)
 
         # test an object that is not a record
         wrong_object = "CH4"
