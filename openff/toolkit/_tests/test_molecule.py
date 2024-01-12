@@ -3492,8 +3492,6 @@ class TestQCArchiveInterface:
     def test_from_qcschema_no_client(self):
         """Test the ability to make molecules from QCArchive record instances and dicts"""
 
-        import json
-
         # As the method can take a record instance or a dict with JSON encoding test both
         # test incomplete dict
         example_dict = {"name": "CH4"}
@@ -3504,7 +3502,7 @@ class TestQCArchiveInterface:
         wrong_object = "CH4"
         # This actualy raises InvalidQCInputError, but this check ensures that it's a subclass of AttributeError
         with pytest.raises(AttributeError):
-            mol = Molecule.from_qcschema(wrong_object)
+            Molecule.from_qcschema(wrong_object)
 
     client_examples = [
         {
