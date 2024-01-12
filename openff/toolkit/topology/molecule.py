@@ -4691,9 +4691,6 @@ class FrozenMolecule(Serializable):
         InvalidConformerError
             If the conformer could not be attached.
         """
-        input_type = None
-        cmiles = None
-        mol_dicts = [None]
         # Process input as dict; convert if necessary
         if not isinstance(qca_object, dict):
             try:
