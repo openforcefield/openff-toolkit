@@ -4,15 +4,14 @@ Test classes and function in module openff.toolkit.typing.engines.smirnoff.param
 """
 from collections import defaultdict
 from inspect import isabstract, isclass
-from typing import Dict, List, Tuple
 
 import numpy
 import pytest
 from numpy.testing import assert_almost_equal
-from openff.units import unit
 from packaging.version import Version
 
 import openff.toolkit.typing.engines.smirnoff.parameters
+from openff.toolkit import unit
 from openff.toolkit._tests.mocking import VirtualSiteMocking
 from openff.toolkit._tests.utils import does_not_raise
 from openff.toolkit.topology import Molecule, Topology
@@ -2324,9 +2323,9 @@ class TestVirtualSiteHandler:
     )
     def test_find_matches(
         self,
-        parameters: List[VirtualSiteHandler.VirtualSiteType],
+        parameters: list[VirtualSiteHandler.VirtualSiteType],
         smiles: str,
-        expected_matches: Dict[Tuple[int, ...], List[Tuple[str, str]]],
+        expected_matches: dict[tuple[int, ...], list[tuple[str, str]]],
     ):
         molecule = Molecule.from_mapped_smiles(smiles, allow_undefined_stereo=True)
 
@@ -2369,7 +2368,7 @@ class TestVirtualSiteHandler:
         matched_smirks = defaultdict(set)
 
         for match_key in matches:
-            match_list: List = matches[match_key]
+            match_list: list = matches[match_key]
 
             for match in match_list:
                 matched_smirks[match.environment_match.topology_atom_indices].add(

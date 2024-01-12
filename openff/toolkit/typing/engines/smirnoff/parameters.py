@@ -57,23 +57,13 @@ import inspect
 import logging
 import re
 from collections import defaultdict
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    List,
-    Literal,
-    Optional,
-    Tuple,
-    Union,
-    cast,
-    get_args,
-)
+from typing import Any, Callable, Literal, Optional, Union, cast, get_args
 
 import numpy as np
-from openff.units import Quantity, Unit, unit
+from openff.units.units import Unit
 from packaging.version import Version
 
+from openff.toolkit import Quantity, unit
 from openff.toolkit.topology import ImproperDict, TagSortedDict, Topology, ValenceDict
 from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.utils.collections import ValidatedDict, ValidatedList
@@ -185,7 +175,7 @@ def _allow_only(allowed_values):
     allowed_values = frozenset(allowed_values)
 
     def _value_checker(instance, attr, new_value):
-        # This statement means that, in the "SMIRNOFF Data Dict" format, the string "None"
+        # This statement means that, in the "SMIRNOFF Data dict" format, the string "None"
         # and the Python None are the same thing
         if new_value == "None":
             new_value = None
@@ -207,7 +197,7 @@ def _validate_units(attr, value: Union[str, Quantity], units: Unit):
     value = object_to_quantity(value)
 
     try:
-        if not units.is_compatible_with(value.units):  # type: ignore[union-attr]
+        if not units.is_compatible_with(value.units):
             raise IncompatibleUnitError(
                 f"{attr.name}={value} should have units of {units}"
             )
@@ -277,7 +267,7 @@ class ParameterAttribute:
 
     The attribute allow automatic conversion and validation of units.
 
-    >>> from openff.units import unit
+    >>> from openff.toolkit import unit
     >>> class MyParameter:
     ...     attr_quantity = ParameterAttribute(unit=unit.angstrom)
     ...
@@ -470,7 +460,7 @@ class IndexedParameterAttribute(ParameterAttribute):
 
     Create an optional indexed attribute with unit of angstrom.
 
-    >>> from openff.units import unit
+    >>> from openff.toolkit import unit
     >>> class MyParameter:
     ...     length = IndexedParameterAttribute(default=None, unit=unit.angstrom)
     ...
@@ -545,7 +535,7 @@ class MappedParameterAttribute(ParameterAttribute):
 
     Create an optional indexed attribute with unit of angstrom.
 
-    >>> from openff.units import unit
+    >>> from openff.toolkit import unit
     >>> class MyParameter:
     ...     length = MappedParameterAttribute(default=None, unit=unit.angstrom)
     ...
@@ -621,7 +611,7 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
 
     Create an optional indexed attribute with unit of angstrom.
 
-    >>> from openff.units import unit
+    >>> from openff.toolkit import unit
     >>> class MyParameter:
     ...     length = IndexedMappedParameterAttribute(default=None, unit=unit.angstrom)
     ...
@@ -1318,7 +1308,7 @@ class _ParameterAttributeHandler:
 
         Returns
         -------
-        parameter_attributes : Dict[str, ParameterAttribute]
+        parameter_attributes : dict[str, ParameterAttribute]
             A map from the name of the controlled parameter to the
             ParameterAttribute descriptor handling it.
 
@@ -1580,7 +1570,7 @@ class ParameterList(list):
 
         Returns
         -------
-        parameter_list : List[dict]
+        parameter_list :list[dict]
             A serialized representation of a ParameterList, with each ParameterType it contains converted to dict.
         """
         parameter_list = list()
@@ -1778,13 +1768,11 @@ class ParameterHandler(_ParameterAttributeHandler):
     _TAGNAME: Optional[str] = None
     # container class with type information that will be stored in self._parameters
     _INFOTYPE: Optional[Any] = None
-    # OpenMM Force class (or None if no equivalent)
-    _OPENMMTYPE: Optional[str] = None
     # list of ParameterHandler classes that must precede this, or None
     _DEPENDENCIES: Optional[Any] = None
 
     # Kwargs to catch when create_force is called
-    _KWARGS: List[str] = []
+    _KWARGS: list[str] = []
     # the earliest version of SMIRNOFF spec that supports this ParameterHandler
     _SMIRNOFF_VERSION_INTRODUCED = 0.0
     _SMIRNOFF_VERSION_DEPRECATED = None
@@ -1854,7 +1842,7 @@ class ParameterHandler(_ParameterAttributeHandler):
                     f"0.3 SMIRNOFF spec requires each parameter section to have its own version."
                 )
 
-        # List of ParameterType objects (also behaves like an OrderedDict where keys are SMARTS).
+        # List of ParameterType objects (also behaves like a dict where keys are SMARTS).
         self._parameters = ParameterList()
 
         # Initialize ParameterAttributes and cosmetic attributes.
@@ -2005,7 +1993,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Given an existing parameter handler and a new parameter to add to it:
 
-        >>> from openff.units import unit
+        >>> from openff.toolkit import unit
         >>> bh = BondHandler(skip_version_check=True)
         >>> length = 1.5 * unit.angstrom
         >>> k = 100 * unit.kilocalorie / unit.mole / unit.angstrom ** 2
@@ -2085,7 +2073,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Create a parameter handler and populate it with some data.
 
-        >>> from openff.units import unit
+        >>> from openff.toolkit import unit
         >>> handler = BondHandler(skip_version_check=True)
         >>> handler.add_parameter(
         ...     {
@@ -2156,7 +2144,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Returns
         ---------
-        matches : ValenceDict[Tuple[int], ParameterHandler._Match]
+        matches : ValenceDict[tuple[int], ParameterHandler._Match]
             ``matches[atom_indices]`` is the ``ParameterType`` object
             matching the tuple of atom indices in ``entity``.
         """
@@ -2308,9 +2296,9 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Parameters
         ----------
-        identical_attrs : List[str]
+        identical_attrs :list[str]
             Names of the parameters that must be checked with the equality operator.
-        tolerance_attrs : List[str]
+        tolerance_attrs :list[str]
             Names of the parameters that must be equal up to a tolerance.
         tolerance : float
             The absolute tolerance used to compare the parameters.
@@ -2391,7 +2379,6 @@ class ConstraintHandler(ParameterHandler):
 
     _TAGNAME = "Constraints"
     _INFOTYPE = ConstraintType
-    _OPENMMTYPE = None  # don't create a corresponding OpenMM Force class
 
 
 class BondHandler(ParameterHandler):
@@ -2454,7 +2441,6 @@ class BondHandler(ParameterHandler):
 
     _TAGNAME = "Bonds"  # SMIRNOFF tag name to process
     _INFOTYPE = BondType  # class to hold force type info
-    _OPENMMTYPE = "HarmonicBondForce"
     _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
     _MAX_SUPPORTED_SECTION_VERSION = Version("0.4")
 
@@ -2551,7 +2537,6 @@ class AngleHandler(ParameterHandler):
 
     _TAGNAME = "Angles"  # SMIRNOFF tag name to process
     _INFOTYPE = AngleType  # class to hold force type info
-    _OPENMMTYPE = "HarmonicAngleForce"
     _DEPENDENCIES = [ConstraintHandler]  # ConstraintHandler must be executed first
 
     potential = ParameterAttribute(default="harmonic")
@@ -2604,7 +2589,6 @@ class ProperTorsionHandler(ParameterHandler):
     _TAGNAME = "ProperTorsions"  # SMIRNOFF tag name to process
     _KWARGS = ["partial_bond_orders_from_molecules"]
     _INFOTYPE = ProperTorsionType  # info type to store
-    _OPENMMTYPE = "PeriodicTorsionForce"
     _MAX_SUPPORTED_SECTION_VERSION = Version("0.4")
 
     potential = ParameterAttribute(
@@ -2672,7 +2656,6 @@ class ImproperTorsionHandler(ParameterHandler):
 
     _TAGNAME = "ImproperTorsions"  # SMIRNOFF tag name to process
     _INFOTYPE = ImproperTorsionType  # info type to store
-    _OPENMMTYPE = "PeriodicTorsionForce"
 
     potential = ParameterAttribute(
         default="k*(1+cos(periodicity*theta-phase))",
@@ -2718,7 +2701,7 @@ class ImproperTorsionHandler(ParameterHandler):
 
         Returns
         ---------
-        matches : ImproperDict[Tuple[int], ParameterHandler._Match]
+        matches : ImproperDict[tuple[int], ParameterHandler._Match]
             ``matches[atom_indices]`` is the ``ParameterType`` object
             matching the 4-tuple of atom indices in ``entity``.
 
@@ -2730,8 +2713,6 @@ class ImproperTorsionHandler(ParameterHandler):
 
 class _NonbondedHandler(ParameterHandler):
     """Base class for ParameterHandlers that deal with OpenMM NonbondedForce objects."""
-
-    _OPENMMTYPE = "NonbondedForce"
 
 
 class vdWHandler(_NonbondedHandler):
@@ -3181,7 +3162,7 @@ class LibraryChargeHandler(_NonbondedHandler):
 
         Returns
         ---------
-        matches : ValenceDict[Tuple[int], ParameterHandler._Match]
+        matches : ValenceDict[tuple[int], ParameterHandler._Match]
             ``matches[atom_indices]`` is the ``ParameterType`` object
             matching the tuple of atom indices in ``entity``.
         """
@@ -3305,7 +3286,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
         Returns
         ---------
-        matches : ValenceDict[Tuple[int], ParameterHandler._Match]
+        matches : ValenceDict[tuple[int], ParameterHandler._Match]
             ``matches[atom_indices]`` is the ``ParameterType`` object
             matching the tuple of atom indices in ``entity``.
         """
@@ -3334,7 +3315,6 @@ class GBSAHandler(ParameterHandler):
 
     _TAGNAME = "GBSA"
     _INFOTYPE = GBSAType
-    _OPENMMTYPE = "GBSAOBCForce"
     # It's important that this runs AFTER partial charges are assigned to all particles, since this will need to
     # collect and assign them to the GBSA particles
     _DEPENDENCIES = [
@@ -3572,7 +3552,6 @@ class VirtualSiteHandler(_NonbondedHandler):
 
     _TAGNAME = "VirtualSites"
     _INFOTYPE = VirtualSiteType
-    _OPENMMTYPE = "NonbondedForce"
     _DEPENDENCIES = [
         ElectrostaticsHandler,
         LibraryChargeHandler,
@@ -3586,8 +3565,8 @@ class VirtualSiteHandler(_NonbondedHandler):
     @classmethod
     def _validate_found_match(
         cls,
-        atoms_by_index: Dict,
-        matched_indices: Tuple[int, ...],
+        atoms_by_index: dict,
+        matched_indices: tuple[int, ...],
         parameter: VirtualSiteType,
     ):
         """
@@ -3672,7 +3651,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             raise ValueError("`key` and `parameter` are mutually exclusive arguments")
 
         key = cast(
-            Tuple[str, str, str],
+            tuple[str, str, str],
             key
             if parameter is None
             else (parameter.type, parameter.smirks, parameter.name),
@@ -3691,7 +3670,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         return None
 
-    def _find_matches_by_parent(self, entity: Topology) -> Dict[int, list]:
+    def _find_matches_by_parent(self, entity: Topology) -> dict[int, list]:
         from collections import defaultdict
 
         topology_atoms = {
@@ -3701,7 +3680,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         # We need to find all the parameters that would lead to a v-site being placed
         # onto a given 'parent atom'. We only allow each parent atom to be assigned one
         # v-site with a given 'name', whereby the last parameter to be matched wins.
-        matches_by_parent: Dict = defaultdict(lambda: defaultdict(list))
+        matches_by_parent: dict = defaultdict(lambda: defaultdict(list))
 
         for parameter in self._parameters:
             # Filter for redundant matches caused by non-tagged atoms
@@ -3764,7 +3743,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         entity: Topology,
         transformed_dict_cls=dict,
         unique=False,
-    ) -> Dict[Tuple[int], List[ParameterHandler._Match]]:
+    ) -> dict[tuple[int], list[ParameterHandler._Match]]:
         assigned_matches_by_parent = self._find_matches_by_parent(entity)
         return_dict = {}
         for parent_index, assigned_parameters in assigned_matches_by_parent.items():

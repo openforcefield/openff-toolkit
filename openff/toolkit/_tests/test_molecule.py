@@ -23,9 +23,9 @@ from unittest.mock import Mock
 
 import numpy as np
 import pytest
-from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
 
+from openff.toolkit import unit
 from openff.toolkit._tests.create_molecules import (
     create_acetaldehyde,
     create_benzene_no_aromatic,

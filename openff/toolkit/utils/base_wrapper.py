@@ -76,14 +76,12 @@ class ToolkitWrapper:
         return self.__class__._toolkit_name
 
     @property
-    # @classmethod
     def toolkit_installation_instructions(self):
         """
         Instructions on how to install the wrapped toolkit.
         """
         return self._toolkit_installation_instructions
 
-    # @classmethod
     @property
     def toolkit_file_read_formats(self):
         """
@@ -91,7 +89,6 @@ class ToolkitWrapper:
         """
         return self._toolkit_file_read_formats
 
-    # @classmethod
     @property
     def toolkit_file_write_formats(self):
         """

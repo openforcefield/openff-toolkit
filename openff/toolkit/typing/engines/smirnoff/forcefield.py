@@ -26,7 +26,7 @@ import copy
 import logging
 import os
 import pathlib
-from typing import TYPE_CHECKING, List, Optional, Type, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 from packaging.version import Version
 
@@ -55,8 +55,8 @@ from openff.toolkit.utils.utils import (
 
 if TYPE_CHECKING:
     import openmm
-    from openff.units import Quantity
 
+    from openff.toolkit import Quantity
     from openff.toolkit.topology import Molecule, Topology
     from openff.toolkit.utils.base_wrapper import ToolkitWrapper
     from openff.toolkit.utils.toolkit_registry import ToolkitRegistry
@@ -64,10 +64,10 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Directory paths used by ForceField to discover offxml files.
-_installed_offxml_dir_paths: List[str] = []
+_installed_offxml_dir_paths: list[str] = []
 
 
-def _get_installed_offxml_dir_paths() -> List[str]:
+def _get_installed_offxml_dir_paths() -> list[str]:
     """Return the list of directory paths where to search for offxml files.
 
     This function load the information by calling all the entry points
@@ -77,7 +77,7 @@ def _get_installed_offxml_dir_paths() -> List[str]:
 
     Returns
     -------
-    installed_offxml_dir_paths : List[str]
+    installed_offxml_dir_paths :list[str]
         All the installed directory paths where ``ForceField`` will
         look for offxml files.
 
@@ -112,7 +112,7 @@ def get_available_force_fields(full_paths=False):
 
     Returns
     -------
-    available_force_fields : List[str]
+    available_force_fields : list[str]
         List of available force field files
 
     """
@@ -185,7 +185,7 @@ class ForceField:
 
     Retrieve the vdW parameters by SMIRKS string and manipulate it:
 
-    >>> from openff.units import unit
+    >>> from openff.toolkit import unit
     >>> parameter = force_field.get_parameter_handler('vdW').parameters['[#1:1]-[#7]']
     >>> parameter.rmin_half += 0.1 * unit.angstroms
     >>> parameter.epsilon *= 1.02
@@ -280,6 +280,10 @@ class ForceField:
         >>> offxml = '<SMIRNOFF version="0.2" aromaticity_model="OEAroModel_MDL"/>'
         >>> forcefield = ForceField(offxml)
 
+        See Also
+        --------
+        parse_sources
+
         """
         # Clear all object fields
         self._initialize()
@@ -304,7 +308,7 @@ class ForceField:
             # module each come from is the safest way to know which are plugins; another
             # option is explicitly defining a set of default handlers
 
-            default_handlers: List[Type[ParameterHandler]] = [
+            default_handlers: list[type[ParameterHandler]] = [
                 handler
                 for handler in all_subclasses(ParameterHandler)
                 if handler.__module__ == internal_module
@@ -514,7 +518,7 @@ class ForceField:
         Parameters
         ----------
         parameter_handler_classes : iterable of ParameterHandler subclasses
-            List of ParameterHandler classes to register for this ForceField.
+           List of ParameterHandler classes to register for this ForceField.
         """
         for parameter_handler_class in parameter_handler_classes:
             tagname = parameter_handler_class._TAGNAME
@@ -618,7 +622,7 @@ class ForceField:
         self._parameter_io_handlers[io_format] = parameter_io_handler
 
     @property
-    def registered_parameter_handlers(self) -> List[str]:
+    def registered_parameter_handlers(self) -> list[str]:
         """
         Return the list of registered parameter handlers by name
 
@@ -762,8 +766,8 @@ class ForceField:
 
         Parameters
         ----------
-        sources : string or file-like object or open file handle or URL (or iterable of these)
-            A list of files defining the SMIRNOFF force field to be loaded.
+        sources : iterable of string or file-like object or open file handle or URL
+            An iterable of files defining the SMIRNOFF force field to be loaded.
             Currently, only `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/>`_
             is supported.  Each entry may be an absolute file path, a path relative to the current working directory, a
             path relative to this module's data subdirectory (for built in force fields), or an open file-like object
@@ -986,7 +990,7 @@ class ForceField:
         # plugin system. It could also be a raw XML-like string ...
         if isinstance(source, str):
             # Try first the simple path.
-            searched_dirs_paths: List[str] = [os.getcwd()]
+            searched_dirs_paths: list[str] = [os.getcwd()]
             # Then try a relative file path w.r.t. an installed directory.
             searched_dirs_paths.extend(_get_installed_offxml_dir_paths())
 
@@ -1129,8 +1133,8 @@ class ForceField:
         topology: "Topology",
         *,
         toolkit_registry: Optional[Union["ToolkitRegistry", "ToolkitWrapper"]] = None,
-        charge_from_molecules: Optional[List["Molecule"]] = None,
-        partial_bond_orders_from_molecules: Optional[List["Molecule"]] = None,
+        charge_from_molecules: Optional[list["Molecule"]] = None,
+        partial_bond_orders_from_molecules: Optional[list["Molecule"]] = None,
         allow_nonintegral_charges: bool = False,
     ) -> "openmm.System":
         """Create an OpenMM System from this ForceField and a Topology.
@@ -1174,8 +1178,8 @@ class ForceField:
         self,
         topology: "Topology",
         toolkit_registry: Optional[Union["ToolkitRegistry", "ToolkitWrapper"]] = None,
-        charge_from_molecules: Optional[List["Molecule"]] = None,
-        partial_bond_orders_from_molecules: Optional[List["Molecule"]] = None,
+        charge_from_molecules: Optional[list["Molecule"]] = None,
+        partial_bond_orders_from_molecules: Optional[list["Molecule"]] = None,
         allow_nonintegral_charges: bool = False,
     ):
         """
@@ -1208,7 +1212,7 @@ class ForceField:
             An `Interchange` object resulting from applying this `ForceField` to a `Topology`.
 
         """
-        from openff.interchange import Interchange  # type: ignore[import]
+        from openff.interchange import Interchange
 
         from openff.toolkit.utils.toolkit_registry import toolkit_registry_manager
 
@@ -1372,8 +1376,8 @@ class ForceField:
 
         """
         from openff.interchange import Interchange
-        from openff.units import unit
 
+        from openff.toolkit import unit
         from openff.toolkit.topology.molecule import Molecule
 
         if not isinstance(molecule, Molecule):
@@ -1382,10 +1386,9 @@ class ForceField:
                 f"{type(molecule)}"
             )
 
-        # Bad type annotation in Interchange, expect to be fixed in 0.3.1
         return unit.Quantity(
             [
-                c.m  # type: ignore[union-attr]
+                c.m
                 for c in Interchange.from_smirnoff(
                     force_field=self, topology=[molecule], **kwargs
                 )["Electrostatics"].charges.values()
