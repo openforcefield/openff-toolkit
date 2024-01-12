@@ -3502,18 +3502,19 @@ class TestQCArchiveInterface:
 
         # test an object that is not a record
         wrong_object = "CH4"
+        # This actualy raises InvalidQCInputError, but this check ensures that it's a subclass of AttributeError
         with pytest.raises(AttributeError):
             mol = Molecule.from_qcschema(wrong_object)
 
-        # with open(get_data_file_path("molecules/qcportal_molecules.json")) as json_file:
-        #     # test loading the dict representation from a json file
-        #     json_mol = json.load(json_file)
-        #     mol = Molecule.from_qcschema(json_mol)
-        #     # now make a molecule from the canonical smiles and make sure they are isomorphic
-        #     can_mol = Molecule.from_smiles(
-        #         json_mol["attributes"]["canonical_isomeric_smiles"]
-        #     )
-        #     assert mol.is_isomorphic_with(can_mol) is True
+        with open(get_data_file_path("molecules/qcportal_molecules.json")) as json_file:
+            # test loading the dict representation from a json file
+            json_mol = json.load(json_file)
+            mol = Molecule.from_qcschema(json_mol)
+            # now make a molecule from the canonical smiles and make sure they are isomorphic
+            can_mol = Molecule.from_smiles(
+                json_mol["attributes"]["canonical_isomeric_smiles"]
+            )
+            assert mol.is_isomorphic_with(can_mol) is True
 
     client_examples = [
         {

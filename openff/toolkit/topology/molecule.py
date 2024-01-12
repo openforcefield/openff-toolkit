@@ -4589,8 +4589,7 @@ class FrozenMolecule(Serializable):
     @requires_package("qcelemental")
     def from_qcschema(
         cls,
-        qca_record,
-        # client=None,
+        qca_object,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
         allow_undefined_stereo: bool = False,
     ):
@@ -4627,7 +4626,7 @@ class FrozenMolecule(Serializable):
 
         Parameters
         ----------
-        qca_record : QCElemental Molecule, QCFractal dataset Entry subclass, or dict
+        qca_object : QCElemental Molecule, QCFractal dataset Entry subclass, or dict
             A QCArchive molecule record or dataset entry, or dict representation of either.
 
         toolkit_registry : openff.toolkit.utils.toolkits.ToolkitRegistry or
@@ -4635,7 +4634,7 @@ class FrozenMolecule(Serializable):
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for SMILES-to-molecule conversion
 
         allow_undefined_stereo : bool, default=False
-            If false, raises an exception if qca_record contains undefined stereochemistry.
+            If false, raises an exception if qca_object contains undefined stereochemistry.
 
         Returns
         -------
@@ -4680,35 +4679,33 @@ class FrozenMolecule(Serializable):
         cmiles = None
         mol_dicts = [None]
         # Process input as dict; convert if necessary
-        if not isinstance(qca_record, dict):
+        if not isinstance(qca_object, dict):
             try:
-                qca_record = qca_record.dict()
+                qca_object = qca_object.dict()
             except AttributeError:
                 raise AttributeError(
-                    f"The input object (type {type(qca_record)=} "
+                    f"The input object (type {type(qca_object)=} "
                     "passed could not be converted to a dict."
                 )
-        if "symbols" in qca_record.keys():
-            input_type = "molecule"
-            mol_dicts = [qca_record]
+        if "symbols" in qca_object.keys():
+            mol_dicts = [qca_object]
         else:
-            input_type = "entry"
-            mol_dicts = [qca_record.get("molecule")]
+            mol_dicts = [qca_object.get("molecule")]
             if not mol_dicts[0]:
-                mol_dicts = [qca_record.get("initial_molecule")]
+                mol_dicts = [qca_object.get("initial_molecule")]
             if not mol_dicts[0]:
                 # TorsionDriveEntries will have a list of mols instead of just one,
                 # so we don't need to cast this to list
-                mol_dicts = qca_record.get("initial_molecules")
+                mol_dicts = qca_object.get("initial_molecules")
             if not mol_dicts:
                 raise InvalidQCInputError(
-                    f"Unable to find molecule information in qcschema input. {qca_record=}"
+                    f"Unable to find molecule information in qcschema input. {qca_object=}"
                 )
 
         first_cmiles = None
         for mol_dict in mol_dicts:
             # Entries sometimes have their cmiles here
-            cmiles = qca_record.get("attributes", {}).get(
+            cmiles = qca_object.get("attributes", {}).get(
                 "canonical_isomeric_explicit_hydrogen_mapped_smiles"
             )
             if not cmiles:
@@ -4735,7 +4732,7 @@ class FrozenMolecule(Serializable):
                     raise InvalidQCInputError(
                         f"Input entry has multiple molecule records with different CMILES. "
                         f"{first_cmiles} != {cmiles} when iterating over molecules for "
-                        f"input {qca_record}"
+                        f"input {qca_object}"
                     )
             geometry = Quantity(
                 np.array(mol_dict["geometry"], float).reshape(-1, 3), unit.bohr
@@ -4747,96 +4744,6 @@ class FrozenMolecule(Serializable):
                 mol_map = offmol.properties.get("initial_molecules", dict())
                 mol_map[offmol.n_conformers - 1] = mol_dict["id"]
                 offmol.properties["initial_molecules"] = mol_map
-
-            # print(f"MISSING CMILES! entry = {entry_name}")
-            # continue
-        # else:
-        #     input_type = "entry"
-        #     cmiles = qca_record["attributes"][
-        #         "canonical_isomeric_explicit_hydrogen_mapped_smiles"
-        #     ]
-        #
-        #
-
-        # identify if this is a dataset entry
-        # if "attributes" in qca_record:
-        #     mapped_smiles = qca_record["attributes"][
-        #         "canonical_isomeric_explicit_hydrogen_mapped_smiles"
-        #     ]
-        #     if client is not None:
-        #         # try and find the initial molecule conformations and attach them
-        #         # collect the input molecules
-        #         try:
-        #             initial_molecules: list[dict] = qca_record["initial_molecules"]
-        #
-        #             hashes: list[str] = [
-        #                 molecule["identifiers"]["molecule_hash"]
-        #                 for molecule in initial_molecules
-        #             ]
-        #
-        #             input_mols = client.query_molecules(molecule_hash=hashes)
-        #
-        #         except KeyError:
-        #             # this must be an optimisation record
-        #             input_mols = client.query_molecules(
-        #                 molecule_hash=qca_record["initial_molecule"]["identifiers"][
-        #                     "molecule_hash"
-        #                 ]
-        #             )
-        #         except AttributeError as error:
-        #             raise AttributeError(
-        #                 "The provided client failed to query molecules, make sure it is an instance of"
-        #                 "`qcportal.PortalClient` and pointed to the correct address."
-        #             ) from error
-        #     else:
-        #         # Will be a `qcportal.molecules.MoleculeQueryIterator` if queries returned anything,
-        #         # otherwise just make an empty iterator
-        #         input_mols = []
-        #
-        # # identify if this is a molecule record
-        # elif "extras" in qca_record:
-        #     mapped_smiles = qca_record["extras"][
-        #         "canonical_isomeric_explicit_hydrogen_mapped_smiles"
-        #     ]
-        #     input_mols = [qca_record]
-        # else:
-        #     raise KeyError(
-        #         "The record must contain the hydrogen mapped smiles to be safely made from the archive. "
-        #         "It is not present in either 'attributes' or 'extras' on the provided `qca_record`"
-        #     )
-        #
-        # # make a new molecule that has been reordered to match the cmiles mapping
-        # offmol = cls.from_mapped_smiles(
-        #     mapped_smiles,
-        #     toolkit_registry=toolkit_registry,
-        #     allow_undefined_stereo=allow_undefined_stereo,
-        # )
-        #
-        # # now for each molecule convert and attach the input geometry
-        # initial_ids = {}
-        # for molecule in input_mols:
-        #     if not isinstance(molecule, dict):
-        #         mol = molecule.dict() #(encoding="json")
-        #     else:
-        #         mol = molecule
-        #
-        #     geometry = Quantity(
-        #         np.array(mol["geometry"], float).reshape(-1, 3), unit.bohr
-        #     )
-        #     try:
-        #         offmol._add_conformer(geometry.to(unit.angstrom))
-        #         # in case this molecule didn't come from a server at all
-        #         if "id" in mol:
-        #             initial_ids[mol["id"]] = offmol.n_conformers - 1
-        #     except InvalidConformerError:
-        #         print(
-        #             "Invalid conformer for this molecule, the geometry could not be attached."
-        #         )
-        #
-        # # attach a dict that has the initial molecule ids and the number of the conformer it is stored in
-        # # if it's empty, don't bother
-        # if initial_ids:
-        #     offmol._properties["initial_molecules"] = initial_ids
 
         return offmol
 
