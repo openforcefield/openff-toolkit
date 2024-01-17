@@ -817,7 +817,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         max_states: int = 0,
     ) -> list["Molecule"]:
         """
-        Enumerate the formal charges of a molecule to generate different protomoers.
+        Enumerate the formal charges of a molecule to generate different protomers.
 
         Parameters
         ----------
