@@ -120,9 +120,9 @@ class TestProtomerEnumeration:
         # Quacpac considers NH4+ and NH3 to be valid states with default charge enumeration settings,
         # but (reasonably enough) does not consider NH2- to be a valid state. Using any of these states
         # as an input, the result should be 2 protomers (cation and neutral) unless `max_states=1`
-        cation = Molecule.from_smiles("[N+](H)(H)(H)H")
-        neutral = Molecule.from_smiles("[N](H)(H)H")
-        anion = Molecule.from_smiles("[N-](H)H")
+        cation = Molecule.from_smiles("[NH4+]")
+        neutral = Molecule.from_smiles("[NH3]")
+        anion = Molecule.from_smiles("[NH2-]")
 
         for molecule in [cation, neutral, anion]:
             assert len(molecule.enumerate_protomers(max_states=3)) == 2
