@@ -4254,19 +4254,21 @@ class FrozenMolecule(Serializable):
 
     # TODO: This should probably be a classmethod
     @OpenEyeToolkitWrapper.requires_toolkit()
-    def enumerate_protomers(self, max_states=10):
+    def enumerate_protomers(self, max_states: int = 0) -> list:
         """
-        Enumerate the formal charges of a molecule to generate different protomoers.
+        Enumerate the formal charges of a molecule to generate different protomers.
 
         Parameters
         ----------
-        max_states: int optional, default=10,
-            The maximum number of protomer states to be returned.
+        max_states
+            The maximum number of protomer states to be returned. If 0, the default,
+            attempt to return all protomers. If set to a non-zero number, the input molecule
+            is not guaranteed to be included in the returned list.
 
         Returns
         -------
         molecules: list[openff.toolkit.Molecule],
-            A list of the protomers of the input molecules not including the input.
+            A list of the protomers of the input molecules possibly including the input.
         """
 
         toolkit = OpenEyeToolkitWrapper()

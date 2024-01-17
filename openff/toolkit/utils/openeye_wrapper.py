@@ -814,23 +814,25 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
     def enumerate_protomers(
         self,
         molecule: "Molecule",
-        max_states: int = 10,
+        max_states: int = 0,
     ) -> list["Molecule"]:
         """
         Enumerate the formal charges of a molecule to generate different protomoers.
 
         Parameters
         ----------
-        molecule: openff.toolkit.topology.Molecule
+        molecule
             The molecule whose state we should enumerate
 
-        max_states: int optional, default=10,
-            The maximum number of protomer states to be returned.
+        max_states
+            The maximum number of protomer states to be returned. If 0, the default,
+            attempt to return all protomers. If set to a non-zero number, the input molecule
+            is not guaranteed to be included in the returned list.
 
         Returns
         -------
         molecules: list[openff.toolkit.Molecule],
-            A list of the protomers of the input molecules not including the input.
+            A list of the protomers of the input molecules possibly including the input.
         """
 
         from openeye import oequacpac
