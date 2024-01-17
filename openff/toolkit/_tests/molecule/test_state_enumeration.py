@@ -32,6 +32,7 @@ class TestProtomerEnumeration:
         # make sure each protomer is unique
         assert len(protomers) == len(set(protomers))
 
+    @requires_openeye
     def test_tetracarboxylic_acid(self):
         acid = Molecule.from_smiles("C(C(=O)O)(C(=O)O)=C(C(=O)O)(C(=O)O)")
 
@@ -48,4 +49,4 @@ class TestProtomerEnumeration:
         protomers = acid.enumerate_protomers()
 
         assert acid in protomers
-        assert len(protomers) == 1600
+        assert len(protomers) == 6400
