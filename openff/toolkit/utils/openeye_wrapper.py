@@ -832,7 +832,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         Returns
         -------
         molecules: list[openff.toolkit.Molecule],
-            A list of the protomers of the input molecules possibly including the input.
+            A list of the protomers of the input molecules, including the input molecule if found
+            by Quacpac and not pruned by `max_states`.
         """
 
         from openeye import oequacpac

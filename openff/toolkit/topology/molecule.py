@@ -4268,7 +4268,8 @@ class FrozenMolecule(Serializable):
         Returns
         -------
         molecules: list[openff.toolkit.Molecule],
-            A list of the protomers of the input molecules possibly including the input.
+            A list of the protomers of the input molecules, including the input molecule if found
+            by the underlying toolkit's protomer enumeration tool and not pruned by `max_states`.
         """
 
         return OpenEyeToolkitWrapper().enumerate_protomers(
