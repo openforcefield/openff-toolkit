@@ -41,6 +41,27 @@ class TestProtomerEnumeration:
         assert len(protomers) == 16
         assert acid in protomers
 
+    @requires_openeye
+    def test_bad_state_not_necessarily_in_output(self):
+        # Quacpac considers NH4+ and NH3 to be valid states with default charge enumeration settings,
+        # but (reasonably enough) does not consider NH2- to be a valid state. Using any of these states
+        # as an input, the result should be 2 protomers (cation and neutral) unless `max_states=1`
+        cation = Molecule.from_smiles("[N+](H)(H)(H)H")
+        neutral = Molecule.from_smiles("[N](H)(H)H")
+        anion = Molecule.from_smiles("[N-](H)H")
+
+        for molecule in [cation, neutral, anion]:
+            assert len(molecule.enumerate_protomers(max_states=3)) == 2
+            assert len(molecule.enumerate_protomers(max_states=1)) == 1
+
+            protomers = molecule.enumerate_protomers()
+
+            assert len(protomers) == 2
+
+            assert cation in molecule.enumerate_protomers()
+            assert neutral in molecule.enumerate_protomers()
+            assert anion not in molecule.enumerate_protomers()
+
     @pytest.mark.slow
     @requires_openeye
     def test_many_protomers(self):
@@ -49,4 +70,4 @@ class TestProtomerEnumeration:
         protomers = acid.enumerate_protomers()
 
         assert acid in protomers
-        assert len(protomers) == 6400
+        assert len(protomers) == 1600
