@@ -838,22 +838,19 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         from openeye import oequacpac
 
         options = oequacpac.OEFormalChargeOptions()
-        # add one as the input is included
-        options.SetMaxCount(max_states + 1)
+        options.SetMaxCount(max_states)
 
-        molecules = []
-
-        oemol = self.to_openeye(molecule=molecule)
-        for protomer in oequacpac.OEEnumerateFormalCharges(oemol, options):
-            molecules.append(
-                self.from_openeye(
-                    protomer,
-                    allow_undefined_stereo=True,
-                    _cls=molecule.__class__,
-                )
+        return [
+            self.from_openeye(
+                protomer,
+                allow_undefined_stereo=True,
+                _cls=molecule.__class__,
             )
-
-        return molecules
+            for protomer in oequacpac.OEEnumerateFormalCharges(
+                self.to_openeye(molecule=molecule),
+                options,
+            )
+        ]
 
     def enumerate_stereoisomers(
         self,

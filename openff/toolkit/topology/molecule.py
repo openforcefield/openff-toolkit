@@ -4271,10 +4271,10 @@ class FrozenMolecule(Serializable):
             A list of the protomers of the input molecules possibly including the input.
         """
 
-        toolkit = OpenEyeToolkitWrapper()
-        molecules = toolkit.enumerate_protomers(molecule=self, max_states=max_states)
-
-        return molecules
+        return OpenEyeToolkitWrapper().enumerate_protomers(
+            molecule=self,
+            max_states=max_states,
+        )
 
     @classmethod
     @RDKitToolkitWrapper.requires_toolkit()
