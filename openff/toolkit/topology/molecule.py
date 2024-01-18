@@ -4620,9 +4620,9 @@ class FrozenMolecule(Serializable):
         of an Entry), it will return an OpenFF Molecule with at least one conformer, corresponding
         to the:
 
-        * ``.molecule`` attribute of a single point entry (single conformer)
-        * ``.initial_molecule`` attribute of an optimization or grid optimization entry (single conformer)
-        * ``initial_molecules`` attribute of a torsion drive entry (one or more conformers)
+        * ``.molecule`` attribute of a SinglepointDatasetEntry (single conformer)
+        * ``.initial_molecule`` attribute of an OptimizationDatasetEntry or GridoptimizationDatasetEntry (single conformer)
+        * ``initial_molecules`` attribute of a TorsiondriveDatasetEntry (one or more conformers, in the order that they appear when accessing the ``initial_molecules`` attribute on the Entry object)
 
         If these QC molecules have their ``.id`` fields populated, the returned OpenFF Molecule  will have a
         dict mapping QC IDs to conformer numbers (``offmol.properties["initial_molecules"]``)
@@ -4632,7 +4632,7 @@ class FrozenMolecule(Serializable):
         field, which will be taken from the following locations, if available, in the following
         order of priority:
 
-        * The input's ``attributes`` attribute (set on Entries)
+        * The input's ``attributes`` attribute (set on QCFractal DatasetEntry objects, such as ``SinglepointDatasetEntry`` and ``TorsiondriveDatasetEntry``)
         * The input's ``identifiers`` attribute (set on QCSchema Molecules made after QCFractal 0.50)
         * The input's ``extras`` attribute (the information was typically set on QCSchema Molecules as part
           of OpenFF's QC data submission pipeline before QCFractal 0.50)
@@ -4698,7 +4698,7 @@ class FrozenMolecule(Serializable):
             except AttributeError:
                 raise AttributeError(
                     f"The input object (type {type(qca_object)=} "
-                    "passed could not be converted to a dict."
+                    "passed is not and a dict and could not be converted to a dict."
                 )
         if "symbols" in qca_object.keys():
             mol_dicts = [qca_object]
