@@ -4621,8 +4621,10 @@ class FrozenMolecule(Serializable):
         to the:
 
         * ``.molecule`` attribute of a SinglepointDatasetEntry (single conformer)
-        * ``.initial_molecule`` attribute of an OptimizationDatasetEntry or GridoptimizationDatasetEntry (single conformer)
-        * ``initial_molecules`` attribute of a TorsiondriveDatasetEntry (one or more conformers, in the order that they appear when accessing the ``initial_molecules`` attribute on the Entry object)
+        * ``.initial_molecule`` attribute of an OptimizationDatasetEntry or
+          GridoptimizationDatasetEntry (single conformer)
+        * ``initial_molecules`` attribute of a TorsiondriveDatasetEntry (one or more conformers, in the
+          order that they appear when accessing the ``initial_molecules`` attribute on the Entry object)
 
         If these QC molecules have their ``.id`` fields populated, the returned OpenFF Molecule  will have a
         dict mapping QC IDs to conformer numbers (``offmol.properties["initial_molecules"]``)
@@ -4632,7 +4634,8 @@ class FrozenMolecule(Serializable):
         field, which will be taken from the following locations, if available, in the following
         order of priority:
 
-        * The input's ``attributes`` attribute (set on QCFractal DatasetEntry objects, such as ``SinglepointDatasetEntry`` and ``TorsiondriveDatasetEntry``)
+        * The input's ``attributes`` attribute (set on QCFractal DatasetEntry objects, such as
+          ``SinglepointDatasetEntry`` and ``TorsiondriveDatasetEntry``)
         * The input's ``identifiers`` attribute (set on QCSchema Molecules made after QCFractal 0.50)
         * The input's ``extras`` attribute (the information was typically set on QCSchema Molecules as part
           of OpenFF's QC data submission pipeline before QCFractal 0.50)
