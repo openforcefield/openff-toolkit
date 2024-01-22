@@ -231,6 +231,10 @@ class TestMMMolecule:
         assert topology.getNumAtoms() == t4.n_atoms
         assert topology.getNumBonds() == t4.n_bonds
 
+    @pytest.skip(reason="Not written")
+    def test_generate_unique_atom_names(self):
+        pass
+
 
 class TestImpropers:
     @pytest.mark.parametrize(
@@ -344,6 +348,10 @@ class TestIsomorphism:
 
 
 class TestHierarchyData:
+    @pytest.fixture()
+    def simple_dipeptide(self):
+        return _SimpleMolecule.from_molecule(create_dipeptide())
+
     def test_mm_hierarchy(self):
         molecule = create_dipeptide()
 
@@ -358,10 +366,8 @@ class TestHierarchyData:
                 mm_molecule.hierarchy_schemes[scheme_name].hierarchy_elements
             ) == len(molecule.hierarchy_schemes[scheme_name].hierarchy_elements)
 
-    def test_hierarchy_preserved_dict_roundtrip(self):
-        roundtripped = _SimpleMolecule.from_dict(
-            _SimpleMolecule.from_molecule(create_dipeptide()).to_dict()
-        )
+    def test_hierarchy_preserved_dict_roundtrip(self, simple_dipeptide):
+        roundtripped = _SimpleMolecule.from_dict(simple_dipeptide.to_dict())
 
         assert [residue.residue_name for residue in roundtripped.residues] == [
             "ACE",
@@ -372,3 +378,10 @@ class TestHierarchyData:
             "1",
             "2",
         ]
+
+    def test_lookup_attribute_not_found(self, simple_dipeptide):
+        with pytest.raises(
+            AttributeError,
+            match="object has no attribute .*foobars",
+        ):
+            simple_dipeptide.foobars
