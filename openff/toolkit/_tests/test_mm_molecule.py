@@ -5,6 +5,9 @@ import pytest
 
 from openff.toolkit import Molecule, Topology
 from openff.toolkit._tests.create_molecules import create_ethanol
+from openff.toolkit._tests.create_molecules import (
+    dipeptide_residues_perceived as create_dipeptide,
+)
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 
 
@@ -338,3 +341,23 @@ class TestIsomorphism:
         self, o_dichlorobezene, m_dichlorobezene
     ):
         assert not _SimpleMolecule.are_isomorphic(o_dichlorobezene, m_dichlorobezene)[0]
+
+
+class TestHierarchyData:
+    def test_mm_hierarchy(self):
+        molecule = create_dipeptide()
+
+        assert molecule.hierarchy_schemes is not None
+
+        mm_molecule = _SimpleMolecule.from_molecule(molecule)
+
+        assert mm_molecule.hierarchy_schemes.keys() == molecule.hierarchy_schemes.keys()
+
+        for scheme_name in molecule.hierarchy_schemes:
+            assert len(
+                mm_molecule.hierarchy_schemes[scheme_name].hierarchy_elements
+            ) == len(molecule.hierarchy_schemes[scheme_name].hierarchy_elements)
+
+    @pytest.mark.skip(reason="Not implemented")
+    def test_hierarchy_preserved_dict_roundtrip():
+        pass

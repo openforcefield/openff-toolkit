@@ -16,6 +16,8 @@ from openff.units.elements import MASSES, SYMBOLS
 from openff.toolkit import unit
 from openff.toolkit.topology.molecule import (
     AtomMetadataDict,
+    HierarchyElement,
+    HierarchyScheme,
     Molecule,
     _atom_nums_to_hill_formula,
 )
@@ -33,8 +35,8 @@ class _SimpleMolecule:
     def __init__(self):
         self.atoms = []
         self.bonds = []
-        self.hierarchy_schemes = dict()
         self.conformers = None
+        self._hierarchy_schemes = dict()
 
     def add_atom(self, atomic_number: int, **kwargs):
         atom = _SimpleAtom(atomic_number, self, **kwargs)
@@ -217,6 +219,10 @@ class _SimpleMolecule:
         """
         return self.to_hill_formula()
 
+    @property
+    def hierarchy_schemes(self) -> dict[str, "HierarchyScheme"]:
+        return self._hierarchy_schemes
+
     def to_hill_formula(self) -> str:
         atom_nums: list[int] = [atom.atomic_number for atom in self.atoms]
 
@@ -366,7 +372,7 @@ class _SimpleMolecule:
         for atom in molecule.atoms:
             mm_molecule.add_atom(
                 atomic_number=atom.atomic_number,
-                meatadata=atom.metadata,
+                metadata=atom.metadata,
             )
 
         for bond in molecule.bonds:
@@ -376,6 +382,20 @@ class _SimpleMolecule:
             )
 
         mm_molecule.conformers = molecule.conformers
+
+        for name, hierarchy_scheme in molecule.hierarchy_schemes.items():
+            assert name == hierarchy_scheme.iterator_name
+
+            mm_scheme = mm_molecule.add_hierarchy_scheme(
+                uniqueness_criteria=hierarchy_scheme.uniqueness_criteria,
+                iterator_name=hierarchy_scheme.iterator_name,
+            )
+
+            for element in hierarchy_scheme.hierarchy_elements:
+                mm_scheme.add_hierarchy_element(
+                    identifier=element.identifier,
+                    atom_indices=element.atom_indices,
+                )
 
         return mm_molecule
 
@@ -471,8 +491,21 @@ class _SimpleMolecule:
 
             atom.name = symbol + str(element_counts[symbol]) + "x"
 
+    def __getattr__(self, name: str) -> list["HierarchyElement"]:
+        """If a requested attribute is not found, check the hierarchy schemes"""
+        try:
+            return self.__dict__["_hierarchy_schemes"][name].hierarchy_elements
+        except KeyError:
+            raise AttributeError(
+                f"'{self.__class__.__name__}' object has no attribute {name!r}"
+            )
+
     def __deepcopy__(self, memo):
         return self.__class__.from_dict(self.to_dict())
+
+
+_SimpleMolecule.add_hierarchy_scheme = Molecule.add_hierarchy_scheme
+_SimpleMolecule.update_hierarchy_schemes = Molecule.update_hierarchy_schemes
 
 
 class _SimpleAtom:
