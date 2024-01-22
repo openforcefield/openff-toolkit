@@ -349,19 +349,20 @@ class _SimpleMolecule:
                 molecule.conformers.append(conformer)
 
         hier_scheme_dicts = molecule_dict.pop("hierarchy_schemes")
-        for iter_name, hierarchy_scheme_dict in hier_scheme_dicts.items():
-            new_hier_scheme = cls.add_hierarchy_scheme(
-                hierarchy_scheme_dict["uniqueness_criteria"],
-                iter_name,
+        for iterator_name, hierarchy_scheme_dict in hier_scheme_dicts.items():
+            molecule._hierarchy_schemes[iterator_name] = HierarchyScheme(
+                parent=molecule,
+                uniqueness_criteria=tuple(hierarchy_scheme_dict["uniqueness_criteria"]),
+                iterator_name=iterator_name,
             )
-            for element_dict in hierarchy_scheme_dict["hierarchy_elements"]:
-                new_hier_scheme.add_hierarchy_element(
-                    element_dict["identifier"], element_dict["particle_indices"]
-                )
-            molecule._expose_hierarchy_scheme(iter_name)
 
-        for key, val in molecule_dict:
-            setattr(molecule, key, val)
+            for element_dict in hierarchy_scheme_dict["hierarchy_elements"]:
+                molecule._hierarchy_schemes[iterator_name].add_hierarchy_element(
+                    identifier=element_dict["identifier"],
+                    atom_indices=element_dict["atom_indices"],
+                )
+
+        {setattr(molecule, key, val) for key, val in molecule_dict.items()}
 
         return molecule
 
@@ -385,17 +386,10 @@ class _SimpleMolecule:
 
         for name, hierarchy_scheme in molecule.hierarchy_schemes.items():
             assert name == hierarchy_scheme.iterator_name
-
-            mm_scheme = mm_molecule.add_hierarchy_scheme(  # type: ignore[operator]
+            mm_molecule.add_hierarchy_scheme(  # type: ignore[operator]
                 uniqueness_criteria=hierarchy_scheme.uniqueness_criteria,
                 iterator_name=hierarchy_scheme.iterator_name,
             )
-
-            for element in hierarchy_scheme.hierarchy_elements:
-                mm_scheme.add_hierarchy_element(
-                    identifier=element.identifier,
-                    atom_indices=element.atom_indices,
-                )
 
         return mm_molecule
 
@@ -583,8 +577,7 @@ class _SimpleAtom:
 
     @classmethod
     def from_dict(cls, atom_dict: dict):
-        atom = cls(atomic_number=atom_dict["atomic_number"])
-        # TODO: Metadata
+        atom = cls(**atom_dict)
         return atom
 
 

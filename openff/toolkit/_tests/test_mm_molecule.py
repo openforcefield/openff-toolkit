@@ -358,6 +358,17 @@ class TestHierarchyData:
                 mm_molecule.hierarchy_schemes[scheme_name].hierarchy_elements
             ) == len(molecule.hierarchy_schemes[scheme_name].hierarchy_elements)
 
-    @pytest.mark.skip(reason="Not implemented")
-    def test_hierarchy_preserved_dict_roundtrip():
-        pass
+    def test_hierarchy_preserved_dict_roundtrip(self):
+        roundtripped = _SimpleMolecule.from_dict(
+            _SimpleMolecule.from_molecule(create_dipeptide()).to_dict()
+        )
+
+        assert [residue.residue_name for residue in roundtripped.residues] == [
+            "ACE",
+            "ALA",
+        ]
+
+        assert [residue.residue_number for residue in roundtripped.residues] == [
+            "1",
+            "2",
+        ]
