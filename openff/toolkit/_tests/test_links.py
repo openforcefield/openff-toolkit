@@ -46,6 +46,9 @@ def test_readme_links(readme_link):
         # record, Export section (select BibTeX in drop-down) and click "Export"
         # button will bring you to this link.
         pytest.skip("Seems to be a Zenodo regression in bibtex link")
+    if readme_link.endswith("MIT"):
+        # January 22 2024: Link causing some failures, accessible in browser
+        pytest.skip("Flaky")
 
     # Try to connect 5 times, keeping track of exceptions so useful feedback can be provided.
     success = False
