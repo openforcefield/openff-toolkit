@@ -25,7 +25,7 @@ from openff.toolkit.utils.utils import deserialize_numpy, serialize_numpy
 if TYPE_CHECKING:
     import networkx as nx
 
-    from openff.toolkit import Quantity
+    from openff.toolkit import Quantity, Topology
     from openff.toolkit.topology.molecule import FrozenMolecule
 
 
@@ -246,6 +246,11 @@ class _SimpleMolecule:
 
         return graph
 
+    def to_topology(self) -> "Topology":
+        from openff.toolkit.topology import Topology
+
+        return Topology.from_molecules([self])
+
     def nth_degree_neighbors(self, n_degrees):
         from openff.toolkit.topology.molecule import (
             _nth_degree_neighbors_from_graphlike,
@@ -285,15 +290,9 @@ class _SimpleMolecule:
                 continue
             molecule_dict[attr_name] = attr_val
 
-        atom_list = list()
-        for atom in self.atoms:
-            atom_list.append(atom.to_dict())
-        molecule_dict["atoms"] = atom_list
+        molecule_dict["atoms"] = [atom.to_dict() for atom in self.atoms]
 
-        bond_list = list()
-        for bond in self.bonds:
-            bond_list.append(bond.to_dict())
-        molecule_dict["bonds"] = bond_list
+        molecule_dict["bonds"] = [bond.to_dict() for bond in self.bonds]
 
         if self.conformers is None:
             molecule_dict["conformers"] = None
@@ -320,6 +319,7 @@ class _SimpleMolecule:
         atom_dicts = molecule_dict.pop("atoms")
         for atom_dict in atom_dicts:
             molecule.atoms.append(_SimpleAtom.from_dict(atom_dict))
+            molecule.atoms[-1]._molecule = molecule
 
         bond_dicts = molecule_dict.pop("bonds")
 
@@ -471,6 +471,9 @@ class _SimpleMolecule:
 
             atom.name = symbol + str(element_counts[symbol]) + "x"
 
+    def __deepcopy__(self, memo):
+        return self.__class__.from_dict(self.to_dict())
+
 
 class _SimpleAtom:
     def __init__(self, atomic_number: int, molecule=None, metadata=None, **kwargs):
@@ -576,9 +579,8 @@ class _SimpleBond:
     def atom2_index(self) -> int:
         return self.atom2.molecule_atom_index
 
-    def to_dict(self) -> dict:
-        bond_dict = dict()
-        bond_dict["atom1_index"] = self.atom1.molecule_atom_index
-        bond_dict["atom2_index"] = self.atom2.molecule_atom_index
-
-        return bond_dict
+    def to_dict(self) -> dict[str, int]:
+        return {
+            "atom1_index": self.atom1.molecule_atom_index,
+            "atom2_index": self.atom2.molecule_atom_index,
+        }

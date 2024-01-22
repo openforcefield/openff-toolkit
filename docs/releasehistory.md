@@ -9,6 +9,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ## Current development
 
 ### API-breaking changes
+
 - [PR #1760](https://github.com/openforcefield/openff-toolkit/pull/1760): Removes the private, unused `ParameterHandler._OPENMMTYPE` attribute.
 
 ### Behavior changes
@@ -18,7 +19,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1778](https://github.com/openforcefield/openff-toolkit/pull/1778): Ensures SD data tags are preserved in `Molecule.from_openeye` if the input is of type `oechem.OEGraphMol`.
 
 ### New features
-- [PR #1775](https://github.com/openforcefield/openff-toolkit/pull/1775): Re-exports `openff.units.unit` and `Quantity` at `openff.toolkit.unit` and `Quantity`.
+
+* [PR #1775](https://github.com/openforcefield/openff-toolkit/pull/1775): Re-exports `openff.units.unit` and `Quantity` at `openff.toolkit.unit` and `Quantity`.
+* [PR #1805](https://github.com/openforcefield/openff-toolkit/pull/1805): Adds `_SimpleMolecule.__deepcopy__` and `_SimpleMolecule.to_topology`.
 
 
 ### Improved documentation and warnings
