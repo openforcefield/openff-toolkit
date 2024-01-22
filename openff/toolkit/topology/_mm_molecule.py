@@ -386,7 +386,7 @@ class _SimpleMolecule:
         for name, hierarchy_scheme in molecule.hierarchy_schemes.items():
             assert name == hierarchy_scheme.iterator_name
 
-            mm_scheme = mm_molecule.add_hierarchy_scheme(
+            mm_scheme = mm_molecule.add_hierarchy_scheme(  # type: ignore[operator]
                 uniqueness_criteria=hierarchy_scheme.uniqueness_criteria,
                 iterator_name=hierarchy_scheme.iterator_name,
             )
@@ -504,8 +504,8 @@ class _SimpleMolecule:
         return self.__class__.from_dict(self.to_dict())
 
 
-_SimpleMolecule.add_hierarchy_scheme = Molecule.add_hierarchy_scheme
-_SimpleMolecule.update_hierarchy_schemes = Molecule.update_hierarchy_schemes
+_SimpleMolecule.add_hierarchy_scheme = Molecule.add_hierarchy_scheme  # type: ignore[attr-defined]
+_SimpleMolecule.update_hierarchy_schemes = Molecule.update_hierarchy_schemes  # type: ignore[attr-defined]
 
 
 class _SimpleAtom:
