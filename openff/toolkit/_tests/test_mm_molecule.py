@@ -231,7 +231,7 @@ class TestMMMolecule:
         assert topology.getNumAtoms() == t4.n_atoms
         assert topology.getNumBonds() == t4.n_bonds
 
-    @pytest.skip(reason="Not written")
+    @pytest.mark.skip(reason="Not written")
     def test_generate_unique_atom_names(self):
         pass
 
