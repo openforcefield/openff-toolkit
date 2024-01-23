@@ -39,7 +39,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### New features
 
-- [PR #1731](https://github.com/openforcefield/openff-toolkit/pull/1731): Suppot SMIRNOFF vdW version 0.5.
+- [PR #1731](https://github.com/openforcefield/openff-toolkit/pull/1731): Support SMIRNOFF vdW version 0.5.
+- [PR #1751](https://github.com/openforcefield/openff-toolkit/pull/1751): Improve visualization API docs and support multiple bonds in `Topology.visualize()`
 
 ### Improved documentation and warnings
 

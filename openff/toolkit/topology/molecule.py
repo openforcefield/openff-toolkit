@@ -87,7 +87,7 @@ from openff.toolkit.utils.toolkits import (
 from openff.toolkit.utils.utils import get_data_file_path, requires_package
 
 if TYPE_CHECKING:
-    import IPython.display
+    import IPython.core.display
     import nglview
 
     from openff.toolkit.topology._mm_molecule import _SimpleAtom, _SimpleMolecule
@@ -5394,61 +5394,65 @@ class Molecule(FrozenMolecule):
     @overload
     def visualize(
         self,
-        backend: Literal["rdkit"],
-    ) -> "IPython.display.SVG":
+        backend: Literal["rdkit"] = ...,
+        width: int = ...,
+        height: int = ...,
+        show_all_hydrogens: bool = ...,
+    ) -> "IPython.core.display.SVG":
         ...
 
     @overload
     def visualize(
         self,
         backend: Literal["openeye"],
-    ) -> "IPython.display.Image":
+        width: int = ...,
+        height: int = ...,
+        show_all_hydrogens: bool = ...,
+    ) -> "IPython.core.display.Image":
         ...
 
     @overload
     def visualize(
         self,
         backend: Literal["nglview"],
+        *,
+        show_all_hydrogens: bool = ...,
     ) -> "nglview.NGLWidget":
         ...
 
     def visualize(
         self,
-        backend: str = "rdkit",
-        width: int = 500,
-        height: int = 300,
-        show_all_hydrogens: bool = True,
-    ) -> Union["IPython.display.SVG", "IPython.display.Image", "nglview.NGLWidget"]:
+        backend="rdkit",
+        width=500,
+        height=300,
+        show_all_hydrogens=True,
+    ):
         """
-        Render a visualization of the molecule in Jupyter
+        Render a visualization of the molecule in Jupyter.
+
+        Note that the ``"nglview"`` backend may, in strained conformations,
+        include bonds not present in the topology.
 
         Parameters
         ----------
-        backend : str, optional, default='rdkit'
+        backend
             The visualization engine to use. Choose from:
 
-            - ``"rdkit"``
+            - ``"rdkit"`` (default)
             - ``"openeye"``
             - ``"nglview"`` (requires conformers)
 
-        width : int, default=500
-            Width of the generated representation (only applicable to
+        width
+            Width of the generated representation in pixels (only applicable to
             ``backend="openeye"`` or ``backend="rdkit"``)
-        height : int, default=300
-            Width of the generated representation (only applicable to
+        height
+            Width of the generated representation in pixels (only applicable to
             ``backend="openeye"`` or ``backend="rdkit"``)
-        show_all_hydrogens : bool, default=True
-            Whether to explicitly depict all hydrogen atoms. (only applicable to
-            ``backend="openeye"`` or ``backend="rdkit"``)
+        show_all_hydrogens
+            Whether to explicitly depict all hydrogen atoms.
 
         Returns
         -------
-        object
-            Depending on the backend chosen:
-
-            - rdkit → IPython.display.SVG
-            - openeye → IPython.display.Image
-            - nglview → nglview.NGLWidget
 
         """
         import inspect
@@ -5469,47 +5473,46 @@ class Molecule(FrozenMolecule):
             ):
                 warnings.warn(
                     f"Arguments `width` and `height` are ignored with {backend=}."
-                    f"Found non-default values {width=} and {height=}",
+                    + f"Found non-default values {width=} and {height=}",
                     stacklevel=2,
                 )
 
             if self.conformers is None:
                 raise MissingConformersError(
                     "Visualizing with NGLview requires that the molecule has "
-                    f"conformers, found {self.conformers=}"
+                    + f"conformers, found {self.conformers=}"
                 )
 
-            else:
-                from openff.toolkit.utils._viz import MoleculeNGLViewTrajectory
+            from openff.toolkit.utils._viz import MoleculeNGLViewTrajectory
 
-                try:
-                    widget = nv.NGLWidget(
-                        MoleculeNGLViewTrajectory(
-                            molecule=self,
-                            ext="MOL2",
-                        )
+            try:
+                widget = nv.NGLWidget(
+                    MoleculeNGLViewTrajectory(
+                        molecule=self,
+                        ext="MOL2",
                     )
-                except ValueError:
-                    widget = nv.NGLWidget(
-                        MoleculeNGLViewTrajectory(
-                            molecule=self,
-                            ext="PDB",
-                        )
+                )
+            except ValueError:
+                widget = nv.NGLWidget(
+                    MoleculeNGLViewTrajectory(
+                        molecule=self,
+                        ext="PDB",
                     )
-
-                widget.clear_representations()
-                widget.add_representation(
-                    "licorice",
-                    sele="*" if show_all_hydrogens else "NOT hydrogen",
-                    radius=0.25,
-                    multipleBond=True,
                 )
 
-                return widget
+            widget.clear_representations()
+            widget.add_representation(
+                "licorice",
+                sele="*" if show_all_hydrogens else "NOT hydrogen",
+                radius=0.25,
+                multipleBond=True,
+            )
+
+            return widget
 
         if backend == "rdkit":
             if RDKIT_AVAILABLE:
-                from IPython.display import SVG
+                from IPython.core.display import SVG
                 from rdkit.Chem.Draw import (  # type: ignore[import-untyped]
                     rdDepictor,
                     rdMolDraw2D,
@@ -5535,14 +5538,14 @@ class Molecule(FrozenMolecule):
             else:
                 warnings.warn(
                     "RDKit was requested as a visualization backend but "
-                    "it was not found to be installed. Falling back to "
-                    "trying to use OpenEye for visualization.",
+                    + "it was not found to be installed. Falling back to "
+                    + "trying to use OpenEye for visualization.",
                     stacklevel=2,
                 )
                 backend = "openeye"
         if backend == "openeye":
             if OPENEYE_AVAILABLE:
-                from IPython.display import Image
+                from IPython.core.display import Image
                 from openeye import oedepict
 
                 oemol = self.to_openeye()
