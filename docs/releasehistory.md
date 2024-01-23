@@ -17,6 +17,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Bugfixes
 
 - [PR #1778](https://github.com/openforcefield/openff-toolkit/pull/1778): Ensures SD data tags are preserved in `Molecule.from_openeye` if the input is of type `oechem.OEGraphMol`.
+- [PR #1797](https://github.com/openforcefield/openff-toolkit/pull/1797): `Topology.from_pdb` can now load more file-like objects, including 
+`io.StringIO`.
 
 ### New features
 
