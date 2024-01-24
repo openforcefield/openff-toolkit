@@ -16,6 +16,8 @@ from openff.units.elements import MASSES, SYMBOLS
 from openff.toolkit import unit
 from openff.toolkit.topology.molecule import (
     AtomMetadataDict,
+    HierarchyElement,
+    HierarchyScheme,
     Molecule,
     _atom_nums_to_hill_formula,
 )
@@ -33,8 +35,8 @@ class _SimpleMolecule:
     def __init__(self):
         self.atoms = []
         self.bonds = []
-        self.hierarchy_schemes = dict()
         self.conformers = None
+        self._hierarchy_schemes = dict()
 
     def add_atom(self, atomic_number: int, **kwargs):
         atom = _SimpleAtom(atomic_number, self, **kwargs)
@@ -217,6 +219,10 @@ class _SimpleMolecule:
         """
         return self.to_hill_formula()
 
+    @property
+    def hierarchy_schemes(self) -> dict[str, "HierarchyScheme"]:
+        return self._hierarchy_schemes
+
     def to_hill_formula(self) -> str:
         atom_nums: list[int] = [atom.atomic_number for atom in self.atoms]
 
@@ -343,19 +349,20 @@ class _SimpleMolecule:
                 molecule.conformers.append(conformer)
 
         hier_scheme_dicts = molecule_dict.pop("hierarchy_schemes")
-        for iter_name, hierarchy_scheme_dict in hier_scheme_dicts.items():
-            new_hier_scheme = cls.add_hierarchy_scheme(
-                hierarchy_scheme_dict["uniqueness_criteria"],
-                iter_name,
+        for iterator_name, hierarchy_scheme_dict in hier_scheme_dicts.items():
+            molecule._hierarchy_schemes[iterator_name] = HierarchyScheme(
+                parent=molecule,
+                uniqueness_criteria=tuple(hierarchy_scheme_dict["uniqueness_criteria"]),
+                iterator_name=iterator_name,
             )
-            for element_dict in hierarchy_scheme_dict["hierarchy_elements"]:
-                new_hier_scheme.add_hierarchy_element(
-                    element_dict["identifier"], element_dict["particle_indices"]
-                )
-            molecule._expose_hierarchy_scheme(iter_name)
 
-        for key, val in molecule_dict:
-            setattr(molecule, key, val)
+            for element_dict in hierarchy_scheme_dict["hierarchy_elements"]:
+                molecule._hierarchy_schemes[iterator_name].add_hierarchy_element(
+                    identifier=element_dict["identifier"],
+                    atom_indices=element_dict["atom_indices"],
+                )
+
+        {setattr(molecule, key, val) for key, val in molecule_dict.items()}
 
         return molecule
 
@@ -366,7 +373,7 @@ class _SimpleMolecule:
         for atom in molecule.atoms:
             mm_molecule.add_atom(
                 atomic_number=atom.atomic_number,
-                meatadata=atom.metadata,
+                metadata=atom.metadata,
             )
 
         for bond in molecule.bonds:
@@ -376,6 +383,13 @@ class _SimpleMolecule:
             )
 
         mm_molecule.conformers = molecule.conformers
+
+        for name, hierarchy_scheme in molecule.hierarchy_schemes.items():
+            assert name == hierarchy_scheme.iterator_name
+            mm_molecule.add_hierarchy_scheme(  # type: ignore[operator]
+                uniqueness_criteria=hierarchy_scheme.uniqueness_criteria,
+                iterator_name=hierarchy_scheme.iterator_name,
+            )
 
         return mm_molecule
 
@@ -471,8 +485,21 @@ class _SimpleMolecule:
 
             atom.name = symbol + str(element_counts[symbol]) + "x"
 
+    def __getattr__(self, name: str) -> list["HierarchyElement"]:
+        """If a requested attribute is not found, check the hierarchy schemes"""
+        try:
+            return self.__dict__["_hierarchy_schemes"][name].hierarchy_elements
+        except KeyError:
+            raise AttributeError(
+                f"'{self.__class__.__name__}' object has no attribute {name!r}"
+            )
+
     def __deepcopy__(self, memo):
         return self.__class__.from_dict(self.to_dict())
+
+
+_SimpleMolecule.add_hierarchy_scheme = Molecule.add_hierarchy_scheme  # type: ignore[attr-defined]
+_SimpleMolecule.update_hierarchy_schemes = Molecule.update_hierarchy_schemes  # type: ignore[attr-defined]
 
 
 class _SimpleAtom:
@@ -550,8 +577,7 @@ class _SimpleAtom:
 
     @classmethod
     def from_dict(cls, atom_dict: dict):
-        atom = cls(atomic_number=atom_dict["atomic_number"])
-        # TODO: Metadata
+        atom = cls(**atom_dict)
         return atom
 
 

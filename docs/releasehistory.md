@@ -18,6 +18,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Bugfixes
 
 - [PR #1778](https://github.com/openforcefield/openff-toolkit/pull/1778): Ensures SD data tags are preserved in `Molecule.from_openeye` if the input is of type `oechem.OEGraphMol`.
+* [PR #1811](https://github.com/openforcefield/openff-toolkit/pull/1811): Preserves hierarchy data in `_SimpleMolecule.from_molecule`
 
 ### New features
 

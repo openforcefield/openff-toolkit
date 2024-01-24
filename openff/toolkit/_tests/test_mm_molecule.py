@@ -5,6 +5,9 @@ import pytest
 
 from openff.toolkit import Molecule, Topology
 from openff.toolkit._tests.create_molecules import create_ethanol
+from openff.toolkit._tests.create_molecules import (
+    dipeptide_residues_perceived as create_dipeptide,
+)
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 
 
@@ -228,6 +231,10 @@ class TestMMMolecule:
         assert topology.getNumAtoms() == t4.n_atoms
         assert topology.getNumBonds() == t4.n_bonds
 
+    @pytest.mark.skip(reason="Not written")
+    def test_generate_unique_atom_names(self):
+        pass
+
 
 class TestImpropers:
     @pytest.mark.parametrize(
@@ -338,3 +345,43 @@ class TestIsomorphism:
         self, o_dichlorobezene, m_dichlorobezene
     ):
         assert not _SimpleMolecule.are_isomorphic(o_dichlorobezene, m_dichlorobezene)[0]
+
+
+class TestHierarchyData:
+    @pytest.fixture()
+    def simple_dipeptide(self):
+        return _SimpleMolecule.from_molecule(create_dipeptide())
+
+    def test_mm_hierarchy(self):
+        molecule = create_dipeptide()
+
+        assert molecule.hierarchy_schemes is not None
+
+        mm_molecule = _SimpleMolecule.from_molecule(molecule)
+
+        assert mm_molecule.hierarchy_schemes.keys() == molecule.hierarchy_schemes.keys()
+
+        for scheme_name in molecule.hierarchy_schemes:
+            assert len(
+                mm_molecule.hierarchy_schemes[scheme_name].hierarchy_elements
+            ) == len(molecule.hierarchy_schemes[scheme_name].hierarchy_elements)
+
+    def test_hierarchy_preserved_dict_roundtrip(self, simple_dipeptide):
+        roundtripped = _SimpleMolecule.from_dict(simple_dipeptide.to_dict())
+
+        assert [residue.residue_name for residue in roundtripped.residues] == [
+            "ACE",
+            "ALA",
+        ]
+
+        assert [residue.residue_number for residue in roundtripped.residues] == [
+            "1",
+            "2",
+        ]
+
+    def test_lookup_attribute_not_found(self, simple_dipeptide):
+        with pytest.raises(
+            AttributeError,
+            match="object has no attribute .*foobars",
+        ):
+            simple_dipeptide.foobars
