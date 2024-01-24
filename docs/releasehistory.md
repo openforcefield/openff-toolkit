@@ -11,6 +11,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### API-breaking changes
 
 - [PR #1760](https://github.com/openforcefield/openff-toolkit/pull/1760): Removes the private, unused `ParameterHandler._OPENMMTYPE` attribute.
+- [PR #1763](https://github.com/openforcefield/openff-toolkit/pull/1763): Updates the OpenFF Toolkit to be compatible with QCFractal >= 0.50. Removes the `client` named argument from `Molecule.from_qcschema`. 
 
 ### Behavior changes
 
