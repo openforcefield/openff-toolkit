@@ -77,7 +77,6 @@ def molecule_with_bogus_atom():
 
 
 @pytest.fixture()
-@requires_rdkit
 def t4():
     return _SimpleMolecule.from_molecule(
         Topology.from_pdb(get_data_file_path("proteins/T4-protein.pdb")).molecule(0)
@@ -180,6 +179,7 @@ class TestMMMolecule:
                 assert atom_copy.molecule is molecule_copy
 
     @pytest.mark.slow
+    @requires_rdkit
     def test_deepcopy_t4(self, t4):
         t4_copy = copy.deepcopy(t4)
 
@@ -205,6 +205,7 @@ class TestMMMolecule:
         assert topology.n_bonds == methanol.n_bonds
 
     @pytest.mark.slow
+    @requires_rdkit
     def test_to_t4_topology(self, t4):
         topology = t4.to_topology()
 
