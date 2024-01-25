@@ -8,6 +8,7 @@ from openff.toolkit._tests.create_molecules import create_ethanol
 from openff.toolkit._tests.create_molecules import (
     dipeptide_residues_perceived as create_dipeptide,
 )
+from openff.toolkit._tests.utils import get_data_file_path, requires_rdkit
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
 
 
@@ -76,9 +77,10 @@ def molecule_with_bogus_atom():
 
 
 @pytest.fixture()
+@requires_rdkit
 def t4():
     return _SimpleMolecule.from_molecule(
-        Topology.from_pdb("openff/toolkit/data/proteins/T4-protein.pdb").molecule(0)
+        Topology.from_pdb(get_data_file_path("proteins/T4-protein.pdb")).molecule(0)
     )
 
 
