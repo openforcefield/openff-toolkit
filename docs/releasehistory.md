@@ -6,6 +6,18 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+## Current development
+
+### API-breaking changes
+
+### Behavior changes
+
+### Bugfixes
+
+### New features
+
+### Improved documentation and warnings
+
 ## 0.15.0
 
 This release adds compatibility with QCFractal >=0.50.0, but removes compatibiltiy with QCFractal <0.50.0.
