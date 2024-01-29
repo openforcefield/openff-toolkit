@@ -2,6 +2,7 @@
 Tests for Topology
 
 """
+
 import itertools
 import re
 from copy import deepcopy

@@ -564,9 +564,9 @@ class ForceField:
                             self._parameter_io_handler_classes[serialization_format],
                         )
                     )
-                self._parameter_io_handler_classes[
-                    serialization_format
-                ] = parameter_io_handler_class
+                self._parameter_io_handler_classes[serialization_format] = (
+                    parameter_io_handler_class
+                )
 
     def register_parameter_handler(self, parameter_handler):
         """

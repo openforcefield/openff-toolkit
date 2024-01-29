@@ -9,6 +9,7 @@ TypedMolecule TODOs
   deserialize a Molecule or a TypedMolecule.
 
 """
+
 from typing import TYPE_CHECKING, Generator, NoReturn, Optional, Union
 
 from openff.units.elements import MASSES, SYMBOLS
@@ -98,7 +99,15 @@ class _SimpleMolecule:
     @property
     def angles(
         self,
-    ) -> Generator[tuple["_SimpleAtom", "_SimpleAtom", "_SimpleAtom",], None, None,]:
+    ) -> Generator[
+        tuple[
+            "_SimpleAtom",
+            "_SimpleAtom",
+            "_SimpleAtom",
+        ],
+        None,
+        None,
+    ]:
         for atom1 in self.atoms:
             for atom2 in atom1.bonded_atoms:
                 for atom3 in atom2.bonded_atoms:
@@ -304,9 +313,9 @@ class _SimpleMolecule:
             molecule_dict["conformers"] = None
         else:
             molecule_dict["conformers"] = []
-            molecule_dict[
-                "conformers_unit"
-            ] = "angstrom"  # Have this defined as a class variable?
+            molecule_dict["conformers_unit"] = (
+                "angstrom"  # Have this defined as a class variable?
+            )
             for conf in self.conformers:
                 conf_unitless = conf.m_as(unit.angstrom)
                 conf_serialized, conf_shape = serialize_numpy((conf_unitless))

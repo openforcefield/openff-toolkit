@@ -24,6 +24,7 @@ Molecular chemical entity representation and routines to interface with cheminfo
    * Speed up overall import time by putting non-global imports only where they are needed
 
 """
+
 import json
 import operator
 import pathlib
@@ -3816,9 +3817,9 @@ class FrozenMolecule(Serializable):
                 if file_format in query_toolkit.toolkit_file_read_formats:
                     toolkit = query_toolkit
                     break
-                supported_read_formats[
-                    query_toolkit.toolkit_name
-                ] = query_toolkit.toolkit_file_read_formats
+                supported_read_formats[query_toolkit.toolkit_name] = (
+                    query_toolkit.toolkit_file_read_formats
+                )
             if toolkit is None:
                 msg = (
                     f"No toolkits in registry can read file {file_path} (format {file_format}). Supported "
@@ -4145,9 +4146,9 @@ class FrozenMolecule(Serializable):
         if toolkit is None:
             supported_formats = {}
             for toolkit in toolkit_registry.registered_toolkits:
-                supported_formats[
-                    toolkit.toolkit_name
-                ] = toolkit.toolkit_file_write_formats
+                supported_formats[toolkit.toolkit_name] = (
+                    toolkit.toolkit_file_write_formats
+                )
             raise ValueError(
                 f"The requested file format ({file_format}) is not available from any of the installed toolkits "
                 f"(supported formats: {supported_formats})"
@@ -4470,9 +4471,9 @@ class FrozenMolecule(Serializable):
         ]
         symbols = [SYMBOLS[atom.atomic_number] for atom in self.atoms]
         if extras is not None:
-            extras[
-                "canonical_isomeric_explicit_hydrogen_mapped_smiles"
-            ] = self.to_smiles(mapped=True)
+            extras["canonical_isomeric_explicit_hydrogen_mapped_smiles"] = (
+                self.to_smiles(mapped=True)
+            )
         else:
             extras = {
                 "canonical_isomeric_explicit_hydrogen_mapped_smiles": self.to_smiles(
@@ -4946,7 +4947,7 @@ class FrozenMolecule(Serializable):
         ):
             raise RemapIndexError(
                 f"All indices in a mapping_dict for a molecule with {self.n_atoms}"
-                + f" atoms must be integers between 0 and {self.n_atoms-1}"
+                + f" atoms must be integers between 0 and {self.n_atoms - 1}"
             )
 
         # If a partial map is allowed, complete it
@@ -5406,22 +5407,19 @@ class Molecule(FrozenMolecule):
     def visualize(
         self,
         backend: Literal["rdkit"],
-    ) -> "IPython.display.SVG":
-        ...
+    ) -> "IPython.display.SVG": ...
 
     @overload
     def visualize(
         self,
         backend: Literal["openeye"],
-    ) -> "IPython.display.Image":
-        ...
+    ) -> "IPython.display.Image": ...
 
     @overload
     def visualize(
         self,
         backend: Literal["nglview"],
-    ) -> "nglview.NGLWidget":
-        ...
+    ) -> "nglview.NGLWidget": ...
 
     def visualize(
         self,
