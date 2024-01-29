@@ -5,5 +5,5 @@ dependencies:
     # Base depends
   - openff-toolkit-examples
     # Tests
-  - pytest
+  - pytest=7.4
   - pytest-rerunfailures
