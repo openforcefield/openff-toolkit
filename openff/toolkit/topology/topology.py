@@ -11,6 +11,7 @@ Class definitions to represent a molecular system and its chemical components
    * Use `attrs <http://www.attrs.org/>`_ for object setter boilerplate?
 
 """
+
 import re
 from collections import defaultdict
 from collections.abc import MutableMapping
@@ -202,7 +203,7 @@ class SortedDict(_TransformedDict):
 
 
 class UnsortedDict(_TransformedDict):
-    ...
+    pass
 
 
 class TagSortedDict(_TransformedDict):
@@ -1214,9 +1215,9 @@ class Topology(Serializable):
         return_dict["aromaticity_model"] = self._aromaticity_model
         return_dict["constrained_atom_pairs"] = dict()
         for constrained_atom_pair, distance in self._constrained_atom_pairs.items():
-            return_dict["constrained_atom_pairs"][
-                constrained_atom_pair
-            ] = quantity_to_string(distance)
+            return_dict["constrained_atom_pairs"][constrained_atom_pair] = (
+                quantity_to_string(distance)
+            )
 
         if self._box_vectors is None:
             return_dict["box_vectors"] = None
