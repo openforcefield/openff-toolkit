@@ -6,17 +6,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-## Current development
+## 0.15.1
 
-### API-breaking changes
+### Tests updated
 
-### Behavior changes
-
-### Bugfixes
-
-### New features
-
-### Improved documentation and warnings
+- [PR #1814](https://github.com/openforcefield/openff-toolkit/pull/1814): Fixes a test to be compatible with both pydantic 1 and 2.
 
 ## 0.15.0
 
