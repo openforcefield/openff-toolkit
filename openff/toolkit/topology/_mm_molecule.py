@@ -21,6 +21,7 @@ from openff.toolkit.topology.molecule import (
     HierarchyScheme,
     Molecule,
     _atom_nums_to_hill_formula,
+    _has_unique_atom_names,
 )
 from openff.toolkit.utils.exceptions import UnsupportedMoleculeConversionError
 from openff.toolkit.utils.utils import deserialize_numpy, serialize_numpy
@@ -497,11 +498,10 @@ class _SimpleMolecule:
     @property
     def has_unique_atom_names(self) -> bool:
         """``True`` if the molecule has unique atom names, ``False`` otherwise."""
+        # TODO: Let _SimpleAtoms have names?
         for atom in self.atoms:
             if not (hasattr(atom, "name")):
                 return False
-        from openff.toolkit.topology.molecule import _has_unique_atom_names
-
         return _has_unique_atom_names(self)
 
     def __getattr__(self, name: str) -> list["HierarchyElement"]:
@@ -527,7 +527,6 @@ class _SimpleAtom:
             self.metadata = AtomMetadataDict()
         else:
             self.metadata = AtomMetadataDict(metadata)
-        # self._name = name
         self._atomic_number = atomic_number
         self._molecule = molecule
         self._bonds: list[Optional[_SimpleBond]] = list()
