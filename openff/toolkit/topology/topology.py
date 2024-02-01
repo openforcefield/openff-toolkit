@@ -1206,13 +1206,14 @@ class Topology(Serializable):
 
     def copy_initializer(self, other):
         import copy
+
         self.aromaticity_model = other.aromaticity_model
         self._constrained_atom_pairs = copy.deepcopy(other._constrained_atom_pairs)
         self._box_vectors = copy.deepcopy(other._box_vectors)
         self._molecules = copy.deepcopy(other._molecules)
         self._invalidate_cached_properties()
-        #other_copy = deepcopy(other)
-        #self._initialize_from_dict(other_dict)
+        # other_copy = deepcopy(other)
+        # self._initialize_from_dict(other_dict)
 
     def to_dict(self):
         from openff.toolkit.utils.utils import serialize_numpy
