@@ -498,10 +498,6 @@ class _SimpleMolecule:
     @property
     def has_unique_atom_names(self) -> bool:
         """``True`` if the molecule has unique atom names, ``False`` otherwise."""
-        # TODO: Let _SimpleAtoms have names?
-        for atom in self.atoms:
-            if not (hasattr(atom, "name")):
-                return False
         return _has_unique_atom_names(self)
 
     def __getattr__(self, name: str) -> list["HierarchyElement"]:
