@@ -234,9 +234,17 @@ class TestMMMolecule:
         assert topology.getNumAtoms() == t4.n_atoms
         assert topology.getNumBonds() == t4.n_bonds
 
-    @pytest.mark.skip(reason="Not written")
-    def test_generate_unique_atom_names(self):
-        pass
+    def test_generate_unique_atom_names(self, water):
+        # Initially atom names are undefined
+        assert not (hasattr(water.atom(0), "name"))
+        assert water.has_unique_atom_names is False
+        # Assign unique atom names and ensure that they're unique
+        water.generate_unique_atom_names()
+        assert water.has_unique_atom_names is True
+        # Now manually make them not-unique and ensure that has_unique_atom_names reflects that
+        water.atom(0).name = "foo"
+        water.atom(1).name = "foo"
+        assert water.has_unique_atom_names is False
 
 
 class TestImpropers:
