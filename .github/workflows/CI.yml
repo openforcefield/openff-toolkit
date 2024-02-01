@@ -162,12 +162,12 @@ jobs:
           pytest -v --no-cov --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
 
       - name: Run notebooks in docs
-        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
+        if: ${{ matrix.rdkit == false && matrix.openeye == false }}
         run: |
           pytest -v --no-cov --durations=5 --nbval --ignore docs/_build/ docs/
 
       - name: Run examples in docstrings
-        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
+        if: ${{ matrix.rdkit == false && matrix.openeye == false }}
         run: |
           pytest -v --no-cov --doctest-modules --ignore-glob='openff/toolkit/_tests/test_*' --ignore=openff/toolkit/data/ --ignore=openff/toolkit/utils/utils.py openff/
 
