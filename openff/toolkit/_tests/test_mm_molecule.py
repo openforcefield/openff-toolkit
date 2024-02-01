@@ -235,8 +235,11 @@ class TestMMMolecule:
         assert topology.getNumBonds() == t4.n_bonds
 
     def test_generate_unique_atom_names(self, water):
-        # Initially atom names are undefined
-        assert not (hasattr(water.atom(0), "name"))
+
+        # Initially atom names default to empty string
+        assert hasattr(water.atom(0), "name")
+        assert water.atom(0).name == ""
+
         assert water.has_unique_atom_names is False
         # Assign unique atom names and ensure that they're unique
         water.generate_unique_atom_names()

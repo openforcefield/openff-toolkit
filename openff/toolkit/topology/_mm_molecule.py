@@ -522,16 +522,34 @@ _SimpleMolecule.update_hierarchy_schemes = Molecule.update_hierarchy_schemes  # 
 
 
 class _SimpleAtom:
-    def __init__(self, atomic_number: int, molecule=None, metadata=None, **kwargs):
+    def __init__(
+        self,
+        atomic_number: int,
+        molecule: Optional[_SimpleMolecule] = None,
+        metadata: Optional[AtomMetadataDict] = None,
+        name: str = "",
+        **kwargs,
+    ):
         if metadata is None:
             self.metadata = AtomMetadataDict()
         else:
             self.metadata = AtomMetadataDict(metadata)
+
+        # This _could_ be hidden away into _metadata
+        self._name = name
         self._atomic_number = atomic_number
         self._molecule = molecule
         self._bonds: list[Optional[_SimpleBond]] = list()
         for key, val in kwargs.items():
             setattr(self, key, val)
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        self._name = value
 
     @property
     def atomic_number(self) -> int:
