@@ -6,17 +6,12 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-## Current development
-
-### API-breaking changes
-
-### Behavior changes
-
-### Bugfixes
+## 0.15.2
 
 ### New features
 
-### Improved documentation and warnings
+- [PR #1818](https://github.com/openforcefield/openff-toolkit/pull/1818): Several improvements to enable the practical use of ``Interchange.from_openmm``.
+
 
 ## 0.15.1
 
