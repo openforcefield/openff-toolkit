@@ -25,7 +25,7 @@ dependencies:
     # Toolkit-specific
   - ambertools >=22
   - rdkit
-  - openeye-toolkits
+  - openeye-toolkits=2023.1
     # Test-only/optional/dev/typing
   - pytest
   - pytest-cov
