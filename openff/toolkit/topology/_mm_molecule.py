@@ -283,7 +283,22 @@ class _SimpleMolecule:
         offset = min(subgraph.nodes())
 
         for _, node_data in subgraph.nodes(data=True):
-            molecule.add_atom(atomic_number=node_data["atomic_number"])
+            # Hierarchy metadata like residue name needs to be passed in as a separate argument,
+            # so we extract those values from the node data
+            metadata = dict()
+            for key, val in node_data.items():
+                if key in [
+                    "residue_name",
+                    "residue_number",
+                    "insertion_code",
+                    "chain_id",
+                ]:
+                    metadata[key] = val
+            # Then we remove the metadata items that we took from the node data
+            for key in metadata.keys():
+                del node_data[key]
+
+            molecule.add_atom(metadata=metadata, **node_data)
 
         for topology_index1, topology_index2, _edge_data in subgraph.edges(data=True):
             molecule.add_bond(topology_index1 - offset, topology_index2 - offset)

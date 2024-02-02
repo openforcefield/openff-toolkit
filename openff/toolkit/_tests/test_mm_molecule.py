@@ -215,9 +215,6 @@ class TestMMMolecule:
         assert topology.n_atoms == t4.n_atoms
         assert topology.n_bonds == t4.n_bonds
 
-    @pytest.mark.skip(
-        reason="Fails because of https://github.com/openforcefield/openff-toolkit/issues/1783"
-    )
     def test_to_openmm_topology(self, methanol):
         topology = methanol.to_topology().to_openmm()
 
