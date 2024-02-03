@@ -6100,7 +6100,9 @@ class HierarchyElement:
         return _generate_unique_atom_names(self)
 
 
-def _has_unique_atom_names(obj: Union[FrozenMolecule, HierarchyElement]) -> bool:
+def _has_unique_atom_names(
+    obj: Union[FrozenMolecule, "_SimpleMolecule", HierarchyElement]
+) -> bool:
     """``True`` if the object has unique atom names, ``False`` otherwise."""
     unique_atom_names = set([atom.name for atom in obj.atoms])
     if len(unique_atom_names) < obj.n_atoms:

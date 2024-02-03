@@ -21,6 +21,7 @@ from openff.toolkit.topology.molecule import (
     HierarchyScheme,
     Molecule,
     _atom_nums_to_hill_formula,
+    _has_unique_atom_names,
 )
 from openff.toolkit.utils.exceptions import UnsupportedMoleculeConversionError
 from openff.toolkit.utils.utils import deserialize_numpy, serialize_numpy
@@ -282,7 +283,22 @@ class _SimpleMolecule:
         offset = min(subgraph.nodes())
 
         for _, node_data in subgraph.nodes(data=True):
-            molecule.add_atom(atomic_number=node_data["atomic_number"])
+            # Hierarchy metadata like residue name needs to be passed in as a separate argument,
+            # so we extract those values from the node data
+            metadata = dict()
+            for key, val in node_data.items():
+                if key in [
+                    "residue_name",
+                    "residue_number",
+                    "insertion_code",
+                    "chain_id",
+                ]:
+                    metadata[key] = val
+            # Then we remove the metadata items that we took from the node data
+            for key in metadata.keys():
+                del node_data[key]
+
+            molecule.add_atom(metadata=metadata, **node_data)
 
         for topology_index1, topology_index2, _edge_data in subgraph.edges(data=True):
             molecule.add_bond(topology_index1 - offset, topology_index2 - offset)
@@ -494,6 +510,11 @@ class _SimpleMolecule:
 
             atom.name = symbol + str(element_counts[symbol]) + "x"
 
+    @property
+    def has_unique_atom_names(self) -> bool:
+        """``True`` if the molecule has unique atom names, ``False`` otherwise."""
+        return _has_unique_atom_names(self)
+
     def __getattr__(self, name: str) -> list["HierarchyElement"]:
         """If a requested attribute is not found, check the hierarchy schemes"""
         try:
@@ -512,16 +533,34 @@ _SimpleMolecule.update_hierarchy_schemes = Molecule.update_hierarchy_schemes  # 
 
 
 class _SimpleAtom:
-    def __init__(self, atomic_number: int, molecule=None, metadata=None, **kwargs):
+    def __init__(
+        self,
+        atomic_number: int,
+        molecule: Optional[_SimpleMolecule] = None,
+        metadata: Optional[AtomMetadataDict] = None,
+        name: str = "",
+        **kwargs,
+    ):
         if metadata is None:
             self.metadata = AtomMetadataDict()
         else:
             self.metadata = AtomMetadataDict(metadata)
+
+        # This _could_ be hidden away into _metadata
+        self._name = name
         self._atomic_number = atomic_number
         self._molecule = molecule
         self._bonds: list[Optional[_SimpleBond]] = list()
         for key, val in kwargs.items():
             setattr(self, key, val)
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        self._name = value
 
     @property
     def atomic_number(self) -> int:
