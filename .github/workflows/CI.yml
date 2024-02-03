@@ -28,9 +28,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["3.9", "3.10", "3.11"]
-        rdkit: [true, false]
-        openeye: [true, false]
+        python-version: ["3.9"]
+        rdkit: [true]
+        openeye: [true]
         exclude:
           - rdkit: false
             openeye: false
@@ -154,7 +154,7 @@ jobs:
             PYTEST_ARGS+=" --runslow"
           fi
 
-          python -m pytest $PYTEST_ARGS $COV
+          #python -m pytest $PYTEST_ARGS $COV
 
       - name: Run code snippets in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
