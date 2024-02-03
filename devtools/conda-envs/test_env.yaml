@@ -5,6 +5,7 @@ channels:
 dependencies:
     # Base depends
   - python
+  - nomkl
   - pip
   - packaging
   - numpy
