@@ -12,6 +12,13 @@ import pytest
 
 logger = logging.getLogger(__name__)
 
+# Ensure QCPortal is imported before any OpenEye modules, see
+# https://github.com/conda-forge/qcfractal-feedstock/issues/43
+try:
+    import qcportal  # noqa
+except ImportError:
+    pass
+
 
 def pytest_configure(config):
     """

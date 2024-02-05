@@ -1279,9 +1279,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 metadata=metadata_dict,
                 invalidate_cache=False,
             )
-            off_to_oe_idx[
-                oe_idx
-            ] = atom_index  # store for mapping oeatom to molecule atom indices below
+            off_to_oe_idx[oe_idx] = (
+                atom_index  # store for mapping oeatom to molecule atom indices below
+            )
             atom_mapping[atom_index] = map_id
 
         molecule._invalidate_cached_properties()
@@ -2779,9 +2779,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             atom_indices: dict[int, int] = dict()
             for matched_atom in match.GetAtoms():
                 if matched_atom.pattern.GetMapIdx() != 0:
-                    atom_indices[
-                        matched_atom.pattern.GetMapIdx() - 1
-                    ] = matched_atom.target.GetIdx()
+                    atom_indices[matched_atom.pattern.GetMapIdx() - 1] = (
+                        matched_atom.target.GetIdx()
+                    )
 
             # Compress into tuple
             matches.append(

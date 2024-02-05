@@ -2,6 +2,7 @@
 Test classes and function in module openff.toolkit.typing.engines.smirnoff.parameters.
 
 """
+
 from collections import defaultdict
 from inspect import isabstract, isclass
 

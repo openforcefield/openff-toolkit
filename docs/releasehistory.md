@@ -9,7 +9,29 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ## Current development
 
 ### API-breaking changes
+
+### Behavior changes
+
+### Bugfixes
+
+### New features
+
+### Improved documentation and warnings
+
+## 0.15.1
+
+### Tests updated
+
+- [PR #1814](https://github.com/openforcefield/openff-toolkit/pull/1814): Fixes a test to be compatible with both pydantic 1 and 2.
+
+## 0.15.0
+
+This release adds compatibility with QCFractal >=0.50.0, but removes compatibiltiy with QCFractal <0.50.0.
+
+### API-breaking changes
+
 - [PR #1760](https://github.com/openforcefield/openff-toolkit/pull/1760): Removes the private, unused `ParameterHandler._OPENMMTYPE` attribute.
+- [PR #1763](https://github.com/openforcefield/openff-toolkit/pull/1763): Updates the OpenFF Toolkit to be compatible with QCFractal >= 0.50. Removes the `client` named argument from `Molecule.from_qcschema`. 
 
 ### Behavior changes
 
@@ -20,9 +42,12 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Bugfixes
 
 - [PR #1778](https://github.com/openforcefield/openff-toolkit/pull/1778): Ensures SD data tags are preserved in `Molecule.from_openeye` if the input is of type `oechem.OEGraphMol`.
+* [PR #1811](https://github.com/openforcefield/openff-toolkit/pull/1811): Preserves hierarchy data in `_SimpleMolecule.from_molecule`
 
 ### New features
-- [PR #1775](https://github.com/openforcefield/openff-toolkit/pull/1775): Re-exports `openff.units.unit` and `Quantity` at `openff.toolkit.unit` and `Quantity`.
+
+* [PR #1775](https://github.com/openforcefield/openff-toolkit/pull/1775): Re-exports `openff.units.unit` and `Quantity` at `openff.toolkit.unit` and `Quantity`.
+* [PR #1805](https://github.com/openforcefield/openff-toolkit/pull/1805): Adds `_SimpleMolecule.__deepcopy__` and `_SimpleMolecule.to_topology`.
 
 
 ### Improved documentation and warnings
