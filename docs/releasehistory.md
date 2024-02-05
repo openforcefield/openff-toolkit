@@ -43,6 +43,10 @@ This release adds compatibility with QCFractal >=0.50.0, but removes compatibilt
 
 ### Behavior changes
 
+- [PR #1779](https://github.com/openforcefield/openff-toolkit/pull/1779): Overhauls `Molecule.enumerate_protomers`:
+  * By default, `max_states=0` and there is no limit to the number of returned protomers
+  * The input molecule is returned if it is enumerated with default Quacpac formal charge enumeration settings
+
 ### Bugfixes
 
 - [PR #1778](https://github.com/openforcefield/openff-toolkit/pull/1778): Ensures SD data tags are preserved in `Molecule.from_openeye` if the input is of type `oechem.OEGraphMol`.
