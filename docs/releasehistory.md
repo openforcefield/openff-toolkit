@@ -13,7 +13,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Behavior changes
 
-- [PR #1779](https://github.com/openforcefield/openff-toolkit/pull/17XX): Overhauls `Molecule.enumerate_protomers`:
+- [PR #1779](https://github.com/openforcefield/openff-toolkit/pull/1779): Overhauls `Molecule.enumerate_protomers`:
   * By default, `max_states=0` and there is no limit to the number of returned protomers
   * The input molecule is returned if it is enumerated with default Quacpac formal charge enumeration settings
 
