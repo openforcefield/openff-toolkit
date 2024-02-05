@@ -13,7 +13,7 @@ import re
 import tempfile
 from collections import defaultdict
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Optional
 
 import numpy as np
 from cachetools import LRUCache, cached
@@ -55,7 +55,7 @@ from openff.toolkit.utils.utils import inherit_docstrings
 logger = logging.getLogger(__name__)
 
 
-TTA: TypeAlias = Tuple[Tuple[Any, ...], ...]
+TTA: TypeAlias = tuple[tuple[Any, ...], ...]
 
 
 def get_oeformat(file_format):
@@ -432,7 +432,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         file_format: str,
         allow_undefined_stereo: bool = False,
         _cls=None,
-    ) -> List["Molecule"]:
+    ) -> list["Molecule"]:
         """
         Return an openff.toolkit.topology.Molecule from a file using this toolkit.
 
@@ -450,7 +450,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Returns
         -------
-        molecules : List[Molecule]
+        molecules : list[Molecule]
             The list of ``Molecule`` objects in the file.
 
         Raises
@@ -496,7 +496,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         file_format: str,
         allow_undefined_stereo: bool = False,
         _cls=None,
-    ) -> List["Molecule"]:
+    ) -> list["Molecule"]:
         """
         Return an openff.toolkit.topology.Molecule from a file-like object (an object with a ".read()" method using
         this toolkit.
@@ -515,7 +515,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Returns
         -------
-        molecules : List[Molecule]
+        molecules : list[Molecule]
             The list of Molecule objects in the file object.
 
         Raises
@@ -692,7 +692,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Returns
         -------
-        molecules : List[Molecule]
+        molecules : list[Molecule]
             The list of Molecule objects in the stream.
 
         """
@@ -813,7 +813,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def enumerate_protomers(
         self, molecule: "Molecule", max_states: int = 10
-    ) -> List["Molecule"]:
+    ) -> list["Molecule"]:
         """
         Enumerate the formal charges of a molecule to generate different protomoers.
 
@@ -827,7 +827,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Returns
         -------
-        molecules: List[openff.toolkit.topology.Molecule],
+        molecules: list[openff.toolkit.topology.Molecule],
             A list of the protomers of the input molecules not including the input.
         """
 
@@ -856,7 +856,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         undefined_only: bool = False,
         max_isomers: int = 20,
         rationalise: bool = True,
-    ) -> List["Molecule"]:
+    ) -> list["Molecule"]:
         """
         Enumerate the stereocenters and bonds of the current molecule.
 
@@ -877,7 +877,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Returns
         --------
-        molecules: List[openff.toolkit.topology.Molecule]
+        molecules: list[openff.toolkit.topology.Molecule]
             A list of openff.toolkit.topology.Molecule instances
 
         """
@@ -914,7 +914,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def enumerate_tautomers(
         self, molecule: "Molecule", max_states: int = 20
-    ) -> List["Molecule"]:
+    ) -> list["Molecule"]:
         """
         Enumerate the possible tautomers of the current molecule
 
@@ -928,7 +928,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Returns
         -------
-        molecules: List[openff.toolkit.topology.Molecule]
+        molecules: list[openff.toolkit.topology.Molecule]
             A list of openff.toolkit.topology.Molecule instances excluding the input molecule.
         """
         from openeye import oequacpac
@@ -1126,6 +1126,12 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         from openeye import oechem
 
+        # Save the existing SD tags, if any, since they're lost in the cast to
+        # OEMol of the input is OEGraphMol. See issue #1711
+        existing_sd_tags = {
+            pair.GetTag(): pair.GetValue() for pair in oechem.OEGetSDDataIter(oemol)
+        }
+
         oemol = oechem.OEMol(oemol)
 
         # Add explicit hydrogens if they're implicit
@@ -1208,9 +1214,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         if oemol.GetTitle() != "":
             molecule.name = oemol.GetTitle()
 
-        # Copy any attached SD tag information
-        for dp in oechem.OEGetSDDataPairs(oemol):
-            molecule._properties[dp.GetTag()] = dp.GetValue()
+        # Attach any SD tag information we saved before casting input to new OEMol
+        for key, value in existing_sd_tags.items():
+            molecule._properties[key] = value
 
         off_to_oe_idx = dict()  # {oemol_idx: molecule_idx}
         atom_mapping = {}
@@ -1269,9 +1275,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 metadata=metadata_dict,
                 invalidate_cache=False,
             )
-            off_to_oe_idx[
-                oe_idx
-            ] = atom_index  # store for mapping oeatom to molecule atom indices below
+            off_to_oe_idx[oe_idx] = (
+                atom_index  # store for mapping oeatom to molecule atom indices below
+            )
             atom_mapping[atom_index] = map_id
 
         molecule._invalidate_cached_properties()
@@ -2296,7 +2302,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         self,
         molecule: "Molecule",
         partial_charge_method: Optional[str] = None,
-        use_conformers: Optional[List[Quantity]] = None,
+        use_conformers: Optional[list[Quantity]] = None,
         strict_n_conformers: bool = False,
         normalize_partial_charges: bool = True,
         _cls=None,
@@ -2512,7 +2518,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         self,
         molecule: "Molecule",
         bond_order_model: Optional[str] = None,
-        use_conformers: Optional[List[Quantity]] = None,
+        use_conformers: Optional[list[Quantity]] = None,
         _cls=None,
     ):
         """
@@ -2634,7 +2640,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             mol_bond = molecule._bonds[bond_idx]
             mol_bond.fractional_bond_order = order
 
-    def get_tagged_smarts_connectivity(self, smarts: str) -> Tuple[TTA, ...]:
+    def get_tagged_smarts_connectivity(self, smarts: str) -> tuple[TTA, ...]:
         """
         Returns a tuple of tuples indicating connectivity between tagged atoms in a SMARTS string. Does not
         return bond order.
@@ -2691,7 +2697,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         smarts: str,
         aromaticity_model=DEFAULT_AROMATICITY_MODEL,
         unique: bool = False,
-    ) -> List[Tuple[int, ...]]:
+    ) -> list[tuple[int, ...]]:
         """Find all sets of atoms in the provided OpenEye molecule that match the provided SMARTS string.
 
         Parameters
@@ -2766,12 +2772,12 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         matches = list()
         for match in substructure_search.Match(mol, unique):
             # Compile list of atom indices that match the pattern tags
-            atom_indices: Dict[int, int] = dict()
+            atom_indices: dict[int, int] = dict()
             for matched_atom in match.GetAtoms():
                 if matched_atom.pattern.GetMapIdx() != 0:
-                    atom_indices[
-                        matched_atom.pattern.GetMapIdx() - 1
-                    ] = matched_atom.target.GetIdx()
+                    atom_indices[matched_atom.pattern.GetMapIdx() - 1] = (
+                        matched_atom.target.GetIdx()
+                    )
 
             # Compress into tuple
             matches.append(
@@ -2786,7 +2792,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         smarts: str,
         aromaticity_model=DEFAULT_AROMATICITY_MODEL,
         unique=False,
-    ) -> List[Tuple[int, ...]]:
+    ) -> list[tuple[int, ...]]:
         """
         Find all SMARTS matches for the specified molecule, using the specified aromaticity model.
 

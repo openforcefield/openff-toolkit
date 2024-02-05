@@ -15,10 +15,49 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Bugfixes
 
 ### New features
-- [PR #1775](https://github.com/openforcefield/openff-toolkit/pull/1775): Re-exports `openff.units.unit` and `Quantity` at `openff.toolkit.unit` and `Quantity`.
+
+### Improved documentation and warnings
+
+
+## 0.15.2
+
+### New features
+
+- [PR #1818](https://github.com/openforcefield/openff-toolkit/pull/1818): Several improvements to enable the practical use of ``Interchange.from_openmm``.
+
+
+## 0.15.1
+
+### Tests updated
+
+- [PR #1814](https://github.com/openforcefield/openff-toolkit/pull/1814): Fixes a test to be compatible with both pydantic 1 and 2.
+
+## 0.15.0
+
+This release adds compatibility with QCFractal >=0.50.0, but removes compatibiltiy with QCFractal <0.50.0.
+
+### API-breaking changes
+
+- [PR #1760](https://github.com/openforcefield/openff-toolkit/pull/1760): Removes the private, unused `ParameterHandler._OPENMMTYPE` attribute.
+- [PR #1763](https://github.com/openforcefield/openff-toolkit/pull/1763): Updates the OpenFF Toolkit to be compatible with QCFractal >= 0.50. Removes the `client` named argument from `Molecule.from_qcschema`. 
+
+### Behavior changes
+
+### Bugfixes
+
+- [PR #1778](https://github.com/openforcefield/openff-toolkit/pull/1778): Ensures SD data tags are preserved in `Molecule.from_openeye` if the input is of type `oechem.OEGraphMol`.
+* [PR #1811](https://github.com/openforcefield/openff-toolkit/pull/1811): Preserves hierarchy data in `_SimpleMolecule.from_molecule`
+
+### New features
+
+* [PR #1775](https://github.com/openforcefield/openff-toolkit/pull/1775): Re-exports `openff.units.unit` and `Quantity` at `openff.toolkit.unit` and `Quantity`.
+* [PR #1805](https://github.com/openforcefield/openff-toolkit/pull/1805): Adds `_SimpleMolecule.__deepcopy__` and `_SimpleMolecule.to_topology`.
 
 
 ### Improved documentation and warnings
+
+- [PR #1732](https://github.com/openforcefield/openff-toolkit/pull/1732): Add documentation describing the use of PDB files with the toolkit.
+- [PR #1804](https://github.com/openforcefield/openff-toolkit/pull/1804): Makes `ForceField.parse_sources` docstring consistent with implementation.
 
 ## 0.14.5
 
@@ -34,7 +73,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Improved documentation and warnings
 
-- [PR #1747](https://github.com/openforcefield/openff-toolkit/pull/1747): Warns if a SMILES with full atom mappings is passed to `Moleucle.from_smiles`, which does not use the atom map for atom ordering (`Molecule.from_mapped_smiles` does).
+- [PR #1747](https://github.com/openforcefield/openff-toolkit/pull/1747): Warns if a SMILES with full atom mappings is passed to `Molecule.from_smiles`, which does not use the atom map for atom ordering (`Molecule.from_mapped_smiles` does).
 - [PR #1743](https://github.com/openforcefield/openff-toolkit/pull/1743): Uses a longer stride in OpenMM DCD reporter in the toolkit showcase and should better utilize GPU resources, if available.
 - [PR #1744](https://github.com/openforcefield/openff-toolkit/pull/1744): Updates the virtual site notebook to use new Interchange behavior.
 

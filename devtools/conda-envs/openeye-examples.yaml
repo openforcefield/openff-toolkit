@@ -22,6 +22,7 @@ dependencies:
   - openff-interchange-base ==0.3.17
   # openff-nagl ==0.3.2
   - typing_extensions
+  - nglview
     # Toolkit-specific
   - openeye-toolkits
     # Test-only/optional/dev/typing/examples
@@ -33,7 +34,7 @@ dependencies:
   - bson
   - msgpack-python
   - qcelemental
-  - qcportal >=0.15, <0.50.0a0
+  - qcportal >=0.50
   - qcengine
   - mdtraj
   - parmed =3
