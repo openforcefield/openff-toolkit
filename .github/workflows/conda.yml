@@ -1,6 +1,7 @@
 name: Conda latest
 
 on:
+  push:
   release:
     types:
       - released
@@ -20,59 +21,46 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        python-version: ["3.9", "3.10"]
+        os: [ubuntu-latest]
+        python-version: ["3.11"]
         openeye: ["true", "false"]
 
     env:
-      CI_OS: ${{ matrix.os }}
       OPENEYE: ${{ matrix.openeye }}
-      PYVER: ${{ matrix.python-version }}
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
-      PACKAGE: openff-toolkit
+      PYTEST_ARGS: -r fE --tb=short -n logical --durations=20
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Vanilla install from conda
         uses: mamba-org/setup-micromamba@v1
-        if: ${{ matrix.openeye == 'false' }}
         with:
-          environment-file: devtools/conda-envs/conda.yaml
+          environment-name: latest-deployment
           create-args: >-
             python=${{ matrix.python-version }}
-      - name: Install from conda with OpenEye
-        uses: mamba-org/setup-micromamba@v1
-        if: ${{ matrix.openeye == 'true' }}
-        with:
-          environment-file: devtools/conda-envs/conda_oe.yaml
-          create-args: >-
-            python=${{ matrix.python-version }}
+            openff-toolkit-examples
+            smirnoff-plugins=2024
+            pytest-xdist
+            pytest-rerunfailures
 
-      - name: Additional info about the build
-        run: |
-          uname -a
-          df -h
-          ulimit -a
+      - name: Install OpenEye Toolkits
+        if: ${{ matrix.openeye == 'true' }}
+        run: micromamba install openeye-toolkits -c openeye
 
       - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
+        if: ${{ matrix.openeye == 'true' }}
         env:
           OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
         run: |
           echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
 
       - name: Environment Information
-        run: |
-          conda info
-          conda list
+        run: micromamba info && micromamba list
 
       - name: Check installed toolkits
         run: |
-          # Checkout the state of the repo as of the last release (including RCs)
           export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openff-toolkit.git | cut -f2 | grep -E "([0-9]+)\.([0-9]+)\.([0-9]+)$" | sort --version-sort | tail -1 | sed 's/refs\/tags\///')
-          git fetch --tags
-          git checkout tags/$LATEST_TAG
-          git log -1 | cat
 
           if [[ "$OPENEYE" == true ]]; then
             python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert OPENEYE_AVAILABLE, 'OpenEye unavailable'"
@@ -86,9 +74,6 @@ jobs:
 
       - name: Check that correct OFFTK version was installed
         run: |
-          # Go up one directory to ensure that we don't just load the OFFTK from the checked-out repo
-          cd ../
-
           export LATEST_TAG=$(git ls-remote --tags https://github.com/openforcefield/openff-toolkit.git | cut -f2 | grep -E "([0-9]+)\.([0-9]+)\.([0-9]+)$" | sort --version-sort | tail -1 | sed 's/refs\/tags\///')
           export FOUND_VER=$(python -c "import openff.toolkit; print(openff.toolkit.__version__)")
 
@@ -102,20 +87,23 @@ jobs:
             exit 1
           fi
 
-          cd openff-toolkit
-
       - name: Test the package
         run: |
-          python -m pip install utilities/test_plugins
 
-          pwd
-          ls
+          # Act like we're testing with this patch deployed ...
+          python -m pip install . utilities/test_plugins/
 
           if [[ "$OPENEYE" == true ]]; then
             python -c "import openff.toolkit; print(openff.toolkit.__file__)"
             python -c "import openeye; print(openeye.oechem.OEChemIsLicensed())"
           fi
 
-          PYTEST_ARGS=" -r fE --tb=short --runslow openff/toolkit/_tests/conftest.py"
-          PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_links.py"
-          pytest $PYTEST_ARGS openff
+          PYTEST_ARGS+=" --ignore-glob='*_links.py'"
+          PYTEST_ARGS+=" --ignore-glob='*_examples.py'"
+          PYTEST_ARGS+=" --ignore-glob='*_nagl.py'"
+
+          env
+
+          python -m pytest $PYTEST_ARGS \
+            --pyargs "openff.toolkit" \
+            -m "slow or not slow"

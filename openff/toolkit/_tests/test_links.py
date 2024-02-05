@@ -1,15 +1,11 @@
-import os
+import pathlib
 import re
 from urllib.request import Request, urlopen
 
 import pytest
 
-ROOT_DIR_PATH = os.path.join(
-    os.path.dirname(os.path.realpath(__file__)), "..", "..", ".."
-)
 
-
-def find_readme_links():
+def find_readme_links() -> list[str]:
     """Yield all the links in the main README.md file.
 
     Returns
@@ -17,9 +13,19 @@ def find_readme_links():
     readme_examples : list[str]
         The list of links included in the README.md file.
     """
-    readme_file_path = os.path.join(ROOT_DIR_PATH, "README.md")
-    with open(readme_file_path, "r") as f:
+    if "site-packages" in __file__:
+        # This test file is being collected from the installed package, which
+        # does not provide the README file.
+        # Note that there will likely be a mis-bundled file
+        # $CONDA_PREFIX/lib/python3.x/site-packages/README.md, but this is not
+        # the toolkit's README file!
+        return list()
+
+    readme_file_path = pathlib.Path(__file__).parents[3] / "README.md"
+
+    with open(readme_file_path.as_posix(), "r") as f:
         readme_content = f.read()
+
     return re.findall("http[s]?://(?:[0-9a-zA-Z]|[-/.%:_])+", readme_content)
 
 
