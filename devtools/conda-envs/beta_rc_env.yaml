@@ -19,7 +19,7 @@ dependencies:
   - openff-units =0.2.0
   - openff-amber-ff-ports
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.3.17
+  - openff-interchange-base >=0.3.19
   - openff-nagl ==0.3.2
     # Toolkit-specific
   - ambertools >=22
