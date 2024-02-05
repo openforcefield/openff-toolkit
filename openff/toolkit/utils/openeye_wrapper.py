@@ -818,8 +818,8 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
     ) -> list["Molecule"]:
         """
         Enumerate the formal charges of a molecule to generate different protomers.
-        Note that, in cases where the input molecule has an uncommon protonation state 
-        (for example ``[NH2-]``), the input molecule may not be included in the output. 
+        Note that, in cases where the input molecule has an uncommon protonation state
+        (for example ``[NH2-]``), the input molecule may not be included in the output.
 
         Parameters
         ----------
@@ -828,7 +828,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         max_states
             The maximum number of protomer states to be returned. If 0, the default,
-            attempt to return all protomers. 
+            attempt to return all protomers.
 
         Returns
         -------
