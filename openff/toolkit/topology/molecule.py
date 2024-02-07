@@ -4416,7 +4416,7 @@ class FrozenMolecule(Serializable):
 
         The kekule structure of the molecule is saved in two places on the returned Molecule:
 
-        * ``extras["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
+        * ``extras["canonical_isomeric_explicit_hydrogen_mapped_smiles"]``
         * ``identifiers["canonical_isomeric_explicit_hydrogen_mapped_smiles"]``
 
         .. warning :: This API is experimental and subject to change.
