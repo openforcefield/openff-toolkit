@@ -34,9 +34,9 @@ class ToolkitWrapper:
     _is_available: Optional[bool] = None  # True if toolkit is available
     _toolkit_version: Optional[str] = None
     _toolkit_name: Optional[str] = None  # Name of the toolkit
-    _toolkit_installation_instructions: Optional[
-        str
-    ] = None  # Installation instructions for the toolkit
+    _toolkit_installation_instructions: Optional[str] = (
+        None  # Installation instructions for the toolkit
+    )
 
     # @staticmethod
     # TODO: Right now, to access the class definition, I have to make this a classmethod

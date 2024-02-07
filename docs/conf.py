@@ -22,8 +22,9 @@ import sys
 
 sys.path.insert(0, os.path.abspath("."))
 
-import openff.toolkit
 import sphinx
+
+import openff.toolkit
 
 # -- General configuration ------------------------------------------------
 
@@ -89,6 +90,10 @@ intersphinx_mapping = {
     ),
     "openff.units": (
         "https://docs.openforcefield.org/projects/units/en/stable/",
+        None,
+    ),
+    "openff.nagl": (
+        "https://docs.openforcefield.org/projects/nagl/en/stable/",
         None,
     ),
     "openff.docs": (

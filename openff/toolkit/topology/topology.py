@@ -11,6 +11,7 @@ Class definitions to represent a molecular system and its chemical components
    * Use `attrs <http://www.attrs.org/>`_ for object setter boilerplate?
 
 """
+
 import re
 from collections import defaultdict
 from collections.abc import MutableMapping
@@ -77,6 +78,7 @@ if TYPE_CHECKING:
     from openff.toolkit.utils import ToolkitRegistry, ToolkitWrapper
 
 TKR: TypeAlias = Union["ToolkitRegistry", "ToolkitWrapper"]
+MoleculeLike: TypeAlias = Union["Molecule", "FrozenMolecule", "_SimpleMolecule"]
 
 
 class _TransformedDict(MutableMapping):
@@ -201,7 +203,7 @@ class SortedDict(_TransformedDict):
 
 
 class UnsortedDict(_TransformedDict):
-    ...
+    pass
 
 
 class TagSortedDict(_TransformedDict):
@@ -414,8 +416,6 @@ class Topology(Serializable):
             or serialized Topology object.
 
         """
-        from openff.toolkit.topology.molecule import FrozenMolecule
-
         # Assign cheminformatics models
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL
 
@@ -495,7 +495,10 @@ class Topology(Serializable):
         return len(self.identical_molecule_groups)
 
     @classmethod
-    def from_molecules(cls, molecules: Union[Molecule, list[Molecule]]) -> "Topology":
+    def from_molecules(
+        cls,
+        molecules: Union[MoleculeLike, list[MoleculeLike]],
+    ) -> "Topology":
         """
         Create a new Topology object containing one copy of each of the specified molecule(s).
 
@@ -673,7 +676,7 @@ class Topology(Serializable):
         return len(self._molecules)
 
     @property
-    def molecules(self) -> Generator[Union[Molecule, _SimpleMolecule], None, None]:
+    def molecules(self) -> Generator[MoleculeLike, None, None]:
         """Returns an iterator over all the Molecules in this Topology
 
         Returns
@@ -750,13 +753,13 @@ class Topology(Serializable):
 
         return atom._topology_atom_index  # type: ignore[attr-defined]
 
-    def molecule_index(self, molecule: Molecule) -> int:
+    def molecule_index(self, molecule: MoleculeLike) -> int:
         """
         Returns the index of a given molecule in this topology
 
         Parameters
         ----------
-        molecule : openff.toolkit.topology.FrozenMolecule
+        molecule
 
         Returns
         -------
@@ -780,7 +783,7 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        molecule : openff.toolkit.topology.FrozenMolecule
+        molecule
 
         Returns
         -------
@@ -1202,8 +1205,13 @@ class Topology(Serializable):
                 del atom.__dict__["_topology_atom_index"]
 
     def copy_initializer(self, other):
-        other_dict = deepcopy(other.to_dict())
-        self._initialize_from_dict(other_dict)
+        import copy
+
+        self.aromaticity_model = other.aromaticity_model
+        self._constrained_atom_pairs = copy.deepcopy(other._constrained_atom_pairs)
+        self._box_vectors = copy.deepcopy(other._box_vectors)
+        self._molecules = copy.deepcopy(other._molecules)
+        self._invalidate_cached_properties()
 
     def to_dict(self):
         from openff.toolkit.utils.utils import serialize_numpy
@@ -1212,9 +1220,9 @@ class Topology(Serializable):
         return_dict["aromaticity_model"] = self._aromaticity_model
         return_dict["constrained_atom_pairs"] = dict()
         for constrained_atom_pair, distance in self._constrained_atom_pairs.items():
-            return_dict["constrained_atom_pairs"][
-                constrained_atom_pair
-            ] = quantity_to_string(distance)
+            return_dict["constrained_atom_pairs"][constrained_atom_pair] = (
+                quantity_to_string(distance)
+            )
 
         if self._box_vectors is None:
             return_dict["box_vectors"] = None
@@ -2110,7 +2118,7 @@ class Topology(Serializable):
                 if isinstance(molecule, Molecule):
                     molecule._conformers = [array[start:stop]]
                 else:
-                    molecule.conformers = [array[start:stop]]
+                    molecule.conformers = [array[start:stop]]  # type: ignore[misc]
             else:
                 molecule.conformers[0:1] = [array[start:stop]]
             start = stop
@@ -2120,7 +2128,7 @@ class Topology(Serializable):
     def from_mdtraj(
         cls,
         mdtraj_topology: "mdtraj.Topology",
-        unique_molecules: Optional[Iterable[FrozenMolecule]] = None,
+        unique_molecules: Optional[Iterable[MoleculeLike]] = None,
         positions: Union[None, "OMMQuantity", Quantity] = None,
     ):
         """
@@ -2331,16 +2339,13 @@ class Topology(Serializable):
                 return molecule.bond(bond_molecule_index)
             this_molecule_start_index += molecule.n_bonds
 
-    def add_molecule(self, molecule: Union[Molecule, _SimpleMolecule]) -> int:
+    def add_molecule(self, molecule: MoleculeLike) -> int:
         """Add a copy of the molecule to the topology"""
         idx = self._add_molecule_keep_cache(molecule)
         self._invalidate_cached_properties()
         return idx
 
-    def _add_molecule_keep_cache(
-        self,
-        molecule: Union[Molecule, _SimpleMolecule],
-    ) -> int:
+    def _add_molecule_keep_cache(self, molecule: MoleculeLike) -> int:
         self._molecules.append(deepcopy(molecule))
         return len(self._molecules)
 
