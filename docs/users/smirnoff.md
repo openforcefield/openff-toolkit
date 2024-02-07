@@ -84,7 +84,7 @@ general or as specific as needed.
 [SMIRKS]: https://www.daylight.com/dayhtml/doc/theory/theory.smirks.html
 [standards repository]: https://openforcefield.github.io/standards/standards/smirnoff/
 [`Interchange`]: openff.interchange.Interchange
-[producing input files and data]: openff.interchange:using/output
+[producing input files and data]: inv:openff.interchange#using/output
 
 :::{hint} 
 This page is not the SMIRNOFF spec; it has been moved to the

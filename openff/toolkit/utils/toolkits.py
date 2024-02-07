@@ -19,6 +19,7 @@ Currently supported toolkits:
    * Change global variables from _INSTALLED to _AVAILABLE
 
 """
+
 __all__ = (
     "DEFAULT_AROMATICITY_MODEL",
     "ALLOWED_AROMATICITY_MODELS",

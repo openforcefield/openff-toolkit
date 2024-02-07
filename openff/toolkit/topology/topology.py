@@ -11,6 +11,7 @@ Class definitions to represent a molecular system and its chemical components
    * Use `attrs <http://www.attrs.org/>`_ for object setter boilerplate?
 
 """
+
 import re
 from collections import defaultdict
 from collections.abc import MutableMapping
@@ -19,15 +20,12 @@ from copy import deepcopy
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
-    Dict,
     Generator,
     Iterable,
     Iterator,
-    List,
     Literal,
     Optional,
     TextIO,
-    Tuple,
     Union,
 )
 
@@ -80,6 +78,7 @@ if TYPE_CHECKING:
     from openff.toolkit.utils import ToolkitRegistry, ToolkitWrapper
 
 TKR: TypeAlias = Union["ToolkitRegistry", "ToolkitWrapper"]
+MoleculeLike: TypeAlias = Union["Molecule", "FrozenMolecule", "_SimpleMolecule"]
 
 
 class _TransformedDict(MutableMapping):
@@ -131,7 +130,7 @@ class _TransformedDict(MutableMapping):
             A key of indices
         possible: list of tuples of int
             List of possible keys
-        permutations: Dict[Tuple[int, ...], int]
+        permutations: dict[tuple[int, ...], int]
             Dictionary of canonical orders
         """
         key = tuple(key)
@@ -204,7 +203,7 @@ class SortedDict(_TransformedDict):
 
 
 class UnsortedDict(_TransformedDict):
-    ...
+    pass
 
 
 class TagSortedDict(_TransformedDict):
@@ -417,8 +416,6 @@ class Topology(Serializable):
             or serialized Topology object.
 
         """
-        from openff.toolkit.topology.molecule import FrozenMolecule
-
         # Assign cheminformatics models
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL
 
@@ -498,7 +495,10 @@ class Topology(Serializable):
         return len(self.identical_molecule_groups)
 
     @classmethod
-    def from_molecules(cls, molecules: Union[Molecule, List[Molecule]]) -> "Topology":
+    def from_molecules(
+        cls,
+        molecules: Union[MoleculeLike, list[MoleculeLike]],
+    ) -> "Topology":
         """
         Create a new Topology object containing one copy of each of the specified molecule(s).
 
@@ -660,12 +660,12 @@ class Topology(Serializable):
             )
 
     @property
-    def constrained_atom_pairs(self) -> Dict[Tuple[int], Union[Quantity, bool]]:
+    def constrained_atom_pairs(self) -> dict[tuple[int], Union[Quantity, bool]]:
         """Returns the constrained atom pairs of the Topology
 
         Returns
         -------
-        constrained_atom_pairs : dict of Tuple[int]: Union[unit.Quantity, bool]
+        constrained_atom_pairs : dict of tuple[int]: Union[unit.Quantity, bool]
              dictionary of the form {(atom1_topology_index, atom2_topology_index): distance}
         """
         return self._constrained_atom_pairs
@@ -676,7 +676,7 @@ class Topology(Serializable):
         return len(self._molecules)
 
     @property
-    def molecules(self) -> Generator[Union[Molecule, _SimpleMolecule], None, None]:
+    def molecules(self) -> Generator[MoleculeLike, None, None]:
         """Returns an iterator over all the Molecules in this Topology
 
         Returns
@@ -753,13 +753,13 @@ class Topology(Serializable):
 
         return atom._topology_atom_index  # type: ignore[attr-defined]
 
-    def molecule_index(self, molecule: Molecule) -> int:
+    def molecule_index(self, molecule: MoleculeLike) -> int:
         """
         Returns the index of a given molecule in this topology
 
         Parameters
         ----------
-        molecule : openff.toolkit.topology.FrozenMolecule
+        molecule
 
         Returns
         -------
@@ -783,7 +783,7 @@ class Topology(Serializable):
 
         Parameters
         ----------
-        molecule : openff.toolkit.topology.FrozenMolecule
+        molecule
 
         Returns
         -------
@@ -823,8 +823,8 @@ class Topology(Serializable):
         return sum(mol.n_angles for mol in self._molecules)
 
     @property
-    def angles(self) -> Generator[Tuple["Atom", ...], None, None]:
-        """Iterator over the angles in this Topology. Returns a Generator of Tuple[Atom]."""
+    def angles(self) -> Generator[tuple["Atom", ...], None, None]:
+        """Iterator over the angles in this Topology. Returns a Generator of tuple[Atom]."""
         for molecule in self._molecules:
             for angle in molecule.angles:
                 yield angle
@@ -835,8 +835,8 @@ class Topology(Serializable):
         return sum(mol.n_propers for mol in self._molecules)
 
     @property
-    def propers(self) -> Generator[Tuple[Union["Atom", _SimpleAtom], ...], None, None]:
-        """Iterable of Tuple[Atom]: iterator over the proper torsions in this Topology."""
+    def propers(self) -> Generator[tuple[Union["Atom", _SimpleAtom], ...], None, None]:
+        """Iterable of tuple[Atom]: iterator over the proper torsions in this Topology."""
         for molecule in self.molecules:
             for proper in molecule.propers:
                 yield proper
@@ -847,8 +847,8 @@ class Topology(Serializable):
         return sum(mol.n_impropers for mol in self._molecules)
 
     @property
-    def impropers(self) -> Generator[Tuple["Atom", ...], None, None]:
-        """Generator of Tuple[Atom]: iterator over the possible improper torsions in this Topology."""
+    def impropers(self) -> Generator[tuple["Atom", ...], None, None]:
+        """Generator of tuple[Atom]: iterator over the possible improper torsions in this Topology."""
         for molecule in self._molecules:
             for improper in molecule.impropers:
                 yield improper
@@ -856,7 +856,7 @@ class Topology(Serializable):
     @property
     def smirnoff_impropers(
         self,
-    ) -> Generator[Tuple[Union["Atom", _SimpleAtom], ...], None, None]:
+    ) -> Generator[tuple[Union["Atom", _SimpleAtom], ...], None, None]:
         """
         Iterate over improper torsions in the molecule, but only those with
         trivalent centers, reporting the central atom second in each improper.
@@ -897,7 +897,7 @@ class Topology(Serializable):
     @property
     def amber_impropers(
         self,
-    ) -> Generator[Tuple[Union["Atom", _SimpleAtom], ...], None, None]:
+    ) -> Generator[tuple[Union["Atom", _SimpleAtom], ...], None, None]:
         """
         Iterate over improper torsions in the molecule, but only those with
         trivalent centers, reporting the central atom first in each improper.
@@ -1073,7 +1073,7 @@ class Topology(Serializable):
         return matches
 
     @property
-    def identical_molecule_groups(self) -> Dict[int, List[Tuple[int, Dict[int, int]]]]:
+    def identical_molecule_groups(self) -> dict[int, list[tuple[int, dict[int, int]]]]:
         """
         Returns groups of chemically identical molecules, identified by index and atom map.
 
@@ -1127,7 +1127,7 @@ class Topology(Serializable):
 
         # Convert molecule identity maps into groups of identical molecules
         identity_maps = self._identify_chemically_identical_molecules()
-        groupings: Dict[int, List[Tuple[int, Dict[int, int]]]] = defaultdict(list)
+        groupings: dict[int, list[tuple[int, dict[int, int]]]] = defaultdict(list)
         for molecule_idx, (unique_mol, atom_map) in identity_maps.items():
             groupings[unique_mol] += [(molecule_idx, atom_map)]
 
@@ -1137,7 +1137,7 @@ class Topology(Serializable):
 
     def _identify_chemically_identical_molecules(
         self,
-    ) -> Dict[int, Tuple[int, Dict[int, int]]]:
+    ) -> dict[int, tuple[int, dict[int, int]]]:
         """
         Perform an all-by-all isomorphism check over molecules in the Topology.
 
@@ -1158,7 +1158,7 @@ class Topology(Serializable):
                 unique_molecule_idx, {molecule_atom_idx, unique_molecule_atom_idx}
             )``
         """
-        identity_maps: Dict[int, Tuple[int, Dict[int, int]]] = dict()
+        identity_maps: dict[int, tuple[int, dict[int, int]]] = dict()
         already_matched_mols = set()
 
         for mol1_idx in range(self.n_molecules):
@@ -1205,8 +1205,13 @@ class Topology(Serializable):
                 del atom.__dict__["_topology_atom_index"]
 
     def copy_initializer(self, other):
-        other_dict = deepcopy(other.to_dict())
-        self._initialize_from_dict(other_dict)
+        import copy
+
+        self.aromaticity_model = other.aromaticity_model
+        self._constrained_atom_pairs = copy.deepcopy(other._constrained_atom_pairs)
+        self._box_vectors = copy.deepcopy(other._box_vectors)
+        self._molecules = copy.deepcopy(other._molecules)
+        self._invalidate_cached_properties()
 
     def to_dict(self):
         from openff.toolkit.utils.utils import serialize_numpy
@@ -1215,9 +1220,9 @@ class Topology(Serializable):
         return_dict["aromaticity_model"] = self._aromaticity_model
         return_dict["constrained_atom_pairs"] = dict()
         for constrained_atom_pair, distance in self._constrained_atom_pairs.items():
-            return_dict["constrained_atom_pairs"][
-                constrained_atom_pair
-            ] = quantity_to_string(distance)
+            return_dict["constrained_atom_pairs"][constrained_atom_pair] = (
+                quantity_to_string(distance)
+            )
 
         if self._box_vectors is None:
             return_dict["box_vectors"] = None
@@ -1385,7 +1390,7 @@ class Topology(Serializable):
 
         # Convert all unique mols to graphs
         topology = cls()
-        graph_to_unq_mol: Dict[Graph, FrozenMolecule] = {}
+        graph_to_unq_mol: dict[Graph, FrozenMolecule] = {}
         for unq_mol in unique_molecules:
             unq_mol_graph = unq_mol.to_networkx()
             for existing_graph in graph_to_unq_mol.keys():
@@ -1543,7 +1548,7 @@ class Topology(Serializable):
         file_path: Union[str, Path, TextIO],
         unique_molecules: Optional[Iterable[Molecule]] = None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-        _custom_substructures: Optional[Dict[str, List[str]]] = None,
+        _custom_substructures: Optional[dict[str, list[str]]] = None,
         _additional_substructures: Optional[Iterable[Molecule]] = None,
     ):
         """
@@ -1624,7 +1629,7 @@ class Topology(Serializable):
             PDB. See above for details.
         toolkit_registry : ToolkitRegistry. Default = None
             The ToolkitRegistry to use as the cheminformatics backend.
-        _custom_substructures: Dict[str, List[str]], Default = {}
+        _custom_substructures: dict[str, list[str]], Default = {}
             Experimental and unstable. Dictionary where keys are the names of new substructures
             (cannot overlap with existing amino acid names) and the values are the new substructure
             entries that follow the same format as those used in the amino acid substructure library
@@ -1664,13 +1669,15 @@ class Topology(Serializable):
          HierarchyElement ('B', '2', ' ', 'CYS') of iterator 'residues' containing 11 atom(s),
          HierarchyElement ('B', '3', ' ', 'NME') of iterator 'residues' containing 6 atom(s)]
 
-         Polymer systems can also be supported if _custom_substructures are given as a Dict[str, List[str]],
-         where the keys are unique atom names and the values are lists of substructure smarts. The
-         substructure smarts must follow the same format as given in
-         "proteins/aa_residues_substructures_explicit_bond_orders_with_caps_explicit_connectivity.json":
-         ”<bond>[#<atomic number>D<degree>+<formal charge>:<id>]<bond>” for monomer atoms and
-         ”<bond>[*:<id>]” for adjacent neighboring atoms
-         (NOTE: This functionality is experimental!)
+        Polymer systems can also be supported if ``_custom_substructures`` are
+        given as a ``dict[str, list[str]]``, where the keys are unique atom
+        names and the values are lists of substructure SMARTS. The substructure
+        SMARTS must follow the same format as given in the `residue
+        substructure connectivity library
+        <https://github.com/openforcefield/openff-toolkit/blob/main/openff/toolkit/data/proteins/aa_residues_substructures_explicit_bond_orders_with_caps_explicit_connectivity.json>`_:
+        ``"<bond>[#<atomic number>D<degree>+<formal charge>:<id>]<bond>"`` for monomer
+        atoms and ``"<bond>[*:<id>]"`` for adjacent neighboring atoms
+        (NOTE: This functionality is experimental!)
 
         >>> PE_substructs = {
         ...     "PE": [
@@ -1973,7 +1980,7 @@ class Topology(Serializable):
             May be a...
 
             - ``openmm.unit.Quantity`` object which has atomic positions as a
-              list of unit-tagged ``Vec3`` objects
+              List of unit-tagged ``Vec3`` objects
             - ``openff.units.unit.Quantity`` object which wraps a
               ``numpy.ndarray`` with dimensions of length
             - (unitless) 2D ``numpy.ndarray``, in which it is assumed that the
@@ -2111,7 +2118,7 @@ class Topology(Serializable):
                 if isinstance(molecule, Molecule):
                     molecule._conformers = [array[start:stop]]
                 else:
-                    molecule.conformers = [array[start:stop]]
+                    molecule.conformers = [array[start:stop]]  # type: ignore[misc]
             else:
                 molecule.conformers[0:1] = [array[start:stop]]
             start = stop
@@ -2121,7 +2128,7 @@ class Topology(Serializable):
     def from_mdtraj(
         cls,
         mdtraj_topology: "mdtraj.Topology",
-        unique_molecules: Optional[Iterable[FrozenMolecule]] = None,
+        unique_molecules: Optional[Iterable[MoleculeLike]] = None,
         positions: Union[None, "OMMQuantity", Quantity] = None,
     ):
         """
@@ -2332,16 +2339,13 @@ class Topology(Serializable):
                 return molecule.bond(bond_molecule_index)
             this_molecule_start_index += molecule.n_bonds
 
-    def add_molecule(self, molecule: Union[Molecule, _SimpleMolecule]) -> int:
+    def add_molecule(self, molecule: MoleculeLike) -> int:
         """Add a copy of the molecule to the topology"""
         idx = self._add_molecule_keep_cache(molecule)
         self._invalidate_cached_properties()
         return idx
 
-    def _add_molecule_keep_cache(
-        self,
-        molecule: Union[Molecule, _SimpleMolecule],
-    ) -> int:
+    def _add_molecule_keep_cache(self, molecule: MoleculeLike) -> int:
         self._molecules.append(deepcopy(molecule))
         return len(self._molecules)
 
@@ -2506,7 +2510,7 @@ class Topology(Serializable):
                 for item in getattr(molecule, iter_name):
                     yield item
 
-    def __getattr__(self, name: str) -> List["HierarchyElement"]:
+    def __getattr__(self, name: str) -> list["HierarchyElement"]:
         """If a requested attribute is not found, check the hierarchy schemes"""
         # Avoid attempting to process dunder methods as hierarchy scheme iterator names
         if name.startswith("__"):
