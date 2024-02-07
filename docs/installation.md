@@ -26,7 +26,7 @@ If you do not have Mamba or Conda installed, see the [ecosystem installation doc
 Installation via the Mamba package manager is the recommended method since all dependencies are automatically fetched and installed for you.
 :::
 
-[ecosystem installation documentation]: openff.docs:install
+[ecosystem installation documentation]: inv:openff.docs#install
 
 (installation/platforms)=
 

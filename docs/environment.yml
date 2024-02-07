@@ -7,11 +7,11 @@ channels:
 dependencies:
     - pip
     # readthedocs dependencies
-    - myst-nb
-    - myst-parser>=0.14
+    - myst-nb=1
+    - myst-parser
     - docutils
     - sphinx-notfound-page
-    - sphinx>=5.0,<6
+    - sphinx=6
     # conda build dependencies
     - python=3.9
     - setuptools

@@ -94,6 +94,21 @@ logger = logging.getLogger(__name__)
 _cal_mol_a2 = unit.calorie / unit.mole / unit.angstrom**2
 
 
+# Hack to make Sphinx happy without breaking changes
+class _UNDEFINED:
+    """
+    Marker type for an undeclared default parameter.
+
+    Custom type used by ``ParameterAttribute`` to differentiate between ``None``
+    and undeclared default.
+    """
+
+    pass
+
+
+UNDEFINED = _UNDEFINED
+
+
 def _linear_inter_or_extrapolate(points_dict, x_query):
     """
     Linearly interpolate or extrapolate based on a piecewise linear function
@@ -320,10 +335,8 @@ class ParameterAttribute:
 
     """
 
-    class UNDEFINED:
-        """Custom type used by ``ParameterAttribute`` to differentiate between ``None`` and undeclared default."""
-
-        pass
+    UNDEFINED = UNDEFINED
+    """Marker type for an undeclared default parameter."""
 
     def __init__(
         self,
