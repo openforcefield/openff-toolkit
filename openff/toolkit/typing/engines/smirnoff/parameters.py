@@ -183,6 +183,25 @@ def _linear_inter_or_extrapolate(points_dict, x_query):
         return k
 
 
+def _idivf_validator(value) -> Callable:
+    """
+    Fairly hacky converter/validator for (proper torsion) idivf.
+
+    Accepted values are "experimental-auto" or any int. Anything that can be
+    passed to `int()` without error is cast to int.
+    """
+    try:
+        # gobble up float or int
+        return int(value)
+    except ValueError:
+        if not isinstance(value, str):
+            raise SMIRNOFFSpecError("Invalid idivf type {type(value)=}")
+        if value != "experimental-auto":
+            raise SMIRNOFFSpecError(f"Invalid idivf value {value}")
+
+        return value
+
+
 # TODO: This is technically a validator, not a converter, but ParameterAttribute doesn't support them yet
 #       (it'll be easy if we switch to use the attrs library).
 def _allow_only(allowed_values):
@@ -2592,7 +2611,7 @@ class ProperTorsionHandler(ParameterHandler):
         periodicity = IndexedParameterAttribute(converter=int)
         phase = IndexedParameterAttribute(unit=unit.degree)
         k = IndexedParameterAttribute(default=None, unit=unit.kilocalorie / unit.mole)
-        idivf = IndexedParameterAttribute(default=None, converter=float)
+        idivf = IndexedParameterAttribute(default=None, converter=_idivf_validator)
 
         # fractional bond order params
         k_bondorder = IndexedMappedParameterAttribute(
