@@ -20,6 +20,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 - [PR #1795](https://github.com/openforcefield/openff-toolkit/pull/1795): Add `NAGLToolkitWrapper` to API reference
 - [PR #1796](https://github.com/openforcefield/openff-toolkit/pull/1796): Update docs tooling and fix warnings
+- [PR #1787](https://github.com/openforcefield/openff-toolkit/pull/1787): Make toolkit wrapper documentation more discoverable
+
 
 ## 0.15.2
 
