@@ -2589,7 +2589,6 @@ This release features additional documentation, code comments, and support for a
 ### Bugfixes
 
 Treatment of improper torsions
-''''''''''''''''''''''''''''''
 
 A significant (though currently unused) problem in handling of improper torsions was corrected.
 Previously, non-planar impropers did not behave correctly, as six-fold impropers have two potential chiralities.
