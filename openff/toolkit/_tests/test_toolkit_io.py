@@ -3,7 +3,6 @@ Tests for I/O functionality of the toolkit wrappers
 
 """
 
-import os
 import pathlib
 import sys
 import tempfile
@@ -944,14 +943,6 @@ class TestRDKitToolkitFromFileIO(BaseFromFileIO):
         assert mol.name == "CHEMBL113"
 
 
-@pytest.fixture(scope="class")
-def tmpdir(request):
-    request.cls.tmpdir = tmpdir = tempfile.TemporaryDirectory()
-    with tmpdir:
-        yield
-    request.cls.tmpdir = None
-
-
 def assert_is_ethanol_sdf(f):
     assert f.readline() == "ethanol\n"  # title line
     f.readline()  # ignore next two lines
@@ -973,12 +964,9 @@ def assert_is_ethanol_smiles(smiles):
 
 
 class BaseToFileIO:
-    def get_tmpfile(self, name):
-        return os.path.join(self.tmpdir.name, name)
-
     @pytest.mark.parametrize("format_name", ["SDF", "sdf", "sDf", "mol", "MOL"])
-    def test_to_file_sdf(self, format_name):
-        filename = self.get_tmpfile("abc.xyz")
+    def test_to_file_sdf(self, format_name, tmp_path):
+        filename = tmp_path / "abc.xyz"
         self.toolkit_wrapper.to_file(ETHANOL, filename, format_name)
         with open(filename) as f:
             assert_is_ethanol_sdf(f)
@@ -999,8 +987,8 @@ class BaseToFileIO:
             self.toolkit_wrapper.to_file_obj(ETHANOL, f, "sdf")
 
     @pytest.mark.parametrize("format_name", ["SMI", "smi", "sMi"])
-    def test_to_file_smi(self, format_name):
-        filename = self.get_tmpfile("abc.xyz")
+    def test_to_file_smi(self, format_name, tmp_path):
+        filename = tmp_path / "abc.xyz"
         self.toolkit_wrapper.to_file(ETHANOL, filename, format_name)
         with open(filename) as f:
             assert_is_ethanol_smi(f)
@@ -1026,19 +1014,19 @@ class BaseToFileIO:
                 self.toolkit_wrapper.to_file(ETHANOL, fileobj.name, "QWE")
 
     @pytest.mark.parametrize("format_name", ["smi", "sdf", "mol"])
-    def test_to_file_when_the_file_does_not_exist(self, format_name):
-        filename = self.get_tmpfile("does/not/exist.smi")
+    def test_to_file_when_the_file_does_not_exist(self, format_name, tmp_path):
+        filename = tmp_path / "does/not/exist.smi"
         with pytest.raises(OSError):
             self.toolkit_wrapper.to_file(ETHANOL, filename, format_name)
 
 
-@pytest.mark.usefixtures("init_toolkit", "tmpdir")
+@pytest.mark.usefixtures("init_toolkit")
 @requires_openeye
 class TestOpenEyeToolkitToFileIO(BaseToFileIO):
     toolkit_wrapper_class = OpenEyeToolkitWrapper
 
 
-@pytest.mark.usefixtures("init_toolkit", "tmpdir")
+@pytest.mark.usefixtures("init_toolkit")
 @requires_rdkit
 class TestRDKitToolkitToFileIO(BaseToFileIO):
     toolkit_wrapper_class = RDKitToolkitWrapper
