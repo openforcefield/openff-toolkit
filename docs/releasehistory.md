@@ -10,6 +10,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### API-breaking changes
 
+- [PR #1742](https://github.com/openforcefield/openff-toolkit/pull/1742): `Topology.from_openmm` and `Topology.from_mdtraj` now require `unique_molecules` at the level of the function signature. Previously `None` was allowed but would always throw `MissingUniqueMoleculesError`, which is now removed.
+
 ### Behavior changes
 
 ### Bugfixes
