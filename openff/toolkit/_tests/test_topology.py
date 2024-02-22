@@ -9,15 +9,17 @@ from copy import deepcopy
 
 import numpy as np
 import pytest
-from openff.units import unit
 from openff.units.openmm import from_openmm
 from openff.units.units import Quantity
 from openff.utilities import has_package, skip_if_missing
 
+from openff.toolkit import unit
 from openff.toolkit._tests.create_molecules import (
+    create_ammonia,
     create_cyclohexane,
     create_ethanol,
     create_reversed_ethanol,
+    create_water,
     cyx_hierarchy_added,
     dipeptide,
     dipeptide_hierarchy_added,
@@ -60,6 +62,7 @@ from openff.toolkit.utils.exceptions import (
     IncompatibleUnitError,
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
+    MissingConformersError,
     MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
     NonUniqueSubstructureName,
@@ -1716,6 +1719,47 @@ class TestTopologyToFromOpenMM:
         assert len(matches) == 0
 
 
+@skip_if_missing("nglview")
+class TestTopologyVisaulization:
+    @requires_rdkit
+    def test_visualize_basic(self):
+        import nglview
+
+        topology = Topology.from_pdb(
+            get_data_file_path(
+                "systems/test_systems/T4_lysozyme_water_ions.pdb",
+            )
+        )
+
+        assert isinstance(topology.visualize(), nglview.NGLWidget)
+
+    @requires_rdkit
+    @skip_if_missing("nglview")
+    def test_missing_positions(self):
+        import nglview
+
+        water = create_water()
+        ammonia = create_ammonia()
+
+        with pytest.raises(MissingConformersError):
+            water.to_topology().visualize()
+
+        with pytest.raises(MissingConformersError):
+            Topology.from_molecules([water, ammonia]).visualize()
+
+        water.generate_conformers()
+
+        with pytest.raises(MissingConformersError):
+            Topology.from_molecules([water, ammonia]).visualize()
+
+        ammonia.generate_conformers()
+
+        assert isinstance(
+            Topology.from_molecules([water, ammonia]).visualize(),
+            nglview.NGLWidget,
+        )
+
+
 class TestAddTopology:
     def test_add_basic(self):
         topology1 = Molecule.from_smiles("O").to_topology()
@@ -2430,3 +2474,17 @@ class TestTopologyFromPdbCustomSubstructures:
 
         assert sorted(sym_atoms) == [3, 4, 10, 13]
         assert sorted(sym_bonds) == [(2, 3), (2, 4), (9, 10), (9, 13)]
+
+
+class TestMixedTopology:
+    def test_reinitialized_mixed_topology(self, mixed_topology):
+        copied = Topology(mixed_topology)
+
+        assert copied.n_atoms == mixed_topology.n_atoms
+        assert copied.n_bonds == mixed_topology.n_bonds
+        assert copied.n_molecules == mixed_topology.n_molecules
+
+        assert (
+            copied.atom(int(copied.n_atoms / 2)).atomic_number
+            == mixed_topology.atom(int(mixed_topology.n_atoms / 2)).atomic_number
+        )

@@ -1,6 +1,7 @@
 """
 OpenMM-specific testing utilities.
 """
+
 import collections
 import copy
 import functools

@@ -1,4 +1,4 @@
-name: test
+name: openff-toolkit-beta-rc-test
 channels:
   - conda-forge/label/openmm_rc
   - openeye/label/rc
@@ -7,7 +7,6 @@ channels:
 dependencies:
     # Base depends
   - python
-  - pydantic =1
   - packaging
   - numpy
   - networkx
@@ -19,8 +18,9 @@ dependencies:
   - openff-forcefields >=2023.05.1
   - smirnoff99Frosst
   - openff-units =0.2.0
+  - openff-amber-ff-ports
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.3.10
+  - openff-interchange-base >=0.3.17
   - openff-nagl-base ==0.3.0
   - openff-nagl-models ==0.1.0
     # Toolkit-specific
@@ -37,11 +37,14 @@ dependencies:
   - bson
   - msgpack-python
   - qcelemental
-  - qcportal >=0.15
+  - qcportal >=0.50
   - qcengine
+  - nglview
   - mdtraj
   - nbval
   - mypy
+  - typing_extensions
+  - pydantic =1
   - pip:
     - types-setuptools
     - types-toml

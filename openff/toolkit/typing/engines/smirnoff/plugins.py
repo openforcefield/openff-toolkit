@@ -21,10 +21,8 @@ point in your projects ``setup.py`` file::
 where in this example your package is named ``myapp`` and contains a class which
 inherits from ``ParameterHandler`` named ``CustomHandler``.
 """
-import logging
-from typing import List, Type
 
-from typing_extensions import TypeAlias
+import logging
 
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 
@@ -33,7 +31,7 @@ logger = logging.getLogger(__name__)
 SUPPORTED_PLUGIN_NAMES = ["handlers"]  # io_handlers could be supported in future.
 
 
-def _load_handler_plugins(handler_name: str, expected_type) -> List[Type]:
+def _load_handler_plugins(handler_name: str, expected_type) -> list[type]:
     """Loads parameter handler plugins of a specified type which have been registered
     with the ``entrypoint`` plugin system.
 
@@ -55,9 +53,9 @@ def _load_handler_plugins(handler_name: str, expected_type) -> List[Type]:
             f"supported plugin names is: {SUPPORTED_PLUGIN_NAMES}."
         )
 
-    PluginType: TypeAlias = Type[ParameterHandler]
+    PluginType = type[ParameterHandler]
 
-    discovered_plugins: List[PluginType] = list()
+    discovered_plugins: list[PluginType] = list()
 
     for entry_point in entry_points().select(
         group=f"openff.toolkit.plugins.{handler_name}"
@@ -68,7 +66,7 @@ def _load_handler_plugins(handler_name: str, expected_type) -> List[Type]:
             logger.exception(f"Could not load the {entry_point} plugin")
             continue
 
-    valid_plugins: List[PluginType] = list()
+    valid_plugins: list[PluginType] = list()
 
     for discovered_plugin in discovered_plugins:
         if not issubclass(discovered_plugin, expected_type):
@@ -84,7 +82,7 @@ def _load_handler_plugins(handler_name: str, expected_type) -> List[Type]:
     return valid_plugins
 
 
-def load_handler_plugins() -> List[Type[ParameterHandler]]:
+def load_handler_plugins() -> list[type[ParameterHandler]]:
     """Loads any ``ParameterHandler`` class plugins which have been registered through
     the ``entrypoint`` plugin system.
 

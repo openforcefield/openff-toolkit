@@ -68,7 +68,7 @@ jobs:
         ls build
 
     - name: Upload installer as artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.os }}_py${{ matrix.python-version }}.sh
         path: toolkit-installer-constructor/build/openff-toolkit*/openff-toolkit*.sh

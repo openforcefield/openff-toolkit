@@ -11,10 +11,13 @@ Serialization mix-in
    installed?
 
 """
+
 import abc
-from typing import Dict
+from typing import TypeVar
 
 from openff.toolkit.utils.utils import requires_package
+
+S = TypeVar("S", bound="Serializable")
 
 
 class Serializable(abc.ABC):
@@ -97,7 +100,7 @@ class Serializable(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def from_dict(cls, d):
+    def from_dict(cls: type[S], d: dict) -> S:
         pass
 
     def to_json(self, indent=None) -> str:
@@ -439,7 +442,7 @@ def _contains_bytes(val) -> bool:
         raise ValueError(f"type {val}")
 
 
-def _prep_numpy_data_for_json(data: Dict) -> Dict:
+def _prep_numpy_data_for_json(data: dict) -> dict:
     """Recursively search through a dict and convert the bytes fields to lists"""
     import numpy as np
 
@@ -455,11 +458,11 @@ def _prep_numpy_data_for_json(data: Dict) -> Dict:
         if isinstance(val, (list, tuple)):
             for i, element in enumerate(val):
                 if isinstance(element, bytes):
-                    # Handles case of List[np.array], like Molecule.conformers
+                    # Handles case of list[np.array], like Molecule.conformers
                     data[key][i] = np.frombuffer(
                         element, dtype=big_endian_float
                     ).tolist()
                 elif isinstance(element, dict):
-                    # Handles case of List[Molecule], like Topology.molecules
+                    # Handles case of list[Molecule], like Topology.molecules
                     data[key][i] = _prep_numpy_data_for_json(element)
     return data

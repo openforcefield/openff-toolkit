@@ -7,13 +7,12 @@ import logging
 import os
 import pathlib
 from tempfile import NamedTemporaryFile
-from typing import Dict
 
 import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
-from openff.units import Quantity, unit
 
+from openff.toolkit import Quantity, unit
 from openff.toolkit._tests.create_molecules import (
     create_acetaldehyde,
     create_acetate,
@@ -32,6 +31,7 @@ from openff.toolkit.topology.molecule import Atom, Molecule
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
+    ChemicalEnvironmentParsingError,
     ConformerGenerationError,
     InChIParseError,
     IncorrectNumConformersError,
@@ -262,7 +262,7 @@ def formic_acid_molecule() -> Molecule:
 
 
 @pytest.fixture()
-def formic_acid_conformers() -> Dict[str, Quantity]:
+def formic_acid_conformers() -> dict[str, Quantity]:
     return {
         "cis": Quantity(
             np.array(
@@ -548,6 +548,17 @@ class TestOpenEyeToolkitWrapper:
             molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
             == expected_output_smiles
         )
+
+    def test_sd_tags_in_graph_mol_preserved(self):
+        from openeye import oechem
+
+        graph = oechem.OEGraphMol()
+
+        oechem.OEParseSmiles(graph, "CCO")
+
+        oechem.OEAddSDData(graph, "cat", "meow")
+
+        assert Molecule.from_openeye(graph).properties["cat"] == "meow"
 
     def test_to_from_openeye_none_partial_charges(self):
         """Test to ensure that to_openeye and from_openeye correctly handle None partial charges"""
@@ -2026,6 +2037,16 @@ class TestOpenEyeToolkitWrapper:
         assert len(tk.find_smarts_matches(mol, smirks, unique=True)) == 1
         assert len(tk.find_smarts_matches(mol, smirks, unique=False)) == 2
 
+    def test_find_matches_bad_smarts(self):
+        with pytest.raises(
+            ChemicalEnvironmentParsingError,
+            match="foobar",
+        ):
+            OpenEyeToolkitWrapper().find_smarts_matches(
+                create_ethanol(),
+                smarts="foobar",
+            )
+
 
 @requires_rdkit
 class TestRDKitToolkitWrapper:
@@ -3044,7 +3065,7 @@ class TestRDKitToolkitWrapper:
     def test_elf_select_diverse_conformers(
         self,
         formic_acid_molecule: Molecule,
-        expected_conformer_map: Dict[int, int],
+        expected_conformer_map: dict[int, int],
         rms_tolerance: Quantity,
     ):
         """Test the greedy selection of 'diverse' ELF conformers."""
@@ -3313,6 +3334,16 @@ class TestRDKitToolkitWrapper:
 
         assert len(tk.find_smarts_matches(mol, smirks, unique=True)) == 1
         assert len(tk.find_smarts_matches(mol, smirks, unique=False)) == 2
+
+    def test_find_matches_bad_smarts(self):
+        with pytest.raises(
+            ChemicalEnvironmentParsingError,
+            match="foobar",
+        ):
+            RDKitToolkitWrapper().find_smarts_matches(
+                create_ethanol(),
+                smarts="foobar",
+            )
 
     def test_to_rdkit_losing_aromaticity_(self):
         # test the example given in issue #513

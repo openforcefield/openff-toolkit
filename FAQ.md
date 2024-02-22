@@ -66,9 +66,12 @@ This behavior is in line with OpenFF's general attitude of requiring users to ex
 
 ## I'm having troubles installing the OpenFF Toolkit on my Apple Silicon Mac.
 
-As of August 2022, some upstreams (at least AmberTools, possibly more) are not built on `osx-arm64`, so installing the OpenFF stack is only possible with [Rosetta](https://support.apple.com/en-au/HT211861). See the [platform support](installation/m1) section of the installation documentation for more.
+As of August 2022, some upstreams (at least AmberTools, possibly more) are not built on `osx-arm64`, so installing the OpenFF stack is only possible with [Rosetta]. See the [platform support] section of the installation documentation for more.
 
 (Keywords `osx-arm64`, M1 Mac, M2 Mac)
+
+[Rosetta]: https://support.apple.com/en-au/HT211861
+[platform support]: inv:#install_arm
 
 ## My mamba/conda installation of the toolkit doesn't appear to work. What should I try next?
 

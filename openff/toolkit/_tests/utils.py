@@ -2,12 +2,14 @@
 Utilities for testing.
 
 """
+
 import os
 from contextlib import contextmanager
 
 import pytest
 from openff.utilities import has_package, skip_if_missing
 
+from openff.toolkit import unit
 from openff.toolkit.utils import (
     AmberToolsToolkitWrapper,
     OpenEyeToolkitWrapper,
@@ -178,7 +180,7 @@ def get_alkethoh_file_path(alkethoh_name, get_amber=False):
 
     Returns
     -------
-    molecule_file_paths : str or List[str]
+    molecule_file_paths : str or list[str]
         All the requested paths. If ``get_amber`` is False, only a single string
         pointing to the path of the mol2 file is returned, otherwise this is a
         list ``[mol2_path, top_path, crd_path]``.

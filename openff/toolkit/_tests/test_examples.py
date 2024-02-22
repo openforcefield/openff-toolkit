@@ -56,7 +56,7 @@ def find_example_scripts():
 
     Returns
     -------
-    example_file_paths : List[str]
+    example_file_paths : list[str]
         List of full paths to python scripts to execute.
     """
     examples_dir_path = ROOT_DIR_PATH.joinpath("examples")
@@ -81,7 +81,7 @@ def find_readme_examples():
 
     Returns
     -------
-    readme_examples : List[str]
+    readme_examples : list[str]
         The list of Python scripts included in the README.md files.
     """
     readme_path = ROOT_DIR_PATH.joinpath("README.md")

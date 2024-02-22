@@ -37,8 +37,8 @@ jobs:
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openff
-      PYTEST_ARGS: -r fE --tb=short
-      NB_ARGS: -v --nbval-lax --ignore=examples/deprecated --durations=20
+      PYTEST_ARGS: -r fE -v -x --tb=short -nauto
+      NB_ARGS: --nbval-lax --dist loadscope --ignore=examples/deprecated
 
     steps:
       - uses: actions/checkout@v4
@@ -136,12 +136,18 @@ jobs:
         run: |
           if [[ ${{ matrix.rdkit }} == false ]]; then
             NB_ARGS+=" --ignore=examples/QCArchive_interface"
+            NB_ARGS+=" --ignore=examples/visualization"
             NB_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
             NB_ARGS+=" --ignore=examples/conformer_energies"
             NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
-            NB_ARGS+=" --ignore=examples/toolkit_showcase"
             NB_ARGS+=" --ignore=examples/using_smirnoff_with_amber_protein_forcefield"
-            NB_ARGS+=" --ignore=examples/SMIRNOFF_simulation/run_simulation.ipynb"
+            NB_ARGS+=" --ignore=examples/SMIRNOFF_simulation"
+            NB_ARGS+=" --ignore=examples/toolkit_showcase"
+          fi
+
+          # GROMACS builds are not stable on macOS + GHA
+          if [[ ${{ matrix.os }} == macos-latest ]]; then
+            NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs/"
           fi
 
           python -m pytest $PYTEST_ARGS $NB_ARGS examples

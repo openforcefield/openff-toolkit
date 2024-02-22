@@ -6,8 +6,9 @@ Tests for utility methods
 import os
 
 import pytest
-from openff.units import unit
 from openff.utilities import skip_if_missing
+
+from openff.toolkit import unit
 
 
 def test_subclasses():
