@@ -201,12 +201,6 @@ class InvalidPeriodicityError(OpenFFToolkitException):
     """
 
 
-class MissingUniqueMoleculesError(OpenFFToolkitException):
-    """
-    Exception for when unique_molecules is required but not found
-    """
-
-
 class SMIRKSMismatchError(OpenFFToolkitException):
     """
     Exception for cases where smirks are inappropriate

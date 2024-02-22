@@ -58,7 +58,6 @@ from openff.toolkit.utils.exceptions import (
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
     MissingConformersError,
-    MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
     NotBondedError,
     VirtualSitesUnsupportedError,
@@ -1363,8 +1362,6 @@ class Topology(Serializable):
 
         Raises
         ------
-        MissingUniqueMoleculesError
-            If ``unique_molecules`` is ``None``
         DuplicateUniqueMoleculeError
             If the same connectivity graph is represented by two different
             molecules in ``unique_molecules``
@@ -1381,12 +1378,6 @@ class Topology(Serializable):
         for omm_bond in openmm_topology.bonds():
             if omm_bond.order is None:
                 omm_has_bond_orders = False
-
-        if unique_molecules is None:
-            raise MissingUniqueMoleculesError(
-                "Topology.from_openmm requires a list of Molecule objects "
-                "passed as unique_molecules, but None was passed."
-            )
 
         # Convert all unique mols to graphs
         topology = cls()
@@ -2167,8 +2158,6 @@ class Topology(Serializable):
 
         Raises
         ------
-        MissingUniqueMoleculesError
-            If ``unique_molecules`` is ``None``
         DuplicateUniqueMoleculeError
             If the same connectivity graph is represented by two different
             molecules in ``unique_molecules``

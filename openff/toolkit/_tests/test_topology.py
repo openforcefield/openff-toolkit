@@ -64,7 +64,6 @@ from openff.toolkit.utils.exceptions import (
     InvalidBoxVectorsError,
     InvalidPeriodicityError,
     MissingConformersError,
-    MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
     NonUniqueSubstructureName,
     SubstructureAtomSmartsInvalid,
@@ -507,11 +506,6 @@ class TestTopology:
             get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb")
         )
 
-        with pytest.raises(
-            MissingUniqueMoleculesError, match="requires a list of Molecule objects"
-        ):
-            Topology.from_openmm(pdbfile.topology)
-
         molecules = [create_ethanol(), create_cyclohexane()]
 
         topology = Topology.from_openmm(
@@ -528,6 +522,13 @@ class TestTopology:
         )
         for omm_atom, off_atom in zip(pdbfile.topology.atoms(), topology.atoms):
             assert omm_atom.name == off_atom.name
+
+    def test_from_openmm_missing_unique_molecules(self):
+        with pytest.raises(
+            TypeError,
+            match="missing 1 required positional argument: 'unique_molecules'",
+        ):
+            Topology.from_openmm(Molecule.from_smiles("O").to_topology().to_openmm())
 
     def test_from_openmm_virtual_sites(self):
         from openff.toolkit import ForceField
@@ -883,7 +884,8 @@ class TestTopology:
         trj = md.load(pdb_path)
 
         with pytest.raises(
-            MissingUniqueMoleculesError, match="requires a list of Molecule objects"
+            TypeError,
+            match="missing 1 required positional argument: 'unique_molecules'",
         ):
             Topology.from_mdtraj(trj.top)
 
