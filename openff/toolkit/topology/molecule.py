@@ -4669,7 +4669,11 @@ class FrozenMolecule(Serializable):
         --------
         Get Molecule from a QCArchive molecule record:
 
-        >>> from qcportal import PortalClient
+        >>> try:
+        ...     from qcportal import PortalClient
+        ... except ImportError:
+        ...     import pytest
+        ...     pytest.skip("This tests sometimes fails when OpenEye is installed")
         >>> client = PortalClient("https://api.qcarchive.molssi.org:443/")
         >>> offmol = Molecule.from_qcschema(
         ...     [*client.query_molecules(molecular_formula="C16H20N3O5")][-1]
