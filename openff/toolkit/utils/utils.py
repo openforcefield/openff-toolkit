@@ -26,7 +26,7 @@ __all__ = [
 import contextlib
 import functools
 import logging
-from typing import Dict, Iterable, List, Tuple, Union
+from typing import Iterable, Union
 
 import numpy as np
 import pint
@@ -208,7 +208,7 @@ def string_to_quantity(quantity_string) -> Union[str, int, float, Quantity]:
 
 
 def convert_all_strings_to_quantity(
-    smirnoff_data: Dict,
+    smirnoff_data: dict,
     ignore_keys: Iterable[str] = tuple(),
 ):
     """
@@ -312,7 +312,7 @@ def object_to_quantity(object):
 
     Returns
     -------
-    converted_object : openmm.unit.Quantity or List[openmm.unit.Quantity]
+    converted_object : openmm.unit.Quantity or list[openmm.unit.Quantity]
 
     """
     # If we can't find a custom type, we treat this as a generic iterator.
@@ -352,7 +352,7 @@ except ImportError:
     pass  # pragma: nocover
 
 
-def serialize_numpy(np_array) -> Tuple[bytes, Tuple[int]]:
+def serialize_numpy(np_array) -> tuple[bytes, tuple[int]]:
     """
     Serializes a numpy array into a big-endian bytestring and tuple representing its shape.
 
@@ -377,7 +377,7 @@ def serialize_numpy(np_array) -> Tuple[bytes, Tuple[int]]:
     return serialized, shape
 
 
-def deserialize_numpy(serialized_np: Union[bytes, List], shape: Tuple[int]):
+def deserialize_numpy(serialized_np: Union[bytes, list], shape: tuple[int]):
     """
     Deserializes a numpy array from a bytestring or list. The input, if a bytestring, is
     assumed to be in big-endian byte order.
@@ -769,7 +769,7 @@ def sort_smirnoff_dict(data):
             sorted_dict[key] = sort_smirnoff_dict(val)
         elif isinstance(val, list):
             # Handle case of ParameterLists, which show up in
-            # the smirnoff dicts as lists of OrderedDicts or dicts
+            # the smirnoff dicts as lists of dicts
             new_parameter_list = list()
             for param in val:
                 new_parameter_list.append(sort_smirnoff_dict(param))

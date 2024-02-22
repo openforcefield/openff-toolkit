@@ -11,7 +11,7 @@ including offering serialization to a variety of standard formats (including [XM
 
 ## Primary objects
 
-:::{eval-rst}
+```{eval-rst}
 .. currentmodule:: openff.toolkit.topology
 .. autosummary::
     :nosignatures:
@@ -20,11 +20,11 @@ including offering serialization to a variety of standard formats (including [XM
     FrozenMolecule
     Molecule
     Topology
-:::
+```
 
 ## Secondary objects
 
-:::{eval-rst}
+```{eval-rst}
 .. currentmodule:: openff.toolkit.topology
 .. autosummary::
     :nosignatures:
@@ -37,5 +37,4 @@ including offering serialization to a variety of standard formats (including [XM
     ImproperDict
     HierarchyScheme
     HierarchyElement
-:::
-
+```

@@ -150,7 +150,7 @@ jobs:
 
       - name: Run mypy
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: mypy -p "openff.toolkit" --exclude "openff/toolkit/data"
+        run: mypy -p "openff.toolkit"
 
       - name: Run unit tests
         run: |
@@ -170,15 +170,19 @@ jobs:
       - name: Run notebooks in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true && matrix.pydantic-version == 1 }}
         run: |
-          pytest -v --no-cov --nbval --ignore docs/_build/ docs/
+          pytest -v --no-cov --durations=5 --nbval --ignore docs/_build/ docs/
 
       - name: Run examples in docstrings
         if: ${{ matrix.rdkit == true && matrix.openeye == true && matrix.pydantic-version == 1 }}
         run: |
-          pytest -v --no-cov --doctest-modules --ignore=openff/toolkit/_tests/ --ignore=openff/toolkit/data/ --ignore=openff/toolkit/utils/utils.py openff/
+          pytest openff \
+            -v -x -n logical --no-cov --doctest-modules \
+            --ignore-glob='openff/toolkit/_tests*' \
+            --ignore=openff/toolkit/data/ \
+            --ignore=openff/toolkit/utils/utils.py
 
       - name: Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage.xml

@@ -99,6 +99,7 @@ be explored by selecting which toolkit(s) are and are not registered.
     OpenEyeToolkitWrapper
     RDKitToolkitWrapper
     AmberToolsToolkitWrapper
+    NAGLToolkitWrapper
     BuiltInToolkitWrapper
 
 .. currentmodule:: openff.toolkit.utils.toolkit_registry
@@ -161,4 +162,3 @@ Exceptions raised by the Toolkit.
     :toctree: api/generated/
 
     exceptions
-

@@ -11,16 +11,15 @@ import os
 import pprint
 import textwrap
 from contextlib import contextmanager
-from typing import List, Tuple
 
 import numpy as np
 import openmm
 import pytest
-from openff.units import unit
 from openff.units.openmm import to_openmm
 from openff.utilities import has_package, skip_if_missing
 from openmm import unit as openmm_unit
 
+from openff.toolkit import unit
 from openff.toolkit.utils import (
     AmberToolsToolkitWrapper,
     OpenEyeToolkitWrapper,
@@ -205,7 +204,7 @@ def get_alkethoh_file_path(alkethoh_name, get_amber=False):
 
     Returns
     -------
-    molecule_file_paths : str or List[str]
+    molecule_file_paths : str or list[str]
         All the requested paths. If ``get_amber`` is False, only a single string
         pointing to the path of the mol2 file is returned, otherwise this is a
         list ``[mol2_path, top_path, crd_path]``.
@@ -333,7 +332,7 @@ def get_context_potential_energy(
 
     Returns
     -------
-    potential_energy : openmm.unit.Quantity or Dict[type, Quantity]
+    potential_energy : openmm.unit.Quantity or dict[type, Quantity]
         The potential energy of the system at the given coordinates.
         If ``by_force_group`` is True, then this is a dictionary
         mapping force groups to their potential energy.
@@ -402,11 +401,11 @@ def compare_context_energies(
 
     Returns
     -------
-    potential_energy1 : openmm.unit.Quantity or Dict[int, Quantity]
+    potential_energy1 : openmm.unit.Quantity or dict[int, Quantity]
         The potential energy of context1 at the given coordinates.
         If ``by_force_group`` is True, then this is a dictionary
         mapping force groups to their potential energy.
-    potential_energy2 : openmm.unit.Quantity or Dict[int, Quantity]
+    potential_energy2 : openmm.unit.Quantity or dict[int, Quantity]
         The potential energy of context2 at the given coordinates.
         If ``by_force_group`` is True, then this is a dictionary
         mapping force groups to their potential energy.
@@ -506,11 +505,11 @@ def compare_system_energies(
 
     Returns
     -------
-    potential_energy1 : openmm.unit.Quantity or Dict[str, Quantity]
+    potential_energy1 : openmm.unit.Quantity or dict[str, Quantity]
         The potential energy of context1 at the given coordinates.
         If ``by_force_type`` is True, then this is a dictionary
         mapping force names to their potential energy.
-    potential_energy2 : openmm.unit.Quantity or Dict[str, Quantity]
+    potential_energy2 : openmm.unit.Quantity or dict[str, Quantity]
         The potential energy of context2 at the given coordinates.
         If ``by_force_type`` is True, then this is a dictionary
         mapping force names to their potential energy.
@@ -744,7 +743,7 @@ class _TorsionParametersComparer:
 
     Attributes
     ----------
-    parameters : List[_ParametersComparer]
+    parameters : list[_ParametersComparer]
         The list of _ParametersComparer instances.
 
     Examples
@@ -825,7 +824,7 @@ class FailedParameterComparisonError(AssertionError):
 
     Attributes
     ----------
-    different_parameters : Dict[Hashable, Tuple[_ParameterComparer]]
+    different_parameters : dict[Hashable, tuple[_ParameterComparer]]
         All the parameters for which a differences was detected.
         different_parameters[atom_indices] is a tuple
         (parameter_force1, parameter_force2).
@@ -848,12 +847,12 @@ def _compare_parameters(
 
     Parameters
     ----------
-    parameters_force1 : Dict[Hashable, _ParametersComparer]
+    parameters_force1 : dict[Hashable, _ParametersComparer]
         A dictionary associating a _ParametersComparer entry to a key
         that is usually a set of atom indices (e.g., the atom index
         for nonbonded interactions, two atom indices for bonds and
         1-4 exceptions, 3 indices for angles, and 4 for torsions).
-    parameters_force2 : Dict[Hashable, _ParametersComparer]
+    parameters_force2 : dict[Hashable, _ParametersComparer]
         The parameters of the force to compare.
     interaction_type : str
         A string describing the type of interactions (e.g., "bond",
@@ -863,7 +862,7 @@ def _compare_parameters(
     force_name : str, optional
         The name of the force to optionally include in the eventual
         error message.
-    systems_labels : Tuple[str], optional
+    systems_labels : tuple[str], optional
         A pair of strings with a meaningful name for the system. If
         specified, this will be included in the error message to
         improve its readability.
@@ -953,7 +952,7 @@ def _get_force_parameters(force, system, ignored_parameters):
 
     Returns
     -------
-    force_parameters : Dict[str, Dict[Hashable, _ParameterComparer]]
+    force_parameters : dict[str, dict[Hashable, _ParameterComparer]]
         The parameter representation. force_parameters[interaction_type]
         is a dictionary mapping a tuple of atom indices to the
         associated parameters. interaction_type can be any string
@@ -1157,7 +1156,7 @@ def _find_all_bonds(system):
 
     Returns
     -------
-    bond_set : Set[Tuple[int]]
+    bond_set : set[tuple[int]]
         A set of pairs (atom_index1, atom_index2) associated to bonds.
         For each bond two pairs are created with the atom indices in
         inverse order.
@@ -1264,7 +1263,7 @@ def compare_system_parameters(
         The first system to compare.
     system2 : openmm.System
         The second system to compare.
-    systems_labels : Tuple[str], optional
+    systems_labels : tuple[str], optional
         A pair of strings with a meaningful name for the system. If
         specified, this will be included in the error message to
         improve its readability.
@@ -1386,7 +1385,7 @@ def compare_amber_smirnoff(
 
     Returns
     -------
-    energies : Dict[str, Dict[str, openmm.unit.Quantity]] or None
+    energies : dict[str, dict[str, openmm.unit.Quantity]] or None
         If ``check_energies`` is ``False``, nothing is returned. Otherwise,
         this is a dictionary with two keys: 'AMBER' and 'SMIRNOFF', each
         pointing to another dictionary mapping forces to their total
@@ -1443,7 +1442,7 @@ def reorder_openff_to_openmm(xyz, n_atoms_per_mol, n_vptls_per_mol):
     OpenMM, where the ordering is AAABBAAABB and was created elsewhere. This will
     reorder the OpenFF particles such that they match with this ordering.
 
-    xyz : List[List[float]]
+    xyz : list[list[float]]
         The atom and virtual positions
     n_atoms_per_mol : int
         The number of atoms per molecule. All molecules are assumed to have the
@@ -1453,7 +1452,7 @@ def reorder_openff_to_openmm(xyz, n_atoms_per_mol, n_vptls_per_mol):
         to have the same number of virtual particles
 
     Returns:
-    xyz : List[List[float]]
+    xyz : list[list[float]]
         The atom and virtual particle positions in OpenFF order
     """
 
@@ -1489,7 +1488,7 @@ def reorder_openmm_to_openff(xyz, n_atoms_per_mol, n_vptls_per_mol):
     This function will reorder the coordinates to be AAAAAABBBB, which is the order
     OpenFF expects/uses.
 
-    xyz : List[List[float]]
+    xyz : list[list[float]]
         The atom and virtual positions
     n_atoms_per_mol : int
         The number of atoms per molecule. All molecules are assumed to have the
@@ -1499,7 +1498,7 @@ def reorder_openmm_to_openff(xyz, n_atoms_per_mol, n_vptls_per_mol):
         to have the same number of virtual particles
 
     Returns:
-    xyz : List[List[float]]
+    xyz : list[list[float]]
         The atom and virtual particle positions in OpenFF order
     """
 
@@ -1531,14 +1530,14 @@ def openmm_evaluate_vsites_and_energy(omm_top, omm_sys, atom_xyz_in_nm, minimize
     ----------
     omm_top: OpenMM Topology
     omm_sys: OpenMM System
-    atom_xyz_in_nm: List[List[float]]
+    atom_xyz_in_nm: list[list[float]]
         An N,3 array of floats interpreted as nanometers of the atom positions
     minimize: bool
         Perform a minimization before calculating energy
 
     Returns
     -------
-    pos: List[List[float]]
+    pos: list[list[float]]
         The coordinates of all particles in the system (OpenMM ordering)
     ene: float
         The potential energy
@@ -1575,7 +1574,7 @@ def insert_vsite_padding(xyz, n_mol, n_vptl, order="OpenFF"):
 
     Parameters
     ----------
-    xyz: List[List[float]]
+    xyz: list[list[float]]
         An Nx3 set of coordinates of atoms only
     n_mol: int
         The number of molecules
@@ -1584,7 +1583,7 @@ def insert_vsite_padding(xyz, n_mol, n_vptl, order="OpenFF"):
 
     Returns
     -------
-    xyz : List[List[float]]
+    xyz : list[list[float]]
         The coordinates of shape (N+n_vsite,3) with all particles in the expected order
     """
 
@@ -1608,7 +1607,7 @@ def coords_from_off_mols(mols, conformer_id=0, unit=unit.angstrom):
 
     Parameters
     ----------
-    mols : List[openff.toolkit.topology.molecule.Molecule]
+    mols : list[openff.toolkit.topology.molecule.Molecule]
         The system/list of molecules
     conformer_id : int, default=0
         The conformer to use for retreiving the coordinates from each molcule
@@ -1626,7 +1625,7 @@ def evaluate_molecules_omm(water, ff, minimize=False):
 
     Parameters
     ----------
-    molecules: List[openff.toolkit.topology.molecule.Molecule]
+    molecules: list[openff.toolkit.topology.molecule.Molecule]
         A list of molecules with a 3D conformation
     forcefield: openff.toolkit.typing.engines.smirnoff.forcefield.ForceField
         The force field object to parameterize with
@@ -1635,7 +1634,7 @@ def evaluate_molecules_omm(water, ff, minimize=False):
 
     Returns
     -------
-    xyz: List[List[float]]
+    xyz: list[list[float]]
         The coordinates of all particles in the system (OpenMM ordering)
     ene: float
         The potential energy
@@ -1678,7 +1677,7 @@ def evaluate_molecules_off(molecules, forcefield, minimize=False):
 
     Parameters
     ----------
-    molecules: List[openff.toolkit.topology.molecule.Molecule]
+    molecules: list[openff.toolkit.topology.molecule.Molecule]
         A list of molecules with a 3D conformation
     forcefield: openff.toolkit.typing.engines.smirnoff.forcefield.ForceField
         The force field object to parameterize with
@@ -1687,7 +1686,7 @@ def evaluate_molecules_off(molecules, forcefield, minimize=False):
 
     Returns
     -------
-    xyz: List[List[float]]
+    xyz: list[list[float]]
         The coordinates of all particles in the system (OpenMM ordering)
     ene: float
         The potential energy
@@ -1716,7 +1715,7 @@ def evaluate_molecules_off(molecules, forcefield, minimize=False):
     return xyz, ene
 
 
-def get_14_scaling_factors(omm_sys: openmm.System) -> Tuple[List, List]:
+def get_14_scaling_factors(omm_sys: openmm.System) -> tuple[list, list]:
     """Find the 1-4 scaling factors as they are applied to an OpenMM System"""
     nonbond_force = [
         f for f in omm_sys.getForces() if type(f) is openmm.NonbondedForce

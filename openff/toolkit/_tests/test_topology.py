@@ -2,18 +2,19 @@
 Tests for Topology
 
 """
+
 import itertools
 import re
 from copy import deepcopy
 
 import numpy as np
 import pytest
-from openff.units import unit
 from openff.units.openmm import from_openmm
 from openff.units.units import Quantity
 from openff.utilities import skip_if_missing
 from openmm import app
 
+from openff.toolkit import unit
 from openff.toolkit._tests.create_molecules import (
     create_ammonia,
     create_cyclohexane,
@@ -2458,3 +2459,17 @@ class TestTopologyFromPdbCustomSubstructures:
 
         assert sorted(sym_atoms) == [3, 4, 10, 13]
         assert sorted(sym_bonds) == [(2, 3), (2, 4), (9, 10), (9, 13)]
+
+
+class TestMixedTopology:
+    def test_reinitialized_mixed_topology(self, mixed_topology):
+        copied = Topology(mixed_topology)
+
+        assert copied.n_atoms == mixed_topology.n_atoms
+        assert copied.n_bonds == mixed_topology.n_bonds
+        assert copied.n_molecules == mixed_topology.n_molecules
+
+        assert (
+            copied.atom(int(copied.n_atoms / 2)).atomic_number
+            == mixed_topology.atom(int(mixed_topology.n_atoms / 2)).atomic_number
+        )
