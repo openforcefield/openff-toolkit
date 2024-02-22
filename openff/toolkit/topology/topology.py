@@ -1567,7 +1567,7 @@ class Topology(Serializable):
         All molecules in the PDB file have the following requirements:
 
         * Polymer molecules must use the standard atom names described in the
-          `PDB Chemical Component dictionary <https://www.wwpdb.org/data/ccd>`_
+          `PDB Chemical Component Dictionary <https://www.wwpdb.org/data/ccd>`_
           (PDB CCD).
         * There must be no missing atoms (all hydrogens must be explicit).
         * All particles must correspond to an atomic nucleus (particles in the
@@ -1669,13 +1669,15 @@ class Topology(Serializable):
          HierarchyElement ('B', '2', ' ', 'CYS') of iterator 'residues' containing 11 atom(s),
          HierarchyElement ('B', '3', ' ', 'NME') of iterator 'residues' containing 6 atom(s)]
 
-         Polymer systems can also be supported if _custom_substructures are given as a dict[str, list[str]],
-         where the keys are unique atom names and the values are lists of substructure smarts. The
-         substructure smarts must follow the same format as given in
-         "proteins/aa_residues_substructures_explicit_bond_orders_with_caps_explicit_connectivity.json":
-         ”<bond>[#<atomic number>D<degree>+<formal charge>:<id>]<bond>” for monomer atoms and
-         ”<bond>[*:<id>]” for adjacent neighboring atoms
-         (NOTE: This functionality is experimental!)
+        Polymer systems can also be supported if ``_custom_substructures`` are
+        given as a ``dict[str, list[str]]``, where the keys are unique atom
+        names and the values are lists of substructure SMARTS. The substructure
+        SMARTS must follow the same format as given in the `residue
+        substructure connectivity library
+        <https://github.com/openforcefield/openff-toolkit/blob/main/openff/toolkit/data/proteins/aa_residues_substructures_explicit_bond_orders_with_caps_explicit_connectivity.json>`_:
+        ``"<bond>[#<atomic number>D<degree>+<formal charge>:<id>]<bond>"`` for monomer
+        atoms and ``"<bond>[*:<id>]"`` for adjacent neighboring atoms
+        (NOTE: This functionality is experimental!)
 
         >>> PE_substructs = {
         ...     "PE": [

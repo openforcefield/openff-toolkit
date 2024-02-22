@@ -1239,6 +1239,15 @@ class ForceField:
         For each molecule, a dictionary of force types is returned, and for each force type,
         each force term is provided with the atoms involved, the parameter id assigned, and the corresponding SMIRKS.
 
+        .. todo::
+           What is the most useful API for this method?
+
+           - Should we instead accept :class:`Molecule` objects as input and
+             individually return labels?
+           - Should we attach the labels to the :class:`Molecule` object?
+           - Or should we label all interactions in a :class:`Topology` instead
+             of just labeling its ``unique_molecules``?
+
         Parameters
         ----------
         topology : openff.toolkit.topology.Topology
@@ -1253,16 +1262,6 @@ class ForceField:
             ['HarmonicBondForce']`` gives details for the harmonic bond
             parameters for the first molecule. Each element is a list of the
             form: ``[ ( [ atom1, ..., atomN], parameter_id, SMIRKS), ... ]``.
-
-
-        .. todo::
-           What is the most useful API for this method?
-           - Should we instead accept :class:`Molecule` objects as input and
-             individually return labels?
-           - Should we attach the labels to the :class:`Molecule` object?
-           - Or should we label all interactions in a :class:`Topology` instead
-             of just labeling its ``unique_molecules``?
-
         """
         from openff.toolkit import Topology
         from openff.toolkit.typing.engines.smirnoff.parameters import VirtualSiteHandler
