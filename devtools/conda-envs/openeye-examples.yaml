@@ -14,20 +14,20 @@ dependencies:
   - xmltodict
   - python-constraint
   - openmm >=7.6
-  - openff-forcefields >=2023.05.1
+  - openff-forcefields >=2023.11
   - smirnoff99Frosst
   - openff-amber-ff-ports >=0.0.3
   - openff-units =0.2.0
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.3.10
+  - openff-interchange-base >=0.3.17
   - openff-nagl-base ==0.3.0
   - openff-nagl-models ==0.1.0
   - typing_extensions
+  - nglview
     # Toolkit-specific
   - openeye-toolkits
     # Test-only/optional/dev/typing/examples
   - pytest
-  - pytest-cov
   - pytest-xdist
   - pytest-rerunfailures
   - pyyaml
@@ -35,11 +35,11 @@ dependencies:
   - bson
   - msgpack-python
   - qcelemental
-  - qcportal >=0.15, <0.50.0a0
+  - qcportal >=0.50
   - qcengine
   - mdtraj
   - parmed =3
   - nbval
   - pdbfixer
   - openmmforcefields >=0.11.2
-  - gromacs >=2021=nompi*
+  - gromacs =2023.3=nompi_*_101

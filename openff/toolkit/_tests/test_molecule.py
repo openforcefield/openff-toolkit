@@ -12,19 +12,21 @@ TODO:
   serialized OFFMols.
 
 """
+
 import copy
 import os
 import pathlib
 import pickle
 import re
+import warnings
 from tempfile import NamedTemporaryFile
 from unittest.mock import Mock
 
 import numpy as np
 import pytest
-from openff.units import unit
 from openff.units.elements import MASSES, SYMBOLS
 
+from openff.toolkit import unit
 from openff.toolkit._tests.create_molecules import (
     create_acetaldehyde,
     create_benzene_no_aromatic,
@@ -56,12 +58,15 @@ from openff.toolkit.topology.molecule import (
 )
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import (
+    AtomMappingWarning,
     HierarchyIteratorNameConflictError,
     IncompatibleShapeError,
     IncompatibleTypeError,
     IncompatibleUnitError,
     InvalidBondOrderError,
     InvalidConformerError,
+    InvalidQCInputError,
+    MissingCMILESError,
     MissingConformersError,
     MissingPartialChargesError,
     MultipleMoleculesInPDBError,
@@ -2078,298 +2083,6 @@ class TestMolecule:
             {0: 2, 1: 0, 2: 1, 3: 8, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7},
         ) == Molecule.are_isomorphic(canonical_ethanol, ethanol, True)
 
-    tautomer_data = [
-        {"molecule": "Oc1c(cccc3)c3nc2ccncc12", "tautomers": 2},
-        {"molecule": "CN=c1nc[nH]cc1", "tautomers": 2},
-        {"molecule": "c1[nH]c2c(=O)[nH]c(nc2n1)N", "tautomers": 14},
-    ]
-
-    @pytest.mark.parametrize(
-        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
-    )
-    @pytest.mark.parametrize("molecule_data", tautomer_data)
-    def test_enumerating_tautomers(self, molecule_data, toolkit_class):
-        """Test the ability of each toolkit to produce tautomers of an input molecule."""
-
-        if toolkit_class.is_available():
-            toolkit = toolkit_class()
-            mol = Molecule.from_smiles(
-                molecule_data["molecule"],
-                allow_undefined_stereo=True,
-                toolkit_registry=toolkit,
-            )
-
-            tautomers = mol.enumerate_tautomers(toolkit_registry=toolkit)
-
-            assert len(tautomers) == molecule_data["tautomers"]
-            assert mol not in tautomers
-            # check that the molecules are not isomorphic of the input
-            for taut in tautomers:
-                assert taut.n_conformers == 0
-                assert mol.is_isomorphic_with(taut) is False
-
-        else:
-            pytest.skip("Required toolkit is unavailable")
-
-    @pytest.mark.parametrize(
-        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
-    )
-    def test_enumerating_tautomers_options(self, toolkit_class):
-        """Test the enumeration options"""
-
-        if toolkit_class.is_available():
-            toolkit = toolkit_class()
-            # test the max molecules option
-            mol = Molecule.from_smiles(
-                "c1[nH]c2c(=O)[nH]c(nc2n1)N",
-                toolkit_registry=toolkit,
-                allow_undefined_stereo=True,
-            )
-
-            tauts_no = 5
-            tautomers = mol.enumerate_tautomers(
-                max_states=tauts_no, toolkit_registry=toolkit
-            )
-            assert len(tautomers) <= tauts_no
-            assert mol not in tautomers
-
-    @pytest.mark.parametrize(
-        "toolkit_class", [RDKitToolkitWrapper, OpenEyeToolkitWrapper]
-    )
-    def test_enumerating_no_tautomers(self, toolkit_class):
-        """Test that the toolkits return an empty list if there are no tautomers to enumerate."""
-
-        if toolkit_class.is_available():
-            toolkit = toolkit_class()
-            mol = Molecule.from_smiles("CC", toolkit_registry=toolkit)
-
-            tautomers = mol.enumerate_tautomers(toolkit_registry=toolkit)
-            assert tautomers == []
-
-        else:
-            pytest.skip("Required toolkit is unavailable")
-
-    @requires_openeye
-    def test_enumerating_no_protomers(self):
-        """Make sure no protomers are returned."""
-
-        mol = Molecule.from_smiles("CC")
-
-        assert mol.enumerate_protomers() == []
-
-    @requires_openeye
-    def test_enumerating_protomers(self):
-        """Test enumerating the formal charges."""
-
-        mol = Molecule.from_smiles("Oc2ccc(c1ccncc1)cc2")
-
-        # there should be three protomers for this molecule so restrict the output
-        protomers = mol.enumerate_protomers(max_states=2)
-
-        assert mol not in protomers
-        assert len(protomers) == 2
-
-        # now make sure we can generate them all
-        protomers = mol.enumerate_protomers(max_states=10)
-
-        assert mol not in protomers
-        assert len(protomers) == 3
-
-        # make sure each protomer is unique
-        unique_protomers = set(protomers)
-        assert len(protomers) == len(unique_protomers)
-
-    @pytest.mark.parametrize(
-        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
-    )
-    def test_enumerating_stereobonds(self, toolkit_class):
-        """Test the backend toolkits in enumerating the stereo bonds in a molecule."""
-
-        if toolkit_class.is_available():
-            toolkit = toolkit_class()
-            mol = Molecule.from_smiles(
-                "ClC=CCl", allow_undefined_stereo=True, toolkit_registry=toolkit
-            )
-
-            # use the default options
-            isomers = mol.enumerate_stereoisomers()
-            assert len(isomers) == 2
-
-            assert mol not in isomers
-            # make sure the input molecule is only different by bond stereo
-            for ismol in isomers:
-                assert (
-                    Molecule.are_isomorphic(
-                        mol,
-                        ismol,
-                        return_atom_map=False,
-                        bond_stereochemistry_matching=False,
-                    )[0]
-                    is True
-                )
-                assert mol.is_isomorphic_with(ismol) is False
-
-            # make sure the isomers are different
-            assert isomers[0].is_isomorphic_with(isomers[1]) is False
-
-        else:
-            pytest.skip("Required toolkit is unavailable")
-
-    @pytest.mark.parametrize(
-        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
-    )
-    def test_enumerating_stereocenters(self, toolkit_class):
-        """Test the backend toolkits in enumerating the stereo centers in a molecule."""
-
-        if toolkit_class.is_available():
-            toolkit = toolkit_class()
-            mol = Molecule.from_smiles(
-                "NC(Cl)(F)O", toolkit_registry=toolkit, allow_undefined_stereo=True
-            )
-
-            isomers = mol.enumerate_stereoisomers(toolkit_registry=toolkit)
-
-            assert len(isomers) == 2
-            # make sure the mol is not in the isomers and that they only differ by stereo chem
-            assert mol not in isomers
-            for ismol in isomers:
-                assert ismol.n_conformers != 0
-                assert (
-                    Molecule.are_isomorphic(
-                        mol,
-                        ismol,
-                        return_atom_map=False,
-                        atom_stereochemistry_matching=False,
-                    )[0]
-                    is True
-                )
-                assert mol.is_isomorphic_with(ismol) is False
-
-            # make sure the two isomers are different
-            assert isomers[0].is_isomorphic_with(isomers[1]) is False
-
-        else:
-            pytest.skip("Required toolkit is unavailable")
-
-    @pytest.mark.parametrize(
-        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
-    )
-    def test_enumerating_stereo_options(self, toolkit_class):
-        """Test the enumerating stereo chem options"""
-
-        if toolkit_class.is_available():
-            toolkit = toolkit_class()
-
-            # test undefined only
-            mol = Molecule.from_smiles(
-                "ClC=CCl", toolkit_registry=toolkit, allow_undefined_stereo=True
-            )
-            isomers = mol.enumerate_stereoisomers(
-                undefined_only=True, rationalise=False
-            )
-
-            assert len(isomers) == 2
-            for isomer in isomers:
-                assert isomer.n_conformers == 0
-
-            mol = Molecule.from_smiles(
-                r"Cl/C=C\Cl", toolkit_registry=toolkit, allow_undefined_stereo=True
-            )
-            isomers = mol.enumerate_stereoisomers(
-                undefined_only=True, rationalise=False
-            )
-
-            assert isomers == []
-
-            mol = Molecule.from_smiles(
-                r"Cl/C=C\Cl", toolkit_registry=toolkit, allow_undefined_stereo=True
-            )
-            isomers = mol.enumerate_stereoisomers(
-                undefined_only=False, rationalise=False
-            )
-
-            assert len(isomers) == 1
-
-            # test max isomers
-            mol = Molecule.from_smiles(
-                "BrC=C[C@H]1OC(C2)(F)C2(Cl)C1",
-                toolkit_registry=toolkit,
-                allow_undefined_stereo=True,
-            )
-            isomers = mol.enumerate_stereoisomers(
-                max_isomers=5,
-                undefined_only=True,
-                toolkit_registry=toolkit,
-                rationalise=True,
-            )
-
-            assert len(isomers) <= 5
-            for isomer in isomers:
-                assert isomer.n_conformers == 1
-
-        else:
-            pytest.skip("Required toolkit is unavailable")
-
-    @pytest.mark.parametrize(
-        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
-    )
-    @pytest.mark.parametrize(
-        "smiles, undefined_only, expected",
-        [
-            (
-                "FC(Br)(Cl)[C@@H](Br)(Cl)",
-                False,
-                [
-                    "F[C@](Br)(Cl)[C@@H](Br)(Cl)",
-                    "F[C@](Br)(Cl)[C@H](Br)(Cl)",
-                    "F[C@@](Br)(Cl)[C@@H](Br)(Cl)",
-                    "F[C@@](Br)(Cl)[C@H](Br)(Cl)",
-                ],
-            ),
-            (
-                "FC(Br)(Cl)[C@@H](Br)(Cl)",
-                True,
-                ["F[C@](Br)(Cl)[C@@H](Br)(Cl)", "F[C@@](Br)(Cl)[C@@H](Br)(Cl)"],
-            ),
-            ("F[C@H](Cl)Br", False, ["F[C@@H](Cl)Br"]),
-            ("F[C@H](Cl)Br", True, []),
-        ],
-    )
-    def test_enumerating_stereo_partially_defined(
-        self, toolkit_class, smiles, undefined_only, expected
-    ):
-        """Test the enumerating stereo of molecules with partially defined chirality"""
-
-        if not toolkit_class.is_available():
-            pytest.skip("Required toolkit is unavailable")
-
-        toolkit = toolkit_class()
-
-        # test undefined only
-        mol = Molecule.from_smiles(
-            smiles, toolkit_registry=toolkit, allow_undefined_stereo=True
-        )
-        stereoisomers = mol.enumerate_stereoisomers(
-            undefined_only=undefined_only, rationalise=False
-        )
-
-        # Ensure that the results of the enumeration are what the test expects.
-        # This roundtrips the expected output from SMILES --> OFFMol --> SMILES,
-        # since the SMILES for stereoisomers generated in this test may change depending
-        # on which cheminformatics toolkit is used.
-        expected = {
-            Molecule.from_smiles(stereoisomer, allow_undefined_stereo=True).to_smiles(
-                explicit_hydrogens=True, isomeric=True, mapped=False
-            )
-            for stereoisomer in expected
-        }
-        actual = {
-            stereoisomer.to_smiles(explicit_hydrogens=True, isomeric=True, mapped=False)
-            for stereoisomer in stereoisomers
-        }
-
-        assert expected == actual
-
     def test_from_xyz_unsupported(self):
         with pytest.raises(UnsupportedFileTypeError):
             Molecule.from_file("foo.xyz", file_format="xyz")
@@ -2576,277 +2289,6 @@ class TestMolecule:
                 assert pdb_bond.is_aromatic == sdf_bonds[key].is_aromatic
                 assert pdb_bond.stereochemistry == sdf_bonds[key].stereochemistry
 
-    @requires_pkg("qcportal")
-    def test_to_qcschema(self):
-        """Test the ability to make and validate qcschema with extras"""
-        # the molecule has no coordinates so this should fail
-        ethanol = Molecule.from_smiles("CCO")
-        with pytest.raises(InvalidConformerError):
-            qcschema = ethanol.to_qcschema()
-
-        # now remake the molecule from the sdf
-        ethanol = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
-        # make sure that requests to missing conformers are caught
-        with pytest.raises(InvalidConformerError):
-            qcschema = ethanol.to_qcschema(conformer=1)
-        # now make a valid qcschema and check its properties
-        qcschema = ethanol.to_qcschema(extras={"test_tag": "test"})
-        # make sure the properties match
-        charge = 0
-        connectivity = [
-            (0, 1, 1.0),
-            (0, 4, 1.0),
-            (0, 5, 1.0),
-            (0, 6, 1.0),
-            (1, 2, 1.0),
-            (1, 7, 1.0),
-            (1, 8, 1.0),
-            (2, 3, 1.0),
-        ]
-        symbols = ["C", "C", "O", "H", "H", "H", "H", "H", "H"]
-
-        def assert_check():
-            assert charge == qcschema.molecular_charge
-            assert connectivity == qcschema.connectivity
-            assert symbols == qcschema.symbols.tolist()
-            assert (
-                qcschema.geometry.all() == ethanol.conformers[0].m_as(unit.bohr).all()
-            )
-
-        assert_check()
-        assert qcschema.extras["test_tag"] == "test"
-        assert qcschema.extras[
-            "canonical_isomeric_explicit_hydrogen_mapped_smiles"
-        ] == ethanol.to_smiles(mapped=True)
-        # # now run again with no extras passed, only cmiles entry will be present with fix-720
-        qcschema = ethanol.to_qcschema()
-        assert_check()
-        assert qcschema.extras[
-            "canonical_isomeric_explicit_hydrogen_mapped_smiles"
-        ] == ethanol.to_smiles(mapped=True)
-
-    @requires_pkg("qcportal")
-    def test_to_qcschema_no_connections(self):
-        mol = Molecule.from_mapped_smiles("[Br-:1].[K+:2]")
-        mol.add_conformer(
-            unit.Quantity(
-                np.array(
-                    [[0.188518, 0.015684, 0.001562], [0.148794, 0.21268, 0.11992]]
-                ),
-                unit.nanometers,
-            )
-        )
-        qcschema = mol.to_qcschema()
-        assert qcschema.connectivity is None
-
-    @requires_pkg("qcportal")
-    def test_from_qcschema_no_client(self):
-        """Test the ability to make molecules from QCArchive record instances and dicts"""
-
-        import json
-
-        # As the method can take a record instance or a dict with JSON encoding test both
-        # test incomplete dict
-        example_dict = {"name": "CH4"}
-        with pytest.raises(KeyError):
-            mol = Molecule.from_qcschema(example_dict)
-
-        # test an object that is not a record
-        wrong_object = "CH4"
-        with pytest.raises(AttributeError):
-            mol = Molecule.from_qcschema(wrong_object)
-
-        with open(get_data_file_path("molecules/qcportal_molecules.json")) as json_file:
-            # test loading the dict representation from a json file
-            json_mol = json.load(json_file)
-            mol = Molecule.from_qcschema(json_mol)
-            # now make a molecule from the canonical smiles and make sure they are isomorphic
-            can_mol = Molecule.from_smiles(
-                json_mol["attributes"]["canonical_isomeric_smiles"]
-            )
-            assert mol.is_isomorphic_with(can_mol) is True
-
-    client_examples = [
-        {
-            "dataset": "TorsionDriveDataset",
-            "name": "Fragment Stability Benchmark",
-            "index": "CC(=O)Nc1cc2c(cc1OC)nc[n:4][c:3]2[NH:2][c:1]3ccc(c(c3)Cl)F",
-        },
-        {
-            "dataset": "TorsionDriveDataset",
-            "name": "OpenFF Fragmenter Phenyl Benchmark",
-            "index": "c1c[ch:1][c:2](cc1)[c:3](=[o:4])o",
-        },
-        {
-            "dataset": "TorsionDriveDataset",
-            "name": "OpenFF Full TorsionDrive Benchmark 1",
-            "index": "0",
-        },
-        {
-            "dataset": "TorsionDriveDataset",
-            "name": "OpenFF Group1 Torsions",
-            "index": "c1c[ch:1][c:2](cc1)[ch2:3][c:4]2ccccc2",
-        },
-        {
-            "dataset": "OptimizationDataset",
-            "name": "Kinase Inhibitors: WBO Distributions",
-            "index": "cc1ccc(cc1nc2nccc(n2)c3cccnc3)nc(=o)c4ccc(cc4)cn5ccn(cc5)c-0",
-        },
-        {
-            "dataset": "OptimizationDataset",
-            "name": "SMIRNOFF Coverage Set 1",
-            "index": "coc(o)oc-0",
-        },
-        {
-            "dataset": "GridOptimizationDataset",
-            "name": "OpenFF Trivalent Nitrogen Set 1",
-            "index": "b1(c2c(ccs2)-c3ccsc3n1)c4c(c(c(c(c4f)f)f)f)f",
-        },
-        {
-            "dataset": "GridOptimizationDataset",
-            "name": "OpenFF Trivalent Nitrogen Set 1",
-            "index": "C(#N)N",
-        },
-    ]
-
-    @requires_pkg("qcportal")
-    @pytest.mark.flaky(reruns=5)
-    @pytest.mark.parametrize("input_data", client_examples)
-    def test_from_qcschema_with_client(self, input_data):
-        """For each of the examples try and make a offmol using the instance and dict and check they match"""
-
-        import qcportal as ptl
-
-        client = ptl.FractalClient()
-        ds = client.get_collection(input_data["dataset"], input_data["name"])
-        entry = ds.get_entry(input_data["index"])
-        # now make the molecule from the record instance with and without the geometry
-        mol_from_dict = Molecule.from_qcschema(entry.dict(encoding="json"))
-        # make the molecule again with the geometries attached
-        mol_from_instance = Molecule.from_qcschema(entry, client)
-        if hasattr(entry, "initial_molecules"):
-            assert mol_from_instance.n_conformers == len(entry.initial_molecules)
-        else:
-            # opt records have one initial molecule
-            assert mol_from_instance.n_conformers == 1
-
-        # now make a molecule from the smiles and make sure they are isomorphic
-        mol_from_smiles = Molecule.from_smiles(
-            entry.attributes["canonical_explicit_hydrogen_smiles"], True
-        )
-
-        assert mol_from_dict.is_isomorphic_with(mol_from_smiles) is True
-
-    @requires_pkg("qcportal")
-    def test_qcschema_round_trip(self):
-        """Test making a molecule from qcschema then converting back
-        Checking whether qca_mol and mol created from/to qcschema are the same or not"""
-
-        # get a molecule qcschema
-        import qcportal as ptl
-
-        client = ptl.FractalClient()
-        ds = client.get_collection("OptimizationDataset", "SMIRNOFF Coverage Set 1")
-        # grab an entry from the optimization data set
-        entry = ds.get_entry("coc(o)oc-0")
-        # now make the molecule from the record instance with the geometry
-        mol = Molecule.from_qcschema(entry, client)
-        # now grab the initial molecule record
-        qca_mol = client.query_molecules(id=entry.initial_molecule)[0]
-        # mow make sure the majority of the qcschema attributes are the same
-        # note we can not compare the full dict due to qcelemental differences
-        qcschema = mol.to_qcschema()
-        assert qcschema.atom_labels.tolist() == qca_mol.atom_labels.tolist()
-        assert qcschema.symbols.tolist() == qca_mol.symbols.tolist()
-        # due to conversion using different programs there is a slight difference here
-        assert qcschema.geometry.flatten().tolist() == pytest.approx(
-            qca_mol.geometry.flatten().tolist(), rel=1.0e-5
-        )
-        assert qcschema.connectivity == qca_mol.connectivity
-        assert qcschema.atomic_numbers.tolist() == qca_mol.atomic_numbers.tolist()
-        assert qcschema.fragment_charges == qca_mol.fragment_charges
-        assert qcschema.fragment_multiplicities == qca_mol.fragment_multiplicities
-        assert qcschema.fragments[0].tolist() == qca_mol.fragments[0].tolist()
-        assert qcschema.mass_numbers.tolist() == qca_mol.mass_numbers.tolist()
-        assert qcschema.name == qca_mol.name
-        assert qcschema.masses.all() == qca_mol.masses.all()
-        assert qcschema.molecular_charge == qca_mol.molecular_charge
-        assert qcschema.molecular_multiplicity == qca_mol.molecular_multiplicity
-        assert qcschema.real.all() == qca_mol.real.all()
-
-    @requires_pkg("qcportal")
-    def test_qcschema_round_trip_from_to_from(self):
-        """Test making a molecule from qca record using from_qcschema,
-        then converting back to qcschema using to_qcschema,
-         and then reading that again using from_qcschema"""
-
-        # get a molecule qcschema
-        import qcportal as ptl
-
-        client = ptl.FractalClient()
-        ds = client.get_collection(
-            "TorsionDriveDataset", "OpenFF-benchmark-ligand-fragments-v1.0"
-        )
-        # grab an entry from the torsiondrive data set
-        entry = ds.get_entry(
-            "[H]c1[c:1]([c:2](c(c(c1[H])N([H])C(=O)[H])[H])[C:3]2=C(C(=C([S:4]2)[H])OC([H])([H])[H])Br)[H]"
-        )
-        # now make the molecule from the record instance with the geometry
-        mol_qca_record = Molecule.from_qcschema(entry, client)
-        off_qcschema = mol_qca_record.to_qcschema()
-        mol_using_from_off_qcschema = Molecule.from_qcschema(off_qcschema)
-        assert_molecule_is_equal(
-            mol_qca_record,
-            mol_using_from_off_qcschema,
-            "Molecule roundtrip to/from_qcschema failed",
-        )
-
-    @requires_pkg("qcportal")
-    def test_qcschema_round_trip_raise_error(self):
-        """Test making a molecule from qcschema,
-        reaching inner except block where everything fails"""
-
-        # get a molecule qcschema
-        import qcportal as ptl
-
-        client = ptl.FractalClient()
-        ds = client.get_collection(
-            "TorsionDriveDataset", "OpenFF-benchmark-ligand-fragments-v1.0"
-        )
-        # grab an entry from the torsiondrive data set
-        entry = ds.get_entry(
-            "[H]c1[c:1]([c:2](c(c(c1[H])N([H])C(=O)[H])[H])[C:3]2=C(C(=C([S:4]2)[H])OC([H])([H])[H])Br)[H]"
-        )
-        del entry.attributes["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
-        # now make the molecule from the record instance with the geometry
-        with pytest.raises(KeyError):
-            Molecule.from_qcschema(entry, client)
-
-    @requires_pkg("qcportal")
-    @pytest.mark.flaky(reruns=10)
-    def test_qcschema_molecule_record_round_trip_from_to_from(self):
-        """Test making a molecule from qca record using from_qcschema,
-        then converting back to qcschema using to_qcschema,
-         and then reading that again using from_qcschema"""
-
-        # get a molecule qcschema
-        import qcportal as ptl
-
-        client = ptl.FractalClient()
-
-        record = client.query_molecules(molecular_formula="C16H20N3O5")[0]
-
-        # now make the molecule from the record instance with the geometry
-        mol_qca_record = Molecule.from_qcschema(record, client)
-        off_qcschema = mol_qca_record.to_qcschema()
-        mol_using_from_off_qcschema = Molecule.from_qcschema(off_qcschema)
-
-        assert_molecule_is_equal(
-            mol_qca_record,
-            mol_using_from_off_qcschema,
-            "Molecule roundtrip to/from_qcschema failed",
-        )
-
     def test_from_mapped_smiles(self):
         """Test making the molecule from issue #412 using both toolkits to ensure the issue
         is fixed."""
@@ -2874,6 +2316,24 @@ class TestMolecule:
             match="The mapped smiles does not contain enough indexes",
         ):
             Molecule.from_mapped_smiles("[Cl:1][Cl]", toolkit_registry=toolkit_class())
+
+    def test_smiles_with_full_map_warning(
+        self,
+    ):
+        with pytest.warns(AtomMappingWarning):
+            Molecule.from_smiles("[H:2][O:1][H:3]")
+
+    @requires_openeye
+    def test_smiles_with_partial_map_no_warning(
+        self,
+    ):
+        """Ensure the 'do you mean from_mapped_smiles?' warning is not emitted with a partial map"""
+        with warnings.catch_warnings():
+            # This turns warnings into exceptions - one way of implementing
+            # "ensure there is not a warning raised"
+            warnings.simplefilter("error")
+
+            Molecule.from_smiles("H[O:1]H")
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_n_atoms(self, molecule):
@@ -3675,6 +3135,288 @@ class TestMolecule:
         assert mol_source._partial_charges is not mol_copy._partial_charges
 
 
+@requires_pkg("qcportal")
+class TestQCArchiveInterface:
+    def test_to_qcschema(self):
+        """Test the ability to make and validate qcschema with extras"""
+        # the molecule has no coordinates so this should fail
+        ethanol = Molecule.from_smiles("CCO")
+        with pytest.raises(InvalidConformerError):
+            qcschema = ethanol.to_qcschema()
+
+        # now remake the molecule from the sdf
+        ethanol = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
+        # make sure that requests to missing conformers are caught
+        with pytest.raises(InvalidConformerError):
+            qcschema = ethanol.to_qcschema(conformer=1)
+        # now make a valid qcschema and check its properties
+        qcschema = ethanol.to_qcschema(extras={"test_tag": "test"})
+        # make sure the properties match
+        charge = 0
+        connectivity = [
+            (0, 1, 1.0),
+            (0, 4, 1.0),
+            (0, 5, 1.0),
+            (0, 6, 1.0),
+            (1, 2, 1.0),
+            (1, 7, 1.0),
+            (1, 8, 1.0),
+            (2, 3, 1.0),
+        ]
+        symbols = ["C", "C", "O", "H", "H", "H", "H", "H", "H"]
+
+        def assert_check():
+            assert charge == qcschema.molecular_charge
+            assert connectivity == qcschema.connectivity
+            assert symbols == qcschema.symbols.tolist()
+            assert (
+                qcschema.geometry.all() == ethanol.conformers[0].m_as(unit.bohr).all()
+            )
+
+        assert_check()
+        assert qcschema.extras["test_tag"] == "test"
+        assert qcschema.extras[
+            "canonical_isomeric_explicit_hydrogen_mapped_smiles"
+        ] == ethanol.to_smiles(mapped=True)
+        # # now run again with no extras passed, only cmiles entry will be present with fix-720
+        qcschema = ethanol.to_qcschema()
+        assert_check()
+        assert qcschema.extras[
+            "canonical_isomeric_explicit_hydrogen_mapped_smiles"
+        ] == ethanol.to_smiles(mapped=True)
+
+    def test_to_qcschema_no_connections(self):
+        mol = Molecule.from_mapped_smiles("[Br-:1].[K+:2]")
+        mol.add_conformer(
+            unit.Quantity(
+                np.array(
+                    [[0.188518, 0.015684, 0.001562], [0.148794, 0.21268, 0.11992]]
+                ),
+                unit.nanometers,
+            )
+        )
+        qcschema = mol.to_qcschema()
+        assert qcschema.connectivity is None
+
+    def test_from_qcschema_no_client(self):
+        """Test the ability to make molecules from QCArchive record instances and dicts"""
+
+        # As the method can take a record instance or a dict with JSON encoding test both
+        # test incomplete dict
+        example_dict = {"name": "CH4"}
+        with pytest.raises(InvalidQCInputError):
+            Molecule.from_qcschema(example_dict)
+
+        # test an object that is not a record
+        wrong_object = "CH4"
+        # This actualy raises InvalidQCInputError, but this check ensures that it's a subclass of AttributeError
+        with pytest.raises(AttributeError):
+            Molecule.from_qcschema(wrong_object)
+
+    client_examples = [
+        {
+            "dataset": "torsiondrive",
+            "name": "Fragment Stability Benchmark",
+            "index": "CC(=O)Nc1cc2c(cc1OC)nc[n:4][c:3]2[NH:2][c:1]3ccc(c(c3)Cl)F",
+        },
+        {
+            "dataset": "torsiondrive",
+            "name": "OpenFF Fragmenter Phenyl Benchmark",
+            "index": "c1c[ch:1][c:2](cc1)[c:3](=[o:4])o",
+        },
+        {
+            "dataset": "torsiondrive",
+            "name": "OpenFF Full TorsionDrive Benchmark 1",
+            "index": "0",
+        },
+        {
+            "dataset": "torsiondrive",
+            "name": "OpenFF Group1 Torsions",
+            "index": "c1c[ch:1][c:2](cc1)[ch2:3][c:4]2ccccc2",
+        },
+        {
+            "dataset": "optimization",
+            "name": "Kinase Inhibitors: WBO Distributions",
+            "index": "cc1ccc(cc1nc2nccc(n2)c3cccnc3)nc(=o)c4ccc(cc4)cn5ccn(cc5)c-0",
+        },
+        {
+            "dataset": "optimization",
+            "name": "SMIRNOFF Coverage Set 1",
+            "index": "coc(o)oc-0",
+        },
+        {
+            "dataset": "gridoptimization",
+            "name": "OpenFF Trivalent Nitrogen Set 1",
+            "index": "b1(c2c(ccs2)-c3ccsc3n1)c4c(c(c(c(c4f)f)f)f)f",
+        },
+        {
+            "dataset": "gridoptimization",
+            "name": "OpenFF Trivalent Nitrogen Set 1",
+            "index": "C(#N)N",
+        },
+        {
+            "dataset": "singlepoint",
+            "name": "OpenFF multi-Br ESP Fragment Conformers v1.1",
+            "index": "c1c(cc(cc1Br)Br)Br",
+        },
+    ]
+
+    @pytest.mark.flaky(reruns=5)
+    @pytest.mark.parametrize("input_data", client_examples)
+    def test_from_qcschema_with_client(self, input_data):
+        """For each of the examples try and make a offmol using the instance and dict and check they match"""
+        import qcportal
+        from qcportal import PortalRequestError
+
+        client = qcportal.PortalClient("https://api.qcarchive.molssi.org:443")
+
+        ds = client.get_dataset(input_data["dataset"], input_data["name"])
+        try:
+            entry = ds.get_entry(input_data["index"])
+        except PortalRequestError:
+            entry = ds.get_entry(input_data["index"].lower())
+        # now make the molecule from the record instance with and without the geometry
+        mol_from_dict = Molecule.from_qcschema(entry)
+        # make the molecule again with the geometries attached
+        mol_from_instance = Molecule.from_qcschema(entry)  # , client)
+        if hasattr(entry, "initial_molecules"):
+            assert mol_from_instance.n_conformers == len(entry.initial_molecules)
+        else:
+            # opt records have one initial molecule
+            assert mol_from_instance.n_conformers == 1
+
+        # now make a molecule from the smiles and make sure they are isomorphic
+        mol_from_smiles = Molecule.from_smiles(
+            entry.attributes["canonical_explicit_hydrogen_smiles"], True
+        )
+
+        assert mol_from_dict.is_isomorphic_with(mol_from_smiles) is True
+
+    def test_qcschema_round_trip(self):
+        """Test making a molecule from qcschema then converting back
+        Checking whether qca_mol and mol created from/to qcschema are the same or not"""
+
+        # get a molecule qcschema
+        import qcportal
+
+        client = qcportal.PortalClient("https://api.qcarchive.molssi.org:443")
+
+        ds = client.get_dataset("optimization", "SMIRNOFF Coverage Set 1")
+
+        # grab an entry from the optimization data set
+        entry = ds.get_entry("coc(o)oc-0")
+
+        # now make the molecule from the record instance with the geometry
+        mol = Molecule.from_qcschema(entry)  # , client)
+
+        # find and grab the initial molecule record
+        iterator = client.query_molecules(
+            molecule_hash=entry.initial_molecule.identifiers.molecule_hash
+        )
+
+        qca_mol = [*iterator][0]
+
+        # mow make sure the majority of the qcschema attributes are the same
+        # note we can not compare the full dict due to qcelemental differences
+        qcschema = mol.to_qcschema()
+        assert qcschema.atom_labels.tolist() == qca_mol.atom_labels.tolist()
+        assert qcschema.symbols.tolist() == qca_mol.symbols.tolist()
+        # due to conversion using different programs there is a slight difference here
+        assert qcschema.geometry.flatten().tolist() == pytest.approx(
+            qca_mol.geometry.flatten().tolist(), rel=1.0e-5
+        )
+        assert qcschema.connectivity == qca_mol.connectivity
+        assert qcschema.atomic_numbers.tolist() == qca_mol.atomic_numbers.tolist()
+        assert qcschema.fragment_charges == qca_mol.fragment_charges
+        assert qcschema.fragment_multiplicities == qca_mol.fragment_multiplicities
+        assert qcschema.fragments[0].tolist() == qca_mol.fragments[0].tolist()
+        assert qcschema.mass_numbers.tolist() == qca_mol.mass_numbers.tolist()
+        assert qcschema.name == qca_mol.name
+        assert qcschema.masses.all() == qca_mol.masses.all()
+        assert qcschema.molecular_charge == qca_mol.molecular_charge
+        assert qcschema.molecular_multiplicity == qca_mol.molecular_multiplicity
+        assert qcschema.real.all() == qca_mol.real.all()
+
+    def test_qcschema_round_trip_from_to_from(self):
+        """Test making a molecule from qca record using from_qcschema,
+        then converting back to qcschema using to_qcschema,
+         and then reading that again using from_qcschema"""
+
+        # get a molecule qcschema
+        import qcportal
+
+        client = qcportal.PortalClient("https://api.qcarchive.molssi.org:443")
+
+        ds = client.get_dataset(
+            "torsiondrive", "OpenFF-benchmark-ligand-fragments-v1.0"
+        )
+        # grab an entry from the torsiondrive data set
+        entry = ds.get_entry(
+            "[H]c1[c:1]([c:2](c(c(c1[H])N([H])C(=O)[H])[H])[C:3]2=C(C(=C([S:4]2)[H])OC([H])([H])[H])Br)[H]".lower()
+        )
+        # now make the molecule from the record instance with the geometry
+        mol_qca_record = Molecule.from_qcschema(entry)  # , client)
+        off_qcschema = mol_qca_record.to_qcschema()
+        mol_using_from_off_qcschema = Molecule.from_qcschema(off_qcschema)
+        assert_molecule_is_equal(
+            mol_qca_record,
+            mol_using_from_off_qcschema,
+            "Molecule roundtrip to/from_qcschema failed",
+        )
+
+    def test_qcschema_round_trip_raise_error(self):
+        """Test making a molecule from qcschema,
+        reaching inner except block where everything fails"""
+        import qcportal
+
+        client = qcportal.PortalClient("https://api.qcarchive.molssi.org:443")
+
+        ds = client.get_dataset(
+            "torsiondrive", "OpenFF-benchmark-ligand-fragments-v1.0"
+        )
+        # grab an entry from the torsiondrive data set
+        entry = ds.get_entry(
+            "[H]c1[c:1]([c:2](c(c(c1[H])N([H])C(=O)[H])[H])[C:3]2=C(C(=C([S:4]2)[H])OC([H])([H])[H])Br)[H]".lower()
+        )
+        del entry.attributes["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
+        # now make the molecule from the record instance with the geometry
+        # We can handle this now - The code recurses down to the mols and gets their CMILESes.
+        # with pytest.raises(KeyError):
+        #     Molecule.from_qcschema(entry) #, client)
+
+    @pytest.mark.flaky(reruns=10)
+    def test_qcschema_molecule_record_round_trip_from_to_from(self):
+        """Test making a molecule from qca record using from_qcschema,
+        then converting back to qcschema using to_qcschema,
+         and then reading that again using from_qcschema"""
+
+        # get a molecule qcschema
+        import qcportal
+
+        client = qcportal.PortalClient("https://api.qcarchive.molssi.org:443")
+
+        record = [*client.query_molecules(molecular_formula="C16H20N3O5")][-1]
+
+        # now make the molecule from the record instance with the geometry
+        mol_qca_record = Molecule.from_qcschema(record)  # , client)
+        off_qcschema = mol_qca_record.to_qcschema()
+        mol_using_from_off_qcschema = Molecule.from_qcschema(off_qcschema)
+
+        assert_molecule_is_equal(
+            mol_qca_record,
+            mol_using_from_off_qcschema,
+            "Molecule roundtrip to/from_qcschema failed",
+        )
+
+        mol_dict = off_qcschema.dict()
+        del mol_dict["extras"]["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
+        del mol_dict["identifiers"][
+            "canonical_isomeric_explicit_hydrogen_mapped_smiles"
+        ]
+        with pytest.raises(MissingCMILESError):
+            Molecule.from_qcschema(mol_dict)
+
+
 class TestMoleculeVisualization:
     @requires_pkg("IPython")
     @requires_rdkit
@@ -4385,25 +4127,28 @@ class TestMoleculeSubclass:
         assert isinstance(mol, MyMol)
 
     @requires_pkg("qcelemental")
-    @requires_pkg("qcportal")
     @pytest.mark.flaky(reruns=5)
     def test_molecule_subclass_from_qcschema(self):
         """Ensure that the right type of object is returned when running MyMol.from_qcschema"""
-        import qcportal as ptl
+        import qcportal
 
-        client = ptl.FractalClient()
-        ds = client.get_collection(
-            "TorsionDriveDataset", "Fragment Stability Benchmark"
+        client = qcportal.PortalClient("https://api.qcarchive.molssi.org:443")
+
+        ds = client.get_dataset(
+            "torsiondrive",
+            "Fragment Stability Benchmark",
         )
+
         entry = ds.get_entry(
-            "CC(=O)Nc1cc2c(cc1OC)nc[n:4][c:3]2[NH:2][c:1]3ccc(c(c3)Cl)F"
+            "CC(=O)Nc1cc2c(cc1OC)nc[n:4][c:3]2[NH:2][c:1]3ccc(c(c3)Cl)F".lower()
         )
+
         # now make the molecule from the record instance with and without the geometry
-        mol = MyMol.from_qcschema(entry.dict(encoding="json"))
+        mol = MyMol.from_qcschema(entry)
+
         assert isinstance(mol, MyMol)
-        # Make from object, which will include geometry
-        mol = MyMol.from_qcschema(entry, client)
-        assert isinstance(mol, MyMol)
+
+        assert mol.n_conformers > 0
 
     def test_molecule_subclass_from_topology(self):
         """Ensure that the right type of object is returned when running MyMol.from_topology"""

@@ -19,7 +19,7 @@ dependencies:
   - openff-units =0.2.0
   - openff-amber-ff-ports
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.3.10
+  - openff-interchange-base >=0.3.17
   - openff-nagl-base ==0.3.0
   - openff-nagl-models ==0.1.0
     # Toolkit-specific
@@ -36,11 +36,13 @@ dependencies:
   - bson
   - msgpack-python
   - qcelemental
-  - qcportal >=0.15, <0.50.0a0
+  - qcportal >=0.50
   - qcengine
   - nglview
   - mdtraj
   - nbval
+  # No idea why this is necessary, see https://github.com/openforcefield/openff-toolkit/pull/1821
+  - nomkl
   - mypy
   - typing_extensions
   - pydantic =1
