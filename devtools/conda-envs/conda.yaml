@@ -1,9 +1,0 @@
-name: latest-deployment
-channels:
-  - conda-forge
-dependencies:
-    # Base depends
-  - openff-toolkit-examples
-    # Tests
-  - pytest=7.4
-  - pytest-rerunfailures

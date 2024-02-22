@@ -2,7 +2,6 @@
 Test that the examples in the repo run without errors.
 """
 
-import os
 import pathlib
 import re
 import subprocess
@@ -38,19 +37,19 @@ def run_script_str(script_str):
 
     """
     with tempfile.TemporaryDirectory() as tmp_dir:
-        temp_file_path = os.path.join(tmp_dir, "temp.py")
+        temp_file_path = (pathlib.Path(tmp_dir) / "temp.py").as_posix()
         # Create temporary python script.
         with open(temp_file_path, "w") as f:
             f.write(script_str)
         # Run the Python script.
         try:
             run_script_file(temp_file_path)
-        except:  # noqa
+        except Exception as error:
             script_str = textwrap.indent(script_str, "    ")
-            raise Exception(f"The following script failed:\n{script_str}")
+            raise Exception(f"The following script failed:\n{script_str}") from error
 
 
-def find_example_scripts():
+def find_example_scripts() -> list[str]:
     """Find all Python scripts, excluding Jupyter notebooks, in the examples folder.
 
     Returns
@@ -58,11 +57,16 @@ def find_example_scripts():
     example_file_paths : list[str]
         List of full paths to python scripts to execute.
     """
-    examples_dir_path = ROOT_DIR_PATH.joinpath("examples")
+    if "site-packages" in __file__:
+        # This test file is being collected from the installed package, which
+        # does not provide the examples folder in the same location
+        return list()
+
+    examples_dir_path = pathlib.Path(__file__).parents[3] / "examples"
 
     # Examples that require RDKit
     rdkit_examples = {
-        examples_dir_path.joinpath("conformer_energies/conformer_energies.py"),
+        examples_dir_path / "conformer_energies/conformer_energies.py",
     }
 
     example_file_paths = []
@@ -75,7 +79,7 @@ def find_example_scripts():
     return example_file_paths
 
 
-def find_readme_examples():
+def find_readme_examples() -> list[str]:
     """Yield the Python scripts in the main README.md file.
 
     Returns
@@ -83,9 +87,19 @@ def find_readme_examples():
     readme_examples : list[str]
         The list of Python scripts included in the README.md files.
     """
-    readme_path = ROOT_DIR_PATH.joinpath("README.md")
-    with open(readme_path, "r") as f:
+    if "site-packages" in __file__:
+        # This test file is being collected from the installed package, which
+        # does not provide the README file.
+        # Note that there will likely be a mis-bundled file
+        # $CONDA_PREFIX/lib/python3.x/site-packages/README.md, but this is not
+        # the toolkit's README file!
+        return list()
+
+    readme_file_path = pathlib.Path(__file__).parents[3] / "README.md"
+
+    with open(readme_file_path, "r") as f:
         readme_content = f.read()
+
     return re.findall("```python(.*?)```", readme_content, flags=re.DOTALL)
 
 
