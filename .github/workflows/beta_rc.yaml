@@ -85,7 +85,7 @@ jobs:
           pytest -v --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
 
       - name: Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage.xml

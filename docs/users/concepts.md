@@ -21,6 +21,6 @@ OpenFF [`ForceField`](openff.toolkit.typing.engines.smirnoff.forcefield.ForceFie
 : An object generated from an OFFXML file (or other source of SMIRNOFF data).
   Most information from the SMIRNOFF data source is stored in this object's several `ParameterHandler`s, however some top-level SMIRNOFF data is stored in the `ForceField` object itself.
 
-OpenFF [`Interchange`](openff.interchange:index)
+OpenFF [`Interchange`](inv:openff.interchange#index)
 : A `Topology` that has been parametrized by a `ForceField`. An `Interchange` contains all the information needed to calculate an energy or start a simulation. `Interchange` also provides methods to export this information
 to MD simulation engines.
