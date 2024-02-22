@@ -6,6 +6,7 @@ Tests for utility methods
 import os
 
 import pytest
+from openff.utilities import skip_if_missing
 
 from openff.toolkit import unit
 
@@ -70,6 +71,7 @@ def test_dimensionless_units():
     assert unit_value == unit.dimensionless
 
 
+@skip_if_missing("openmm")
 def test_object_to_quantity_accepts_openmm():
     import openmm
 

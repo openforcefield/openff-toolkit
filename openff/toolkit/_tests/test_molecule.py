@@ -25,6 +25,7 @@ from unittest.mock import Mock
 import numpy as np
 import pytest
 from openff.units.elements import MASSES, SYMBOLS
+from openff.utilities import skip_if_missing
 
 from openff.toolkit import unit
 from openff.toolkit._tests.create_molecules import (
@@ -3649,6 +3650,7 @@ class TestMoleculeResiduePerception:
             assert found == expected
 
 
+@skip_if_missing("openmm")
 class TestMoleculeFromPDB:
     """
     Test creation of cheminformatics-rich openff Molecule from PDB files.
@@ -4303,6 +4305,7 @@ class TestHierarchies:
                 iterator_name="atoms",
             )
 
+    @skip_if_missing("openmm")
     def test_add_default_hierarchy_schemes(self):
         """Test add_default_hierarchy_schemes and its kwargs"""
         offmol = Molecule.from_polymer_pdb(

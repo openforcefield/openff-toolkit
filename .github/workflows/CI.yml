@@ -22,7 +22,7 @@ defaults:
 jobs:
   test:
     if: (github.event_name == 'schedule' && github.repository == 'openforcefield/openff-toolkit') || (github.event_name != 'schedule')
-    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.rdkit }}, OpenEye=${{ matrix.openeye }}
+    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.rdkit }}, OpenEye=${{ matrix.openeye }}, OpenMM=${{ matrix.openmm }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -31,6 +31,8 @@ jobs:
         python-version: ["3.9", "3.10", "3.11"]
         rdkit: [true, false]
         openeye: [true, false]
+        # Remove before merge
+        openmm: [true, false]
         exclude:
           - rdkit: false
             openeye: false
@@ -42,7 +44,7 @@ jobs:
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openff
-      PYTEST_ARGS: -r fE --tb=short -nauto
+      PYTEST_ARGS: -r fE --tb=short -nauto -x
       COV: --cov=openff/toolkit --cov-config=setup.cfg --cov-append --cov-report=xml
 
     steps:
@@ -114,6 +116,10 @@ jobs:
             done
           fi
 
+      - name: Optionally remove OpenMM
+        if: ${{ matrix.openmm == false }}
+        run: micromamba remove --force openmm --yes
+
       - name: Remove NAGL if no RDKit
         if: ${{ matrix.rdkit == false }}
         run: micromamba remove --force openff-nagl-base --yes
@@ -162,7 +168,7 @@ jobs:
           pytest -v --no-cov --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
 
       - name: Run notebooks in docs
-        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
+        if: ${{ matrix.rdkit == true && matrix.openeye == true && matrix.openmm == true}}
         run: |
           pytest -v --no-cov --durations=5 --nbval --ignore docs/_build/ docs/
 
