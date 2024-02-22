@@ -4075,6 +4075,7 @@ class TestForceFieldWithToolkits(_ForceFieldFixtures):
 
 class TestSmirnoffVersionConverter:
     @requires_openeye_mol2
+    @pytest.mark.slow
     @pytest.mark.parametrize(
         ("freesolv_id", "forcefield_version", "allow_undefined_stereo"),
         generate_freesolv_parameters_assignment_cases(),
