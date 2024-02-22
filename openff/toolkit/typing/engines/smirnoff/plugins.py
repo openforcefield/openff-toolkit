@@ -21,6 +21,7 @@ point in your projects ``setup.py`` file::
 where in this example your package is named ``myapp`` and contains a class which
 inherits from ``ParameterHandler`` named ``CustomHandler``.
 """
+
 import logging
 
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler

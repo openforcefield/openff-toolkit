@@ -1,6 +1,7 @@
 """
 Built-in ToolkitWrapper for very basic functionality. Intended for testing and not much more.
 """
+
 __all__ = ("BuiltInToolkitWrapper",)
 
 from typing import TYPE_CHECKING, Optional

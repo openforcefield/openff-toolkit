@@ -11,6 +11,7 @@ Serialization mix-in
    installed?
 
 """
+
 import abc
 from typing import TypeVar
 

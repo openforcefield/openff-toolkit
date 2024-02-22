@@ -812,10 +812,14 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         return offmol_w_stereo_and_aro
 
     def enumerate_protomers(
-        self, molecule: "FrozenMolecule", max_states: int = 10
-    ) -> list["FrozenMolecule"]:
+        self,
+        molecule: "FrozenMolecule",
+        max_states: int = 0,
+    ) -> list["Molecule"]:
         """
-        Enumerate the formal charges of a molecule to generate different protomoers.
+        Enumerate the formal charges of a molecule to generate different protomers.
+        Note that, in cases where the input molecule has an uncommon protonation state
+        (for example ``[NH2-]``), the input molecule may not be included in the output.
 
         Parameters
         ----------
@@ -823,32 +827,32 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             The molecule whose state we should enumerate
 
         max_states
-            The maximum number of protomer states to be returned.
+            The maximum number of protomer states to be returned. If 0, the default,
+            attempt to return all protomers.
 
         Returns
-        -------
+        ------
         molecules
-            A list of the protomers of the input molecules not including the input.
+            A list of the protomers of the input molecules, including the input molecule if found
+            by Quacpac and not pruned by `max_states`.
         """
 
         from openeye import oequacpac
 
         options = oequacpac.OEFormalChargeOptions()
-        # add one as the input is included
-        options.SetMaxCount(max_states + 1)
+        options.SetMaxCount(max_states)
 
-        molecules = []
-
-        oemol = self.to_openeye(molecule=molecule)
-        for protomer in oequacpac.OEEnumerateFormalCharges(oemol, options):
-            mol = self.from_openeye(
-                protomer, allow_undefined_stereo=True, _cls=molecule.__class__
+        return [
+            self.from_openeye(
+                protomer,
+                allow_undefined_stereo=True,
+                _cls=molecule.__class__,
             )
-
-            if mol != molecule:
-                molecules.append(mol)
-
-        return molecules
+            for protomer in oequacpac.OEEnumerateFormalCharges(
+                self.to_openeye(molecule=molecule),
+                options,
+            )
+        ]
 
     def enumerate_stereoisomers(
         self,
@@ -1275,9 +1279,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 metadata=metadata_dict,
                 invalidate_cache=False,
             )
-            off_to_oe_idx[
-                oe_idx
-            ] = atom_index  # store for mapping oeatom to molecule atom indices below
+            off_to_oe_idx[oe_idx] = (
+                atom_index  # store for mapping oeatom to molecule atom indices below
+            )
             atom_mapping[atom_index] = map_id
 
         molecule._invalidate_cached_properties()
@@ -2780,9 +2784,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
             atom_indices: dict[int, int] = dict()
             for matched_atom in match.GetAtoms():
                 if matched_atom.pattern.GetMapIdx() != 0:
-                    atom_indices[
-                        matched_atom.pattern.GetMapIdx() - 1
-                    ] = matched_atom.target.GetIdx()
+                    atom_indices[matched_atom.pattern.GetMapIdx() - 1] = (
+                        matched_atom.target.GetIdx()
+                    )
 
             # Compress into tuple
             matches.append(

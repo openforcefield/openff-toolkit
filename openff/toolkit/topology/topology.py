@@ -11,6 +11,7 @@ Class definitions to represent a molecular system and its chemical components
    * Use `attrs <http://www.attrs.org/>`_ for object setter boilerplate?
 
 """
+
 import re
 from collections import defaultdict
 from collections.abc import MutableMapping
@@ -77,6 +78,7 @@ if TYPE_CHECKING:
     from openff.toolkit.utils import ToolkitRegistry, ToolkitWrapper
 
 TKR: TypeAlias = Union["ToolkitRegistry", "ToolkitWrapper"]
+MoleculeLike: TypeAlias = Union["Molecule", "FrozenMolecule", "_SimpleMolecule"]
 
 
 class _TransformedDict(MutableMapping):
@@ -205,7 +207,7 @@ class SortedDict(_TransformedDict):
 
 
 class UnsortedDict(_TransformedDict):
-    ...
+    pass
 
 
 class TagSortedDict(_TransformedDict):
@@ -420,8 +422,6 @@ class Topology(Serializable):
             or serialized Topology object.
 
         """
-        from openff.toolkit.topology.molecule import FrozenMolecule
-
         # Assign cheminformatics models
         self._aromaticity_model = DEFAULT_AROMATICITY_MODEL
 
@@ -502,7 +502,8 @@ class Topology(Serializable):
 
     @classmethod
     def from_molecules(
-        cls, molecules: Union[FrozenMolecule, list[FrozenMolecule]]
+        cls,
+        molecules: Union[MoleculeLike, list[MoleculeLike]],
     ) -> "Topology":
         """
         Create a new Topology object containing one copy of each of the specified molecule(s).
@@ -681,7 +682,7 @@ class Topology(Serializable):
         return len(self._molecules)
 
     @property
-    def molecules(self) -> Generator[Union[Molecule, _SimpleMolecule], None, None]:
+    def molecules(self) -> Generator[MoleculeLike, None, None]:
         """Returns an iterator over all the Molecules in this Topology
 
         Returns
@@ -758,7 +759,7 @@ class Topology(Serializable):
 
         return atom._topology_atom_index  # type: ignore[attr-defined]
 
-    def molecule_index(self, molecule: Molecule) -> int:
+    def molecule_index(self, molecule: MoleculeLike) -> int:
         """
         Returns the index of a given molecule in this topology
 
@@ -1210,8 +1211,13 @@ class Topology(Serializable):
                 del atom.__dict__["_topology_atom_index"]
 
     def copy_initializer(self, other):
-        other_dict = deepcopy(other.to_dict())
-        self._initialize_from_dict(other_dict)
+        import copy
+
+        self.aromaticity_model = other.aromaticity_model
+        self._constrained_atom_pairs = copy.deepcopy(other._constrained_atom_pairs)
+        self._box_vectors = copy.deepcopy(other._box_vectors)
+        self._molecules = copy.deepcopy(other._molecules)
+        self._invalidate_cached_properties()
 
     def to_dict(self) -> dict:
         from openff.toolkit.utils.utils import serialize_numpy
@@ -1575,7 +1581,7 @@ class Topology(Serializable):
         All molecules in the PDB file have the following requirements:
 
         * Polymer molecules must use the standard atom names described in the
-          `PDB Chemical Component dictionary <https://www.wwpdb.org/data/ccd>`_
+          `PDB Chemical Component Dictionary <https://www.wwpdb.org/data/ccd>`_
           (PDB CCD).
         * There must be no missing atoms (all hydrogens must be explicit).
         * All particles must correspond to an atomic nucleus (particles in the
@@ -1677,13 +1683,15 @@ class Topology(Serializable):
          HierarchyElement ('B', '2', ' ', 'CYS') of iterator 'residues' containing 11 atom(s),
          HierarchyElement ('B', '3', ' ', 'NME') of iterator 'residues' containing 6 atom(s)]
 
-         Polymer systems can also be supported if _custom_substructures are given as a dict[str, list[str]],
-         where the keys are unique atom names and the values are lists of substructure smarts. The
-         substructure smarts must follow the same format as given in
-         "proteins/aa_residues_substructures_explicit_bond_orders_with_caps_explicit_connectivity.json":
-         ”<bond>[#<atomic number>D<degree>+<formal charge>:<id>]<bond>” for monomer atoms and
-         ”<bond>[*:<id>]” for adjacent neighboring atoms
-         (NOTE: This functionality is experimental!)
+        Polymer systems can also be supported if ``_custom_substructures`` are
+        given as a ``dict[str, list[str]]``, where the keys are unique atom
+        names and the values are lists of substructure SMARTS. The substructure
+        SMARTS must follow the same format as given in the `residue
+        substructure connectivity library
+        <https://github.com/openforcefield/openff-toolkit/blob/main/openff/toolkit/data/proteins/aa_residues_substructures_explicit_bond_orders_with_caps_explicit_connectivity.json>`_:
+        ``"<bond>[#<atomic number>D<degree>+<formal charge>:<id>]<bond>"`` for monomer
+        atoms and ``"<bond>[*:<id>]"`` for adjacent neighboring atoms
+        (NOTE: This functionality is experimental!)
 
         >>> PE_substructs = {
         ...     "PE": [
@@ -2127,7 +2135,7 @@ class Topology(Serializable):
                 if isinstance(molecule, Molecule):
                     molecule._conformers = [array[start:stop]]
                 else:
-                    molecule.conformers = [array[start:stop]]
+                    molecule.conformers = [array[start:stop]]  # type: ignore[misc]
             else:
                 molecule.conformers[0:1] = [array[start:stop]]
             start = stop
@@ -2137,7 +2145,7 @@ class Topology(Serializable):
     def from_mdtraj(
         cls,
         mdtraj_topology: "mdtraj.Topology",
-        unique_molecules: Optional[Iterable[FrozenMolecule]] = None,
+        unique_molecules: Optional[Iterable[MoleculeLike]] = None,
         positions: Union[None, "OMMQuantity", Quantity] = None,
     ):
         """
@@ -2348,16 +2356,13 @@ class Topology(Serializable):
                 return molecule.bond(bond_molecule_index)
             this_molecule_start_index += molecule.n_bonds
 
-    def add_molecule(self, molecule: Union[Molecule, _SimpleMolecule]) -> int:
+    def add_molecule(self, molecule: MoleculeLike) -> int:
         """Add a copy of the molecule to the topology"""
         idx = self._add_molecule_keep_cache(molecule)
         self._invalidate_cached_properties()
         return idx
 
-    def _add_molecule_keep_cache(
-        self,
-        molecule: Union[FrozenMolecule, _SimpleMolecule],
-    ) -> int:
+    def _add_molecule_keep_cache(self, molecule: MoleculeLike) -> int:
         self._molecules.append(deepcopy(molecule))
         return len(self._molecules)
 

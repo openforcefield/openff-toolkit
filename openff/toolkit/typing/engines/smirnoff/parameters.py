@@ -94,6 +94,21 @@ logger = logging.getLogger(__name__)
 _cal_mol_a2 = unit.calorie / unit.mole / unit.angstrom**2
 
 
+# Hack to make Sphinx happy without breaking changes
+class _UNDEFINED:
+    """
+    Marker type for an undeclared default parameter.
+
+    Custom type used by ``ParameterAttribute`` to differentiate between ``None``
+    and undeclared default.
+    """
+
+    pass
+
+
+UNDEFINED = _UNDEFINED
+
+
 def _linear_inter_or_extrapolate(points_dict, x_query):
     """
     Linearly interpolate or extrapolate based on a piecewise linear function
@@ -320,10 +335,8 @@ class ParameterAttribute:
 
     """
 
-    class UNDEFINED:
-        """Custom type used by ``ParameterAttribute`` to differentiate between ``None`` and undeclared default."""
-
-        pass
+    UNDEFINED = UNDEFINED
+    """Marker type for an undeclared default parameter."""
 
     def __init__(
         self,
@@ -1049,7 +1062,7 @@ class _ParameterAttributeHandler:
                     for key, val in mapping.items():
                         attrib_name_indexed, attrib_name_mapped = attrib_name.split("_")
                         smirnoff_dict[
-                            f"{attrib_name_indexed}{str(idx+1)}_{attrib_name_mapped}{key}"
+                            f"{attrib_name_indexed}{str(idx + 1)}_{attrib_name_mapped}{key}"
                         ] = val
             elif attrib_name in indexed_attribs:
                 for idx, val in enumerate(attrib_value):
@@ -2203,9 +2216,9 @@ class ParameterHandler(_ParameterAttributeHandler):
             ):
                 # Update the matches for this parameter type.
                 handler_match = self._Match(parameter_type, environment_match)
-                matches_for_this_type[
-                    environment_match.topology_atom_indices
-                ] = handler_match
+                matches_for_this_type[environment_match.topology_atom_indices] = (
+                    handler_match
+                )
 
             # Update matches of all parameter types.
             matches.update(matches_for_this_type)
@@ -3679,9 +3692,11 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         key = cast(
             tuple[str, str, str],
-            key
-            if parameter is None
-            else (parameter.type, parameter.smirks, parameter.name),
+            (
+                key
+                if parameter is None
+                else (parameter.type, parameter.smirks, parameter.name)
+            ),
         )
         expected_type, expected_smirks, expected_name = key
 

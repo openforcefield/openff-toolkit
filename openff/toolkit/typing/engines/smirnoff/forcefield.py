@@ -282,6 +282,10 @@ class ForceField:
         >>> offxml = '<SMIRNOFF version="0.2" aromaticity_model="OEAroModel_MDL"/>'
         >>> forcefield = ForceField(offxml)
 
+        See Also
+        --------
+        parse_sources
+
         """
         # Clear all object fields
         self._initialize()
@@ -568,9 +572,9 @@ class ForceField:
                             self._parameter_io_handler_classes[serialization_format],
                         )
                     )
-                self._parameter_io_handler_classes[
-                    serialization_format
-                ] = parameter_io_handler_class
+                self._parameter_io_handler_classes[serialization_format] = (
+                    parameter_io_handler_class
+                )
 
     def register_parameter_handler(self, parameter_handler: ParameterHandler):
         """
@@ -779,7 +783,7 @@ class ForceField:
         Parameters
         ----------
         sources
-            A list of files defining the SMIRNOFF force field to be loaded.
+            An iterable of files defining the SMIRNOFF force field to be loaded.
             Currently, only `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/>`_
             is supported.  Each entry may be an absolute file path, a path relative to the current working directory, a
             path relative to this module's data subdirectory (for built in force fields), or an open file-like object
@@ -1260,6 +1264,15 @@ class ForceField:
         For each molecule, a dictionary of force types is returned, and for each force type,
         each force term is provided with the atoms involved, the parameter id assigned, and the corresponding SMIRKS.
 
+        .. todo::
+           What is the most useful API for this method?
+
+           - Should we instead accept :class:`Molecule` objects as input and
+             individually return labels?
+           - Should we attach the labels to the :class:`Molecule` object?
+           - Or should we label all interactions in a :class:`Topology` instead
+             of just labeling its ``unique_molecules``?
+
         Parameters
         ----------
         topology
@@ -1274,16 +1287,6 @@ class ForceField:
             ['HarmonicBondForce']`` gives details for the harmonic bond
             parameters for the first molecule. Each element is a list of the
             form: ``[ ( [ atom1, ..., atomN], parameter_id, SMIRKS), ... ]``.
-
-
-        .. todo::
-           What is the most useful API for this method?
-           - Should we instead accept :class:`Molecule` objects as input and
-             individually return labels?
-           - Should we attach the labels to the :class:`Molecule` object?
-           - Or should we label all interactions in a :class:`Topology` instead
-             of just labeling its ``unique_molecules``?
-
         """
         from openff.toolkit.typing.engines.smirnoff.parameters import VirtualSiteHandler
 
