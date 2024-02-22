@@ -79,7 +79,7 @@ intersphinx_mapping = {
     "openmm": ("http://docs.openmm.org/latest/api-python/", None),
     "rdkit": ("https://www.rdkit.org/docs", None),
     "openeye": ("https://docs.eyesopen.com/toolkits/python/", None),
-    "mdtraj": ("https://www.mdtraj.org/1.9.8dev0/", None),
+    "mdtraj": ("https://www.mdtraj.org/1.9.5/", None),
     "openff.interchange": (
         "https://docs.openforcefield.org/projects/interchange/en/stable/",
         None,
