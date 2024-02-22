@@ -38,4 +38,3 @@ including offering serialization to a variety of standard formats (including [XM
     HierarchyScheme
     HierarchyElement
 ```
-

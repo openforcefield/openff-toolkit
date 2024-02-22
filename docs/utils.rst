@@ -162,4 +162,3 @@ Exceptions raised by the Toolkit.
     :toctree: api/generated/
 
     exceptions
-

@@ -60,4 +60,3 @@ constraint-algorithm   = LINCS ; Use fast and stable LINCS constraint algorithm
 continuation           = no ; Apply constraints to the initial configuration (important since energy minimisation was unconstrained)
 lincs-order            = 4 ; Increase if you get LINCS errors
 lincs-iter             = 1 ; Increase if you get LINCS errors
-

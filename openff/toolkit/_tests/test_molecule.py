@@ -3417,8 +3417,8 @@ class TestQCArchiveInterface:
             Molecule.from_qcschema(mol_dict)
 
 
+@requires_pkg("IPython")
 class TestMoleculeVisualization:
-    @requires_pkg("IPython")
     @requires_rdkit
     def test_visualize_rdkit(self):
         """
@@ -3476,8 +3476,15 @@ class TestMoleculeVisualization:
     )
     def test_ipython_repr_no_nglview(self):
         """Test that the default Molecule repr does not break when nglview is not installed"""
+        from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE, RDKIT_AVAILABLE
+
         molecule = Molecule().from_smiles("CCO")
-        molecule._ipython_display_()
+
+        if RDKIT_AVAILABLE:
+            # the default is `backend="rdkit"`
+            molecule.visualize()
+        elif OPENEYE_AVAILABLE:
+            molecule.visualize(backend="openeye")
 
     def test_get_coordinates(self):
         from openff.toolkit.utils._viz import MoleculeNGLViewTrajectory
