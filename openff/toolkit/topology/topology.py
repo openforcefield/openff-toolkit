@@ -2066,6 +2066,7 @@ class Topology(Serializable):
         See Also
         ========
         set_positions
+        clear_positions
         """
         conformers = []
         for molecule in self.molecules:
@@ -2080,6 +2081,21 @@ class Topology(Serializable):
         positions = np.concatenate(conformers, axis=0)
 
         return Quantity(positions, unit.nanometer)
+
+    def clear_positions(self):
+        """
+        Clear the positions of this topology by removing all conformers from its consituent molecules.
+
+        Note that all conformers will be deleted (in-place) from all molecules. Use `Topology.get_positions()`
+        if you wish to save them before clearing.
+
+        See Also
+        --------
+        get_positions
+        set_positions
+        """
+        for molecule in self.molecules:
+            molecule._conformers = None
 
     def set_positions(self, array: Quantity):
         """
@@ -2098,7 +2114,13 @@ class Topology(Serializable):
         See Also
         ========
         get_positions
+        clear_positions
         """
+        if array is None:
+            raise ValueError(
+                "array argument cannot be None, use clear_positions instead."
+            )
+
         if not isinstance(array, Quantity):
             raise IncompatibleUnitError(
                 "array should be an OpenFF Quantity with dimensions of length"
