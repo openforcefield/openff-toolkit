@@ -9,9 +9,11 @@ import functools
 import importlib
 import itertools
 import os
+import pathlib
 import pprint
 import textwrap
 from contextlib import contextmanager
+from typing import Union
 
 import numpy as np
 import openmm
@@ -43,6 +45,22 @@ requires_openeye_mol2 = pytest.mark.skipif(
     not OpenEyeToolkitWrapper.is_available(),
     reason="Test requires OE toolkit to read mol2 files",
 )
+
+
+def _get_readme_path() -> Union[pathlib.Path, None]:
+    """
+    Return a path to the README file or None if it cannot be assured to be the toolkit's README.
+    """
+    if "site-packages" in __file__:
+        # This test file is being collected from the installed package, which
+        # does not provide the README file.
+        # Note that there will likely be a mis-bundled file
+        # $CONDA_PREFIX/lib/python3.x/site-packages/README.md, but this is not
+        # the toolkit's README file!
+        return None
+
+    else:
+        return pathlib.Path(__file__).parents[3] / "README.md"
 
 
 def has_pkg(pkg_name):
