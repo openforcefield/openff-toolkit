@@ -4277,7 +4277,7 @@ class FrozenMolecule(Serializable):
         """
 
         return OpenEyeToolkitWrapper().enumerate_protomers(
-            molecule=self,  # type: ignore[arg-type]
+            molecule=self,
             max_states=max_states,
         )
 

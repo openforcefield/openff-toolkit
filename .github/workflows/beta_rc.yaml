@@ -70,8 +70,7 @@ jobs:
           pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
 
       - name: Run mypy
-        run: |
-          mypy --namespace-packages -p "openff.toolkit"
+        run: mypy -p "openff.toolkit"
 
       - name: Run unit tests
         run: |

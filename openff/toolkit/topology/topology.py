@@ -1052,7 +1052,7 @@ class Topology(Serializable):
             # Find all atomsets that match this definition in the reference molecule
             # This will automatically attempt to match chemically identical atoms in
             # a canonical order within the Topology
-            mol_matches = unique_mol.chemical_environment_matches(  # type: ignore[union-attr]
+            mol_matches = unique_mol.chemical_environment_matches(  # type: ignore[operator]
                 smarts,
                 unique=unique,
                 toolkit_registry=toolkit_registry,

@@ -383,7 +383,7 @@ class _SimpleMolecule:
         hier_scheme_dicts = molecule_dict.pop("hierarchy_schemes")
         for iterator_name, hierarchy_scheme_dict in hier_scheme_dicts.items():
             molecule._hierarchy_schemes[iterator_name] = HierarchyScheme(
-                parent=molecule,
+                parent=molecule,  # type: ignore[arg-type]
                 uniqueness_criteria=tuple(hierarchy_scheme_dict["uniqueness_criteria"]),
                 iterator_name=iterator_name,
             )
@@ -394,7 +394,8 @@ class _SimpleMolecule:
                     atom_indices=element_dict["atom_indices"],
                 )
 
-        {setattr(molecule, key, val) for key, val in molecule_dict.items()}
+        for key, val in molecule_dict.items():
+            setattr(molecule, key, val)
 
         return molecule
 
@@ -418,7 +419,7 @@ class _SimpleMolecule:
 
         for name, hierarchy_scheme in molecule.hierarchy_schemes.items():
             assert name == hierarchy_scheme.iterator_name
-            mm_molecule.add_hierarchy_scheme(  # type: ignore[operator]
+            mm_molecule.add_hierarchy_scheme(
                 uniqueness_criteria=hierarchy_scheme.uniqueness_criteria,
                 iterator_name=hierarchy_scheme.iterator_name,
             )
@@ -535,7 +536,7 @@ class _SimpleMolecule:
         return self.__class__.from_dict(self.to_dict())
 
 
-_SimpleMolecule.add_hierarchy_scheme = Molecule.add_hierarchy_scheme  # type: ignore[attr-defined]
+_SimpleMolecule.add_hierarchy_scheme = Molecule.add_hierarchy_scheme  # type: ignore[assignment]
 _SimpleMolecule.update_hierarchy_schemes = Molecule.update_hierarchy_schemes  # type: ignore[attr-defined]
 
 

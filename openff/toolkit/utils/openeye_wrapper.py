@@ -843,7 +843,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         options.SetMaxCount(max_states)
 
         return [
-            self.from_openeye(
+            self.from_openeye(  # type: ignore[misc]
                 protomer,
                 allow_undefined_stereo=True,
                 _cls=molecule.__class__,

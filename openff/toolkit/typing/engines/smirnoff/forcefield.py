@@ -1304,7 +1304,7 @@ class ForceField:
                 if type(parameter_handler) is VirtualSiteHandler:
                     param_is_list = True
 
-                matches = parameter_handler.find_matches(molecule.to_topology())  # type: ignore[union-attr]
+                matches = parameter_handler.find_matches(molecule.to_topology())
 
                 # Remove the chemical environment matches from the
                 # matched results.
