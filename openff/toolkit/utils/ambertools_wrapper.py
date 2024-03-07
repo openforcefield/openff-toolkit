@@ -37,6 +37,26 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         "The AmberTools toolkit (free and open source) can be found at "
         "https://anaconda.org/conda-forge/ambertools"
     )
+    _supported_charge_methods: dict[str, dict[str, Union[int, str]]] = {
+        "am1bcc": {
+            "antechamber_keyword": "bcc",
+            "min_confs": 1,
+            "max_confs": 1,
+            "rec_confs": 1,
+        },
+        "am1-mulliken": {
+            "antechamber_keyword": "mul",
+            "min_confs": 1,
+            "max_confs": 1,
+            "rec_confs": 1,
+        },
+        "gasteiger": {
+            "antechamber_keyword": "gas",
+            "min_confs": 0,
+            "max_confs": 0,
+            "rec_confs": 0,
+        },
+    }
 
     def __init__(self):
         super().__init__()
@@ -138,34 +158,13 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
             # Standardize method name for string comparisons
             partial_charge_method = partial_charge_method.lower()
 
-        SUPPORTED_CHARGE_METHODS: dict[str, dict[str, Union[int, str]]] = {
-            "am1bcc": {
-                "antechamber_keyword": "bcc",
-                "min_confs": 1,
-                "max_confs": 1,
-                "rec_confs": 1,
-            },
-            "am1-mulliken": {
-                "antechamber_keyword": "mul",
-                "min_confs": 1,
-                "max_confs": 1,
-                "rec_confs": 1,
-            },
-            "gasteiger": {
-                "antechamber_keyword": "gas",
-                "min_confs": 0,
-                "max_confs": 0,
-                "rec_confs": 0,
-            },
-        }
-
-        if partial_charge_method not in SUPPORTED_CHARGE_METHODS:
+        if partial_charge_method not in self._supported_charge_methods:
             raise ChargeMethodUnavailableError(
                 f"partial_charge_method '{partial_charge_method}' is not available from AmberToolsToolkitWrapper. "
-                f"Available charge methods are {list(SUPPORTED_CHARGE_METHODS.keys())} "
+                f"Available charge methods are {self._supported_charge_methods}"
             )
 
-        charge_method = SUPPORTED_CHARGE_METHODS[partial_charge_method]
+        charge_method = self._supported_charge_methods[partial_charge_method]
 
         if _cls is None:
             _cls = Molecule

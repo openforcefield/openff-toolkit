@@ -13,7 +13,7 @@ import re
 import tempfile
 from collections import defaultdict
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import numpy as np
 from cachetools import LRUCache, cached
@@ -95,11 +95,55 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
     # Only for OpenEye is there potentially a difference between
     # being available and installed
     _is_installed: Optional[bool] = None
-    _license_functions = {
+    _license_functions: dict[str, str] = {
         "oechem": "OEChemIsLicensed",
         "oequacpac": "OEQuacPacIsLicensed",
         "oeiupac": "OEIUPACIsLicensed",
         "oeomega": "OEOmegaIsLicensed",
+    }
+    _supported_charge_methods = {
+        "am1bcc": {
+            "oe_charge_method": "OEAM1BCCCharges",
+            "min_confs": 1,
+            "max_confs": 1,
+            "rec_confs": 1,
+        },
+        "am1-mulliken": {
+            "oe_charge_method": "OEAM1Charges",
+            "min_confs": 1,
+            "max_confs": 1,
+            "rec_confs": 1,
+        },
+        "gasteiger": {
+            "oe_charge_method": "OEGasteigerCharges",
+            "min_confs": 0,
+            "max_confs": 0,
+            "rec_confs": 0,
+        },
+        "mmff94": {
+            "oe_charge_method": "OEMMFF94Charges",
+            "min_confs": 0,
+            "max_confs": 0,
+            "rec_confs": 0,
+        },
+        "am1bccnosymspt": {
+            "oe_charge_method": "OEAM1BCCCharges",
+            "min_confs": 1,
+            "max_confs": 1,
+            "rec_confs": 1,
+        },
+        "am1elf10": {
+            "oe_charge_method": "OEELFCharges",
+            "min_confs": 1,
+            "max_confs": None,
+            "rec_confs": 500,
+        },
+        "am1bccelf10": {
+            "oe_charge_method": "OEAM1BCCELF10Charges",
+            "min_confs": 1,
+            "max_confs": None,
+            "rec_confs": 500,
+        },
     }
 
     def __init__(self):
@@ -2358,65 +2402,20 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         from openff.toolkit.topology import Molecule
 
-        SUPPORTED_CHARGE_METHODS = {
-            "am1bcc": {
-                "oe_charge_method": oequacpac.OEAM1BCCCharges,
-                "min_confs": 1,
-                "max_confs": 1,
-                "rec_confs": 1,
-            },
-            "am1-mulliken": {
-                "oe_charge_method": oequacpac.OEAM1Charges,
-                "min_confs": 1,
-                "max_confs": 1,
-                "rec_confs": 1,
-            },
-            "gasteiger": {
-                "oe_charge_method": oequacpac.OEGasteigerCharges,
-                "min_confs": 0,
-                "max_confs": 0,
-                "rec_confs": 0,
-            },
-            "mmff94": {
-                "oe_charge_method": oequacpac.OEMMFF94Charges,
-                "min_confs": 0,
-                "max_confs": 0,
-                "rec_confs": 0,
-            },
-            "am1bccnosymspt": {
-                "oe_charge_method": oequacpac.OEAM1BCCCharges,
-                "min_confs": 1,
-                "max_confs": 1,
-                "rec_confs": 1,
-            },
-            "am1elf10": {
-                "oe_charge_method": oequacpac.OEELFCharges(
-                    oequacpac.OEAM1Charges(optimize=True, symmetrize=True), 10
-                ),
-                "min_confs": 1,
-                "max_confs": None,
-                "rec_confs": 500,
-            },
-            "am1bccelf10": {
-                "oe_charge_method": oequacpac.OEAM1BCCELF10Charges,
-                "min_confs": 1,
-                "max_confs": None,
-                "rec_confs": 500,
-            },
-        }
-
         if partial_charge_method is None:
             partial_charge_method = "am1-mulliken"
 
         partial_charge_method = partial_charge_method.lower()
 
-        if partial_charge_method not in SUPPORTED_CHARGE_METHODS:
+        if partial_charge_method not in self._supported_charge_methods:
             raise ChargeMethodUnavailableError(
                 f"partial_charge_method '{partial_charge_method}' is not available from OpenEyeToolkitWrapper. "
-                f"Available charge methods are {list(SUPPORTED_CHARGE_METHODS.keys())} "
+                f"Available charge methods are {self.supported_charge_methods}"
             )
 
-        charge_method = SUPPORTED_CHARGE_METHODS[partial_charge_method]
+        charge_method: dict[str, Union[str, int, None]] = (
+            self._supported_charge_methods[partial_charge_method]
+        )
 
         if _cls is None:
             _cls = Molecule
@@ -2453,28 +2452,30 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         oechem.OEThrow.SetOutputStream(errfs)
         oechem.OEThrow.Clear()
 
+        if partial_charge_method == "am1elf10":
+            # special case
+            oe_charge_method = oequacpac.OEELFCharges(
+                oequacpac.OEAM1Charges(optimize=True, symmetrize=True), 10
+            )
+        else:
+            # otherwise just look up the method from the oequacpc module
+            oe_charge_method = getattr(oequacpac, charge_method["oe_charge_method"])
+
         # The OpenFF toolkit has always supported a version of AM1BCC with no geometry optimization
         # or symmetry correction. So we include this keyword to provide a special configuration of quacpac
         # if requested.
         if partial_charge_method == "am1bccnosymspt":
-            optimize = False
-            symmetrize = False
-            quacpac_status = oequacpac.OEAssignCharges(
-                oemol, charge_method["oe_charge_method"](optimize, symmetrize)
-            )
-        else:
+            kwargs = {
+                "optimize": False,
+                "symmetrize": False,
+            }
+        elif partial_charge_method in ["gasteiger", "mmff94", "am1bccelf10"]:
             # symmetrize is implicit in gasteiger and mmff and is already set to True in am1bccelf10
-            if partial_charge_method in ["gasteiger", "mmff94", "am1bccelf10"]:
-                kwargs = {}
-            else:
-                kwargs = {"symmetrize": True}
+            kwargs = dict()
+        else:
+            kwargs = {"symmetrize": True}
 
-            oe_charge_method = charge_method["oe_charge_method"]
-
-            if callable(oe_charge_method):
-                oe_charge_method = oe_charge_method(**kwargs)
-
-            quacpac_status = oequacpac.OEAssignCharges(oemol, oe_charge_method)
+        quacpac_status = oequacpac.OEAssignCharges(oemol, oe_charge_method(**kwargs))
 
         oechem.OEThrow.SetOutputStream(oechem.oeerr)  # restoring to original state
         # This logic handles errors encountered in #34, which can occur when using ELF10 conformer selection

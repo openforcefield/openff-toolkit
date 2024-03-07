@@ -5,7 +5,7 @@ Base class for toolkit wrappers. Defines the public API and some shared methods
 __all__ = ("ToolkitWrapper",)
 
 from functools import wraps
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
@@ -37,6 +37,7 @@ class ToolkitWrapper:
     _toolkit_installation_instructions: Optional[str] = (
         None  # Installation instructions for the toolkit
     )
+    _supported_charge_methods: dict[str, dict[str, Union[int, str, None]]] = dict()
 
     # @staticmethod
     # TODO: Right now, to access the class definition, I have to make this a classmethod
@@ -60,7 +61,6 @@ class ToolkitWrapper:
         return decorator
 
     @property
-    # @classmethod
     def toolkit_name(self):
         """
         Return the name of the toolkit wrapped by this class as a str
@@ -95,6 +95,10 @@ class ToolkitWrapper:
         List of file formats that this toolkit can write.
         """
         return self._toolkit_file_write_formats
+
+    @property
+    def supported_charge_methods(self) -> list[str]:
+        return [*self._supported_charge_methods.keys()]
 
     @classmethod
     def is_available(cls):

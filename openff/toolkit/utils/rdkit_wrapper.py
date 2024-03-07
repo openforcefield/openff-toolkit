@@ -78,6 +78,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         "A conda-installable version of the free and open source RDKit cheminformatics "
         "toolkit can be found at: https://anaconda.org/conda-forge/rdkit"
     )
+    _supported_charge_methods = ["mmff94", "gasteiger"]
 
     def __init__(self):
         super().__init__()
@@ -1781,17 +1782,15 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         import numpy as np
         from rdkit.Chem import AllChem
 
-        SUPPORTED_CHARGE_METHODS = {"mmff94", "gasteiger"}
-
         if partial_charge_method is None:
             partial_charge_method = "mmff94"
 
         partial_charge_method = partial_charge_method.lower()
 
-        if partial_charge_method not in SUPPORTED_CHARGE_METHODS:
+        if partial_charge_method not in self._supported_charge_methods:
             raise ChargeMethodUnavailableError(
                 f"partial_charge_method '{partial_charge_method}' is not available from RDKitToolkitWrapper. "
-                f"Available charge methods are {list(SUPPORTED_CHARGE_METHODS)} "
+                f"Available charge methods are {self._supported_charge_methods}"
             )
 
         rdkit_molecule = molecule.to_rdkit()
