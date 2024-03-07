@@ -154,6 +154,8 @@ jobs:
             PYTEST_ARGS+=" --runslow"
           fi
 
+          PYTEST_ARGS+=" --runslow"
+
           python -m pytest --durations=20 $PYTEST_ARGS $COV
 
       - name: Run code snippets in docs

@@ -77,6 +77,7 @@ from openff.toolkit.utils.exceptions import (
 )
 from openff.toolkit.utils.toolkits import (
     AmberToolsToolkitWrapper,
+    BuiltInToolkitWrapper,
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
     ToolkitRegistry,
@@ -3415,6 +3416,45 @@ class TestQCArchiveInterface:
         ]
         with pytest.raises(MissingCMILESError):
             Molecule.from_qcschema(mol_dict)
+
+
+class TestGetAvailableChargeMethods:
+    def test_with_global_toolkit_registry(self):
+        """Test the get_available_charge_methods method"""
+        from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE
+
+        available_methods = create_ethanol().get_available_charge_methods()
+
+        for method in available_methods:
+            assert isinstance(method, str)
+
+        # The toolkit should always have (basic) AM1-BCC available
+        assert "am1bcc" in available_methods
+
+        # These are provided by both RDKit and OpenEye
+        assert "mmff94" in available_methods
+        assert "gasteiger" in available_methods
+
+        assert ("am1elf10" in available_methods) == OPENEYE_AVAILABLE
+        assert ("am1bccelf10" in available_methods) == OPENEYE_AVAILABLE
+
+    def test_with_explicit_registry(self):
+        assert "zeros" in create_ethanol().get_available_charge_methods(
+            toolkit_registry=ToolkitRegistry([BuiltInToolkitWrapper])
+        )
+
+    def test_with_explicit_wrapper(self):
+        assert "zeros" in create_ethanol().get_available_charge_methods(
+            toolkit_registry=BuiltInToolkitWrapper()
+        )
+
+    def test_error_with_type(self):
+        from openff.toolkit.utils.exceptions import InvalidToolkitRegistryError
+
+        with pytest.raises(InvalidToolkitRegistryError):
+            create_ethanol().get_available_charge_methods(
+                toolkit_registry=BuiltInToolkitWrapper
+            )
 
 
 class TestMoleculeVisualization:

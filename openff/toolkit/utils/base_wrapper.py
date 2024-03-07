@@ -5,7 +5,7 @@ Base class for toolkit wrappers. Defines the public API and some shared methods
 __all__ = ("ToolkitWrapper",)
 
 from functools import wraps
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional, TypedDict
 
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
@@ -16,6 +16,15 @@ from openff.toolkit.utils.exceptions import (
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import Molecule
+
+
+class _ChargeSettings(TypedDict, total=False):
+    n_conformers: int
+    rec_confs: int
+    min_confs: int
+    max_confs: int  # OpenEyeToolkitWrapper sometimes defines this as None
+    antechamber_keyword: str
+    oe_charge_method: str
 
 
 def _mol_to_ctab_and_aro_key(
@@ -37,7 +46,7 @@ class ToolkitWrapper:
     _toolkit_installation_instructions: Optional[str] = (
         None  # Installation instructions for the toolkit
     )
-    _supported_charge_methods: dict[str, dict[str, Union[int, str, None]]] = dict()
+    _supported_charge_methods: dict[str, _ChargeSettings] = dict()
 
     # @staticmethod
     # TODO: Right now, to access the class definition, I have to make this a classmethod

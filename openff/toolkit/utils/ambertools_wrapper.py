@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 from collections import defaultdict
 from shutil import which
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 
@@ -37,7 +37,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         "The AmberTools toolkit (free and open source) can be found at "
         "https://anaconda.org/conda-forge/ambertools"
     )
-    _supported_charge_methods: dict[str, dict[str, Union[int, str]]] = {
+    _supported_charge_methods = {
         "am1bcc": {
             "antechamber_keyword": "bcc",
             "min_confs": 1,
@@ -189,8 +189,8 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
             self._check_n_conformers(
                 mol_copy,
                 partial_charge_method=partial_charge_method,
-                min_confs=charge_method["min_confs"],  # type: ignore[arg-type]
-                max_confs=charge_method["max_confs"],  # type: ignore[arg-type]
+                min_confs=charge_method["min_confs"],
+                max_confs=charge_method["max_confs"],
                 strict_n_conformers=strict_n_conformers,
             )
 

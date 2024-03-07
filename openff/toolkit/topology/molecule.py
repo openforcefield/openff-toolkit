@@ -2497,6 +2497,36 @@ class FrozenMolecule(Serializable):
                 f"{type(toolkit_registry)}"
             )
 
+    def get_available_charge_methods(
+        self,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
+    ) -> list[str]:
+        """
+        Get the charge methods supported by each wrapper in the specified registry.
+
+        Parameters
+        ----------
+        toolkit_registry
+            :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for the
+            calculation.
+
+        """
+        if isinstance(toolkit_registry, ToolkitRegistry):
+            return list(
+                {
+                    method
+                    for wrapper in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits
+                    for method in wrapper.supported_charge_methods
+                }
+            )
+        elif isinstance(toolkit_registry, ToolkitWrapper):
+            return toolkit_registry.supported_charge_methods
+        else:
+            raise InvalidToolkitRegistryError(
+                f"Invalid toolkit_registry passed to get_available_charge_methods"
+                f"Expected ToolkitRegistry or ToolkitWrapper. Got {type(toolkit_registry)}"
+            )
+
     def assign_partial_charges(
         self,
         partial_charge_method: str,

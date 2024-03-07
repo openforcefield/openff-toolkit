@@ -13,7 +13,7 @@ import re
 import tempfile
 from collections import defaultdict
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional
 
 import numpy as np
 from cachetools import LRUCache, cached
@@ -26,7 +26,11 @@ if TYPE_CHECKING:
 
 from openff.units.elements import SYMBOLS
 
-from openff.toolkit.utils import base_wrapper
+from openff.toolkit.utils.base_wrapper import (
+    ToolkitWrapper,
+    _ChargeSettings,
+    _mol_to_ctab_and_aro_key,
+)
 from openff.toolkit.utils.constants import (
     ALLOWED_AROMATICITY_MODELS,
     DEFAULT_AROMATICITY_MODEL,
@@ -73,7 +77,7 @@ def get_oeformat(file_format):
 
 
 @inherit_docstrings
-class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
+class OpenEyeToolkitWrapper(ToolkitWrapper):
     """
     OpenEye toolkit wrapper
 
@@ -135,13 +139,13 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         "am1elf10": {
             "oe_charge_method": "OEELFCharges",
             "min_confs": 1,
-            "max_confs": None,
+            "max_confs": None,  # type: ignore[typeddict-item]
             "rec_confs": 500,
         },
         "am1bccelf10": {
             "oe_charge_method": "OEAM1BCCELF10Charges",
             "min_confs": 1,
-            "max_confs": None,
+            "max_confs": None,  # type: ignore[typeddict-item]
             "rec_confs": 500,
         },
     }
@@ -1409,7 +1413,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     to_openeye_cache = LRUCache(maxsize=4096)
 
-    @cached(to_openeye_cache, key=base_wrapper._mol_to_ctab_and_aro_key)
+    @cached(to_openeye_cache, key=_mol_to_ctab_and_aro_key)
     def _connection_table_to_openeye(
         self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL
     ):
@@ -2413,9 +2417,9 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
                 f"Available charge methods are {self.supported_charge_methods}"
             )
 
-        charge_method: dict[str, Union[str, int, None]] = (
-            self._supported_charge_methods[partial_charge_method]
-        )
+        charge_method: _ChargeSettings = self._supported_charge_methods[
+            partial_charge_method
+        ]
 
         if _cls is None:
             _cls = Molecule
@@ -2452,14 +2456,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         oechem.OEThrow.SetOutputStream(errfs)
         oechem.OEThrow.Clear()
 
-        if partial_charge_method == "am1elf10":
-            # special case
-            oe_charge_method = oequacpac.OEELFCharges(
-                oequacpac.OEAM1Charges(optimize=True, symmetrize=True), 10
-            )
-        else:
-            # otherwise just look up the method from the oequacpc module
-            oe_charge_method = getattr(oequacpac, charge_method["oe_charge_method"])
+        oe_charge_method = getattr(oequacpac, charge_method["oe_charge_method"])
 
         # The OpenFF toolkit has always supported a version of AM1BCC with no geometry optimization
         # or symmetry correction. So we include this keyword to provide a special configuration of quacpac
@@ -2475,7 +2472,23 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         else:
             kwargs = {"symmetrize": True}
 
-        quacpac_status = oequacpac.OEAssignCharges(oemol, oe_charge_method(**kwargs))
+        if partial_charge_method == "am1elf10":
+            # special case
+            charge_settings = oequacpac.OEELFCharges(
+                oequacpac.OEAM1Charges(
+                    optimize=True,
+                    symmetrize=True,
+                ),
+                10,
+            )
+
+        else:
+            charge_settings = oe_charge_method(**kwargs)
+
+        quacpac_status = oequacpac.OEAssignCharges(
+            oemol,
+            charge_settings,
+        )
 
         oechem.OEThrow.SetOutputStream(oechem.oeerr)  # restoring to original state
         # This logic handles errors encountered in #34, which can occur when using ELF10 conformer selection
