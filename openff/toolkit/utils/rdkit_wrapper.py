@@ -78,7 +78,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         "A conda-installable version of the free and open source RDKit cheminformatics "
         "toolkit can be found at: https://anaconda.org/conda-forge/rdkit"
     )
-    _supported_charge_methods = ["mmff94", "gasteiger"]
+    _supported_charge_methods = {"mmff94": dict(), "gasteiger": dict()}
 
     def __init__(self):
         super().__init__()
