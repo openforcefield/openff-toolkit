@@ -144,7 +144,7 @@ jobs:
 
       - name: Run mypy
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: mypy --version  # -p "openff.toolkit"
+        run: mypy -p "openff.toolkit"
 
       - name: Run unit tests
         run: |
