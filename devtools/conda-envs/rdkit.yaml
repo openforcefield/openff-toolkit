@@ -24,7 +24,8 @@ dependencies:
   - typing_extensions
     # Toolkit-specific
   - ambertools >=22
-  - rdkit
+    # https://github.com/rdkit/rdkit/issues/7221
+  - rdkit <2023.09.6
     # Test-only/optional/dev/typing
   - pytest
   - pytest-cov
