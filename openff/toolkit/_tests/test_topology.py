@@ -1710,6 +1710,7 @@ class TestTopology:
 
 @skip_if_missing("nglview")
 class TestTopologyVisaulization:
+    @pytest.mark.slow
     @requires_rdkit
     def test_visualize_basic(self):
         import nglview

@@ -154,7 +154,7 @@ jobs:
             PYTEST_ARGS+=" --runslow"
           fi
 
-          python -m pytest $PYTEST_ARGS $COV
+          python -m pytest --durations=20 $PYTEST_ARGS $COV
 
       - name: Run code snippets in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
