@@ -2243,6 +2243,14 @@ class TestTopologyPositions:
 
         return topology
 
+    @pytest.fixture()
+    def topology_with_positions(self, topology) -> Topology:
+        # These conformers will obviously overlap, but they'll be the right data type
+        for molecule in topology.molecules:
+            molecule.generate_conformers(n_conformers=1)
+
+        return topology
+
     def test_set_positions_fails_without_units(self, topology):
         # Generate positions without units deterministically
         positions_no_units = np.arange(topology.n_atoms * 3).reshape(-1, 3)
@@ -2325,6 +2333,30 @@ class TestTopologyPositions:
         topology.set_positions(positions)
         topology._molecules[0]._conformers = None
         assert topology.get_positions() is None
+
+    def test_clear_and_re_set_positions(self, topology_with_positions):
+        initial_positions = topology_with_positions.get_positions()
+        assert initial_positions is not None
+        assert initial_positions.shape == (topology_with_positions.n_atoms, 3)
+
+        with pytest.raises(
+            ValueError,
+            match="cannot be None.*use clear_positions",
+        ):
+            topology_with_positions.set_positions(None)
+
+        topology_with_positions.clear_positions()
+
+        assert topology_with_positions.get_positions() is None
+
+        for molecule in topology_with_positions.molecules:
+            assert molecule.conformers is None
+
+        # re-set positions back to their original values
+        topology_with_positions.set_positions(initial_positions)
+
+        assert initial_positions is not None
+        assert initial_positions.shape == (topology_with_positions.n_atoms, 3)
 
 
 @requires_rdkit
