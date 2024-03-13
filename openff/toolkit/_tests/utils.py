@@ -142,13 +142,12 @@ def get_amber_file_path(prefix):
         Absolute path to the AMBER inpcrd filepath in testdata/systems/amber
 
     """
-    prefix = os.path.join("systems", "amber", prefix)
-    prmtop_filepath = get_data_file_path(prefix + ".prmtop")
-    inpcrd_filepath = get_data_file_path(prefix + ".inpcrd")
-    return prmtop_filepath, inpcrd_filepath
+    prefix = pathlib.Path("systems", "amber", prefix)
+
+    return (path.as_posix() for path in (prefix / "prmtop", prefix / "inpcrd"))
 
 
-def get_packmol_pdb_file_path(prefix="cyclohexane_ethanol_0.4_0.6"):
+def get_packmol_pdb_file_path(prefix: str = "cyclohexane_ethanol_0.4_0.6") -> str:
     """Get PDB filename for a packmol-generated box
 
     Parameters
@@ -161,12 +160,10 @@ def get_packmol_pdb_file_path(prefix="cyclohexane_ethanol_0.4_0.6"):
     pdb_filename : str
         Absolute path to the PDB file
     """
-    prefix = os.path.join("systems", "packmol_boxes", prefix)
-    pdb_filename = get_data_file_path(prefix + ".pdb")
-    return pdb_filename
+    return pathlib.Path("systems", "packmol_boxes", f"{prefix}.pdb").as_posix()
 
 
-def get_monomer_mol2_file_path(prefix="ethanol"):
+def get_monomer_mol2_file_path(prefix: str = "ethanol") -> str:
     """Get absolute filepath for a mol2 file denoting a small molecule monomer in testdata
 
     Parameters
@@ -180,9 +177,7 @@ def get_monomer_mol2_file_path(prefix="ethanol"):
         Absolute path to the mol2 file
     """
     # TODO: The mol2 files in this folder are not tripos mol2 files. Delete or convert them.
-    prefix = os.path.join("systems", "monomers", prefix)
-    mol2_filename = get_data_file_path(prefix + ".mol2")
-    return mol2_filename
+    return pathlib.Path("systems", "monomers", f"{prefix}.mol2").as_posix()
 
 
 def extract_compressed_molecules(tar_file_name, file_subpaths=None, filter_func=None):
@@ -193,7 +188,7 @@ def extract_compressed_molecules(tar_file_name, file_subpaths=None, filter_func=
 
     # Find the path of the tarfile with respect to the data/molecules/ folder.
     molecules_dir_path = get_data_file_path("molecules")
-    tar_file_path = os.path.join(molecules_dir_path, tar_file_name)
+    tar_file_path = pathlib.Path(molecules_dir_path, tar_file_name)
     tar_root_dir_name = tar_file_name.split(".")[0]
 
     # Return value: Paths to the extracted molecules.
@@ -204,21 +199,21 @@ def extract_compressed_molecules(tar_file_name, file_subpaths=None, filter_func=
         # We can already check the paths of the extracted files
         # and skipping opening the tarball if not necessary.
         extracted_file_paths = [
-            os.path.join(molecules_dir_path, tar_root_dir_name, file_subpath)
+            pathlib.Path(molecules_dir_path, tar_root_dir_name, file_subpath)
             for file_subpath in file_subpaths
         ]
 
         # Remove files that we have already extracted.
         # Also, we augument the subpath with its root directory.
         file_subpaths_set = {
-            os.path.join(tar_root_dir_name, subpath)
+            pathlib.Path(tar_root_dir_name, subpath)
             for subpath, fullpath in zip(file_subpaths, extracted_file_paths)
             if not os.path.isfile(fullpath)
         }
 
         # If everything was already extracted, we don't need to open the tarball.
         if len(file_subpaths_set) == 0:
-            return extracted_file_paths
+            return [path.as_posix() for path in extracted_file_paths]
 
         # Otherwise, create a filter matching only the subpaths.
         def filter_func(x):
@@ -246,7 +241,7 @@ def extract_compressed_molecules(tar_file_name, file_subpaths=None, filter_func=
         # Built the paths to the extracted molecules we didn't already.
         if extracted_file_paths is None:
             extracted_file_paths = [
-                os.path.join(molecules_dir_path, m.name) for m in members
+                pathlib.Path(molecules_dir_path, m.name) for m in members
             ]
 
         # Extract only the members that we haven't already extracted.
@@ -257,7 +252,7 @@ def extract_compressed_molecules(tar_file_name, file_subpaths=None, filter_func=
         ]
         tar_file.extractall(path=molecules_dir_path, members=members)
 
-    return extracted_file_paths
+    return [path.as_posix() for path in extracted_file_paths]
 
 
 def get_alkethoh_file_path(alkethoh_name, get_amber=False):
@@ -280,17 +275,17 @@ def get_alkethoh_file_path(alkethoh_name, get_amber=False):
     """
     # Determine if this is a ring or a chain molecule and the subfolder name.
     is_ring = alkethoh_name[9] == "r"
-    alkethoh_subdir_name = "rings" if is_ring else "chain"
-    alkethoh_subdir_name = "AlkEthOH_" + alkethoh_subdir_name + "_filt1"
+    subdir_name = "rings" if is_ring else "chain"
+    subdir_name = "AlkEthOH_" + subdir_name + "_filt1"
 
     # Determine which paths have to be returned.
-    file_base_subpath = os.path.join(alkethoh_subdir_name, alkethoh_name)
     # We always return the mol2 file.
-    file_subpaths = [file_base_subpath + "_tripos.mol2"]
+    file_subpaths = [pathlib.Path(subdir_name, f"{alkethoh_name}_tripos.mol2")]
+
     # Check if we need to return also Amber files.
     if get_amber:
-        file_subpaths.append(file_base_subpath + ".top")
-        file_subpaths.append(file_base_subpath + ".crd")
+        file_subpaths.append(pathlib.Path(subdir_name, f"{alkethoh_name}.top"))
+        file_subpaths.append(pathlib.Path(subdir_name, f"{alkethoh_name}.crd"))
 
     return extract_compressed_molecules(
         "AlkEthOH_tripos.tar.gz", file_subpaths=file_subpaths
@@ -299,9 +294,9 @@ def get_alkethoh_file_path(alkethoh_name, get_amber=False):
 
 def get_freesolv_file_path(freesolv_id, ff_version):
     file_base_name = "mobley_" + freesolv_id
-    mol2_file_subpath = os.path.join("mol2files_sybyl", file_base_name + ".mol2")
+    mol2_file_subpath = pathlib.Path("mol2files_sybyl", file_base_name + ".mol2")
     xml_dir = "xml_" + ff_version.replace(".", "_")
-    xml_file_subpath = os.path.join(xml_dir, file_base_name + "_vacuum.xml")
+    xml_file_subpath = pathlib.Path(xml_dir, file_base_name + "_vacuum.xml")
 
     # Extract the files if needed.
     file_subpaths = [mol2_file_subpath, xml_file_subpath]

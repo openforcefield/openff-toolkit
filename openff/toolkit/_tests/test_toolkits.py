@@ -4,7 +4,6 @@ Tests for cheminformatics toolkit wrappers
 """
 
 import logging
-import os
 import pathlib
 from tempfile import NamedTemporaryFile
 
@@ -1353,7 +1352,7 @@ class TestOpenEyeToolkitWrapper:
         toolkit = OpenEyeToolkitWrapper()
 
         molecule = Molecule.from_file(
-            get_data_file_path(os.path.join("molecules", "z_3_hydroxy_propenal.sdf")),
+            get_data_file_path(pathlib.Path("molecules", "z_3_hydroxy_propenal.sdf")),
             "SDF",
         )
 
@@ -3092,7 +3091,7 @@ class TestRDKitToolkitWrapper:
         toolkit = RDKitToolkitWrapper()
 
         molecule = Molecule.from_file(
-            get_data_file_path(os.path.join("molecules", "z_3_hydroxy_propenal.sdf")),
+            get_data_file_path(pathlib.Path("molecules", "z_3_hydroxy_propenal.sdf")),
             "SDF",
         )
 

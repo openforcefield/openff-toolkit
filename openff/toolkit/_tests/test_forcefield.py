@@ -5,7 +5,7 @@ Tests for forcefield class
 
 import copy
 import itertools
-import os
+import pathlib
 from tempfile import NamedTemporaryFile
 
 import numpy as np
@@ -822,16 +822,17 @@ class TestForceField(_ForceFieldFixtures):
     def test_do_not_load_in_child_dir(self, tmp_path):
         """Ensure force field XML files in nested subdirectories are not loaded
         when not explicitly pointed to."""
-        nested_directory = tmp_path / os.path.join("a", "b", "c")
-        os.makedirs(nested_directory, exist_ok=True)
+        nested_directory = pathlib.Path(tmp_path, "a", "b", "c")
+
+        nested_directory.mkdir(parents=True)
 
         # Create a FF in a nested directory
         ForceField("openff-1.0.0.offxml").to_file(
-            os.path.join(nested_directory, "force-field.offxml")
+            nested_directory / "force-field.offxml"
         )
 
         # Check that the file does not exist in the current working directory.
-        assert not os.path.isfile("force-field.offxml")
+        assert not pathlib.Path("force-field.offxml").exists()
 
         with pytest.raises(
             OSError, match="Source 'force-field.offxml' could not be read."
@@ -1350,12 +1351,12 @@ class TestForceField(_ForceFieldFixtures):
         This test is very slow, so it is only run if the --runslow option is provided to pytest.
         """
         box_file_path = get_data_file_path(
-            os.path.join("systems", "packmol_boxes", box)
+            pathlib.Path("systems", "packmol_boxes", box)
         )
         pdbfile = app.PDBFile(box_file_path)
         mol_names = ["water", "cyclohexane", "ethanol", "propane", "methane", "butanol"]
         sdf_files = [
-            get_data_file_path(os.path.join("systems", "monomers", name + ".sdf"))
+            get_data_file_path(pathlib.Path("systems", "monomers", f"{name}.sdf"))
             for name in mol_names
         ]
         molecules = [Molecule.from_file(sdf_file) for sdf_file in sdf_files]
@@ -2043,8 +2044,9 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         """Test assigning charges to one water molecule using library charges"""
         ff = ForceField(*ff_inputs)
         mol = Molecule.from_file(
-            get_data_file_path(os.path.join("systems", "monomers", "water.sdf"))
+            get_data_file_path(pathlib.Path("systems", "monomers", "water.sdf"))
         )
+
         omm_system = ff.create_openmm_system(mol.to_topology())
         nonbondedForce = [
             f for f in omm_system.getForces() if type(f) is NonbondedForce
@@ -2425,7 +2427,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             xml_OH_library_charges_xml,
         )
         mol = Molecule.from_file(
-            get_data_file_path(os.path.join("systems", "monomers", "water.sdf"))
+            get_data_file_path(pathlib.Path("systems", "monomers", "water.sdf"))
         )
         omm_system = ff.create_openmm_system(mol.to_topology())
         nonbondedForce = [
@@ -2458,8 +2460,9 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             get_data_file_path("test_forcefields/tip3p.offxml"),
         )
         mol = Molecule.from_file(
-            get_data_file_path(os.path.join("systems", "monomers", "water.sdf"))
+            get_data_file_path(pathlib.Path("systems", "monomers", "water.sdf"))
         )
+
         top = Topology.from_molecules([mol, mol])
         omm_system = ff.create_openmm_system(top)
         nonbondedForce = [
@@ -2578,23 +2581,23 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         )
         # Cyclohexane will be assigned nonzero charges based on `charge_from_molecules` kwarg
         cyclohexane = Molecule.from_file(
-            get_data_file_path(os.path.join("systems", "monomers", "cyclohexane.sdf"))
+            get_data_file_path(pathlib.Path("systems", "monomers", "cyclohexane.sdf"))
         )
         # Butanol will be assigned zero-valued charges based on `charge_from_molecules` kwarg
         butanol = Molecule.from_file(
-            get_data_file_path(os.path.join("systems", "monomers", "butanol.sdf"))
+            get_data_file_path(pathlib.Path("systems", "monomers", "butanol.sdf"))
         )
         # Propane will be assigned charges from AM1BCC
         propane = Molecule.from_file(
-            get_data_file_path(os.path.join("systems", "monomers", "propane.sdf"))
+            get_data_file_path(pathlib.Path("systems", "monomers", "propane.sdf"))
         )
         # Water will be assigned TIP3P librarycharges
         water = Molecule.from_file(
-            get_data_file_path(os.path.join("systems", "monomers", "water.sdf"))
+            get_data_file_path(pathlib.Path("systems", "monomers", "water.sdf"))
         )
         # Ethanol should be caught by ToolkitAM1BCC
         ethanol = Molecule.from_file(
-            get_data_file_path(os.path.join("systems", "monomers", "ethanol.sdf"))
+            get_data_file_path(pathlib.Path("systems", "monomers", "ethanol.sdf"))
         )
         # iodide should fail to be assigned charges by AM1-BCC, and instead be caught by ChargeIncrementHandler
         # (and assigned formal charge by dummy charge method)
@@ -2965,14 +2968,14 @@ def generate_alkethoh_parameters_assignment_cases():
     def extract_id(file_path):
         """Extract the AlkEthOH molecule ID from the file path."""
         # An example of file path is AlkEthOH_tripos/AlkEthOH_chain_filt1/AlkEthOH_c555.crd
-        return os.path.splitext(os.path.basename(file_path))[0][9:]
+        return pathlib.Path(file_path).stem[9:]
 
     # Get all the molecules ids from the tarfiles. The tarball is extracted
     # in conftest.py if slow tests are activated.
     import tarfile
 
     alkethoh_tar_file_path = get_data_file_path(
-        os.path.join("molecules", "AlkEthOH_tripos.tar.gz")
+        pathlib.Path("molecules", "AlkEthOH_tripos.tar.gz")
     )
     with tarfile.open(alkethoh_tar_file_path, "r:gz") as tar:
         # Collect all the files discarding the duplicates in the test_filt1 folder.
@@ -3028,15 +3031,19 @@ def generate_freesolv_parameters_assignment_cases():
     def extract_id(file_path):
         """Extract the FreeSolv ID and force field version from the file subpath."""
         # An example of file path is FreeSolv/xml_0_0_4_fixed/mobley_7913234_vacuum.xml
-        freesolv_id = os.path.basename(file_path).split("_")[1]
-        force_field_version = os.path.basename(os.path.dirname(file_path))[4:]
+        freesolv_id = pathlib.Path(file_path).stem.split("_")[1]  # e.g. "7913234"
+        force_field_version = pathlib.Path(file_path).parent.stem[
+            4:
+        ]  # e.g. "0_0_4_fixed"
+
         allow_undefined_stereo = freesolv_id in ignore_undefined_stereo
+
         return (freesolv_id, force_field_version, allow_undefined_stereo)
 
     # Get all the tarball XML files available. The tarball is extracted
     # in conftest.py if slow tests are activated.
     freesolv_tar_file_path = get_data_file_path(
-        os.path.join("molecules", "FreeSolv.tar.gz")
+        pathlib.Path("molecules", "FreeSolv.tar.gz")
     )
     with tarfile.open(freesolv_tar_file_path, "r:gz") as tar:
         slow_test_cases = {
