@@ -11,15 +11,14 @@ import pytest
 from numpy.testing import assert_almost_equal
 from packaging.version import Version
 
-import openff.toolkit.typing.engines.smirnoff.parameters
-from openff.toolkit import unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.toolkit._tests.mocking import VirtualSiteMocking
 from openff.toolkit._tests.utils import does_not_raise
-from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
+    AngleHandler,
     BondHandler,
     ChargeIncrementModelHandler,
+    ConstraintHandler,
     ElectrostaticsHandler,
     GBSAHandler,
     ImproperTorsionHandler,
@@ -1156,6 +1155,26 @@ class TestParameterType:
         assert NamedType(smirks="[*:1]").__repr__().startswith("<NamedType")
 
 
+class TestElementName:
+    @pytest.mark.parametrize(
+        ("_class", "expected_name"),
+        [
+            (ConstraintHandler, "Constraint"),
+            (BondHandler, "Bond"),
+            (AngleHandler, "Angle"),
+            (ProperTorsionHandler, "Proper"),
+            (ImproperTorsionHandler, "Improper"),
+            (vdWHandler, "Atom"),
+            (LibraryChargeHandler, "LibraryCharge"),
+            (ChargeIncrementModelHandler, "ChargeIncrement"),
+            (VirtualSiteHandler, "VirtualSite"),
+            (GBSAHandler, "Atom"),
+        ],
+    )
+    def test_element_names(self, _class, expected_name):
+        assert _class._INFOTYPE._ELEMENT_NAME == expected_name
+
+
 class TestBondType:
     """Tests for the BondType class."""
 
@@ -1806,7 +1825,6 @@ class TestvdWType:
 
     def test_sigma_rmin_half(self):
         """Test the setter/getter behavior or sigma and rmin_half"""
-        from openff.toolkit.typing.engines.smirnoff.parameters import vdWHandler
 
         data = {
             "smirks": "[*:1]",
@@ -2436,15 +2454,15 @@ class TestVirtualSiteHandler:
                 "smirks": "[H][#6:2]([H])=[#8:1]",
                 "name": "EP",
                 "type": "BondCharge",
-                "distance": 7.0 * openff.units.unit.angstrom,
+                "distance": Quantity(7.0, "angstrom"),
                 "match": "all_permutations",
-                "charge_increment1": 0.2 * openff.units.unit.elementary_charge,
-                "charge_increment2": 0.1 * openff.units.unit.elementary_charge,
-                "sigma": 1.0 * openff.units.unit.angstrom,
-                "epsilon": 2.0 * openff.units.unit.kilocalorie_per_mole,
+                "charge_increment1": Quantity(0.2, "elementary_charge"),
+                "charge_increment2": Quantity(0.1, "elementary_charge"),
+                "sigma": Quantity(1.0, "angstrom"),
+                "epsilon": Quantity(2.0, "kilocalorie_per_mole"),
             }
         )
-        molecule = openff.toolkit.Molecule.from_mapped_smiles("[H:3][C:2]([H:4])=[O:1]")
+        molecule = Molecule.from_mapped_smiles("[H:3][C:2]([H:4])=[O:1]")
         matches = vsite_handler.find_matches(molecule.to_topology())
         assert len(matches) == 1
 
@@ -2709,6 +2727,8 @@ class TestGBSAHandler:
 
 class TestParameterTypeReExports:
     def test_parametertype_reexports(self):
+        import openff.toolkit.typing.engines.smirnoff.parameters
+
         params_module = openff.toolkit.typing.engines.smirnoff.parameters
 
         def subclass_attrs(obj, classinfo):
