@@ -2058,38 +2058,15 @@ class TestVirtualSiteHandler:
         "kwargs, expected_kwargs",
         [
             (
-                {"type": "BondCharge", "match": "all_permutations"},
                 {
                     "type": "BondCharge",
                     "match": "all_permutations",
-                    "outOfPlaneAngle": None,
-                    "inPlaneAngle": None,
-                    "sigma": 0.0 * unit.angstrom,
-                    "epsilon": 0.0 * unit.kilocalorie_per_mole,
-                },
-            ),
-            (
-                {
-                    "type": "BondCharge",
-                    "match": "all_permutations",
-                    "rmin_half": 1.0 * unit.angstrom,
                 },
                 {
                     "type": "BondCharge",
                     "match": "all_permutations",
                     "outOfPlaneAngle": None,
                     "inPlaneAngle": None,
-                    "rmin_half": 1.0 * unit.angstrom,
-                    "epsilon": 0.0 * unit.kilocalorie_per_mole,
-                },
-            ),
-            (
-                {"type": "MonovalentLonePair", "match": "all_permutations"},
-                {
-                    "type": "MonovalentLonePair",
-                    "match": "all_permutations",
-                    "sigma": 0.0 * unit.angstrom,
-                    "epsilon": 0.0 * unit.kilocalorie_per_mole,
                 },
             ),
         ],
@@ -2098,6 +2075,20 @@ class TestVirtualSiteHandler:
         assert kwargs != expected_kwargs
         VirtualSiteHandler.VirtualSiteType._add_default_init_kwargs(kwargs)
         assert kwargs == expected_kwargs
+
+    def test_vdw_defaults(self):
+        """Test initializing without vdW parameters specified."""
+        defaults = VirtualSiteHandler.VirtualSiteType(
+            type="BondCharge",
+            smirks="",
+            match="all_permutations",
+            distance=0.0 * unit.angstrom,
+            charge_increment=2 * [0.0 * unit.elementary_charge],
+        )
+
+        assert defaults.rmin_half == 0.0 * unit.angstrom
+        assert defaults.sigma == 0.0 * unit.angstrom
+        assert defaults.epsilon == 0.0 * unit.kilojoule_per_mole
 
     @pytest.mark.parametrize(
         "parameter, in_plane_angle, expected_raises",

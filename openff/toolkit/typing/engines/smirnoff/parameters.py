@@ -3563,12 +3563,12 @@ class VirtualSiteHandler(_NonbondedHandler):
         rmin_half = ParameterAttribute(default=None, unit=unit.angstrom)
 
         def __init__(self, **kwargs):
-            self._add_default_init_kwargs(kwargs)
-
             if "rmin_half" not in kwargs:
                 kwargs["sigma"] = kwargs.get("sigma", 0.0 * unit.angstrom)
 
             kwargs["epsilon"] = kwargs.get("epsilon", 0.0 * unit.kilocalorie_per_mole)
+
+            self._add_default_init_kwargs(kwargs)
 
             super().__init__(**kwargs)
 
