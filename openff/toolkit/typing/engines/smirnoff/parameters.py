@@ -3555,7 +3555,7 @@ class VirtualSiteHandler(_NonbondedHandler):
     .. warning :: This API is experimental and subject to change.
     """
 
-    class VirtualSiteType(vdWHandler.vdWType, _BaseVirtualSiteType):
+    class VirtualSiteType(_BaseVirtualSiteType, vdWHandler.vdWType):
         epsilon = ParameterAttribute(
             default=0.0 * unit.kilocalorie_per_mole, unit=unit.kilocalorie_per_mole
         )
