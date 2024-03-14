@@ -3388,7 +3388,7 @@ _VirtualSiteType = Literal[
 ]
 
 
-class _BasicVirtualSiteType(ParameterType):
+class _BaseVirtualSiteType(ParameterType):
     """A SMIRNOFF virtual site type.
 
     .. warning :: This API is experimental and subject to change.
@@ -3555,7 +3555,7 @@ class VirtualSiteHandler(_NonbondedHandler):
     .. warning :: This API is experimental and subject to change.
     """
 
-    class VirtualSiteType(vdWHandler.vdWType, _BasicVirtualSiteType):
+    class VirtualSiteType(vdWHandler.vdWType, _BaseVirtualSiteType):
         epsilon = ParameterAttribute(
             default=0.0 * unit.kilocalorie_per_mole, unit=unit.kilocalorie_per_mole
         )
