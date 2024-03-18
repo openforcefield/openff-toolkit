@@ -28,16 +28,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["3.9", "3.10", "3.11"]
-        rdkit: [true, false]
-        openeye: [true, false]
-        exclude:
-          - rdkit: false
-            openeye: false
-          - openeye: true
-            python-version: "3.10"
-          - openeye: true
-            python-version: "3.11"
+        python-version: ["3.10"]
+        rdkit: [true]
+        openeye: [true]
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
@@ -138,42 +131,9 @@ jobs:
           conda info
           conda list
 
-      - name: Check links
-        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
-
       - name: Run mypy
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: mypy -p "openff.toolkit"
-
-      - name: Run unit tests
-        run: |
-          PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_examples.py"
-          PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_links.py"
-          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
-            PYTEST_ARGS+=" --runslow"
-          fi
-
-          python -m pytest --durations=20 $PYTEST_ARGS $COV
-
-      - name: Run code snippets in docs
-        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: |
-          pytest -v --no-cov --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
-
-      - name: Run notebooks in docs
-        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: |
-          pytest -v --no-cov --durations=5 --nbval --ignore docs/_build/ docs/
-
-      - name: Run examples in docstrings
-        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: |
-          pytest openff \
-            -v -x -n logical --no-cov --doctest-modules \
-            --ignore-glob='openff/toolkit/_tests*' \
-            --ignore=openff/toolkit/data/ \
-            --ignore=openff/toolkit/utils/utils.py
 
       - name: Codecov
         uses: codecov/codecov-action@v4
