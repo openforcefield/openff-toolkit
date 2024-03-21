@@ -78,11 +78,18 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         "A conda-installable version of the free and open source RDKit cheminformatics "
         "toolkit can be found at: https://anaconda.org/conda-forge/rdkit"
     )
+    # TODO: Add TDT support
+    _toolkit_file_read_formats = ["SDF", "MOL", "SMI"]
+    _toolkit_file_write_formats = [
+        "SDF",
+        "MOL",
+        "SMI",
+        "PDB",
+        "TDT",
+    ]
 
     def __init__(self):
         super().__init__()
-
-        self._toolkit_file_read_formats = ["SDF", "MOL", "SMI"]  # TODO: Add TDT support
 
         if not self.is_available():
             raise ToolkitUnavailableException(
@@ -94,24 +101,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
             self._toolkit_version = rdkit_version
 
-            from rdkit import Chem
-
-            # we have to make sure the toolkit can be loaded before formatting this dict
-            # Note any new file write formats should be added here only
-            self._toolkit_file_write_formats: dict[str, Any] = {  # type: ignore[assignment]
-                "SDF": Chem.SDWriter,
-                "MOL": Chem.SDWriter,
-                "SMI": None,  # Special support to use to_smiles() instead of RDKit's SmilesWriter
-                "PDB": Chem.PDBWriter,
-                "TDT": Chem.TDTWriter,
-            }
-
     @property
     def toolkit_file_write_formats(self) -> list[str]:
         """
         List of file formats that this toolkit can write.
         """
-        return list(self._toolkit_file_write_formats.keys())
+        return self._toolkit_file_write_formats
 
     @classmethod
     def is_available(cls) -> bool:
@@ -1225,6 +1220,15 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         -------
 
         """
+        from rdkit import Chem
+
+        _TOOLKIT_WRITERS: dict[str, Any] = {
+            "SDF": Chem.SDWriter,
+            "MOL": Chem.SDWriter,
+            "PDB": Chem.PDBWriter,
+            "TDT": Chem.TDTWriter,
+        }
+
         file_format = normalize_file_format(file_format)
         _require_text_file_obj(file_obj)
 
@@ -1239,7 +1243,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             file_obj.write(output_line)
         else:
             try:
-                writer_func = self._toolkit_file_write_formats[file_format]
+                writer_func = _TOOLKIT_WRITERS[file_format]
             except KeyError:
                 raise ValueError(f"Unsupported file format: {file_format})") from None
             rdmol = self.to_rdkit(molecule)

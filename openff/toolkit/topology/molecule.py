@@ -5528,18 +5528,15 @@ class Molecule(FrozenMolecule):
         if backend == "rdkit":
             if RDKIT_AVAILABLE:
                 from IPython.display import SVG
-                from rdkit.Chem.Draw import (  # type: ignore[import-untyped]
-                    rdDepictor,
-                    rdMolDraw2D,
-                )
-                from rdkit.Chem.rdmolops import RemoveHs  # type: ignore[import-untyped]
+                from rdkit import Chem
+                from rdkit.Chem.Draw import rdDepictor, rdMolDraw2D
 
                 rdmol = self.to_rdkit()
 
                 if not show_all_hydrogens:
                     # updateExplicitCount: Keep a record of the hydrogens we remove.
                     # This is used in visualization to distinguish eg radicals from normal species
-                    rdmol = RemoveHs(rdmol, updateExplicitCount=True)
+                    rdmol = Chem.RemoveHs(rdmol, updateExplicitCount=True)
 
                 rdDepictor.SetPreferCoordGen(True)
                 rdDepictor.Compute2DCoords(rdmol)

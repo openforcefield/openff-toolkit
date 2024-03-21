@@ -41,9 +41,6 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
     def __init__(self):
         super().__init__()
 
-        self._toolkit_file_read_formats = []
-        self._toolkit_file_write_formats = []
-
         if not self.is_available():
             raise ToolkitUnavailableException(
                 f"The required toolkit {self._toolkit_name} is not "

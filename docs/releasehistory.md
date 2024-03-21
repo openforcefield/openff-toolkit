@@ -16,6 +16,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### New features
 
+- [PR #1827](https://github.com/openforcefield/openff-toolkit/pull/1827): Adds `Topology.clear_positions`
+
 ### Improved documentation and warnings
 
 - [PR #1795](https://github.com/openforcefield/openff-toolkit/pull/1795): Add `NAGLToolkitWrapper` to API reference
@@ -75,7 +77,7 @@ This release adds compatibility with QCFractal >=0.50.0, but removes compatibilt
 
 ### New features
 
-- [PR #1731](https://github.com/openforcefield/openff-toolkit/pull/1731): Suppot SMIRNOFF vdW version 0.5.
+- [PR #1731](https://github.com/openforcefield/openff-toolkit/pull/1731): Support SMIRNOFF vdW version 0.5.
 
 ### Improved documentation and warnings
 
