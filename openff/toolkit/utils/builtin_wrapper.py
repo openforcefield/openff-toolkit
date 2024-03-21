@@ -27,9 +27,6 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
     def __init__(self):
         super().__init__()
 
-        self._toolkit_file_read_formats = []
-        self._toolkit_file_write_formats = []
-
     def assign_partial_charges(
         self,
         molecule,
