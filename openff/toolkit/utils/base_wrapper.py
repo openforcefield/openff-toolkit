@@ -40,9 +40,6 @@ class ToolkitWrapper:
     _toolkit_file_read_formats: list[str] = list()
     _toolkit_file_write_formats: list[str] = list()
 
-    _toolkit_file_read_formats: list[str] = list()
-    _toolkit_file_write_formats: list[str] = list()
-
     # @staticmethod
     # TODO: Right now, to access the class definition, I have to make this a classmethod
     # and thereby call it with () on the outermost decorator. Is this wasting time? Are we caching

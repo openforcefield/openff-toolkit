@@ -814,7 +814,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         self,
         molecule: "FrozenMolecule",
         max_states: int = 0,
-    ) -> list["Molecule"]:
+    ) -> list["FrozenMolecule"]:
         """
         Enumerate the formal charges of a molecule to generate different protomers.
         Note that, in cases where the input molecule has an uncommon protonation state
@@ -842,7 +842,7 @@ class OpenEyeToolkitWrapper(base_wrapper.ToolkitWrapper):
         options.SetMaxCount(max_states)
 
         return [
-            self.from_openeye(  # type: ignore[misc]
+            self.from_openeye(
                 protomer,
                 allow_undefined_stereo=True,
                 _cls=molecule.__class__,

@@ -419,8 +419,9 @@ class _SimpleMolecule:
                 atom2=mm_molecule.atom(bond.atom2_index),
             )
 
-        for conformer in molecule.conformers:
-            mm_molecule.add_conformer(conformer)
+        if molecule.conformers is not None:
+            for conformer in molecule.conformers:
+                mm_molecule.add_conformer(conformer)
 
         for name, hierarchy_scheme in molecule.hierarchy_schemes.items():
             assert name == hierarchy_scheme.iterator_name

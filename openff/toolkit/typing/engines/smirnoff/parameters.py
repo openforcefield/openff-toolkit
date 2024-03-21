@@ -2044,7 +2044,9 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         # If a dict was passed, construct it; if a ParameterType was passed, do nothing
         if parameter_kwargs:
-            new_parameter = self._INFOTYPE(**parameter_kwargs)  # type: ignore
+            # here we are using the INFOTYPE to construct a new parameter
+            # and at this poitn we expect parameter_kwargs to be a dict
+            new_parameter = self._INFOTYPE(**parameter_kwargs)  # type: ignore[misc]
         elif parameter:
             new_parameter = parameter
         else:
@@ -3235,6 +3237,7 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
         ----------
         other_handler
             The handler to compare to.
+        assume_missing_is_default
 
         Raises
         ------
@@ -3305,7 +3308,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
         other_handler
             The handler to compare to.
         assume_missing_is_default
-            ???
+
         Raises
         ------
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
