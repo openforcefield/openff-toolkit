@@ -47,6 +47,8 @@ class ToolkitWrapper:
         None  # Installation instructions for the toolkit
     )
     _supported_charge_methods: dict[str, _ChargeSettings] = dict()
+    _toolkit_file_read_formats: list[str] = list()
+    _toolkit_file_write_formats: list[str] = list()
 
     # @staticmethod
     # TODO: Right now, to access the class definition, I have to make this a classmethod
@@ -78,7 +80,7 @@ class ToolkitWrapper:
 
         Returns
         -------
-        toolkit_name : str
+        toolkit_name
             The name of the wrapped toolkit
 
         """
@@ -99,7 +101,7 @@ class ToolkitWrapper:
         return self._toolkit_file_read_formats
 
     @property
-    def toolkit_file_write_formats(self):
+    def toolkit_file_write_formats(self) -> list[str]:
         """
         List of file formats that this toolkit can write.
         """
@@ -116,7 +118,7 @@ class ToolkitWrapper:
 
         Returns
         -------
-        is_installed : bool
+        is_installed
             True if corresponding toolkit is installed, False otherwise.
 
         """
@@ -131,7 +133,7 @@ class ToolkitWrapper:
 
         Returns
         -------
-        toolkit_version : str
+        toolkit_version
             The version of the wrapped toolkit
 
         """
@@ -143,19 +145,19 @@ class ToolkitWrapper:
 
         Parameters
         ----------
-        file_path : str
+        file_path
             The file to read the molecule from
-        file_format : str
+        file_format
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check
             ToolkitWrapper.toolkit_file_read_formats for details.
-        allow_undefined_stereo : bool, default=False
+        allow_undefined_stereo
             If false, raises an exception if any molecules contain undefined stereochemistry.
-        _cls : class
+        _cls
             Molecule constructor
         Returns
         -------
-        molecules : Molecule or list of Molecules
+        molecules
             a list of Molecule objects is returned.
 
         """
@@ -171,21 +173,21 @@ class ToolkitWrapper:
 
         Parameters
         ----------
-        file_obj : file-like object
+        file_obj
             The file-like object to read the molecule from
-        file_format : str
+        file_format
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check
             ToolkitWrapper.toolkit_file_read_formats for details.
-        allow_undefined_stereo : bool, default=False
+        allow_undefined_stereo
             If false, raises an exception if any molecules contain undefined stereochemistry.
             If false, the function skips loading the molecule.
-        _cls : class
+        _cls
             Molecule constructor
 
         Returns
         -------
-        molecules : Molecule or list of Molecules
+        molecules
             a list of Molecule objects is returned.
         """
         return NotImplementedError
@@ -204,15 +206,15 @@ class ToolkitWrapper:
 
         Parameters
         ----------
-        molecule : Molecule
+        molecule
             Molecule for which partial charges are to be computed
-        partial_charge_method : str, optional, default=None
+        partial_charge_method
             The name of the charge method being used
-        min_confs : int, optional, default=None
+        min_confs
             The minimum number of conformers required to use this charge method
-        max_confs : int, optional, default=None
+        max_confs
             The maximum number of conformers required to use this charge method
-        strict_n_conformers : bool, default=False
+        strict_n_conformers
             Whether to raise an exception if an invalid number of conformers is provided.
             If this is False and an invalid number of conformers is found, a warning will be raised.
 

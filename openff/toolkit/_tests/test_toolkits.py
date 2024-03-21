@@ -2062,23 +2062,21 @@ class TestOpenEyeToolkitWrapper:
             )
 
     def test_charge_method_api_continuity(self):
-        from openeye import oequacpac
-
         assert OpenEyeToolkitWrapper.SUPPORTED_CHARGE_METHODS["gasteiger"] == {
-            "oe_charge_method": oequacpac.OEGasteigerCharges,
+            "oe_charge_method": "OEGasteigerCharges",
             "min_confs": 0,
             "max_confs": 0,
             "rec_confs": 0,
         }
         assert OpenEyeToolkitWrapper.SUPPORTED_CHARGE_METHODS["am1bcc"] == {
-            "oe_charge_method": oequacpac.OEAM1BCCCharges,
+            "oe_charge_method": "OEAM1BCCCharges",
             "min_confs": 1,
             "max_confs": 1,
             "rec_confs": 1,
         }
 
         assert OpenEyeToolkitWrapper.SUPPORTED_CHARGE_METHODS["am1bccelf10"] == {
-            "oe_charge_method": oequacpac.OEAM1BCCELF10Charges,
+            "oe_charge_method": "OEAM1BCCELF10Charges",
             "min_confs": 1,
             "max_confs": None,
             "rec_confs": 500,
