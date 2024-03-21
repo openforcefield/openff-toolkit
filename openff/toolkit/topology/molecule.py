@@ -4137,6 +4137,7 @@ class FrozenMolecule(Serializable):
             return self._to_xyz_file(file_path=file_path)
 
         # Take the first toolkit that can write the desired output format
+        toolkit: Optional[ToolkitWrapper] = None
         for query_toolkit in toolkit_registry.registered_toolkits:
             if file_format in query_toolkit.toolkit_file_write_formats:
                 toolkit = query_toolkit
