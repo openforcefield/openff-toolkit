@@ -3813,6 +3813,7 @@ class FrozenMolecule(Serializable):
         # Determine which toolkit to use (highest priority that's compatible with input type)
         if isinstance(toolkit_registry, ToolkitRegistry):
             # TODO: Encapsulate this logic into ToolkitRegistry.call()?
+            toolkit = None
             supported_read_formats = {}
             for query_toolkit in toolkit_registry.registered_toolkits:
                 if file_format in query_toolkit.toolkit_file_read_formats:
