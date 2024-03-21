@@ -150,6 +150,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         },
     }
 
+    SUPPORTED_CHARGE_METHODS = _supported_charge_methods
+
     def __init__(self):
         self._toolkit_file_read_formats = [
             "CAN",

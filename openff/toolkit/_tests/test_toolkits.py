@@ -2061,6 +2061,29 @@ class TestOpenEyeToolkitWrapper:
                 smarts="foobar",
             )
 
+    def test_charge_method_api_continuity(self):
+        from openeye import oequacpac
+
+        assert OpenEyeToolkitWrapper.SUPPORTED_CHARGE_METHODS["gasteiger"] == {
+            "oe_charge_method": oequacpac.OEGasteigerCharges,
+            "min_confs": 0,
+            "max_confs": 0,
+            "rec_confs": 0,
+        }
+        assert OpenEyeToolkitWrapper.SUPPORTED_CHARGE_METHODS["am1bcc"] == {
+            "oe_charge_method": oequacpac.OEAM1BCCCharges,
+            "min_confs": 1,
+            "max_confs": 1,
+            "rec_confs": 1,
+        }
+
+        assert OpenEyeToolkitWrapper.SUPPORTED_CHARGE_METHODS["am1bccelf10"] == {
+            "oe_charge_method": oequacpac.OEAM1BCCELF10Charges,
+            "min_confs": 1,
+            "max_confs": None,
+            "rec_confs": 500,
+        }
+
 
 @requires_rdkit
 class TestRDKitToolkitWrapper:
@@ -3407,6 +3430,12 @@ class TestRDKitToolkitWrapper:
         # TODO: Add read/write tests for gzipped files
         # TODO: Add write tests for all formats
 
+    def test_charge_method_api_continuity(self):
+        assert isinstance(RDKitToolkitWrapper.SUPPORTED_CHARGE_METHODS, set)
+
+        assert "mmff94" in RDKitToolkitWrapper.SUPPORTED_CHARGE_METHODS
+        assert "gasteiger" in RDKitToolkitWrapper.SUPPORTED_CHARGE_METHODS
+
 
 @requires_ambertools
 @requires_rdkit
@@ -4076,6 +4105,20 @@ class TestBuiltInToolkitWrapper:
                 use_conformers=molecule.conformers,
                 strict_n_conformers=True,
             )
+
+    def test_charge_method_api_continuity(self):
+        assert isinstance(BuiltInToolkitWrapper.PARTIAL_CHARGE_METHODS, dict)
+
+        assert BuiltInToolkitWrapper.PARTIAL_CHARGE_METHODS["zeros"] == {
+            "rec_confs": 0,
+            "min_confs": 0,
+            "max_confs": 0,
+        }
+        assert BuiltInToolkitWrapper.PARTIAL_CHARGE_METHODS["formal_charge"] == {
+            "rec_confs": 0,
+            "min_confs": 0,
+            "max_confs": 0,
+        }
 
 
 class TestToolkitWrapper:

@@ -58,6 +58,8 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         },
     }
 
+    SUPPORTED_CHARGE_METHODS = _supported_charge_methods
+
     def __init__(self):
         super().__init__()
 

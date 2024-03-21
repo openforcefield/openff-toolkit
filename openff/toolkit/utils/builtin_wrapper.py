@@ -28,6 +28,8 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
         "formal_charge": {"rec_confs": 0, "min_confs": 0, "max_confs": 0},
     }
 
+    PARTIAL_CHARGE_METHODS = _supported_charge_methods
+
     def __init__(self):
         super().__init__()
 
