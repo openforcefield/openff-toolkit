@@ -8,6 +8,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+* #1798 Adds type annotations to most of the codebase.
+
 ### API-breaking changes
 
 ### Behavior changes
