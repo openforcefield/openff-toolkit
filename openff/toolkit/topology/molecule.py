@@ -4119,11 +4119,12 @@ class FrozenMolecule(Serializable):
         >>> molecule.to_file('imatinib.pdb', file_format='pdb')  # doctest: +SKIP
 
         """
+        toolkit: Optional[ToolkitRegistry]
 
         if isinstance(toolkit_registry, ToolkitRegistry):
             pass
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
+            toolkit = toolkit_registry  # type: ignore[assignment]
             toolkit_registry = ToolkitRegistry(toolkit_precedence=[])
             toolkit_registry.add_toolkit(toolkit)
         else:
@@ -4137,7 +4138,7 @@ class FrozenMolecule(Serializable):
             return self._to_xyz_file(file_path=file_path)
 
         # Take the first toolkit that can write the desired output format
-        toolkit: Optional[ToolkitWrapper] = None
+        toolkit = None
         for query_toolkit in toolkit_registry.registered_toolkits:
             if file_format in query_toolkit.toolkit_file_write_formats:
                 toolkit = query_toolkit
@@ -4146,9 +4147,9 @@ class FrozenMolecule(Serializable):
         # Raise an exception if no toolkit was found to provide the requested file_format
         if toolkit is None:
             supported_formats = {}
-            for toolkit in toolkit_registry.registered_toolkits:
-                supported_formats[toolkit.toolkit_name] = (
-                    toolkit.toolkit_file_write_formats
+            for _toolkit in toolkit_registry.registered_toolkits:
+                supported_formats[_toolkit.toolkit_name] = (
+                    _toolkit.toolkit_file_write_formats
                 )
             raise ValueError(
                 f"The requested file format ({file_format}) is not available from any of the installed toolkits "
