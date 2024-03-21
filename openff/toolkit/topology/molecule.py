@@ -103,7 +103,10 @@ if TYPE_CHECKING:
 # TODO: Allow all OpenEye aromaticity models to be used with OpenEye names?
 #       Only support OEAroModel_MDL in RDKit version?
 
+# TODO: These aliases are duplicated in a few places, might make sense to consolidate them
+#       into a single location, but that'd weirdly nudge them towards first-class existence
 TKR: TypeAlias = Union[ToolkitRegistry, ToolkitWrapper]
+MoleculeLike: TypeAlias = Union["Molecule", "FrozenMolecule", "_SimpleMolecule"]
 FM = TypeVar("FM", bound="FrozenMolecule")
 P = TypeVar("P", bound="Particle")
 A = TypeVar("A", bound="Atom")
@@ -2163,7 +2166,9 @@ class FrozenMolecule(Serializable):
             return isomorphic, None
 
     def is_isomorphic_with(
-        self, other: Union["FrozenMolecule", "_SimpleMolecule", nx.Graph], **kwargs
+        self,
+        other: Union["FrozenMolecule", "_SimpleMolecule", nx.Graph],
+        **kwargs,
     ) -> bool:
         """
         Check if the molecule is isomorphic with the other molecule which can be an openff.toolkit.topology.Molecule
@@ -3498,14 +3503,6 @@ class FrozenMolecule(Serializable):
     def to_hill_formula(self) -> str:
         """
         Generate the Hill formula of this molecule.
-
-        Returns
-        ----------
-        formula
-
-        Raises
-        -----------
-        NotImplementedError
         """
         if self._hill_formula is None:
             atom_nums = [atom.atomic_number for atom in self.atoms]
@@ -3788,6 +3785,7 @@ class FrozenMolecule(Serializable):
         >>> molecule = Molecule.from_file(sdf_file_path)
 
         """
+        toolkit: Optional[ToolkitWrapper]
 
         if file_format is None:
             if isinstance(file_path, pathlib.Path):
@@ -3815,7 +3813,6 @@ class FrozenMolecule(Serializable):
         # Determine which toolkit to use (highest priority that's compatible with input type)
         if isinstance(toolkit_registry, ToolkitRegistry):
             # TODO: Encapsulate this logic into ToolkitRegistry.call()?
-            toolkit = None
             supported_read_formats = {}
             for query_toolkit in toolkit_registry.registered_toolkits:
                 if file_format in query_toolkit.toolkit_file_read_formats:
@@ -4139,7 +4136,6 @@ class FrozenMolecule(Serializable):
             return self._to_xyz_file(file_path=file_path)
 
         # Take the first toolkit that can write the desired output format
-        toolkit = None  # type: ignore[assignment]
         for query_toolkit in toolkit_registry.registered_toolkits:
             if file_format in query_toolkit.toolkit_file_write_formats:
                 toolkit = query_toolkit
@@ -5081,7 +5077,7 @@ class FrozenMolecule(Serializable):
                 "to_openeye", self, aromaticity_model=aromaticity_model
             )
 
-    def _construct_angles(self):
+    def _construct_angles(self) -> None:
         """
         Get an iterator over all i-j-k angles.
         """
@@ -5098,7 +5094,7 @@ class FrozenMolecule(Serializable):
                         else:
                             self._angles.add((atom3, atom2, atom1))
 
-    def _construct_torsions(self):
+    def _construct_torsions(self) -> None:
         """
         Construct sets containing the atoms improper and proper torsions
 
@@ -5140,7 +5136,7 @@ class FrozenMolecule(Serializable):
 
             self._torsions = self._propers | self._impropers
 
-    def _construct_bonded_atoms_list(self):
+    def _construct_bonded_atoms_list(self) -> None:
         """
         Construct list of all atoms each atom is bonded to.
 
@@ -5758,7 +5754,8 @@ def _atom_nums_to_hill_formula(atom_nums: list[int]) -> str:
 
 
 def _nth_degree_neighbors_from_graphlike(
-    graphlike: Union[FrozenMolecule, "_SimpleMolecule"], n_degrees: int
+    graphlike: MoleculeLike,
+    n_degrees: int,
 ) -> Generator[
     Union[tuple[Atom, Atom], tuple["_SimpleAtom", "_SimpleAtom"]], None, None
 ]:
@@ -5828,7 +5825,7 @@ class HierarchyScheme:
 
     def __init__(
         self,
-        parent: FrozenMolecule,
+        parent: MoleculeLike,
         uniqueness_criteria: Iterable[str],
         iterator_name: str,
     ):
@@ -6075,7 +6072,7 @@ class HierarchyElement:
         return self.parent.atoms[self.atom_indices[index]]
 
     @property
-    def parent(self) -> FrozenMolecule:
+    def parent(self) -> MoleculeLike:
         """
         The parent molecule for this hierarchy element
         """

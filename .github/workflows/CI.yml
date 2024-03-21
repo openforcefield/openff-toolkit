@@ -143,7 +143,7 @@ jobs:
         run: pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
 
       - name: Run mypy
-        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
+        if: ${{ matrix.rdkit == true && matrix.python-version == 3.11 }}
         run: mypy -p "openff.toolkit"
 
       - name: Run unit tests

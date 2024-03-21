@@ -37,7 +37,7 @@ class _SimpleMolecule:
     def __init__(self):
         self.atoms = []
         self.bonds = []
-        self.conformers = None
+        self._conformers = None
         self._hierarchy_schemes = dict()
 
     def add_atom(self, atomic_number: int, **kwargs):
@@ -61,10 +61,14 @@ class _SimpleMolecule:
         bond = _SimpleBond(atom1_atom, atom2_atom, **kwargs)
         self.bonds.append(bond)
 
+    @property
+    def conformers(self) -> Optional[list["Quantity"]]:
+        return self._conformers
+
     def add_conformer(self, conformer):
-        if self.conformers is None:
-            self.conformers = list()
-        self.conformers.append(conformer)
+        if self._conformers is None:
+            self._conformers = list()
+        self._conformers.append(conformer)
 
     @property
     def n_atoms(self) -> int:
@@ -76,9 +80,7 @@ class _SimpleMolecule:
 
     @property
     def n_conformers(self) -> int:
-        if self.conformers is None:
-            return 0
-        return len(self.conformers)
+        return 0 if self._conformers is None else len(self._conformers)
 
     def atom(self, index):
         return self.atoms[index]
@@ -305,6 +307,8 @@ class _SimpleMolecule:
 
         return molecule
 
+    # TODO: Implement me - shouldn't need to be too different than Molecule.add_hierarchy_scheme
+    #       since the extra chemical information is unrelated to hierarchy/metadata
     def add_hierarchy_scheme(
         self,
         uniqueness_criteria: Iterable[str],
@@ -332,14 +336,14 @@ class _SimpleMolecule:
 
         molecule_dict["bonds"] = [bond.to_dict() for bond in self.bonds]
 
-        if self.conformers is None:
+        if self._conformers is None:
             molecule_dict["conformers"] = None
         else:
             molecule_dict["conformers"] = []
             molecule_dict["conformers_unit"] = (
                 "angstrom"  # Have this defined as a class variable?
             )
-            for conf in self.conformers:
+            for conf in self._conformers:
                 conf_unitless = conf.m_as(unit.angstrom)
                 conf_serialized, conf_shape = serialize_numpy((conf_unitless))
                 molecule_dict["conformers"].append(conf_serialized)
@@ -370,20 +374,20 @@ class _SimpleMolecule:
 
         conformers = molecule_dict.pop("conformers")
         if conformers is None:
-            molecule.conformers = None
+            molecule._conformers = None
         else:
             conformers_unit = molecule_dict.pop("conformers_unit")
-            molecule.conformers = list()
+            molecule._conformers = list()
             for ser_conf in conformers:
                 conformers_shape = (molecule.n_atoms, 3)
                 conformer_unitless = deserialize_numpy(ser_conf, conformers_shape)
                 conformer = unit.Quantity(conformer_unitless, conformers_unit)
-                molecule.conformers.append(conformer)
+                molecule._conformers.append(conformer)
 
         hier_scheme_dicts = molecule_dict.pop("hierarchy_schemes")
         for iterator_name, hierarchy_scheme_dict in hier_scheme_dicts.items():
             molecule._hierarchy_schemes[iterator_name] = HierarchyScheme(
-                parent=molecule,  # type: ignore[arg-type]
+                parent=molecule,
                 uniqueness_criteria=tuple(hierarchy_scheme_dict["uniqueness_criteria"]),
                 iterator_name=iterator_name,
             )
@@ -415,7 +419,8 @@ class _SimpleMolecule:
                 atom2=mm_molecule.atom(bond.atom2_index),
             )
 
-        mm_molecule.conformers = molecule.conformers
+        for conformer in molecule.conformers:
+            mm_molecule.add_conformer(conformer)
 
         for name, hierarchy_scheme in molecule.hierarchy_schemes.items():
             assert name == hierarchy_scheme.iterator_name
@@ -558,7 +563,7 @@ class _SimpleAtom:
         self._name = name
         self._atomic_number = atomic_number
         self._molecule = molecule
-        self._bonds: list[Optional[_SimpleBond]] = list()
+        self._bonds: list[_SimpleBond] = list()
         for key, val in kwargs.items():
             setattr(self, key, val)
 
@@ -608,7 +613,7 @@ class _SimpleAtom:
     @property
     def bonded_atoms(self):
         for bond in self._bonds:
-            for atom in [bond.atom1, bond.atom2]:  # type: ignore[union-attr]
+            for atom in [bond.atom1, bond.atom2]:
                 if atom is not self:
                     yield atom
 

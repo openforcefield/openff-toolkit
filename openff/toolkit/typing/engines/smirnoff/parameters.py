@@ -1982,7 +1982,11 @@ class ParameterHandler(_ParameterAttributeHandler):
 
     # TODO: Can we ensure SMIRKS and other parameters remain valid after manipulation?
     def add_parameter(
-        self, parameter_kwargs=None, parameter=None, after=None, before=None
+        self,
+        parameter_kwargs: Optional[dict] = None,
+        parameter: Optional[ParameterType] = None,
+        after: Optional[str] = None,
+        before: Optional[str] = None,
     ):
         """Add a parameter to the force field, ensuring all parameters are valid.
 
