@@ -51,7 +51,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def normalize_file_format(file_format):
+def normalize_file_format(file_format: str) -> str:
     return file_format.upper()
 
 
@@ -115,7 +115,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Returns
         -------
-        is_installed : bool
+        is_installed
             True if RDKit is installed, False otherwise.
 
         """
@@ -140,13 +140,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        obj : A rdchem.Mol-derived object
+        obj
             An object to be type-checked and converted into a Molecule, if possible.
-        allow_undefined_stereo : bool, default=False
+        allow_undefined_stereo
             Whether to accept molecules with undefined stereocenters. If False,
             an exception will be raised if a molecule with undefined stereochemistry
             is passed into this function.
-        _cls : class
+        _cls
             Molecule constructor
 
         Returns
@@ -198,25 +198,25 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        file_path: str
+        file_path
             PDB file path
-        smiles : str
+        smiles
             a valid smiles string for the pdb, used for stereochemistry, formal charges, and bond order
-        allow_undefined_stereo : bool, default=False
+        allow_undefined_stereo
             If false, raises an exception if SMILES contains undefined stereochemistry.
-        _cls : class
+        _cls
             Molecule constructor
-        name : str, default=""
+        name
             An optional name for the output molecule
 
         Returns
         --------
-        molecule : openff.toolkit.Molecule (or _cls() type)
+        molecule
             An OFFMol instance with ordering the same as used in the PDB file.
 
         Raises
         ------
-        InvalidConformerError : if the SMILES and PDB molecules are not isomorphic.
+        InvalidConformerError
         """
         from rdkit import Chem
 
@@ -400,9 +400,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """Validates custom substructures to adhere to monomer specifications
         Parameters
         ----------
-        custom_substructures : dict[str, list[str]]
+        custom_substructures
             substructures given with unique names as keys and smarts as values
-        forbidden_keys : DictKeys[str]
+        forbidden_keys
             a list of keys that cannot overlap with the custom substructure keys
 
         Returns
@@ -589,11 +589,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """Adds general atom names to match the format of the amino acid substructure dict
         Parameters
         ----------
-        custom_substructures : dict[str, list[str]]
+        custom_substructures
             substructures given with unique names as keys and smarts as values
         Returns
         -------
-        prepared_dict : dict[str, dict[str, list[str]]]
+        prepared_dict
             a dictionary of the same type and format as the predefined toolkit
             substructures (amino acids, etc). Atom names are given the format
             "CSTM_{symbol}", including wildtypes which show as "CSTM_*"
@@ -614,16 +614,16 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         Parameters
         ----------
-        rdkit_mol : rdkit.Chem.Mol
+        rdkit_mol
             Currently invalid (bond orders and charge) Molecule
-        substructure_library : dict{str:list[str, list[str]]}
+        substructure_library
             A dictionary of substructures. substructure_library[aa_name] = list[tagged SMARTS, list[atom_names]]
-        toolkit_registry = ToolkitWrapper or ToolkitRegistry. Default = None
+        toolkit_registry
             Either a ToolkitRegistry, ToolkitWrapper
 
         Returns
         -------
-        rdkit_mol : rdkit.Chem.Mol
+        rdkit_mol
             a copy of the original molecule with charges and bond order added
 
         Raises
@@ -637,7 +637,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         from rdkit import Chem
         from rdkit.DataStructs.cDataStructs import CreateFromBinaryText
 
-        already_assigned_nodes = set()
+        already_assigned_nodes: set = set()
         # TODO: We currently assume all single and modify a few
         # Therefore it's hard to know if we've missed any edges...
         # Notably assumes all bonds *between* fragments are single
@@ -801,7 +801,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # Some advanced error reporting needs to interpret the substructure smarts to do things like
             # compare atom counts. Since OFFTK doesn't have a native class to hold fragments, we convert
             # the smarts into a sorted list of symbols to help with generating the error message.
-            resname_to_symbols_and_atomnames = {}
+            resname_to_symbols_and_atomnames: dict[str, list[tuple]] = dict()
             for resname, smarts_to_atom_names in substructure_library.items():
                 resname_to_symbols_and_atomnames[resname] = list()
                 for smarts, atom_names in smarts_to_atom_names.items():
@@ -1041,19 +1041,19 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        file_path : str
+        file_path
             The file to read the molecule from
-        file_format : str
+        file_format
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check
             ToolkitWrapper.toolkit_file_read_formats for details.
-        allow_undefined_stereo : bool, default=False
+        allow_undefined_stereo
             If false, raises an exception if RDMol contains undefined stereochemistry.
-        _cls : class
+        _cls
             Molecule constructor
         Returns
         -------
-        molecules : iterable of Molecules
+        molecules
             a list of Molecule objects is returned.
 
         """
@@ -1130,19 +1130,19 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        file_obj : file-like object
+        file_obj
             The file-like object to read the molecule from
-        file_format : str
+        file_format
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check
             ToolkitWrapper.toolkit_file_read_formats for details.
-        allow_undefined_stereo : bool, default=False
+        allow_undefined_stereo
             If false, raises an exception if RDMol contains undefined stereochemistry.
-        _cls : class
+        _cls
             Molecule constructor
         Returns
         -------
-        molecules : Molecule or list of Molecules
+        molecules
             a list of Molecule objects is returned.
 
         """
@@ -1209,7 +1209,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : an OpenFF Molecule
+        molecule
             The molecule to write
         file_obj
             The file-like object to write to
@@ -1259,7 +1259,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : an OpenFF Molecule
+        molecule
             The molecule to write
         file_path
             The file path to write to
@@ -1289,21 +1289,21 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule: openff.toolkit.topology.Molecule
+        molecule
             The molecule whose state we should enumerate
 
-        undefined_only: bool optional, default=False
+        undefined_only
             If we should enumerate all stereocenters and bonds or only those with undefined stereochemistry
 
-        max_isomers: int optional, default=20
+        max_isomers
             The maximum amount of molecules that should be returned
 
-        rationalise: bool optional, default=True
+        rationalise
             If we should try to build and rationalise the molecule to ensure it can exist
 
         Returns
         --------
-        molecules: list[openff.toolkit.topology.Molecule]
+        molecules
             A list of openff.toolkit.topology.Molecule instances
 
         """
@@ -1350,15 +1350,15 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule: openff.toolkit.topology.Molecule
+        molecule
             The molecule whose state we should enumerate
 
-        max_states: int optional, default=20
+        max_states
             The maximum amount of molecules that should be returned
 
         Returns
         -------
-        molecules: list[openff.toolkit.topology.Molecule]
+        molecules
             A list of openff.toolkit.topology.Molecule instances not including the input molecule.
         """
 
@@ -1391,12 +1391,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule: openff.toolkit.topology.Molecule
+        molecule
             The input molecule
 
          Returns
         -------
-        molecule : openff.toolkit.topology.Molecule
+        molecule
             The input molecule, with canonically-indexed atoms and bonds.
         """
 
@@ -1438,13 +1438,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : An openff.toolkit.topology.Molecule
+        molecule
             The molecule to convert into a SMILES.
-        isomeric: bool optional, default= True
+        isomeric
             return an isomeric smiles
-        explicit_hydrogens: bool optional, default=True
+        explicit_hydrogens
             return a smiles string containing all hydrogens explicitly
-        mapped: bool optional, default=False
+        mapped
             return a explicit hydrogen mapped smiles, the atoms to be mapped can be controlled by
             supplying an atom map into the properties dictionary. If no mapping is passed all
             atoms will be mapped in order, else an atom map dictionary from the current atom
@@ -1453,7 +1453,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Returns
         -------
-        smiles : str
+        smiles
             The SMILES of the input molecule.
         """
         from rdkit import Chem
@@ -1515,27 +1515,27 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        smiles : str
+        smiles
             The SMILES string to turn into a molecule
-        hydrogens_are_explicit : bool, default=False
+        hydrogens_are_explicit
             If False, RDKit will perform hydrogen addition using Chem.AddHs
-        allow_undefined_stereo : bool, default=False
+        allow_undefined_stereo
             Whether to accept SMILES with undefined stereochemistry. If False,
             an exception will be raised if a SMILES with undefined stereochemistry
             is passed into this function.
-        _cls : class
+        _cls
             Molecule constructor
-        name : str, default=""
+        name
             An optional name to pass to the _cls constructor
 
         Returns
         -------
-        molecule : openff.toolkit.topology.Molecule
+        molecule
             An OpenFF style molecule.
 
         Raises
         ------
-        RadicalsNotSupportedError : If any atoms in the RDKit molecule contain radical electrons.
+        RadicalsNotSupportedError
         """
         from rdkit import Chem
 
@@ -1607,20 +1607,20 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        inchi : str
+        inchi
             The InChI representation of the molecule.
 
-        allow_undefined_stereo : bool, default=False
+        allow_undefined_stereo
             Whether to accept InChI with undefined stereochemistry. If False,
             an exception will be raised if a InChI with undefined stereochemistry
             is passed into this function.
 
-        _cls : class
+        _cls
             Molecule constructor
 
         Returns
         -------
-        molecule : openff.toolkit.topology.Molecule
+        molecule
         """
 
         from rdkit import Chem
@@ -1675,19 +1675,19 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : a :class:`Molecule`
+        molecule
             The molecule to generate conformers for.
-        n_conformers : int, default=1
+        n_conformers
             Maximum number of conformers to generate.
-        rms_cutoff : unit-wrapped float, in units of distance, optional, default=None
+        rms_cutoff
             The minimum RMS value at which two conformers are considered redundant and one is deleted.
             If None, the cutoff is set to 1 Angstrom
 
-        clear_existing : bool, default=True
+        clear_existing
             Whether to overwrite existing conformers for the molecule.
-        _cls : class
+        _cls
             Molecule constructor
-        make_carboxylic_acids_cis: bool, default=False
+        make_carboxylic_acids_cis
             Guarantee all conformers have exclusively cis carboxylic acid groups (COOH)
             by rotating the proton in any trans carboxylic acids 180 degrees around the C-O bond.
 
@@ -1751,28 +1751,28 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : openff.toolkit.topology.Molecule
+        molecule
             Molecule for which partial charges are to be computed
-        partial_charge_method : str, optional, default=None
+        partial_charge_method
             The charge model to use. One of ['mmff94', 'gasteiger']. If None, 'mmff94' will be used.
 
             * 'mmff94': Applies partial charges using the Merck Molecular Force Field
                         (MMFF). This method does not make use of conformers, and hence
                         ``use_conformers`` and ``strict_n_conformers`` will not impact
                         the partial charges produced.
-        use_conformers : iterable of unit-wrapped numpy arrays, each with
+        use_conformers
             shape (n_atoms, 3) and dimension of distance. Optional, default = None
             Coordinates to use for partial charge calculation. If None, an appropriate number of
             conformers will be generated.
-        strict_n_conformers : bool, default=False
+        strict_n_conformers
             Whether to raise an exception if an invalid number of conformers is provided for
             the given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised.
-        normalize_partial_charges : bool, default=True
+        normalize_partial_charges
             Whether to offset partial charges so that they sum to the total formal charge of the molecule.
             This is used to prevent accumulation of rounding errors when the partial charge generation method has
             low precision.
-        _cls : class
+        _cls
             Molecule constructor
 
         Raises
@@ -2206,18 +2206,18 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        rdmol : rkit.RDMol
+        rdmol
             An RDKit molecule
-        allow_undefined_stereo : bool, default=False
+        allow_undefined_stereo
             If false, raises an exception if rdmol contains undefined stereochemistry.
-        hydrogens_are_explicit : bool, default=False
+        hydrogens_are_explicit
             If False, RDKit will perform hydrogen addition using Chem.AddHs
-        _cls : class
+        _cls
             Molecule constructor
 
         Returns
         -------
-        molecule : openff.toolkit.topology.Molecule
+        molecule
             An OpenFF molecule
 
         Examples
@@ -2620,13 +2620,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         Parameters
         ----------
 
-        aromaticity_model : str, optional, default="OEAroModel_MDL"
+        aromaticity_model
             The aromaticity model to use. Only OEAroModel_MDL is supported.
 
         Returns
         -------
 
-        rdmol : rkit.RDMol
+        rdmol
             An RDKit molecule
 
         Examples
@@ -2748,16 +2748,16 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : An openff.toolkit.topology.Molecule
+        molecule
             The molecule to convert into a SMILES.
 
-        fixed_hydrogens: bool, default=False
+        fixed_hydrogens
             If a fixed hydrogen layer should be added to the InChI, if `True` this will produce a
             non standard specific InChI string of the molecule.
 
         Returns
         --------
-        inchi: str
+        inchi
             The InChI string of the molecule.
         """
 
@@ -2780,16 +2780,16 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : An openff.toolkit.topology.Molecule
+        molecule
             The molecule to convert into a SMILES.
 
-        fixed_hydrogens: bool, default=False
+        fixed_hydrogens
             If a fixed hydrogen layer should be added to the InChI, if `True` this will
             produce a non standard specific InChI string of the molecule.
 
         Returns
         --------
-        inchi_key: str
+        inchi_key
             The InChIKey representation of the molecule.
         """
 
@@ -2809,14 +2809,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        smarts : str
+        smarts
             The tagged SMARTS to analyze
 
         Returns
         -------
-        unique_tags : tuple of int
+        unique_tags
             A sorted tuple of all unique tagged atom map indices.
-        tagged_atom_connectivity : tuple of tuples of int, shape n_tagged_bonds x 2
+        tagged_atom_connectivity
             A tuple of tuples, where each inner tuple is a pair of tagged atoms (tag_idx_1, tag_idx_2)
              which are bonded. The inner tuples are ordered smallest-to-largest, and the tuple of
              tuples is ordered lexically. So the return value for an improper torsion would be
@@ -2865,22 +2865,22 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        rdmol : rdkit.Chem.Mol
+        rdmol
             rdmol to process with the SMIRKS in order to find matches
-        smarts : str
+        smarts
             SMARTS string with any number of sequentially tagged atoms.
             If there are N tagged atoms numbered 1..N, the resulting matches will be
             N-tuples of atoms that match the corresponding tagged atoms.
-        aromaticity_model : str, optional, default='OEAroModel_MDL'
+        aromaticity_model
             OpenEye aromaticity model designation as a string, such as ``OEAroModel_MDL``.
             Molecule is prepared with this aromaticity model prior to querying.
-        unique : bool, default=False
+        unique
             If True, only return unique matches. If False, return all matches. This is passed to
             RDKit's ``GetSubstructMatches`` as ``uniquify``.
 
         Returns
         -------
-        matches : list of tuples of atoms indices within the ``rdmol``
+        matches
             matches[index] is an N-tuple of atom numbers from the ``rdmol``
             Matches are returned in no guaranteed order.
             # TODO: What is returned if no matches are found? An empty list, or None?
@@ -2972,13 +2972,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : openff.toolkit.topology.Molecule
+        molecule
             The molecule for which all specified SMARTS matches are to be located
-        smarts : str
+        smarts
             SMARTS string with optional SMIRKS-style atom tagging
-        aromaticity_model : str, optional, default='OEAroModel_MDL'
+        aromaticity_model
             Molecule is prepared with this aromaticity model prior to querying.
-        unique : bool, default=False
+        unique
             If True, only return unique matches. If False, return all matches.
 
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
@@ -3001,12 +3001,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        atom : openff.toolkit.topology.molecule.Atom
+        atom
             The molecule containing the atom of interest
 
         Returns
         -------
-        is_in_ring : bool
+        is_in_ring
             Whether or not the atom is in a ring.
 
         Raises
@@ -3035,12 +3035,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        bond : openff.toolkit.topology.molecule.Bond
+        bond
             The molecule containing the atom of interest
 
         Returns
         -------
-        is_in_ring : bool
+        is_in_ring
             Whether or not the bond of index `bond_index` is in a ring
 
         Raises
@@ -3063,21 +3063,21 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return is_in_ring
 
     @staticmethod
-    def _find_undefined_stereo_atoms(rdmol, assign_stereo=False):
+    def _find_undefined_stereo_atoms(rdmol, assign_stereo: bool = False) -> list[int]:
         """Find the chiral atoms with undefined stereochemsitry in the RDMol.
 
         Parameters
         ----------
-        rdmol : rdkit.RDMol
+        rdmol
             The RDKit molecule.
-        assign_stereo : bool, optional, default=False
+        assign_stereo
             As a side effect, this function calls ``Chem.AssignStereochemistry()``
             so by default we work on a molecule copy. Set this to ``True`` to avoid
             making a copy and assigning the stereochemistry to the Mol object.
 
         Returns
         -------
-        undefined_atom_indices : list[int]
+        undefined_atom_indices
             A list of atom indices that are chiral centers with undefined
             stereochemistry.
 
@@ -3110,12 +3110,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        rdmol : rdkit.RDMol
+        rdmol
             The RDKit molecule.
 
         Returns
         -------
-        undefined_bond_indices : list[int]
+        undefined_bond_indices
             A list of bond indices with undefined stereochemistry.
 
         See Also
@@ -3174,9 +3174,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        rdmol : rdkit.Chem.Mol
+        rdmol
             The RDKit molecule.
-        err_msg_prefix : str, optional
+        err_msg_prefix
             A string to prepend to the error message (but not the warning).
 
         Raises

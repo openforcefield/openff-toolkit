@@ -5,7 +5,7 @@ __all__ = ("ToolkitRegistry", "toolkit_registry_manager")
 import inspect
 import logging
 from contextlib import contextmanager
-from typing import Union
+from typing import Callable, Optional, Union
 
 from openff.toolkit.utils.ambertools_wrapper import AmberToolsToolkitWrapper
 from openff.toolkit.utils.base_wrapper import ToolkitWrapper
@@ -57,25 +57,27 @@ class ToolkitRegistry:
     .. warning :: This API is experimental and subject to change.
     """
 
+    _toolkits: list[ToolkitWrapper]
+
     def __init__(
         self,
-        toolkit_precedence=None,
-        exception_if_unavailable=True,
-        _register_imported_toolkit_wrappers=False,
+        toolkit_precedence: Optional[list[type[ToolkitWrapper]]] = None,
+        exception_if_unavailable: bool = True,
+        _register_imported_toolkit_wrappers: bool = False,
     ):
         """
         Create an empty toolkit registry.
 
         Parameters
         ----------
-        toolkit_precedence : list, optional, default=None
+        toolkit_precedence
             List of toolkit wrapper classes, in order of desired precedence when performing molecule operations. If
             None, no toolkits will be registered.
 
-        exception_if_unavailable : bool, optional, default=True
+        exception_if_unavailable
             If True, an exception will be raised if the toolkit is unavailable
 
-        _register_imported_toolkit_wrappers : bool, optional, default=False
+        _register_imported_toolkit_wrappers
             If True, will attempt to register all imported ToolkitWrapper subclasses that can be
             found in the order of toolkit_precedence, if specified. If toolkit_precedence is not
             specified, the default order is [OpenEyeToolkitWrapper, RDKitToolkitWrapper,
@@ -84,7 +86,7 @@ class ToolkitRegistry:
         """
         self._toolkits = list()
 
-        toolkits_to_register = list()
+        toolkit_classes_to_register: list[type[ToolkitWrapper]] = list()
 
         if _register_imported_toolkit_wrappers:
             if toolkit_precedence is None:
@@ -97,19 +99,20 @@ class ToolkitRegistry:
             all_importable_toolkit_wrappers = all_subclasses(ToolkitWrapper)
             for toolkit in toolkit_precedence:
                 if toolkit in all_importable_toolkit_wrappers:
-                    toolkits_to_register.append(toolkit)
+                    toolkit_classes_to_register.append(toolkit)
         else:
             if toolkit_precedence is not None:
-                toolkits_to_register = toolkit_precedence
+                toolkit_classes_to_register = toolkit_precedence
 
-        if toolkits_to_register:
-            for toolkit in toolkits_to_register:
+        if toolkit_classes_to_register:
+            for toolkit in toolkit_classes_to_register:
                 self.register_toolkit(
-                    toolkit, exception_if_unavailable=exception_if_unavailable
+                    toolkit_wrapper=toolkit,
+                    exception_if_unavailable=exception_if_unavailable,
                 )
 
     @property
-    def registered_toolkits(self):
+    def registered_toolkits(self) -> list[ToolkitWrapper]:
         """
         List registered toolkits.
 
@@ -119,12 +122,12 @@ class ToolkitRegistry:
 
         Returns
         -------
-        toolkits : iterable of toolkit objects
+        toolkits
         """
         return list(self._toolkits)
 
     @property
-    def registered_toolkit_versions(self):
+    def registered_toolkit_versions(self) -> dict[str, str]:
         """
         Return a dict containing the version of each registered toolkit.
 
@@ -132,15 +135,17 @@ class ToolkitRegistry:
 
         Returns
         -------
-        toolkit_versions : dict[str, str]
+        toolkit_versions
             A dictionary mapping names and versions of wrapped toolkits
 
         """
-        return dict(
-            (tk.toolkit_name, tk.toolkit_version) for tk in self.registered_toolkits
-        )
+        return {tk.toolkit_name: tk.toolkit_version for tk in self.registered_toolkits}
 
-    def register_toolkit(self, toolkit_wrapper, exception_if_unavailable=True):
+    def register_toolkit(
+        self,
+        toolkit_wrapper: Union[ToolkitWrapper, type[ToolkitWrapper]],
+        exception_if_unavailable: bool = True,
+    ):
         """
         Register the provided toolkit wrapper class, instantiating an object of it.
 
@@ -153,16 +158,19 @@ class ToolkitRegistry:
 
         Parameters
         ----------
-        toolkit_wrapper : instance or subclass of ToolkitWrapper
+        toolkit_wrapper
             The toolkit wrapper to register or its class.
-        exception_if_unavailable : bool, optional, default=True
+        exception_if_unavailable
             If True, an exception will be raised if the toolkit is unavailable
 
         """
         # Instantiate class if class, or just add if already instantiated.
-        if isinstance(toolkit_wrapper, type):
+        if isinstance(toolkit_wrapper, ToolkitWrapper):
+            self._toolkits.append(toolkit_wrapper)
+
+        elif issubclass(toolkit_wrapper, ToolkitWrapper):
             try:
-                toolkit_wrapper = toolkit_wrapper()
+                _toolkit_wrapper = toolkit_wrapper()
 
             # This exception can be raised by OpenEyeToolkitWrapper
             except LicenseError as license_exception:
@@ -172,17 +180,18 @@ class ToolkitRegistry:
                     logger.warning(license_exception)
                 return
             except ToolkitUnavailableException:
-                msg = "Unable to load toolkit '{}'. ".format(
-                    toolkit_wrapper._toolkit_name
-                )
                 if exception_if_unavailable:
-                    raise ToolkitUnavailableException(msg)
+                    raise ToolkitUnavailableException(
+                        "Unable to load toolkit '{_toolkit_wrapper._toolkit_name}'. "
+                    )
                 return
 
-        # Add toolkit to the registry.
-        self._toolkits.append(toolkit_wrapper)
+            self._toolkits.append(_toolkit_wrapper)
 
-    def deregister_toolkit(self, toolkit_wrapper):
+        else:
+            raise ValueError(f"Given unexpected argument {type(toolkit_wrapper)=}")
+
+    def deregister_toolkit(self, toolkit_wrapper: ToolkitWrapper):
         """
         Remove a ToolkitWrapper from the list of toolkits in this ToolkitRegistry
 
@@ -190,7 +199,7 @@ class ToolkitRegistry:
 
         Parameters
         ----------
-        toolkit_wrapper : instance or subclass of ToolkitWrapper
+        toolkit_wrapper
             The toolkit wrapper to remove from the registry
 
         Raises
@@ -227,7 +236,7 @@ class ToolkitRegistry:
         for toolkit_to_remove in toolkits_to_remove:
             self._toolkits.remove(toolkit_to_remove)
 
-    def add_toolkit(self, toolkit_wrapper):
+    def add_toolkit(self, toolkit_wrapper: ToolkitWrapper):
         """
         Append a ToolkitWrapper onto the list of toolkits in this ToolkitRegistry
 
@@ -235,7 +244,7 @@ class ToolkitRegistry:
 
         Parameters
         ----------
-        toolkit_wrapper : openff.toolkit.utils.ToolkitWrapper
+        toolkit_wrapper
             The ToolkitWrapper object to add to the list of registered toolkits
 
         Raises
@@ -244,23 +253,23 @@ class ToolkitRegistry:
             If toolkit_wrapper is not a ToolkitWrapper or subclass
         """
         if not isinstance(toolkit_wrapper, ToolkitWrapper):
-            msg = "Something other than a ToolkitWrapper object was passed to ToolkitRegistry.add_toolkit()\n"
-            msg += "Given object {} of type {}".format(
-                toolkit_wrapper, type(toolkit_wrapper)
+            raise InvalidToolkitError(
+                "Something other than a ToolkitWrapper object was passed to ToolkitRegistry.add_toolkit()\n"
+                f"Given object {toolkit_wrapper} of type {type(toolkit_wrapper)}"
             )
-            raise InvalidToolkitError(msg)
+
         self._toolkits.append(toolkit_wrapper)
 
     # TODO: Can we automatically resolve calls to methods that are not explicitly defined using some Python magic?
 
-    def resolve(self, method_name):
+    def resolve(self, method_name: str) -> Callable:
         """
         Resolve the requested method name by checking all registered toolkits in
         order of precedence for one that provides the requested method.
 
         Parameters
         ----------
-        method_name : str
+        method_name
             The name of the method to resolve
 
         Returns
@@ -293,15 +302,20 @@ class ToolkitRegistry:
 
         # No toolkit was found to provide the requested capability
         # TODO: Can we help developers by providing a check for typos in expected method names?
-        msg = 'No registered toolkits can provide the capability "{}".\n'.format(
-            method_name
+        raise NotImplementedError(
+            f'No registered toolkits can provide the capability "{method_name}".\n'
+            f"Available toolkits are: {self.registered_toolkits}\n"
         )
-        msg += "Available toolkits are: {}\n".format(self.registered_toolkits)
-        raise NotImplementedError(msg)
 
     # TODO: Can we instead register available methods directly with `ToolkitRegistry`,
     # so we can just use `ToolkitRegistry.method()`?
-    def call(self, method_name, *args, raise_exception_types=None, **kwargs):
+    def call(
+        self,
+        method_name: str,
+        *args,
+        raise_exception_types: Optional[list[type[Exception]]] = None,
+        **kwargs,
+    ):
         """
         Execute the requested method by attempting to use all registered toolkits in order of precedence.
 
@@ -311,9 +325,9 @@ class ToolkitRegistry:
 
         Parameters
         ----------
-        method_name : str
+        method_name
             The name of the method to execute
-        raise_exception_types : list of Exception subclasses, default=None
+        raise_exception_types
             A list of exception-derived types to catch and raise immediately. If None, this will be set to [Exception],
             which will raise an error immediately if the first ToolkitWrapper in the registry fails. To try each
             ToolkitWrapper that provides a suitably-named method, set this to the empty list ([]). If all
@@ -366,7 +380,7 @@ class ToolkitRegistry:
         msg += "Available toolkits are: {}\n".format(self.registered_toolkits)
         # Append information about toolkits that implemented the method, but could not handle the provided parameters
         for toolkit, error in errors:
-            msg += " {} {} : {}\n".format(toolkit, type(error), error)
+            msg += f" {toolkit} {type(error)} : {error}\n"
         raise ValueError(msg)
 
     def __repr__(self):
