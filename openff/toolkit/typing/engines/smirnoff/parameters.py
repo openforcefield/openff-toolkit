@@ -2083,7 +2083,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Parameters
         ----------
-        parameter_attrs of {attr: value}
+        parameter_attrs
             The attrs mapped to desired values (for example {"smirks": "[*:1]~[#16:2]=,:[#6:3]~[*:4]", "id": "t105"} )
 
         Returns

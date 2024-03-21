@@ -3543,7 +3543,7 @@ class FrozenMolecule(Serializable):
         query
             SMARTS string (with one or more tagged atoms).
         unique
-            Whether to return unique matches
+            If ``True``, de-duplicates matches before returning.
         toolkit_registry
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for chemical environment matches
 
@@ -4074,9 +4074,9 @@ class FrozenMolecule(Serializable):
 
         # check if we have a file path or an open file object
         if isinstance(file_path, str):
-            xyz_data = open(file_path, "w")
+            xyz_data: IO[str] = open(file_path, "w")
         else:
-            xyz_data = file_path  # type: ignore[assignment]
+            xyz_data = file_path
 
         # add the data to the xyz_data list
         for i, geometry in enumerate(conformers, 1):
@@ -5098,7 +5098,7 @@ class FrozenMolecule(Serializable):
                         else:
                             self._angles.add((atom3, atom2, atom1))
 
-    def _construct_torsions(self):
+    def _construct_torsions(self) -> None:
         """
         Construct sets containing the atoms improper and proper torsions
 
@@ -5140,7 +5140,7 @@ class FrozenMolecule(Serializable):
 
             self._torsions = self._propers | self._impropers
 
-    def _construct_bonded_atoms_list(self):
+    def _construct_bonded_atoms_list(self) -> None:
         """
         Construct list of all atoms each atom is bonded to.
 
