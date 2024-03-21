@@ -2062,6 +2062,8 @@ class TestOpenEyeToolkitWrapper:
             )
 
     def test_charge_method_api_continuity(self):
+        """Test rough continuity of OpenEyeToolkitWrapper.SUPPORTED_CHARGE_METHODS"""
+
         assert OpenEyeToolkitWrapper.SUPPORTED_CHARGE_METHODS["gasteiger"] == {
             "oe_charge_method": "OEGasteigerCharges",
             "min_confs": 0,
@@ -3429,6 +3431,7 @@ class TestRDKitToolkitWrapper:
         # TODO: Add write tests for all formats
 
     def test_charge_method_api_continuity(self):
+        """Test rough continuity of RDKitToolkitWrapper.SUPPORTED_CHARGE_METHODS"""
         assert isinstance(RDKitToolkitWrapper.SUPPORTED_CHARGE_METHODS, set)
 
         assert "mmff94" in RDKitToolkitWrapper.SUPPORTED_CHARGE_METHODS
@@ -4105,6 +4108,7 @@ class TestBuiltInToolkitWrapper:
             )
 
     def test_charge_method_api_continuity(self):
+        """Test rough continuity of BuiltinToolkitWrapper.PARTIAL_CHARGE_METHODS"""
         assert isinstance(BuiltInToolkitWrapper.PARTIAL_CHARGE_METHODS, dict)
 
         assert BuiltInToolkitWrapper.PARTIAL_CHARGE_METHODS["zeros"] == {
