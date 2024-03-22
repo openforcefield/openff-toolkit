@@ -5,7 +5,7 @@ Base class for toolkit wrappers. Defines the public API and some shared methods
 __all__ = ("ToolkitWrapper",)
 
 from functools import wraps
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, TypedDict
 
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
@@ -16,6 +16,15 @@ from openff.toolkit.utils.exceptions import (
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import Molecule
+
+
+class _ChargeSettings(TypedDict, total=False):
+    n_conformers: int
+    rec_confs: int
+    min_confs: int
+    max_confs: int  # OpenEyeToolkitWrapper sometimes defines this as None
+    antechamber_keyword: str
+    oe_charge_method: str
 
 
 def _mol_to_ctab_and_aro_key(
@@ -37,6 +46,7 @@ class ToolkitWrapper:
     _toolkit_installation_instructions: Optional[str] = (
         None  # Installation instructions for the toolkit
     )
+    _supported_charge_methods: dict[str, _ChargeSettings] = dict()
     _toolkit_file_read_formats: list[str] = list()
     _toolkit_file_write_formats: list[str] = list()
 
@@ -62,7 +72,6 @@ class ToolkitWrapper:
         return decorator
 
     @property
-    # @classmethod
     def toolkit_name(self):
         """
         Return the name of the toolkit wrapped by this class as a str
@@ -97,6 +106,10 @@ class ToolkitWrapper:
         List of file formats that this toolkit can write.
         """
         return self._toolkit_file_write_formats
+
+    @property
+    def supported_charge_methods(self) -> list[str]:
+        return [*self._supported_charge_methods.keys()]
 
     @classmethod
     def is_available(cls):

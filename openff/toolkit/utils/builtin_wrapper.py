@@ -28,6 +28,12 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
         "This toolkit is installed with the Open Force Field Toolkit and does "
         "not require additional dependencies."
     )
+    _supported_charge_methods = {
+        "zeros": {"rec_confs": 0, "min_confs": 0, "max_confs": 0},
+        "formal_charge": {"rec_confs": 0, "min_confs": 0, "max_confs": 0},
+    }
+
+    PARTIAL_CHARGE_METHODS = _supported_charge_methods
 
     def __init__(self):
         super().__init__()
@@ -82,11 +88,6 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
         ChargeCalculationError if the charge calculation is supported by this toolkit, but fails
         """
 
-        PARTIAL_CHARGE_METHODS = {
-            "zeros": {"rec_confs": 0, "min_confs": 0, "max_confs": 0},
-            "formal_charge": {"rec_confs": 0, "min_confs": 0, "max_confs": 0},
-        }
-
         if partial_charge_method is None:
             partial_charge_method = "formal_charge"
 
@@ -99,18 +100,20 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
         mol_copy = _cls(molecule)
 
         partial_charge_method = partial_charge_method.lower()
-        if partial_charge_method not in PARTIAL_CHARGE_METHODS:
+        if partial_charge_method not in self._supported_charge_methods:
             raise ChargeMethodUnavailableError(
                 f'Partial charge method "{partial_charge_method}"" is not supported by '
                 f"the Built-in toolkit. Available charge methods are "
-                f"{list(PARTIAL_CHARGE_METHODS.keys())}"
+                f"{self._supported_charge_methods}"
             )
 
         if use_conformers is None:
             # Note that this refers back to the GLOBAL_TOOLKIT_REGISTRY by default, since
             # BuiltInToolkitWrapper can't generate conformers
             mol_copy.generate_conformers(
-                n_conformers=PARTIAL_CHARGE_METHODS[partial_charge_method]["rec_confs"]
+                n_conformers=self._supported_charge_methods[partial_charge_method][
+                    "rec_confs"
+                ]
             )
         else:
             mol_copy._conformers = None

@@ -9,6 +9,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ## Current development
 
 * #1798 Adds type annotations to most of the codebase.
+* #1834 Adds `Molecule.get_available_charge_methods` and `BaseWrapper.supported_charge_methods`.
 
 ### API-breaking changes
 
