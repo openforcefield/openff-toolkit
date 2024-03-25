@@ -223,6 +223,8 @@ def convert_all_strings_to_quantity(
     Integers and floats are ignored and not converted into a dimensionless
     ``openff.units.unit.Quantity`` object.
 
+    Some good keys to ignore include `ignore_keys=["smirks", "name", "id", "parent_id"]`.
+
     Parameters
     ----------
     smirnoff_data
@@ -323,15 +325,15 @@ def convert_all_quantities_to_string(
 @functools.singledispatch
 def object_to_quantity(object):
     """
-    Attempts to turn the provided object into openmm.unit.Quantity(s).
+    Attempts to turn the provided object into `openff.units.Quantity`s.
 
-    Can handle float, int, strings, quantities, or iterators over
+    Can handle float, int, str, `Quantity`, `openmm.unit.Quantity`, or iterators over
     the same. Raises an exception if unable to convert all inputs.
 
     Parameters
     ----------
     object
-        The object to convert to a ``openmm.unit.Quantity`` object.
+        The object to convert to a ``Quantity`` object.
 
     Returns
     -------
