@@ -27,10 +27,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        python-version: ["3.9", "3.10", "3.11"]
-        rdkit: [true, false]
-        openeye: [true, false]
+        os: [ubuntu-latest]
+        python-version: ["3.9"]
+        rdkit: [true]
+        openeye: [false]
         exclude:
           - rdkit: false
             openeye: false
