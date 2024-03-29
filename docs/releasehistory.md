@@ -26,6 +26,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1795](https://github.com/openforcefield/openff-toolkit/pull/1795): Add `NAGLToolkitWrapper` to API reference
 - [PR #1796](https://github.com/openforcefield/openff-toolkit/pull/1796): Update docs tooling and fix warnings
 - [PR #1786](https://github.com/openforcefield/openff-toolkit/pull/1786): Describe contributing to documentation notebooks in developers guide.
+- [PR #1845](https://github.com/openforcefield/openff-toolkit/pull/1845): Update convert_all_strings_to_quantity docstring.
 
 ## 0.15.2
 
