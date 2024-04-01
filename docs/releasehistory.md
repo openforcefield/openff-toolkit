@@ -27,6 +27,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1796](https://github.com/openforcefield/openff-toolkit/pull/1796): Update docs tooling and fix warnings
 - [PR #1786](https://github.com/openforcefield/openff-toolkit/pull/1786): Describe contributing to documentation notebooks in developers guide.
 - [PR #1845](https://github.com/openforcefield/openff-toolkit/pull/1845): Update convert_all_strings_to_quantity docstring.
+- [PR #1849](https://github.com/openforcefield/openff-toolkit/pull/1849): Add "how are charges assigned?" section to FAQ. 
 
 ## 0.15.2
 
