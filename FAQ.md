@@ -98,7 +98,7 @@ and then try rerunning and/or reinstalling the Toolkit.
 
 There are [many charge methods](https://openforcefield.github.io/standards/standards/smirnoff/#partial-charge-and-electrostatics-models) supported by the SMIRNOFF specification. With the exception of water, mainline OpenFF force fields only use AM1-BCC (through `ToolkitAM1BCC`) to assign partial charges. (A future biopolymer force field will likely use library charges for standard residues.)
 
-If OpenEye Toolkits are installed and licensed, the ELF10 variant of AM1-BCC is used. OpenEye's OMEGA is used to generate conformers and OpenEye's Quacpac (`oequacpac.OEAM1BCCELF10Charges`) is used to generate partial charges.
+If OpenEye Toolkits are installed and licensed, the ELF10 variant of AM1-BCC is used. OpenEye's Quacpac (`oequacpac.OEAM1BCCELF10Charges`) is used to generate partial charges.
 
 Otherwise, RDKit is used to generate a conformer which is passed to AmberTool's `sqm` (with `-c bcc`).
 
