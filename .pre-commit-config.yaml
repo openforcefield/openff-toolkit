@@ -3,7 +3,7 @@ ci:
 files: ^openff|(^examples/((?!deprecated).)*$)|^docs
 repos:
 - repo: https://github.com/psf/black
-  rev: 24.2.0
+  rev: 24.3.0
   hooks:
   - id: black
   - id: black-jupyter
@@ -22,7 +22,7 @@ repos:
         'flake8-bugbear',
     ]
 - repo: https://github.com/nbQA-dev/nbQA
-  rev: 1.7.1
+  rev: 1.8.5
   hooks:
     - id: nbqa-pyupgrade
       args:
