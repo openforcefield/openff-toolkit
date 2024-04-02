@@ -30,9 +30,6 @@ dependencies:
   - toml
   - bson
   - msgpack-python
-  - qcelemental
-  - qcportal >=0.50
-  - qcengine
   - nglview
   - nbval
   - pydantic =1
