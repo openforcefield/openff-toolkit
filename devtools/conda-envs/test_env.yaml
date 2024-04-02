@@ -1,13 +1,14 @@
 name: openff-toolkit-test
 channels:
   - openeye
+  - conda-forge/label/numpy_dev
   - conda-forge
 dependencies:
     # Base depends
   - python
   - pip
   - packaging
-  - numpy
+  - numpy ~=2.0.0rc1
   - networkx
   - cachetools
   - cached-property

@@ -1,13 +1,14 @@
 name: openeye-examples
 channels:
   - openeye
+  - conda-forge/label/numpy_dev
   - conda-forge
 dependencies:
     # Base depends
   - python
   - pydantic =1
   - packaging
-  - numpy
+  - numpy ~=2.0.0rc1
   - networkx
   - cachetools
   - cached-property
