@@ -565,7 +565,15 @@ class TestParameterHandler:
         # Add p1 before param b3
         bh.add_parameter(parameter=param_to_add_by_smirks, before="[*:1]=[*:2]")
 
-        assert [p.id for p in bh._parameters] == ["b1", "d1", "p1", "b2", "d2", "b3", "b4"]
+        assert [p.id for p in bh._parameters] == [
+            "b1",
+            "d1",
+            "p1",
+            "b2",
+            "d2",
+            "b3",
+            "b4",
+        ]
 
         # Add p2 after index 2 (which is param p1)
         bh.add_parameter(parameter=param_to_add_by_index, after=2)

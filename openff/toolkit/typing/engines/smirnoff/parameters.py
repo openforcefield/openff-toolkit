@@ -2059,7 +2059,9 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         if not allow_duplicate_smirks:
             if self._index_of_parameter(new_parameter) is not None:
-                msg = f"A parameter SMIRKS pattern {new_parameter.smirks} already exists."
+                msg = (
+                    f"A parameter SMIRKS pattern {new_parameter.smirks} already exists."
+                )
                 raise DuplicateParameterError(msg)
 
         before_index, after_index = None, None
