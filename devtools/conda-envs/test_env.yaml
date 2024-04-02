@@ -21,10 +21,6 @@ dependencies:
   - openff-amber-ff-ports
   - openff-utilities >=0.1.5
   - openff-interchange-base ~=0.3.18
-    # Toolkit-specific
-  - ambertools >=22
-    # https://github.com/rdkit/rdkit/issues/7221
-  - rdkit <2023.09.6
   - openeye-toolkits
     # Test-only/optional/dev/typing
   - pytest
