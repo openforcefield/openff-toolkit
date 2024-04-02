@@ -493,10 +493,14 @@ class TestParameterHandler:
             "smirks": param2["smirks"],
             "length": 2 * self.length,
             "k": 2 * self.k,
+            "id": "b4",
         }
 
-        # Ensure a duplicate parameter CAN be added
-        bh.add_parameter(param_duplicate_smirks)
+        # Ensure a duplicate parameter cannot be added under default conditions
+        with pytest.raises(DuplicateParameterError):
+            bh.add_parameter(param_duplicate_smirks)
+        # Ensure a duplicate parameter CAN be added if `allow_duplicate_smirks=True`
+        bh.add_parameter(param_duplicate_smirks, allow_duplicate_smirks=True)
 
         dict_to_add_by_smirks = {
             "smirks": "[#1:1]-[#6:2]",
@@ -551,17 +555,17 @@ class TestParameterHandler:
         # Add d1 before param b2
         bh.add_parameter(dict_to_add_by_smirks, before="[*:1]=[*:2]")
 
-        assert [p.id for p in bh._parameters] == ["b1", "d1", "b2", "b3"]
+        assert [p.id for p in bh._parameters] == ["b1", "d1", "b2", "b3", "b4"]
 
         # Add d2 after index 2 (which is also param b2)
         bh.add_parameter(dict_to_add_by_index, after=2)
 
-        assert [p.id for p in bh._parameters] == ["b1", "d1", "b2", "d2", "b3"]
+        assert [p.id for p in bh._parameters] == ["b1", "d1", "b2", "d2", "b3", "b4"]
 
         # Add p1 before param b3
         bh.add_parameter(parameter=param_to_add_by_smirks, before="[*:1]=[*:2]")
 
-        assert [p.id for p in bh._parameters] == ["b1", "d1", "p1", "b2", "d2", "b3"]
+        assert [p.id for p in bh._parameters] == ["b1", "d1", "p1", "b2", "d2", "b3", "b4"]
 
         # Add p2 after index 2 (which is param p1)
         bh.add_parameter(parameter=param_to_add_by_index, after=2)
@@ -574,6 +578,7 @@ class TestParameterHandler:
             "b2",
             "d2",
             "b3",
+            "b4",
         ]
 
         # Add s0 between params that are several positions apart
@@ -588,6 +593,7 @@ class TestParameterHandler:
             "b2",
             "d2",
             "b3",
+            "b4",
         ]
 
     def test_different_units_to_dict(self):
