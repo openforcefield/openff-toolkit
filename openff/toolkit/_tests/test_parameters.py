@@ -850,7 +850,6 @@ class TestParameterList:
         parameters = ParameterList([p1, p2])
         assert parameters.index("[*:1]") == 1
 
-
     def test_contains(self):
         """Test ParameterList __contains__ overloading."""
         p1 = ParameterType(smirks="[*:1]")
