@@ -35,7 +35,6 @@ dependencies:
   - qcportal >=0.50
   - qcengine
   - nglview
-  - mdtraj
   - nbval
   - mypy
   - typing_extensions
