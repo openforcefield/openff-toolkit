@@ -1506,7 +1506,7 @@ class ParameterList(list):
         if isinstance(item, ParameterType):
             return super().index(item)
         else:
-            for parameter in self:
+            for parameter in self[::-1]:
                 if parameter.smirks == item:
                     return self.index(parameter)
             raise ParameterLookupError(f"SMIRKS {item} not found in ParameterList")
@@ -2052,9 +2052,9 @@ class ParameterHandler(_ParameterAttributeHandler):
         else:
             raise ValueError("One of (parameter, parameter_kwargs) must be specified")
 
-        if self._index_of_parameter(new_parameter) is not None:
-            msg = f"A parameter SMIRKS pattern {new_parameter.smirks} already exists."
-            raise DuplicateParameterError(msg)
+        # if self._index_of_parameter(new_parameter) is not None:
+        #     msg = f"A parameter SMIRKS pattern {new_parameter.smirks} already exists."
+        #     raise DuplicateParameterError(msg)
 
         before_index, after_index = None, None
 

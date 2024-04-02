@@ -1711,6 +1711,18 @@ class TestForceField(_ForceFieldFixtures):
         ):
             force_field["vdW"][smirks]
 
+    def test_lookup_duplicate_parameter_type(self, force_field):
+        """Test that if a parameter SMIRKS appears twice, lookups will yield the second copy"""
+        first_bond = force_field["Bonds"][0]
+        force_field["Bonds"].add_parameter({"smirks": first_bond.smirks,
+                                            "k": first_bond.k / 2,
+                                            "length": first_bond.length/2,
+                                            "id": first_bond.id+"2"})
+        result = force_field["Bonds"][first_bond.smirks]
+        assert result.id == force_field["Bonds"][0].id + "2"
+        assert result.k == first_bond.k / 2
+        assert result.length == first_bond.length/2
+
     @pytest.mark.parametrize(
         "to_deregister",
         [

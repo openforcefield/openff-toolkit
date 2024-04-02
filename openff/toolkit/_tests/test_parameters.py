@@ -495,9 +495,8 @@ class TestParameterHandler:
             "k": 2 * self.k,
         }
 
-        # Ensure a duplicate parameter cannot be added
-        with pytest.raises(DuplicateParameterError):
-            bh.add_parameter(param_duplicate_smirks)
+        # Ensure a duplicate parameter CAN be added
+        bh.add_parameter(param_duplicate_smirks)
 
         dict_to_add_by_smirks = {
             "smirks": "[#1:1]-[#6:2]",
@@ -843,6 +842,14 @@ class TestParameterList:
         p4 = ParameterType(smirks="[#2:1]")
         with pytest.raises(ValueError, match="is not in list"):
             parameters.index(p4)
+
+    def test_index_duplicates(self):
+        """Test ParameterList.index when multiple parameters have identical SMIRKS"""
+        p1 = ParameterType(smirks="[*:1]")
+        p2 = ParameterType(smirks="[*:1]")
+        parameters = ParameterList([p1, p2])
+        assert parameters.index("[*:1]") == 1
+
 
     def test_contains(self):
         """Test ParameterList __contains__ overloading."""
