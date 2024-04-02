@@ -20,9 +20,7 @@ dependencies:
   - openff-units =0.2.0
   - openff-amber-ff-ports
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.3.17
-  - openff-nagl-base ==0.3.0
-  - openff-nagl-models ==0.1.0
+  - openff-interchange-base ~=0.3.18
     # Toolkit-specific
   - ambertools >=22
     # https://github.com/rdkit/rdkit/issues/7221
@@ -43,9 +41,7 @@ dependencies:
   - nglview
   - mdtraj
   - nbval
-  # No idea why this is necessary, see https://github.com/openforcefield/openff-toolkit/pull/1821
-  - nomkl
-  - mypy =1.8
+  - mypy
   - typing_extensions
   - pydantic =1
   - pip:
