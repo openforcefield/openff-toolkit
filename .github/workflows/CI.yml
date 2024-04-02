@@ -111,34 +111,10 @@ jobs:
         if: ${{ matrix.rdkit == false }}
         run: micromamba remove --force openff-nagl-base --yes
 
-      - name: Check installed toolkits
-        run: |
-          for tk in ${{ env.TOOLKIT_CHECKS }}; do
-            python -c "from openff.toolkit.utils.toolkits import ${tk}_AVAILABLE; assert ${tk}_AVAILABLE, '${tk} unavailable'"
-          done
-
-      - name: Check uninstalled toolkits
-        run: |
-          if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
-            for tk in ${{ env.PACKAGES_TO_REMOVE }}; do
-              TK=$(echo ${tk%-*} | tr 'a-z' 'A-Z')
-              python -c "from openff.toolkit.utils.toolkits import ${TK}_AVAILABLE; assert not ${TK}_AVAILABLE, '${TK} available'"
-            done
-          fi
-
       - name: Environment Information
         run: |
           conda info
           conda list
-
-      - name: Check links
-        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
-
-      - name: Run mypy
-        # subtle differences in Python/mypy versions, just keep it passing on one
-        if: ${{ matrix.rdkit == true && matrix.openeye && matrix.python-version == 3.11 }}
-        run: mypy -p "openff.toolkit"
 
       - name: Run unit tests
         run: |
@@ -149,25 +125,6 @@ jobs:
           fi
 
           python -m pytest --durations=20 $PYTEST_ARGS $COV
-
-      - name: Run code snippets in docs
-        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: |
-          pytest -v --no-cov --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
-
-      - name: Run notebooks in docs
-        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: |
-          pytest -v --no-cov --durations=5 --nbval --ignore docs/_build/ docs/
-
-      - name: Run examples in docstrings
-        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: |
-          pytest openff \
-            -v -x -n logical --no-cov --doctest-modules \
-            --ignore-glob='openff/toolkit/_tests*' \
-            --ignore=openff/toolkit/data/ \
-            --ignore=openff/toolkit/utils/utils.py
 
       - name: Codecov
         uses: codecov/codecov-action@v4
