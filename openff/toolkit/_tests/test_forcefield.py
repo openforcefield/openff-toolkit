@@ -1724,7 +1724,7 @@ class TestForceField(_ForceFieldFixtures):
             allow_duplicate_smirks=True,
         )
         result = force_field["Bonds"][first_bond.smirks]
-        assert result == forcefield['Bonds'].parameters[first_bond.smirks]
+        assert result == forcefield["Bonds"].parameters[first_bond.smirks]
         assert result.id == force_field["Bonds"][0].id + "2"
         assert result.k == first_bond.k / 2
         assert result.length == first_bond.length / 2
