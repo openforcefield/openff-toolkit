@@ -1506,7 +1506,7 @@ class ParameterList(list):
         if isinstance(item, ParameterType):
             return super().index(item)
         else:
-            for parameter in self:
+            for parameter in self[::-1]:
                 if parameter.smirks == item:
                     return self.index(parameter)
             raise ParameterLookupError(f"SMIRKS {item} not found in ParameterList")
@@ -1543,7 +1543,8 @@ class ParameterList(list):
 
     def __getitem__(self, item: Union[int, slice, str, "ParameterType"]):  # type: ignore[override]
         """
-        Retrieve item by index or SMIRKS
+        Retrieve item by index or SMIRKS. If multiple parameters have the same
+        SMIRKS, this returns the last one.
 
         Parameters
         ----------
@@ -1987,6 +1988,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         parameter: Optional[ParameterType] = None,
         after: Optional[str] = None,
         before: Optional[str] = None,
+        allow_duplicate_smirks: bool = False,
     ):
         """Add a parameter to the force field, ensuring all parameters are valid.
 
@@ -2002,6 +2004,9 @@ class ParameterHandler(_ParameterAttributeHandler):
         before
             The SMIRKS pattern (if str) or index (if int) of the parameter directly after where
             the new parameter will be added
+        allow_duplicate_smirks
+            If False, a DuplicateParameterError will be raised if the parameter being added has
+            a SMIRKS that already appears in another parameter owned by this ParameterHandler.
 
         Note the following behavior:
           * Either `parameter_kwargs` or `parameter` must be specified.
@@ -2052,9 +2057,12 @@ class ParameterHandler(_ParameterAttributeHandler):
         else:
             raise ValueError("One of (parameter, parameter_kwargs) must be specified")
 
-        if self._index_of_parameter(new_parameter) is not None:
-            msg = f"A parameter SMIRKS pattern {new_parameter.smirks} already exists."
-            raise DuplicateParameterError(msg)
+        if not allow_duplicate_smirks:
+            if self._index_of_parameter(new_parameter) is not None:
+                msg = (
+                    f"A parameter SMIRKS pattern {new_parameter.smirks} already exists."
+                )
+                raise DuplicateParameterError(msg)
 
         before_index, after_index = None, None
 
@@ -2387,7 +2395,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
     def __getitem__(self, val):
         """
-        Syntax sugar for lookikng up a ParameterType in a ParameterHandler
+        Syntax sugar for looking up a ParameterType in a ParameterHandler
         based on its SMIRKS.
         """
         return self.parameters[val]

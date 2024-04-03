@@ -15,11 +15,20 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Behavior changes
 
+- [PR #1852](https://github.com/openforcefield/openff-toolkit/pull/1852): Fixes issue 
+  [#1363](https://github.com/openforcefield/openff-toolkit/issues/1363): If multiple parameters have identical 
+  SMIRKS, calls to `ParameterHandler[smirks]` and `ParameterList[smirks]` will now return the LAST parameter 
+  with a matching SMIRKS. Previously this would return the FIRST parameter with a matching SMIRKS, which was 
+  a confusing behavior given SMIRNOFF hierarchy rules.
+
 ### Bugfixes
 
 ### New features
 
 - [PR #1827](https://github.com/openforcefield/openff-toolkit/pull/1827): Adds `Topology.clear_positions`
+- [PR #1852](https://github.com/openforcefield/openff-toolkit/pull/1852): Adds the `allow_duplicate_smirks` named
+  argument to `ParameterHandler.add_parameter`. Previously it was possible to make a force field with duplicate
+  SMIRKS by loading it from file or combining multiple FFs, so this also lets you do it using the API.
 
 ### Improved documentation and warnings
 
