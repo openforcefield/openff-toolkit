@@ -1089,7 +1089,7 @@ class FrozenMolecule(Serializable):
         """``True`` if the molecule has unique atom names, ``False`` otherwise."""
         return _has_unique_atom_names(self)
 
-    def generate_unique_atom_names(self, suffix:str = None):
+    def generate_unique_atom_names(self, suffix: str = None):
         """
         Generate unique atom names from the element symbol and count.
 
@@ -6128,7 +6128,7 @@ class HierarchyElement:
         """``True`` if the element has unique atom names, ``False`` otherwise."""
         return _has_unique_atom_names(self)
 
-    def generate_unique_atom_names(self, suffix:str = None):
+    def generate_unique_atom_names(self, suffix: str = None):
         """
         Generate unique atom names from the element symbol and count.
 
@@ -6154,7 +6154,9 @@ def _has_unique_atom_names(
     return True
 
 
-def _generate_unique_atom_names(obj: Union[FrozenMolecule, HierarchyElement], suffix:str = "x"):
+def _generate_unique_atom_names(
+    obj: Union[FrozenMolecule, HierarchyElement], suffix: str = "x"
+):
     """
     Generate unique atom names from the element symbol and count.
 
@@ -6165,7 +6167,7 @@ def _generate_unique_atom_names(obj: Union[FrozenMolecule, HierarchyElement], su
     atom names might begin 'C1x', 'H1x', 'O1x', 'C2x', etc.
     """
     from collections import defaultdict
- 
+
     element_counts: DefaultDict[str, int] = defaultdict(int)
     for atom in obj.atoms:
         symbol = atom.symbol
