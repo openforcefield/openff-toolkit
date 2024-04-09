@@ -17,6 +17,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+- [PR #1846](https://github.com/openforcefield/openff-toolkit/pull/1846): Band-aids issue [#1842](https://github.com/openforcefield/openff-toolkit/issues/1846), where the Toolkit Showcase example would sporadically fail when run with one core.
+
 ### New features
 
 - [PR #1827](https://github.com/openforcefield/openff-toolkit/pull/1827): Adds `Topology.clear_positions`
