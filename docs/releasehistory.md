@@ -8,6 +8,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+- [PR #1808](https://github.com/openforcefield/openff-toolkit/pull/1808): Improves default representation of ValenceDict.
+
 ### API-breaking changes
 - [PR #1760](https://github.com/openforcefield/openff-toolkit/pull/1760): Removes the private, unused `ParameterHandler._OPENMMTYPE` attribute.
 
