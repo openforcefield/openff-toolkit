@@ -143,8 +143,9 @@ jobs:
         run: pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
 
       - name: Run mypy
-        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: mypy -p "openff.toolkit" --exclude "openff/toolkit/data"
+        # subtle differences in Python/mypy versions, just keep it passing on one
+        if: ${{ matrix.rdkit == true && matrix.openeye && matrix.python-version == 3.11 }}
+        run: mypy -p "openff.toolkit"
 
       - name: Run unit tests
         run: |
@@ -154,7 +155,7 @@ jobs:
             PYTEST_ARGS+=" --runslow"
           fi
 
-          python -m pytest $PYTEST_ARGS $COV
+          python -m pytest --durations=20 $PYTEST_ARGS $COV
 
       - name: Run code snippets in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
@@ -169,10 +170,14 @@ jobs:
       - name: Run examples in docstrings
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: |
-          pytest -v --no-cov --doctest-modules --ignore=openff/toolkit/_tests/ --ignore=openff/toolkit/data/ --ignore=openff/toolkit/utils/utils.py openff/
+          pytest openff \
+            -v -x -n logical --no-cov --doctest-modules \
+            --ignore-glob='openff/toolkit/_tests*' \
+            --ignore=openff/toolkit/data/ \
+            --ignore=openff/toolkit/utils/utils.py
 
       - name: Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage.xml

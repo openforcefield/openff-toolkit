@@ -2,7 +2,6 @@
 Test that the examples in the repo run without errors.
 """
 
-import os
 import pathlib
 import re
 import subprocess
@@ -11,9 +10,8 @@ import textwrap
 
 import pytest
 
+from openff.toolkit._tests.utils import _get_readme_path
 from openff.toolkit.utils import RDKIT_AVAILABLE, get_data_file_path, temporary_cd
-
-ROOT_DIR_PATH = pathlib.Path(__file__).joinpath("../../../../").resolve()
 
 
 def run_script_file(file_path):
@@ -38,19 +36,20 @@ def run_script_str(script_str):
 
     """
     with tempfile.TemporaryDirectory() as tmp_dir:
-        temp_file_path = os.path.join(tmp_dir, "temp.py")
+        temp_file_path = pathlib.Path(tmp_dir, "temp.py").as_posix()
+
         # Create temporary python script.
         with open(temp_file_path, "w") as f:
             f.write(script_str)
         # Run the Python script.
         try:
             run_script_file(temp_file_path)
-        except:  # noqa
+        except Exception as error:
             script_str = textwrap.indent(script_str, "    ")
-            raise Exception(f"The following script failed:\n{script_str}")
+            raise Exception(f"The following script failed:\n{script_str}") from error
 
 
-def find_example_scripts():
+def find_example_scripts() -> list[str]:
     """Find all Python scripts, excluding Jupyter notebooks, in the examples folder.
 
     Returns
@@ -58,12 +57,16 @@ def find_example_scripts():
     example_file_paths : list[str]
         List of full paths to python scripts to execute.
     """
-    examples_dir_path = ROOT_DIR_PATH.joinpath("examples")
+    # Count on the examples/ path being equivalently accessible as the README file
+    readme_file_path = _get_readme_path()
+
+    if readme_file_path is None:
+        return list()
+
+    examples_dir_path = pathlib.Path(_get_readme_path().parent, "examples")
 
     # Examples that require RDKit
-    rdkit_examples = {
-        examples_dir_path.joinpath("conformer_energies/conformer_energies.py"),
-    }
+    rdkit_examples = {examples_dir_path / "conformer_energies/conformer_energies.py"}
 
     example_file_paths = []
     for example_file_path in examples_dir_path.glob("*/*.py"):
@@ -75,7 +78,7 @@ def find_example_scripts():
     return example_file_paths
 
 
-def find_readme_examples():
+def find_readme_examples() -> list[str]:
     """Yield the Python scripts in the main README.md file.
 
     Returns
@@ -83,9 +86,14 @@ def find_readme_examples():
     readme_examples : list[str]
         The list of Python scripts included in the README.md files.
     """
-    readme_path = ROOT_DIR_PATH.joinpath("README.md")
-    with open(readme_path, "r") as f:
+    readme_file_path = _get_readme_path()
+
+    if readme_file_path is None:
+        return list()
+
+    with open(readme_file_path, "r") as f:
         readme_content = f.read()
+
     return re.findall("```python(.*?)```", readme_content, flags=re.DOTALL)
 
 

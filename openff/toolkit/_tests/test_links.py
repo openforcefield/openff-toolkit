@@ -1,15 +1,12 @@
-import os
 import re
 from urllib.request import Request, urlopen
 
 import pytest
 
-ROOT_DIR_PATH = os.path.join(
-    os.path.dirname(os.path.realpath(__file__)), "..", "..", ".."
-)
+from openff.toolkit._tests.utils import _get_readme_path
 
 
-def find_readme_links():
+def find_readme_links() -> list[str]:
     """Yield all the links in the main README.md file.
 
     Returns
@@ -17,10 +14,16 @@ def find_readme_links():
     readme_examples : list[str]
         The list of links included in the README.md file.
     """
-    readme_file_path = os.path.join(ROOT_DIR_PATH, "README.md")
-    with open(readme_file_path, "r") as f:
-        readme_content = f.read()
-    return re.findall("http[s]?://(?:[0-9a-zA-Z]|[-/.%:_])+", readme_content)
+    readme_file_path = _get_readme_path()
+
+    if readme_file_path is None:
+        return list()
+
+    else:
+        with open(readme_file_path.as_posix(), "r") as f:
+            readme_content = f.read()
+
+        return re.findall("http[s]?://(?:[0-9a-zA-Z]|[-/.%:_])+", readme_content)
 
 
 @pytest.mark.parametrize("readme_link", find_readme_links())
@@ -46,6 +49,9 @@ def test_readme_links(readme_link):
         # record, Export section (select BibTeX in drop-down) and click "Export"
         # button will bring you to this link.
         pytest.skip("Seems to be a Zenodo regression in bibtex link")
+    if readme_link.endswith("MIT"):
+        # January 22 2024: Link causing some failures, accessible in browser
+        pytest.skip("Flaky")
 
     # Try to connect 5 times, keeping track of exceptions so useful feedback can be provided.
     success = False

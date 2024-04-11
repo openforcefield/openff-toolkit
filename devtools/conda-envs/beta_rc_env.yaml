@@ -14,18 +14,19 @@ dependencies:
   - cached-property
   - xmltodict
   - python-constraint
-  - openmm >=7.6
-  - openff-forcefields >=2023.05.1
+  - openmm >=8
+  - openff-forcefields >=2024
   - smirnoff99Frosst
   - openff-units =0.2.0
   - openff-amber-ff-ports
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.3.17
+  - openff-interchange-base >=0.3.23
   - openff-nagl-base ==0.3.0
   - openff-nagl-models ==0.1.0
     # Toolkit-specific
   - ambertools >=22
-  - rdkit
+    # https://github.com/rdkit/rdkit/issues/7221
+  - rdkit <2023.09.3
   - openeye-toolkits
     # Test-only/optional/dev
   - pytest
@@ -37,14 +38,14 @@ dependencies:
   - bson
   - msgpack-python
   - qcelemental
-  - qcportal >=0.15, <0.50.0a0
+  - qcportal >=0.50
   - qcengine
   - nglview
   - mdtraj
   - nbval
   - mypy
   - typing_extensions
-  - pydantic =1
+  - pydantic >1
   - pip:
     - types-setuptools
     - types-toml
