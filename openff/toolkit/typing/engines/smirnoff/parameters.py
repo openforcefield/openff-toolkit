@@ -3430,7 +3430,8 @@ _VirtualSiteType = Literal[
 
 
 class _BaseVirtualSiteType(ParameterType):
-    """A SMIRNOFF virtual site type.
+    """
+    Handle virtual site parameters, including geometry and electrostatics, but not vdW interactions.
 
     .. warning :: This API is experimental and subject to change.
     """
@@ -3597,6 +3598,8 @@ class VirtualSiteHandler(_NonbondedHandler):
     """
 
     class VirtualSiteType(_BaseVirtualSiteType, vdWHandler.vdWType):
+        """Store virtual site parameters (geometry and electrostatics) and vdW interactions."""
+
         epsilon = ParameterAttribute(
             default=0.0 * unit.kilocalorie_per_mole, unit=unit.kilocalorie_per_mole
         )
