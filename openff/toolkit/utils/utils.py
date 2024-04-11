@@ -26,12 +26,16 @@ __all__ = [
 import contextlib
 import functools
 import logging
-from typing import Iterable, Union
+from typing import TYPE_CHECKING, Any, Iterable, TypeVar, Union, overload
 
+import numpy
 import numpy as np
 import pint
 from openff.units import Quantity, Unit, unit
 from openff.utilities import requires_package
+
+if TYPE_CHECKING:
+    from openff.toolkit import ForceField, Molecule
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +53,10 @@ def inherit_docstrings(cls):
     return cls
 
 
-def all_subclasses(cls):
+T = TypeVar("T")
+
+
+def all_subclasses(cls: type[T]) -> list[type[T]]:
     """Recursively retrieve all subclasses of the specified class"""
     return cls.__subclasses__() + [
         g for s in cls.__subclasses__() for g in all_subclasses(s)
@@ -63,7 +70,7 @@ def temporary_cd(dir_path):
     Parameters
     ----------
 
-    dir_path : str
+    dir_path
         The directory path to enter within the context
 
     Examples
@@ -93,7 +100,7 @@ def get_data_file_path(relative_path: str) -> str:
     Parameters
     ----------
 
-    name : str
+    relative_path
         Name of the file to load (with respect to `openff/toolkit/data/`)
 
     """
@@ -137,18 +144,18 @@ def dict_to_quantity(input_dict):
 
 def quantity_to_string(input_quantity: Quantity) -> str:
     """
-    Serialize a openff.units.unit.Quantity to a string representation that is backwards-compatible
+    Serialize a ``openff.units.Quantity`` to a string representation that is backwards-compatible
     with older versions of the OpenFF Toolkit. This includes a " * " between numerical values and
     their units and "A" being used in place of the unicode Å ("\N{ANGSTROM SIGN}").
 
     Parameters
     ----------
-    input_quantity : openff.units.unit.Quantity
+    input_quantity
         The quantity to serialize
 
     Returns
     -------
-    output_string : str
+    output_string
         The serialized quantity
 
     """
@@ -157,36 +164,35 @@ def quantity_to_string(input_quantity: Quantity) -> str:
     # parser, thus we convert any arrays to list here
     if isinstance(unitless_value, np.ndarray):
         unitless_value = list(unitless_value)
-    unit_string = unit_to_string(input_quantity.units)
-    output_string = "{} * {}".format(unitless_value, unit_string)
-    return output_string
 
-    return str(input_quantity)
+    unit_string = unit_to_string(input_quantity.units)
+
+    return f"{unitless_value} * {unit_string}"
 
 
 def string_to_unit(unit_string):
     """
-    Deserializes a openff.units.unit.Quantity from a string representation, for
+    Deserializes a ``openff.units.Quantity`` from a string representation, for
     example: "kilocalories_per_mole / angstrom ** 2"
 
 
     Parameters
     ----------
-    unit_string : dict
-        Serialized representation of a openff.units.unit.Quantity.
+    unit_string
+        Serialized representation of a ``openff.units.Quantity``.
 
     Returns
     -------
-    output_unit: openff.units.unit.Quantity
+    output_unit
         The deserialized unit from the string
     """
     return Unit(unit_string)
 
 
 def string_to_quantity(quantity_string) -> Union[str, int, float, Quantity]:
-    """Attempt to parse a string into a unit.Quantity.
+    """Attempt to parse a string into a ``Quantity``.
 
-    Note that dimensionless floats and ints are returns as floats or ints, not Quantity objects.
+    Note that dimensionless floats and ints are returns as floats or ints, not ``Quantity`` objects.
     """
 
     from tokenize import TokenError
@@ -209,26 +215,32 @@ def string_to_quantity(quantity_string) -> Union[str, int, float, Quantity]:
 def convert_all_strings_to_quantity(
     smirnoff_data: dict,
     ignore_keys: Iterable[str] = tuple(),
-):
+) -> dict:
     """
     Traverses a SMIRNOFF data structure, attempting to convert all
-    quantity-defining strings into openff.units.unit.Quantity objects.
+    quantity-defining strings into ``openff.units.Quantity`` objects.
 
     Integers and floats are ignored and not converted into a dimensionless
-    ``openff.units.unit.Quantity`` object.
+    ``openff.units.Quantity`` object.
+
+    Some good keys to ignore include `ignore_keys=["smirks", "name", "id", "parent_id"]`
+    since these are commonly used in SMIRNOFF force fields in ways that are meant to
+    remain strings. For more context, see `Issue #1635`_.
+
+    .. _Issue #1635: https://github.com/openforcefield/openff-toolkit/issues/1635.
 
     Parameters
     ----------
-    smirnoff_data : dict
+    smirnoff_data
         A hierarchical dict structured in compliance with the SMIRNOFF spec
-    ignore_keys : iterable of str, optional, default=tuple()
+    ignore_keys
         A list of keys to skip when converting strings to quantities
 
     Returns
     -------
-    converted_smirnoff_data : dict
+    converted_smirnoff_data
         A hierarchical dict structured in compliance with the SMIRNOFF spec,
-        with quantity-defining strings converted to openff.units.unit.Quantity objects
+        with quantity-defining strings converted to ``openff.units.Quantity`` objects
     """
     from pint import DefinitionSyntaxError
 
@@ -263,55 +275,73 @@ def convert_all_strings_to_quantity(
     return obj_to_return
 
 
-def convert_all_quantities_to_string(smirnoff_data):
+@overload
+def convert_all_quantities_to_string(  # noqa: E704
+    smirnoff_data: list[Quantity],
+) -> list[str]: ...
+
+
+@overload
+def convert_all_quantities_to_string(  # noqa: E704
+    smirnoff_data: dict,
+) -> Union[list[str], dict[str, Any]]: ...
+
+
+@overload
+def convert_all_quantities_to_string(  # noqa: E704
+    smirnoff_data: "Quantity",
+) -> Union[str, list[str], dict[str, Any]]: ...
+
+
+def convert_all_quantities_to_string(
+    smirnoff_data: Union[dict, str, Quantity, list]
+) -> Union[str, dict[str, Any], list[str]]:
     """
     Traverses a SMIRNOFF data structure, attempting to convert all
     quantities into strings.
 
     Parameters
     ----------
-    smirnoff_data : dict
+    smirnoff_data
         A hierarchical dict structured in compliance with the SMIRNOFF spec
 
     Returns
     -------
-    converted_smirnoff_data : dict
+    converted_smirnoff_data
         A hierarchical dict structured in compliance with the SMIRNOFF spec,
-        with openff.units.unit.Quantitys converted to string
+        with ``openff.units.Quantity``s converted to string
     """
 
     if isinstance(smirnoff_data, dict):
         for key, value in smirnoff_data.items():
             smirnoff_data[key] = convert_all_quantities_to_string(value)
-        obj_to_return = smirnoff_data
+        return smirnoff_data
     elif isinstance(smirnoff_data, list):
         for index, item in enumerate(smirnoff_data):
             smirnoff_data[index] = convert_all_quantities_to_string(item)
-        obj_to_return = smirnoff_data
+        return smirnoff_data
     elif isinstance(smirnoff_data, Quantity):
-        obj_to_return = quantity_to_string(smirnoff_data)
+        return quantity_to_string(smirnoff_data)
     else:
-        obj_to_return = smirnoff_data
-
-    return obj_to_return
+        return smirnoff_data
 
 
 @functools.singledispatch
 def object_to_quantity(object):
     """
-    Attempts to turn the provided object into openmm.unit.Quantity(s).
+    Attempts to turn the provided object into `openff.units.Quantity`s.
 
-    Can handle float, int, strings, quantities, or iterators over
+    Can handle float, int, str, `Quantity`, `openmm.unit.Quantity`, or iterators over
     the same. Raises an exception if unable to convert all inputs.
 
     Parameters
     ----------
-    object : int, float, string, quantity, or iterator of strings of quantities
-        The object to convert to a ``openmm.unit.Quantity`` object.
+    object
+        The object to convert to a ``Quantity`` object(s).
 
     Returns
     -------
-    converted_object : openmm.unit.Quantity or list[openmm.unit.Quantity]
+    converted_object
 
     """
     # If we can't find a custom type, we treat this as a generic iterator.
@@ -340,7 +370,7 @@ def _(obj):
 
 
 try:
-    import openmm
+    import openmm.unit
     from openff.units.openmm import from_openmm
 
     @object_to_quantity.register(openmm.unit.Quantity)
@@ -357,14 +387,14 @@ def serialize_numpy(np_array) -> tuple[bytes, tuple[int]]:
 
     Parameters
     ----------
-    np_array : A numpy array
+    np_array
         Input numpy array
 
     Returns
     -------
-    serialized : bytes
+    serialized
         A big-endian bytestring of the NumPy array.
-    shape : tuple of ints
+    shape
         The shape of the serialized array
     """
     import numpy as np
@@ -376,20 +406,24 @@ def serialize_numpy(np_array) -> tuple[bytes, tuple[int]]:
     return serialized, shape
 
 
-def deserialize_numpy(serialized_np: Union[bytes, list], shape: tuple[int]):
+def deserialize_numpy(
+    serialized_np: Union[bytes, list],
+    shape: tuple[int, ...],
+) -> numpy.ndarray:
     """
     Deserializes a numpy array from a bytestring or list. The input, if a bytestring, is
     assumed to be in big-endian byte order.
 
     Parameters
     ----------
-    serialized_np : bytes or list
+    serialized_np
         A byte or list serialized representation of a numpy array
-    shape : tuple of ints
+    shape
         The shape of the serialized array
+
     Returns
     -------
-    np_array : numpy.ndarray
+    np_array
         The deserialized numpy array
     """
 
@@ -414,7 +448,7 @@ def convert_0_2_smirnoff_to_0_3(smirnoff_data_0_2):
 
     Parameters
     ----------
-    smirnoff_data_0_2 : dict
+    smirnoff_data_0_2
         Hierarchical dict representing a SMIRNOFF data structure according the the 0.2 spec
 
     Returns
@@ -480,7 +514,7 @@ def convert_0_1_smirnoff_to_0_2(smirnoff_data_0_1):
 
     Parameters
     ----------
-    smirnoff_data_0_1 : dict
+    smirnoff_data_0_1
         Hierarchical dict representing a SMIRNOFF data structure according the the 0.1 spec
 
     Returns
@@ -618,10 +652,10 @@ def recursive_attach_unit_strings(smirnoff_data, units_to_attach):
 
     Parameters
     ----------
-    smirnoff_data : dict
+    smirnoff_data
         Any level of hierarchy that is part of a SMIRNOFF dict, with all data members
         formatted as string.
-    units_to_attach : dict
+    units_to_attach
         Dict of the form {key:unit_string}
 
     Returns
@@ -675,26 +709,28 @@ def recursive_attach_unit_strings(smirnoff_data, units_to_attach):
     return smirnoff_data
 
 
-def get_molecule_parameterIDs(molecules, forcefield):
+def get_molecule_parameterIDs(
+    molecules: list["Molecule"], forcefield: "ForceField"
+) -> tuple[dict, dict]:
     """Process a list of molecules with a specified SMIRNOFF ffxml file and determine which parameters are used by
     which molecules, returning collated results.
 
     Parameters
     ----------
-    molecules : list of openff.toolkit.topology.Molecule
+    molecules
         List of molecules (with explicit hydrogens) to parse
-    forcefield : openff.toolkit.typing.engines.smirnoff.ForceField
+    forcefield
         The ForceField to apply
 
     Returns
     -------
-    parameters_by_molecule : dict
+    parameters_by_molecule
         Parameter IDs used in each molecule, keyed by isomeric SMILES
         generated from provided OEMols. Each entry in the dict is a list
         which does not necessarily have unique entries; i.e. parameter IDs
         which are used more than once will occur multiple times.
 
-    parameters_by_ID : dict
+    parameters_by_ID
         Molecules in which each parameter ID occur, keyed by parameter ID.
         Each entry in the dict is a set of isomeric SMILES for molecules
         in which that parameter occurs. No frequency information is stored.
@@ -704,8 +740,8 @@ def get_molecule_parameterIDs(molecules, forcefield):
     from openff.toolkit.topology import Topology
 
     # Create storage
-    parameters_by_molecule = dict()
-    parameters_by_ID = dict()
+    parameters_by_molecule: dict[str, list] = dict()
+    parameters_by_ID: dict[str, set[str]] = dict()
 
     # Generate isomeric SMILES for each molecule, ensuring all molecules are unique
     isosmiles = [molecule.to_smiles() for molecule in molecules]
@@ -713,7 +749,7 @@ def get_molecule_parameterIDs(molecules, forcefield):
     duplicates = set(
         smiles
         for smiles in isosmiles
-        if smiles in already_seen or already_seen.add(smiles)
+        if smiles in already_seen or already_seen.add(smiles)  # type: ignore[func-returns-value]
     )
     if len(duplicates) > 0:
         raise ValueError(
