@@ -32,6 +32,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   argument to `ParameterHandler.add_parameter`. Previously it was possible to make a force field with duplicate
   SMIRKS by loading it from file or combining multiple FFs, so this also lets you do it using the API.
 - [PR #1826](https://github.com/openforcefield/openff-toolkit/pull/1826): Allow writing molecules to `Path`s
+- [PR #1797](https://github.com/openforcefield/openff-toolkit/pull/1797): `Topology.from_pdb` can now load more file-like objects, including 
+`io.StringIO`.
+- [PR #1808](https://github.com/openforcefield/openff-toolkit/pull/1808): Improves default representation of ValenceDict.
 
 ### Improved documentation and warnings
 
@@ -40,6 +43,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1786](https://github.com/openforcefield/openff-toolkit/pull/1786): Describe contributing to documentation notebooks in developers guide.
 - [PR #1845](https://github.com/openforcefield/openff-toolkit/pull/1845): Update convert_all_strings_to_quantity docstring.
 - [PR #1849](https://github.com/openforcefield/openff-toolkit/pull/1849): Add "how are charges assigned?" section to FAQ. 
+
+### Tests updated
+- [PR #1836](https://github.com/openforcefield/openff-toolkit/pull/1836): Update tests to not directly call `numpy.random.random` any more (per [NEP 19](https://numpy.org/neps/nep-0019-rng-policy.html#numpy-random))
 
 ## 0.15.2
 
@@ -72,7 +78,7 @@ This release adds compatibility with QCFractal >=0.50.0, but removes compatibilt
 ### Bugfixes
 
 - [PR #1778](https://github.com/openforcefield/openff-toolkit/pull/1778): Ensures SD data tags are preserved in `Molecule.from_openeye` if the input is of type `oechem.OEGraphMol`.
-* [PR #1811](https://github.com/openforcefield/openff-toolkit/pull/1811): Preserves hierarchy data in `_SimpleMolecule.from_molecule`
+- [PR #1811](https://github.com/openforcefield/openff-toolkit/pull/1811): Preserves hierarchy data in `_SimpleMolecule.from_molecule`
 
 ### New features
 
