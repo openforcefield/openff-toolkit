@@ -40,6 +40,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1845](https://github.com/openforcefield/openff-toolkit/pull/1845): Update convert_all_strings_to_quantity docstring.
 - [PR #1849](https://github.com/openforcefield/openff-toolkit/pull/1849): Add "how are charges assigned?" section to FAQ. 
 
+### Tests updated
+- [PR #1836](https://github.com/openforcefield/openff-toolkit/pull/1836): Update tests to not directly call `numpy.random.random` any more (per [NEP 19](https://numpy.org/neps/nep-0019-rng-policy.html#numpy-random))
+
 ## 0.15.2
 
 ### New features
