@@ -1034,6 +1034,21 @@ class TestMolecule:
 
             Molecule.from_file(pathlib.Path(filename), file_format="sdf")
 
+    @pytest.mark.parametrize("toolkit", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
+    def test_to_pathlib_path(self, tmp_path, toolkit):
+
+        if toolkit == OpenEyeToolkitWrapper:
+            pytest.importorskip("openeye")
+        elif toolkit == RDKitToolkitWrapper:
+            pytest.importorskip("rdkit")
+
+        ethanol = create_ethanol()
+
+        filename = tmp_path / "tmp.sdf"
+        ethanol.to_file(filename, file_format="sdf", toolkit_registry=toolkit())
+
+        Molecule.from_file(filename.as_posix())
+
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_create_from_serialized(self, molecule):
         """Test standard constructor taking the output of Molecule.to_dict()."""

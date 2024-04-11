@@ -31,6 +31,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1852](https://github.com/openforcefield/openff-toolkit/pull/1852): Adds the `allow_duplicate_smirks` named
   argument to `ParameterHandler.add_parameter`. Previously it was possible to make a force field with duplicate
   SMIRKS by loading it from file or combining multiple FFs, so this also lets you do it using the API.
+- [PR #1826](https://github.com/openforcefield/openff-toolkit/pull/1826): Allow writing molecules to `Path`s
 - [PR #1797](https://github.com/openforcefield/openff-toolkit/pull/1797): `Topology.from_pdb` can now load more file-like objects, including 
 `io.StringIO`.
 - [PR #1808](https://github.com/openforcefield/openff-toolkit/pull/1808): Improves default representation of ValenceDict.
