@@ -2,6 +2,7 @@
 Tests for forcefield class
 
 """
+
 import copy
 import itertools
 import os
@@ -14,7 +15,6 @@ from numpy.testing import assert_almost_equal
 from openff.units.openmm import from_openmm, to_openmm
 from openmm import NonbondedForce, Platform, XmlSerializer, app
 from openmm import unit as openmm_unit
-from pydantic import ValidationError
 
 from openff.toolkit import unit
 from openff.toolkit._tests.create_molecules import (
@@ -1710,6 +1710,24 @@ class TestForceField(_ForceFieldFixtures):
             match=r" not found in ParameterList",
         ):
             force_field["vdW"][smirks]
+
+    def test_lookup_duplicate_parameter_type(self, force_field):
+        """Test that if a parameter SMIRKS appears twice, lookups will yield the second copy"""
+        first_bond = force_field["Bonds"][0]
+        force_field["Bonds"].add_parameter(
+            {
+                "smirks": first_bond.smirks,
+                "k": first_bond.k / 2,
+                "length": first_bond.length / 2,
+                "id": first_bond.id + "2",
+            },
+            allow_duplicate_smirks=True,
+        )
+        result = force_field["Bonds"][first_bond.smirks]
+        assert result == force_field["Bonds"].parameters[first_bond.smirks]
+        assert result.id == force_field["Bonds"][0].id + "2"
+        assert result.k == first_bond.k / 2
+        assert result.length == first_bond.length / 2
 
     @pytest.mark.parametrize(
         "to_deregister",
@@ -4007,6 +4025,14 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         )._fractional_bondorder_interpolation = "invalid method name"
         topology = Topology.from_molecules([mol])
 
+        # This error will be either from v1 of the package (if v1 is installed)
+        # or the faked v1 API (if v2 is installed). Ensure the v1 error or a
+        # mimick of it is imported
+        try:
+            from pydantic.v1 import ValidationError
+        except ImportError:
+            from pydantic import ValidationError
+
         # If important, this can be a custom exception instead of a verbose ValidationError
         with pytest.raises(
             ValidationError,
@@ -4067,6 +4093,7 @@ class TestForceFieldWithToolkits(_ForceFieldFixtures):
 
 class TestSmirnoffVersionConverter:
     @requires_openeye_mol2
+    @pytest.mark.slow
     @pytest.mark.parametrize(
         ("freesolv_id", "forcefield_version", "allow_undefined_stereo"),
         generate_freesolv_parameters_assignment_cases(),

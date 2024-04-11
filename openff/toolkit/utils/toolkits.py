@@ -19,6 +19,7 @@ Currently supported toolkits:
    * Change global variables from _INSTALLED to _AVAILABLE
 
 """
+
 __all__ = (
     "DEFAULT_AROMATICITY_MODEL",
     "ALLOWED_AROMATICITY_MODELS",
@@ -38,6 +39,7 @@ __all__ = (
     "OpenEyeToolkitWrapper",
     "RDKitToolkitWrapper",
     "AmberToolsToolkitWrapper",
+    "NAGLToolkitWrapper",
     "BuiltInToolkitWrapper",
     "ChargeMethodUnavailableError",
     "IncorrectNumConformersError",
@@ -85,6 +87,7 @@ from openff.toolkit.utils.exceptions import (
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
+from openff.toolkit.utils.nagl_wrapper import NAGLToolkitWrapper
 from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
 from openff.toolkit.utils.toolkit_registry import (
@@ -153,4 +156,5 @@ if not any_toolkits:  # pragma: no cover
             msg += "{} : {}\n".format(
                 wrapper._toolkit_name, wrapper._toolkit_installation_instructions
             )
+    # TODO: Make this a warning!?
     print(msg)

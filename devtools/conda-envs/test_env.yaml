@@ -24,7 +24,8 @@ dependencies:
   - openff-nagl-models ==0.1.0
     # Toolkit-specific
   - ambertools >=22
-  - rdkit
+    # https://github.com/rdkit/rdkit/issues/7221
+  - rdkit <2023.09.6
   - openeye-toolkits
     # Test-only/optional/dev/typing
   - pytest
@@ -36,12 +37,14 @@ dependencies:
   - bson
   - msgpack-python
   - qcelemental
-  - qcportal >=0.15, <0.50.0a0
+  - qcportal >=0.50
   - qcengine
   - nglview
   - mdtraj
   - nbval
-  - mypy
+  # No idea why this is necessary, see https://github.com/openforcefield/openff-toolkit/pull/1821
+  - nomkl
+  - mypy =1.8
   - typing_extensions
   - pydantic =1
   - pip:

@@ -9,11 +9,11 @@ if TYPE_CHECKING:
 class OpenFFToolkitException(Exception):
     """Base exception for custom exceptions raised by the OpenFF Toolkit"""
 
-    def __init__(self, msg):
+    def __init__(self, msg: str):
         super().__init__(msg)
         self.msg = msg
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.msg
 
 
@@ -119,6 +119,12 @@ class InvalidConformerError(OpenFFToolkitException):
     This error is raised when the conformer added to the molecule
     has a different connectivity to that already defined.
     or any other conformer related issues.
+    """
+
+
+class InvalidQCInputError(OpenFFToolkitException, AttributeError):
+    """
+    This error is raised when an input to Molecule.from_qcschema is invalid.
     """
 
 
@@ -361,6 +367,11 @@ class MissingConformersError(OpenFFToolkitException, ValueError):
     """Error raised when a molecule is missing conformer(s) in a context in which it is expected to have them."""
 
 
+class MissingCMILESError(OpenFFToolkitException, KeyError):
+    """Error raised when attempting to convert an QC input to an OFF Molecule, but the CMILES can't be found
+    or isn't present."""
+
+
 class UnsupportedMoleculeConversionError(OpenFFToolkitException):
     """Error raised when attempting to instantiate a Molecule with insufficient inputs."""
 
@@ -399,7 +410,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
     def __init__(
         self,
         msg: Optional[str] = None,
-        substructure_library: Optional[dict[str, tuple[str, list[str]]]] = None,
+        substructure_library: Optional[dict[str, list[tuple]]] = None,
         omm_top: Optional["OpenMMTopology"] = None,
         unassigned_bonds: Optional[list[tuple[int, int]]] = None,
         unassigned_atoms: Optional[list[int]] = None,

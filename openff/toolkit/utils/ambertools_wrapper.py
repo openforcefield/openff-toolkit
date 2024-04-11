@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 from collections import defaultdict
 from shutil import which
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 
@@ -37,12 +37,31 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         "The AmberTools toolkit (free and open source) can be found at "
         "https://anaconda.org/conda-forge/ambertools"
     )
+    _supported_charge_methods = {
+        "am1bcc": {
+            "antechamber_keyword": "bcc",
+            "min_confs": 1,
+            "max_confs": 1,
+            "rec_confs": 1,
+        },
+        "am1-mulliken": {
+            "antechamber_keyword": "mul",
+            "min_confs": 1,
+            "max_confs": 1,
+            "rec_confs": 1,
+        },
+        "gasteiger": {
+            "antechamber_keyword": "gas",
+            "min_confs": 0,
+            "max_confs": 0,
+            "rec_confs": 0,
+        },
+    }
+
+    SUPPORTED_CHARGE_METHODS = _supported_charge_methods
 
     def __init__(self):
         super().__init__()
-
-        self._toolkit_file_read_formats = []
-        self._toolkit_file_write_formats = []
 
         if not self.is_available():
             raise ToolkitUnavailableException(
@@ -66,7 +85,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Returns
         -------
-        is_installed : bool
+        is_installed
             True if AmberTools is installed, False otherwise.
 
         """
@@ -100,24 +119,24 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : openff.toolkit.topology.Molecule
+        molecule
             Molecule for which partial charges are to be computed
-        partial_charge_method : str, optional, default=None
+        partial_charge_method
             The charge model to use. One of ['gasteiger', 'am1bcc', 'am1-mulliken'].
             If None, 'am1-mulliken' will be used.
-        use_conformers : iterable of unit-wrapped numpy arrays, each
+        use_conformers
             with shape (n_atoms, 3) and dimension of distance. Optional, default = None
             List of unit-wrapped numpy arrays to use for partial charge calculation.
             If None, an appropriate number of conformers will be generated.
-        strict_n_conformers : bool, default=False
+        strict_n_conformers
             Whether to raise an exception if an invalid number of conformers is provided for
             the given charge method.
             If this is False and an invalid number of conformers is found, a warning will be raised.
-        normalize_partial_charges : bool, default=True
+        normalize_partial_charges
             Whether to offset partial charges so that they sum to the total formal charge of the molecule.
             This is used to prevent accumulation of rounding errors when the partial charge generation method has
             low precision.
-        _cls : class
+        _cls
             Molecule constructor
 
         Raises
@@ -138,34 +157,13 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
             # Standardize method name for string comparisons
             partial_charge_method = partial_charge_method.lower()
 
-        SUPPORTED_CHARGE_METHODS: dict[str, dict[str, Union[int, str]]] = {
-            "am1bcc": {
-                "antechamber_keyword": "bcc",
-                "min_confs": 1,
-                "max_confs": 1,
-                "rec_confs": 1,
-            },
-            "am1-mulliken": {
-                "antechamber_keyword": "mul",
-                "min_confs": 1,
-                "max_confs": 1,
-                "rec_confs": 1,
-            },
-            "gasteiger": {
-                "antechamber_keyword": "gas",
-                "min_confs": 0,
-                "max_confs": 0,
-                "rec_confs": 0,
-            },
-        }
-
-        if partial_charge_method not in SUPPORTED_CHARGE_METHODS:
+        if partial_charge_method not in self._supported_charge_methods:
             raise ChargeMethodUnavailableError(
                 f"partial_charge_method '{partial_charge_method}' is not available from AmberToolsToolkitWrapper. "
-                f"Available charge methods are {list(SUPPORTED_CHARGE_METHODS.keys())} "
+                f"Available charge methods are {self._supported_charge_methods}"
             )
 
-        charge_method = SUPPORTED_CHARGE_METHODS[partial_charge_method]
+        charge_method = self._supported_charge_methods[partial_charge_method]
 
         if _cls is None:
             _cls = Molecule
@@ -190,8 +188,8 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
             self._check_n_conformers(
                 mol_copy,
                 partial_charge_method=partial_charge_method,
-                min_confs=charge_method["min_confs"],  # type: ignore[arg-type]
-                max_confs=charge_method["max_confs"],  # type: ignore[arg-type]
+                min_confs=charge_method["min_confs"],
+                max_confs=charge_method["max_confs"],
                 strict_n_conformers=strict_n_conformers,
             )
 
@@ -287,7 +285,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        file_path : str
+        file_path
             The path to sqm.in
         """
 
@@ -323,15 +321,15 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        file_path : str
+        file_path
             File path for sqm output file
-        validate_elements : iterable of str
+        validate_elements
             The element symbols expected in molecule index order. A ValueError will be raised
             if the elements are not found in this order.
 
         Returns
         -------
-        bond_orders : dict[(int, int)]: float
+        bond_orders
             A dictionary where the keys are tuples of two atom indices and the values are
             floating-point bond orders. The keys are sorted in ascending order, such that
             the lower atom index is key[0] and the higher is key[1].
@@ -406,15 +404,14 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Parameters
         ----------
-        molecule : openff.toolkit.topology.molecule Molecule
+        molecule
             The molecule to assign wiberg bond orders to
-        bond_order_model : str, optional, default=None
+        bond_order_model
             The charge model to use. Only allowed value is 'am1-wiberg'. If None, 'am1-wiberg' will be used.
-        use_conformers : iterable of unit-wraapped np.array with shape (n_atoms, 3)
-            and dimension of distance, optional, default=None
+        use_conformers
             The conformers to use for fractional bond order calculation. If None, an appropriate
             number of conformers will be generated by an available ToolkitWrapper.
-        _cls : class
+        _cls
             Molecule constructor
         """
         from openff.toolkit.topology import Molecule
