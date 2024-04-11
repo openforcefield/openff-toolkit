@@ -769,6 +769,7 @@ class TestTopology:
     @requires_rdkit
     def test_from_pdb_input_types(self):
         import pathlib
+        from io import StringIO
 
         import openmm.app
 
@@ -779,6 +780,10 @@ class TestTopology:
         Topology.from_pdb(pathlib.Path(protein_path))
 
         with open(protein_path) as f:
+            Topology.from_pdb(f)
+
+        pdb_string = pathlib.Path(protein_path).read_text()
+        with StringIO(pdb_string) as f:
             Topology.from_pdb(f)
 
         with pytest.raises(ValueError, match="Unexpected type.*PDBFile"):
