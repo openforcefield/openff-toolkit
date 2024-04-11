@@ -57,12 +57,12 @@ class ValidatedList(list):
 
         Parameters
         ----------
-        seq : Iterable
+        seq
             A sequence of elements.
-        converter : callable or list[callable]
+        converter
             Functions that will be used to convert each new element of
             the list.
-        validator : callable or list[callable]
+        validator
             Functions that will be used to convert each new element of
             the list.
 
@@ -117,7 +117,7 @@ class ValidatedList(list):
     # TODO: Is there a cleaner way (getstate/setstate perhaps?) to allow FFs to be
     #       pickled?
     def __reduce__(self):
-        return (__class__, (list(self),), self.__dict__)
+        return (self.__class__, (list(self),), self.__dict__)
 
     def _convert_and_validate(self, seq):
         """Run all converters and the validator on the given sequence."""
@@ -181,12 +181,12 @@ class ValidatedDict(dict):
 
         Parameters
         ----------
-        mapping : Mapping
+        mapping
             A mapping of elements, probably a dict.
-        converter : callable or list[callable]
+        converter
             Functions that will be used to convert each new element of
             the dict.
-        validator : callable or list[callable]
+        validator
             Functions that will be used to convert each new element of
             the dict.
 
@@ -219,7 +219,7 @@ class ValidatedDict(dict):
     # TODO: Is there a cleaner way (getstate/setstate perhaps?) to allow FFs to be
     #       pickled?
     def __reduce__(self):
-        return (__class__, (dict(self),), self.__dict__)
+        return (self.__class__, (dict(self),), self.__dict__)
 
     def _convert_and_validate(self, mapping):
         """Run all converters and the validator on the given mapping."""

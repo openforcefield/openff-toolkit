@@ -20,7 +20,7 @@ jobs:
           - ubuntu-latest
           - macos-latest
         python-version:
-          - 3.10
+          - "3.10"
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt

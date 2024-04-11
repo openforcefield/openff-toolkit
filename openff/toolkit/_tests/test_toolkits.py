@@ -299,6 +299,20 @@ class TestOpenEyeToolkitWrapper:
 
     # TODO: Make separate smiles_add_H and smiles_explicit_H tests
 
+    def test_supported_charge_methods(self):
+        methods = OpenEyeToolkitWrapper().supported_charge_methods
+
+        assert "am1-mulliken" in methods
+        assert "am1bcc" in methods
+        assert "am1bccelf10" in methods
+        assert "am1elf10" in methods
+        assert "am1bccnosymspt" in methods
+        assert "mmff94" in methods
+        assert "gasteiger" in methods
+
+        assert "zeros" not in methods
+        assert "formal_charge" not in methods
+
     def test_smiles(self):
         """Test OpenEyeToolkitWrapper to_smiles() and from_smiles()"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
@@ -2049,10 +2063,44 @@ class TestOpenEyeToolkitWrapper:
                 smarts="foobar",
             )
 
+    def test_charge_method_api_continuity(self):
+        """Test rough continuity of OpenEyeToolkitWrapper.SUPPORTED_CHARGE_METHODS"""
+
+        assert OpenEyeToolkitWrapper.SUPPORTED_CHARGE_METHODS["gasteiger"] == {
+            "oe_charge_method": "OEGasteigerCharges",
+            "min_confs": 0,
+            "max_confs": 0,
+            "rec_confs": 0,
+        }
+        assert OpenEyeToolkitWrapper.SUPPORTED_CHARGE_METHODS["am1bcc"] == {
+            "oe_charge_method": "OEAM1BCCCharges",
+            "min_confs": 1,
+            "max_confs": 1,
+            "rec_confs": 1,
+        }
+
+        assert OpenEyeToolkitWrapper.SUPPORTED_CHARGE_METHODS["am1bccelf10"] == {
+            "oe_charge_method": "OEAM1BCCELF10Charges",
+            "min_confs": 1,
+            "max_confs": None,
+            "rec_confs": 500,
+        }
+
 
 @requires_rdkit
 class TestRDKitToolkitWrapper:
     """Test the RDKitToolkitWrapper"""
+
+    def test_supported_charge_methods(self):
+        methods = RDKitToolkitWrapper().supported_charge_methods
+
+        assert "mmff94" in methods
+        assert "gasteiger" in methods
+
+        assert "zeros" not in methods
+        assert "formal_charge" not in methods
+        assert "am1bcc" not in methods
+        assert "am1bccelf10" not in methods
 
     def test_smiles(self):
         """Test RDKitToolkitWrapper to_smiles() and from_smiles()"""
@@ -3384,11 +3432,30 @@ class TestRDKitToolkitWrapper:
         # TODO: Add read/write tests for gzipped files
         # TODO: Add write tests for all formats
 
+    def test_charge_method_api_continuity(self):
+        """Test rough continuity of RDKitToolkitWrapper.SUPPORTED_CHARGE_METHODS"""
+        assert isinstance(RDKitToolkitWrapper.SUPPORTED_CHARGE_METHODS, set)
+
+        assert "mmff94" in RDKitToolkitWrapper.SUPPORTED_CHARGE_METHODS
+        assert "gasteiger" in RDKitToolkitWrapper.SUPPORTED_CHARGE_METHODS
+
 
 @requires_ambertools
 @requires_rdkit
 class TestAmberToolsToolkitWrapper:
     """Test the AmberToolsToolkitWrapper"""
+
+    def test_supported_charge_methods(self):
+        methods = AmberToolsToolkitWrapper().supported_charge_methods
+
+        assert "gasteiger" in methods
+        assert "am1bcc" in methods
+        assert "am1-mulliken" in methods
+
+        assert "zeros" not in methods
+        assert "formal_charge" not in methods
+        assert "mmff94" not in methods
+        assert "am1bccelf10" not in methods
 
     def test_assign_partial_charges_am1bcc(self):
         """Test AmberToolsToolkitWrapper assign_partial_charges() with am1bcc"""
@@ -3913,6 +3980,20 @@ class TestAmberToolsToolkitWrapper:
 class TestBuiltInToolkitWrapper:
     """Test the BuiltInToolkitWrapper"""
 
+    def test_supported_charge_methods(self):
+        methods = BuiltInToolkitWrapper().supported_charge_methods
+
+        assert "am1-mulliken" not in methods
+        assert "am1bcc" not in methods
+        assert "am1bccelf10" not in methods
+        assert "am1elf10" not in methods
+        assert "am1bccnosymspt" not in methods
+        assert "mmff94" not in methods
+        assert "gasteiger" not in methods
+
+        assert "zeros" in methods
+        assert "formal_charge" in methods
+
     @pytest.mark.parametrize("partial_charge_method", ["zeros", "formal_charge"])
     def test_assign_partial_charges_neutral(self, partial_charge_method):
         """Test BuiltInToolkitWrapper assign_partial_charges()"""
@@ -4027,6 +4108,21 @@ class TestBuiltInToolkitWrapper:
                 use_conformers=molecule.conformers,
                 strict_n_conformers=True,
             )
+
+    def test_charge_method_api_continuity(self):
+        """Test rough continuity of BuiltinToolkitWrapper.PARTIAL_CHARGE_METHODS"""
+        assert isinstance(BuiltInToolkitWrapper.PARTIAL_CHARGE_METHODS, dict)
+
+        assert BuiltInToolkitWrapper.PARTIAL_CHARGE_METHODS["zeros"] == {
+            "rec_confs": 0,
+            "min_confs": 0,
+            "max_confs": 0,
+        }
+        assert BuiltInToolkitWrapper.PARTIAL_CHARGE_METHODS["formal_charge"] == {
+            "rec_confs": 0,
+            "min_confs": 0,
+            "max_confs": 0,
+        }
 
 
 class TestToolkitWrapper:

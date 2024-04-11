@@ -31,16 +31,16 @@ logger = logging.getLogger(__name__)
 SUPPORTED_PLUGIN_NAMES = ["handlers"]  # io_handlers could be supported in future.
 
 
-def _load_handler_plugins(handler_name: str, expected_type) -> list[type]:
+def _load_handler_plugins(handler_name: str, expected_type: type) -> list[type]:
     """Loads parameter handler plugins of a specified type which have been registered
     with the ``entrypoint`` plugin system.
 
     Parameters
     ----------
-    handler_name: str
+    handler_name
         The name of the hander plugin. This can currently be any of the names
         listed in ``SUPPORTED_PLUGIN_NAMES``.
-    expected_type: type
+    expected_type
         The expected class type of the plugin. E.g. when loading parameter io
         handler plugins the expected class type is ``ParameterIOHandler``. Any
         classes not matching the expected type will be skipped.
@@ -88,7 +88,6 @@ def load_handler_plugins() -> list[type[ParameterHandler]]:
 
     Returns
     -------
-    list of type of ParameterHandler
         The registered ``ParameterHandler`` plugins.
     """
     return _load_handler_plugins("handlers", ParameterHandler)

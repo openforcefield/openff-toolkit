@@ -1,4 +1,5 @@
 import importlib
+import pathlib
 import warnings
 from typing import TYPE_CHECKING, Optional
 
@@ -27,12 +28,17 @@ class NAGLToolkitWrapper(ToolkitWrapper):
     _toolkit_installation_instructions = (
         "See https://docs.openforcefield.org/projects/nagl/en/latest/installation.html"
     )
+    try:
+        from openff.nagl_models import list_available_nagl_models
+
+        _supported_charge_methods = {
+            pathlib.Path(path).name: dict() for path in list_available_nagl_models()
+        }
+    except ImportError:
+        _supported_charge_methods = dict()
 
     def __init__(self):
         super().__init__()
-
-        self._toolkit_file_read_formats = []
-        self._toolkit_file_write_formats = []
 
         if not self.is_available():
             raise ToolkitUnavailableException(
