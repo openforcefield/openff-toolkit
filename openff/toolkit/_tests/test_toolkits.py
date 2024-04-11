@@ -54,7 +54,7 @@ from openff.toolkit.utils.toolkits import (
     ToolkitWrapper,
 )
 
-_rng = np.random.default_rng(11223344)
+_rng = np.random.default_rng()
 
 
 def get_mini_drug_bank(toolkit_class, xfail_mols=None):
