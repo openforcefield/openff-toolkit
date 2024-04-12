@@ -54,6 +54,8 @@ from openff.toolkit.utils.toolkits import (
     ToolkitWrapper,
 )
 
+_rng = np.random.default_rng()
+
 
 def get_mini_drug_bank(toolkit_class, xfail_mols=None):
     """Read the mini drug bank sdf file with the toolkit and return the molecules"""
@@ -3064,8 +3066,8 @@ class TestRDKitToolkitWrapper:
 
     def test_elf_compute_rms_matrix(self, formic_acid_molecule: Molecule):
         """Test the computation of the ELF conformer RMS matrix."""
-        formic_acid_molecule.add_conformer(np.random.random((5, 3)) * unit.angstrom)
-        formic_acid_molecule.add_conformer(np.random.random((5, 3)) * unit.angstrom)
+        formic_acid_molecule.add_conformer(_rng.random((5, 3)) * unit.angstrom)
+        formic_acid_molecule.add_conformer(_rng.random((5, 3)) * unit.angstrom)
 
         rms_matrix = RDKitToolkitWrapper._elf_compute_rms_matrix(formic_acid_molecule)
 
@@ -3118,7 +3120,7 @@ class TestRDKitToolkitWrapper:
     ):
         """Test the greedy selection of 'diverse' ELF conformers."""
 
-        formic_acid_molecule.add_conformer(np.random.random((5, 3)) * unit.angstrom)
+        formic_acid_molecule.add_conformer(_rng.random((5, 3)) * unit.angstrom)
         formic_acid_molecule.add_conformer(formic_acid_molecule.conformers[0] * 1.1)
         formic_acid_molecule.add_conformer(formic_acid_molecule.conformers[0] * 1.2)
 
