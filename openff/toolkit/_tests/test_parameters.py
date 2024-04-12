@@ -1943,6 +1943,21 @@ class TestVirtualSiteHandler:
     Test the creation of a VirtualSiteHandler and the implemented VirtualSiteTypes
     """
 
+    def test_getitem_forbidden(self, opc):
+        smirks = list(opc["VirtualSites"]._parameters)[0].smirks
+
+        with pytest.raises(
+            NotImplementedError,
+            match="uniquely identify",
+        ):
+            opc["VirtualSites"][smirks]
+
+        with pytest.raises(
+            NotImplementedError,
+            match="uniquely identify",
+        ):
+            opc["VirtualSites"].parameters[smirks]
+
     @pytest.mark.parametrize(
         "parameter, expected_index",
         [

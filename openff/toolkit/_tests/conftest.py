@@ -126,3 +126,10 @@ def pytest_collection_modifyitems(config, items):
                     "reason", ""
                 )
                 item.add_marker(pytest.mark.xfail(reason=reason))
+
+
+@pytest.fixture
+def opc():
+    from openff.toolkit import ForceField
+
+    return ForceField("opc.offxml")

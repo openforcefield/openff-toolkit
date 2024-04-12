@@ -529,11 +529,8 @@ class TestTopology:
         for omm_atom, off_atom in zip(pdbfile.topology.atoms(), topology.atoms):
             assert omm_atom.name == off_atom.name
 
-    def test_from_openmm_virtual_sites(self):
-        from openff.toolkit import ForceField
-
+    def test_from_openmm_virtual_sites(self, opc):
         water = Molecule.from_mapped_smiles("[O:1]([H:2])[H:3]")
-        opc = ForceField("opc-1.0.1.offxml")
 
         openmm_topology = opc.create_interchange([water]).to_openmm_topology()
 
