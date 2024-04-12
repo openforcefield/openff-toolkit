@@ -13,7 +13,7 @@ import re
 import tempfile
 from collections import defaultdict
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import numpy as np
 from cachetools import LRUCache, cached
@@ -478,7 +478,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     def from_file(
         self,
-        file_path: str,
+        file_path: Union[str, pathlib.Path],
         file_format: str,
         allow_undefined_stereo: bool = False,
         _cls=None,
@@ -523,21 +523,23 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         from openeye import oechem
 
         if isinstance(file_path, pathlib.Path):
-            file_path: str = file_path.as_posix()  # type: ignore[no-redef]
+            _file_path = file_path.as_posix()
+        else:
+            _file_path = file_path
 
         oeformat = get_oeformat(file_format)
-        ifs = oechem.oemolistream(file_path)
+        ifs = oechem.oemolistream(_file_path)
         if not ifs.IsValid():
             # Get Python to report an error message, if possible.
             # This can distinguish between FileNotFound, IsADirectoryError, etc.
-            open(file_path).close()
+            open(_file_path).close()
             # If that worked, then who knows. Fail anyway.
             raise OSError("Unable to open file")
 
         ifs.SetFormat(oeformat)
 
         return self._read_oemolistream_molecules(
-            ifs, allow_undefined_stereo, file_path=file_path, _cls=_cls
+            ifs, allow_undefined_stereo, file_path=_file_path, _cls=_cls
         )
 
     def from_file_obj(
@@ -615,7 +617,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             file_data = path.read_text()
             file_obj.write(file_data)
 
-    def to_file(self, molecule: "Molecule", file_path: str, file_format: str):
+    def to_file(
+        self,
+        molecule: "Molecule",
+        file_path: Union[str, pathlib.Path],
+        file_format: str,
+    ):
         """
         Writes an OpenFF Molecule to a file-like object
 
@@ -630,6 +637,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         """
         from openeye import oechem
+
+        if isinstance(file_path, pathlib.Path):
+            file_path = file_path.as_posix()
 
         oemol = self.to_openeye(molecule)
         ofs = oechem.oemolostream(file_path)
@@ -722,7 +732,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         return False
 
     def _read_oemolistream_molecules(
-        self, oemolistream, allow_undefined_stereo: bool, file_path=None, _cls=None
+        self,
+        oemolistream,
+        allow_undefined_stereo: bool,
+        file_path: Optional[str] = None,
+        _cls=None,
     ):
         """
         Reads and return the Molecules in a OEMol input stream.
