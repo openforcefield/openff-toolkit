@@ -3616,39 +3616,6 @@ class VirtualSiteHandler(_NonbondedHandler):
 
             super().__init__(**kwargs)
 
-        @classmethod
-        def _supports_in_plane_angle(cls, type_: _VirtualSiteType) -> bool:
-            return type_ in {"MonovalentLonePair"}
-
-        @classmethod
-        def _supports_out_of_plane_angle(cls, type_: _VirtualSiteType) -> bool:
-            return type_ in {"MonovalentLonePair", "DivalentLonePair"}
-
-        @classmethod
-        def _expected_num_charge_increments(cls, type_: _VirtualSiteType) -> int:
-            if type_ == "BondCharge":
-                return 2
-            elif (type_ == "MonovalentLonePair") or (type_ == "DivalentLonePair"):
-                return 3
-            elif type_ == "TrivalentLonePair":
-                return 4
-            raise NotImplementedError()
-
-        @classmethod
-        def _supports_match(
-            cls, type_: _VirtualSiteType, match: str, is_in_plane: Optional[bool] = None
-        ) -> bool:
-            is_in_plane = True if is_in_plane is None else is_in_plane
-
-            if match == "once":
-                return type_ == "TrivalentLonePair" or (
-                    type_ == "DivalentLonePair" and is_in_plane
-                )
-            elif match == "all_permutations":
-                return type_ in {"BondCharge", "MonovalentLonePair", "DivalentLonePair"}
-
-            raise NotImplementedError()
-
     _TAGNAME = "VirtualSites"
     _INFOTYPE = VirtualSiteType
     _DEPENDENCIES = [
