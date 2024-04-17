@@ -1675,7 +1675,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         assert None not in oemol_bonds
 
         # Retain conformations, if present
-        if molecule._conformers is not None:
+        if molecule.n_conformers != 0:
             oemol.DeleteConfs()
             for conf in molecule._conformers:
                 # OE needs a 1 x (3*n_Atoms) double array as input
