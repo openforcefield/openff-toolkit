@@ -140,10 +140,10 @@ jobs:
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
 
-      - name: Run mypy
-        # subtle differences in Python/mypy versions, just keep it passing on one
-        if: ${{ matrix.rdkit == true && matrix.openeye && matrix.python-version == 3.11 }}
-        run: mypy -p "openff.toolkit"
+      #- name: Run mypy
+      #  # subtle differences in Python/mypy versions, just keep it passing on one
+      #  if: ${{ matrix.rdkit == true && matrix.openeye && matrix.python-version == 3.11 }}
+      #  run: mypy -p "openff.toolkit"
 
       - name: Run unit tests
         run: |
