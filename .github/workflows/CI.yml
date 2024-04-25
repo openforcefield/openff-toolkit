@@ -28,14 +28,16 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-12]
-        python-version: ["3.11"]
-        rdkit: [true]
-        openeye: [true]
+        python-version: ["3.10", "3.11"]
+        rdkit: [true, false]
+        openeye: [true, false]
         exclude:
           - rdkit: false
             openeye: false
           - openeye: true
             python-version: "3.10"
+          - openeye: true
+            python-version: "3.11"
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
@@ -140,10 +142,10 @@ jobs:
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
 
-      #- name: Run mypy
-      #  # subtle differences in Python/mypy versions, just keep it passing on one
-      #  if: ${{ matrix.rdkit == true && matrix.openeye && matrix.python-version == 3.11 }}
-      #  run: mypy -p "openff.toolkit"
+      - name: Run mypy
+        # subtle differences in Python/mypy versions, just keep it passing on one
+        if: ${{ matrix.rdkit == true && matrix.openeye && matrix.python-version == 3.11 }}
+        run: mypy -p "openff.toolkit"
 
       - name: Run unit tests
         run: |
