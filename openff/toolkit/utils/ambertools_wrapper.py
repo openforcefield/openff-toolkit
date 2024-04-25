@@ -11,6 +11,7 @@ from shutil import which
 from typing import TYPE_CHECKING, Optional
 
 import numpy as np
+from openff.utilities.provenance import get_ambertools_version
 
 from openff.toolkit import Quantity, unit
 from openff.toolkit.utils import base_wrapper, rdkit_wrapper
@@ -69,10 +70,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
                 f"available. {self._toolkit_installation_instructions}"
             )
 
-        # TODO: More reliable way to extract AmberTools version
-        out = subprocess.check_output(["antechamber", "-L"])
-        ambertools_version = out.decode("utf-8").split("\n")[1].split()[3].strip(":")
-        self._toolkit_version = ambertools_version
+        self._toolkit_version = get_ambertools_version()
 
         # TODO: Find AMBERHOME or executable home, checking miniconda if needed
         # Store an instance of an RDKitToolkitWrapper for file I/O
