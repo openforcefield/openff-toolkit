@@ -14,6 +14,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+- [PR #1868](https://github.com/openforcefield/openff-toolkit/pull/1868): Fixes issue
+  [#1868](https://github.com/openforcefield/openff-toolkit/issues/1868) in which `Topology.set_positions`
+  would sometimes fail if it contained `_SimpleMolecule`s.
+
 ### New features
 
 ### Improved documentation and warnings
