@@ -12,10 +12,17 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
-* #1798 Adds type annotations to most of the codebase.
-* #1834 Adds `Molecule.get_available_charge_methods` and `BaseWrapper.supported_charge_methods`.
-
 ### API-breaking changes
+
+### Behavior changes
+
+### Bugfixes
+
+### New features
+
+### Improved documentation and warnings
+
+## 0.16.0
 
 ### Behavior changes
 
@@ -27,7 +34,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
-- [PR #1846](https://github.com/openforcefield/openff-toolkit/pull/1846): Band-aids issue [#1842](https://github.com/openforcefield/openff-toolkit/issues/1846), where the Toolkit Showcase example would sporadically fail when run with one core.
+- [PR #1846](https://github.com/openforcefield/openff-toolkit/pull/1846): Band-aids issue 
+  [#1842](https://github.com/openforcefield/openff-toolkit/issues/1846), where the Toolkit Showcase example would 
+  sporadically fail when run with one core.
 
 ### New features
 
@@ -37,8 +46,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   SMIRKS by loading it from file or combining multiple FFs, so this also lets you do it using the API.
 - [PR #1826](https://github.com/openforcefield/openff-toolkit/pull/1826): Allow writing molecules to `Path`s
 - [PR #1797](https://github.com/openforcefield/openff-toolkit/pull/1797): `Topology.from_pdb` can now load more file-like objects, including 
-`io.StringIO`.
+  `io.StringIO`.
 - [PR #1808](https://github.com/openforcefield/openff-toolkit/pull/1808): Improves default representation of ValenceDict.
+- [PR #1834](https://github.com/openforcefield/openff-toolkit/pull/1834): Adds `Molecule.get_available_charge_methods` and `BaseWrapper.supported_charge_methods`.
+- [PR #1837](https://github.com/openforcefield/openff-toolkit/pull/1837): Decouples vdW and virtual site parameters.
+
 
 ### Improved documentation and warnings
 
@@ -47,6 +59,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1786](https://github.com/openforcefield/openff-toolkit/pull/1786): Describe contributing to documentation notebooks in developers guide.
 - [PR #1845](https://github.com/openforcefield/openff-toolkit/pull/1845): Update convert_all_strings_to_quantity docstring.
 - [PR #1849](https://github.com/openforcefield/openff-toolkit/pull/1849): Add "how are charges assigned?" section to FAQ. 
+- [PR #1798](https://github.com/openforcefield/openff-toolkit/pull/1798): Adds type annotations to most of the codebase.
+
 
 ### Tests updated
 - [PR #1836](https://github.com/openforcefield/openff-toolkit/pull/1836): Update tests to not directly call `numpy.random.random` any more (per [NEP 19](https://numpy.org/neps/nep-0019-rng-policy.html#numpy-random))

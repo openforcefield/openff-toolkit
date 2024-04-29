@@ -27,8 +27,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        python-version: ["3.9", "3.10", "3.11"]
+        os: [ubuntu-latest, macos-12]
+        python-version: ["3.10", "3.11"]
         rdkit: [true, false]
         openeye: [true, false]
         exclude:
@@ -110,7 +110,7 @@ jobs:
         run: |
           if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
             for cpkg in ${{ env.PACKAGES_TO_REMOVE }}; do
-              if [[ $(conda list | grep $cpkg) ]]; then micromamba remove --force $cpkg --yes ; fi
+              if [[ $(micromamba list | grep $cpkg) ]]; then micromamba remove --force $cpkg --yes ; fi
             done
           fi
 
@@ -135,8 +135,8 @@ jobs:
 
       - name: Environment Information
         run: |
-          conda info
-          conda list
+          micromamba info
+          micromamba list
 
       - name: Check links
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}

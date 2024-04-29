@@ -51,6 +51,7 @@ __all__ = [
     "ChargeIncrementType",
     "VirtualSiteType",
 ]
+
 import copy
 import functools
 import inspect
@@ -59,7 +60,7 @@ import re
 from collections import defaultdict
 from typing import Any, Callable, Literal, Optional, Union, cast, get_args
 
-import numpy as np
+import numpy
 from openff.units.units import Unit
 from packaging.version import Version
 
@@ -278,7 +279,7 @@ class ParameterAttribute:
     >>> my_par.attr_required
     Traceback (most recent call last):
     ...
-    AttributeError: 'MyParameter' object has no attribute '_attr_required'
+    AttributeError: 'MyParameter' object has no attribute '_attr_required'. Did you mean: 'attr_required'?
 
     The attribute allow automatic conversion and validation of units.
 
@@ -3436,23 +3437,176 @@ _VirtualSiteType = Literal[
 ]
 
 
+class _BaseVirtualSiteType(ParameterType):
+    """
+    Handle virtual site parameters, including geometry and electrostatics, but not vdW interactions.
+
+    .. warning :: This API is experimental and subject to change.
+    """
+
+    _ELEMENT_NAME = "VirtualSite"
+
+    name = ParameterAttribute(default="EP", converter=str)
+    type = ParameterAttribute(converter=str)
+
+    match = ParameterAttribute(converter=str)
+
+    distance = ParameterAttribute(unit=unit.angstrom)
+    outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
+    inPlaneAngle = ParameterAttribute(unit=unit.degree)
+
+    charge_increment = IndexedParameterAttribute(unit=unit.elementary_charge)
+
+    @property
+    def parent_index(self) -> int:
+        """Returns the index of the atom matched by the SMIRKS pattern that should
+        be considered the 'parent' to the virtual site.
+        A value of ``0`` corresponds to the atom matched by the ``:1`` selector in
+        the SMIRKS pattern, a value ``2`` the atom matched by ``:2`` and so on.
+        """
+        return self.type_to_parent_index(self.type)
+
+    @classmethod
+    def type_to_parent_index(cls, type_: _VirtualSiteType) -> int:
+        """Returns the index of the atom matched by the SMIRKS pattern that should
+        be considered the 'parent' to a given type of virtual site.
+        A value of ``0`` corresponds to the atom matched by the ``:1`` selector in
+        the SMIRKS pattern, a value ``2`` the atom matched by ``:2`` and so on.
+        """
+
+        if type_.replace("VirtualSite", "") in get_args(_VirtualSiteType):
+            return 0
+
+        raise NotImplementedError()
+
+    @outOfPlaneAngle.converter  # type: ignore[no-redef]
+    def outOfPlaneAngle(self, attr, value):
+        if value == "None":
+            return
+
+        supports_out_of_plane_angle = self._supports_out_of_plane_angle(self.type)
+
+        if not supports_out_of_plane_angle and value is not None:
+            raise SMIRNOFFSpecError(
+                f"'{self.type}' sites do not support `outOfPlaneAngle`"
+            )
+        elif supports_out_of_plane_angle:
+            return _validate_units(attr, value, unit.degrees)
+
+        return value
+
+    @inPlaneAngle.converter  # type: ignore[no-redef]
+    def inPlaneAngle(self, attr, value):
+        if value == "None":
+            return
+
+        supports_in_plane_angle = self._supports_in_plane_angle(self.type)
+
+        if not supports_in_plane_angle and value is not None:
+            raise SMIRNOFFSpecError(
+                f"'{self.type}' sites do not support `inPlaneAngle`"
+            )
+        elif supports_in_plane_angle:
+            return _validate_units(attr, value, unit.degrees)
+
+        return value
+
+    def __init__(self, **kwargs):
+        self._add_default_init_kwargs(kwargs)
+        super().__init__(**kwargs)
+
+    @classmethod
+    def _add_default_init_kwargs(cls, kwargs):
+        """Adds any missing default values to the ``kwargs`` dictionary, and
+        partially validates any provided values that aren't easily validated with
+        converters.
+        """
+
+        type_ = kwargs.get("type", None)
+
+        if type_ is None:
+            raise SMIRNOFFSpecError("the `type` keyword is missing")
+        if type_ not in get_args(_VirtualSiteType):
+            raise SMIRNOFFSpecError(f"'{type_}' is not a supported virtual site type")
+
+        if "charge_increment" in kwargs:
+            expected_num_charge_increments = cls._expected_num_charge_increments(type_)
+            num_charge_increments = len(kwargs["charge_increment"])
+            if num_charge_increments != expected_num_charge_increments:
+                raise SMIRNOFFSpecError(
+                    f"'{type_}' virtual sites expect exactly {expected_num_charge_increments} "
+                    f"charge increments, but got {kwargs['charge_increment']} "
+                    f"(length {num_charge_increments}) instead."
+                )
+
+        supports_in_plane_angle = cls._supports_in_plane_angle(type_)
+        supports_out_of_plane_angle = cls._supports_out_of_plane_angle(type_)
+
+        if not supports_out_of_plane_angle:
+            kwargs["outOfPlaneAngle"] = kwargs.get("outOfPlaneAngle", None)
+        if not supports_in_plane_angle:
+            kwargs["inPlaneAngle"] = kwargs.get("inPlaneAngle", None)
+
+        match = kwargs.get("match", None)
+
+        if match is None:
+            raise SMIRNOFFSpecError("the `match` keyword is missing")
+
+        out_of_plane_angle = kwargs.get("outOfPlaneAngle", 0.0 * unit.degree)
+        is_in_plane = (
+            None
+            if not supports_out_of_plane_angle
+            else numpy.isclose(out_of_plane_angle.m_as(unit.degree), 0.0)
+        )
+
+        if not cls._supports_match(type_, match, is_in_plane):
+            raise SMIRNOFFSpecError(
+                f"match='{match}' not supported with type='{type_}'"
+                + ("" if is_in_plane is None else f" and is_in_plane={is_in_plane}")
+            )
+
+    @classmethod
+    def _supports_in_plane_angle(cls, type_: _VirtualSiteType) -> bool:
+        return type_ in {"MonovalentLonePair"}
+
+    @classmethod
+    def _supports_out_of_plane_angle(cls, type_: _VirtualSiteType) -> bool:
+        return type_ in {"MonovalentLonePair", "DivalentLonePair"}
+
+    @classmethod
+    def _expected_num_charge_increments(cls, type_: _VirtualSiteType) -> int:
+        if type_ == "BondCharge":
+            return 2
+        elif (type_ == "MonovalentLonePair") or (type_ == "DivalentLonePair"):
+            return 3
+        elif type_ == "TrivalentLonePair":
+            return 4
+        raise NotImplementedError()
+
+    @classmethod
+    def _supports_match(
+        cls, type_: _VirtualSiteType, match: str, is_in_plane: Optional[bool] = None
+    ) -> bool:
+        is_in_plane = True if is_in_plane is None else is_in_plane
+
+        if match == "once":
+            return type_ == "TrivalentLonePair" or (
+                type_ == "DivalentLonePair" and is_in_plane
+            )
+        elif match == "all_permutations":
+            return type_ in {"BondCharge", "MonovalentLonePair", "DivalentLonePair"}
+
+        raise NotImplementedError()
+
+
 class VirtualSiteHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<VirtualSites>`` tags
     TODO: Add example usage/documentation
     .. warning :: This API is experimental and subject to change.
     """
 
-    class VirtualSiteType(vdWHandler.vdWType):
-        _ELEMENT_NAME = "VirtualSite"
-
-        name = ParameterAttribute(default="EP", converter=str)
-        type = ParameterAttribute(converter=str)
-
-        match = ParameterAttribute(converter=str)
-
-        distance = ParameterAttribute(unit=unit.angstrom)
-        outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
-        inPlaneAngle = ParameterAttribute(unit=unit.degree)
+    class VirtualSiteType(_BaseVirtualSiteType, vdWHandler.vdWType):
+        """Store virtual site parameters (geometry and electrostatics) and vdW interactions."""
 
         epsilon = ParameterAttribute(
             default=0.0 * unit.kilocalorie_per_mole, unit=unit.kilocalorie_per_mole
@@ -3460,157 +3614,15 @@ class VirtualSiteHandler(_NonbondedHandler):
         sigma = ParameterAttribute(default=1.0 * unit.angstrom, unit=unit.angstrom)
         rmin_half = ParameterAttribute(default=None, unit=unit.angstrom)
 
-        charge_increment = IndexedParameterAttribute(unit=unit.elementary_charge)
-
-        @property
-        def parent_index(self) -> int:
-            """Returns the index of the atom matched by the SMIRKS pattern that should
-            be considered the 'parent' to the virtual site.
-            A value of ``0`` corresponds to the atom matched by the ``:1`` selector in
-            the SMIRKS pattern, a value ``2`` the atom matched by ``:2`` and so on.
-            """
-            return self.type_to_parent_index(self.type)
-
-        @classmethod
-        def type_to_parent_index(cls, type_: _VirtualSiteType) -> int:
-            """Returns the index of the atom matched by the SMIRKS pattern that should
-            be considered the 'parent' to a given type of virtual site.
-            A value of ``0`` corresponds to the atom matched by the ``:1`` selector in
-            the SMIRKS pattern, a value ``2`` the atom matched by ``:2`` and so on.
-            """
-
-            if type_.replace("VirtualSite", "") in get_args(_VirtualSiteType):
-                return 0
-
-            raise NotImplementedError()
-
-        @outOfPlaneAngle.converter  # type: ignore[no-redef]
-        def outOfPlaneAngle(self, attr, value):
-            if value == "None":
-                return
-
-            supports_out_of_plane_angle = self._supports_out_of_plane_angle(self.type)
-
-            if not supports_out_of_plane_angle and value is not None:
-                raise SMIRNOFFSpecError(
-                    f"'{self.type}' sites do not support `outOfPlaneAngle`"
-                )
-            elif supports_out_of_plane_angle:
-                return _validate_units(attr, value, unit.degrees)
-
-            return value
-
-        @inPlaneAngle.converter  # type: ignore[no-redef]
-        def inPlaneAngle(self, attr, value):
-            if value == "None":
-                return
-
-            supports_in_plane_angle = self._supports_in_plane_angle(self.type)
-
-            if not supports_in_plane_angle and value is not None:
-                raise SMIRNOFFSpecError(
-                    f"'{self.type}' sites do not support `inPlaneAngle`"
-                )
-            elif supports_in_plane_angle:
-                return _validate_units(attr, value, unit.degrees)
-
-            return value
-
         def __init__(self, **kwargs):
-            self._add_default_init_kwargs(kwargs)
-            super().__init__(**kwargs)
-
-        @classmethod
-        def _add_default_init_kwargs(cls, kwargs):
-            """Adds any missing default values to the ``kwargs`` dictionary, and
-            partially validates any provided values that aren't easily validated with
-            converters.
-            """
-
-            type_ = kwargs.get("type", None)
-
-            if type_ is None:
-                raise SMIRNOFFSpecError("the `type` keyword is missing")
-            if type_ not in get_args(_VirtualSiteType):
-                raise SMIRNOFFSpecError(
-                    f"'{type_}' is not a supported virtual site type"
-                )
-
-            if "charge_increment" in kwargs:
-                expected_num_charge_increments = cls._expected_num_charge_increments(
-                    type_
-                )
-                num_charge_increments = len(kwargs["charge_increment"])
-                if num_charge_increments != expected_num_charge_increments:
-                    raise SMIRNOFFSpecError(
-                        f"'{type_}' virtual sites expect exactly {expected_num_charge_increments} "
-                        f"charge increments, but got {kwargs['charge_increment']} "
-                        f"(length {num_charge_increments}) instead."
-                    )
-
-            supports_in_plane_angle = cls._supports_in_plane_angle(type_)
-            supports_out_of_plane_angle = cls._supports_out_of_plane_angle(type_)
-
-            if not supports_out_of_plane_angle:
-                kwargs["outOfPlaneAngle"] = kwargs.get("outOfPlaneAngle", None)
-            if not supports_in_plane_angle:
-                kwargs["inPlaneAngle"] = kwargs.get("inPlaneAngle", None)
-
-            match = kwargs.get("match", None)
-
-            if match is None:
-                raise SMIRNOFFSpecError("the `match` keyword is missing")
-
-            out_of_plane_angle = kwargs.get("outOfPlaneAngle", 0.0 * unit.degree)
-            is_in_plane = (
-                None
-                if not supports_out_of_plane_angle
-                else np.isclose(out_of_plane_angle.m_as(unit.degree), 0.0)
-            )
-
-            if not cls._supports_match(type_, match, is_in_plane):
-                raise SMIRNOFFSpecError(
-                    f"match='{match}' not supported with type='{type_}'"
-                    + ("" if is_in_plane is None else f" and is_in_plane={is_in_plane}")
-                )
-
             if "rmin_half" not in kwargs:
                 kwargs["sigma"] = kwargs.get("sigma", 0.0 * unit.angstrom)
 
             kwargs["epsilon"] = kwargs.get("epsilon", 0.0 * unit.kilocalorie_per_mole)
 
-        @classmethod
-        def _supports_in_plane_angle(cls, type_: _VirtualSiteType) -> bool:
-            return type_ in {"MonovalentLonePair"}
+            self._add_default_init_kwargs(kwargs)
 
-        @classmethod
-        def _supports_out_of_plane_angle(cls, type_: _VirtualSiteType) -> bool:
-            return type_ in {"MonovalentLonePair", "DivalentLonePair"}
-
-        @classmethod
-        def _expected_num_charge_increments(cls, type_: _VirtualSiteType) -> int:
-            if type_ == "BondCharge":
-                return 2
-            elif (type_ == "MonovalentLonePair") or (type_ == "DivalentLonePair"):
-                return 3
-            elif type_ == "TrivalentLonePair":
-                return 4
-            raise NotImplementedError()
-
-        @classmethod
-        def _supports_match(
-            cls, type_: _VirtualSiteType, match: str, is_in_plane: Optional[bool] = None
-        ) -> bool:
-            is_in_plane = True if is_in_plane is None else is_in_plane
-
-            if match == "once":
-                return type_ == "TrivalentLonePair" or (
-                    type_ == "DivalentLonePair" and is_in_plane
-                )
-            elif match == "all_permutations":
-                return type_ in {"BondCharge", "MonovalentLonePair", "DivalentLonePair"}
-
-            raise NotImplementedError()
+            super().__init__(**kwargs)
 
     _TAGNAME = "VirtualSites"
     _INFOTYPE = VirtualSiteType
