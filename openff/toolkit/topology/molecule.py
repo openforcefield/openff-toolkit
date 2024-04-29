@@ -4186,10 +4186,8 @@ class FrozenMolecule(Serializable):
                 f"(supported formats: {supported_formats})"
             )
 
-        # Write file
-        if type(file_path) is str:
-            # Open file for writing
-            toolkit.to_file(self, file_path, file_format)  # type: ignore[attr-defined]
+        if isinstance(file_path, (str, pathlib.Path)):
+            toolkit.to_file(self, file_path, file_format)
         else:
             toolkit.to_file_obj(self, file_path, file_format)  # type: ignore[attr-defined]
 

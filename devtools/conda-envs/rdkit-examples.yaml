@@ -44,4 +44,4 @@ dependencies:
   - mdtraj
   - pdbfixer
   - openmmforcefields >=0.11.2
-  - gromacs =2023.3=nompi_*_101
+  - gromacs >=2023.3
