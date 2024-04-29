@@ -18,6 +18,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Improved documentation and warnings
 
+- [PR #1870](https://github.com/openforcefield/openff-toolkit/pull/1870): Updates examples to use openff-2.2.0, 
+  and modernizes use of some API points. 
+
 ## 0.16.0
 
 ### Behavior changes
