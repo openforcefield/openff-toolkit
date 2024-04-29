@@ -6,6 +6,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+
+* #1861 Forbid looking up virtual site parameters by SMIRKS, since a valid SMIRNOFF force field 
+  can have several virtual site parameters with identical SMIRKS.
+
 ## Current development
 
 * #1798 Adds type annotations to most of the codebase.
