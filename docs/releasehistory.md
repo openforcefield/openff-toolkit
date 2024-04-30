@@ -18,10 +18,52 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Improved documentation and warnings
 
-- [PR #1795](https://github.com/openforcefield/openff-toolkit/pull/1795): Add `NAGLToolkitWrapper` to API reference
-- [PR #1796](https://github.com/openforcefield/openff-toolkit/pull/1796): Update docs tooling and fix warnings
+- [PR #1870](https://github.com/openforcefield/openff-toolkit/pull/1870): Updates examples to use openff-2.2.0, 
+  and modernizes use of some API points. 
 - [PR #1787](https://github.com/openforcefield/openff-toolkit/pull/1787): Make toolkit wrapper documentation more discoverable
 
+## 0.16.0
+
+### Behavior changes
+
+- [PR #1852](https://github.com/openforcefield/openff-toolkit/pull/1852): Fixes issue 
+  [#1363](https://github.com/openforcefield/openff-toolkit/issues/1363): If multiple parameters have identical 
+  SMIRKS, calls to `ParameterHandler[smirks]` and `ParameterList[smirks]` will now return the LAST parameter 
+  with a matching SMIRKS. Previously this would return the FIRST parameter with a matching SMIRKS, which was 
+  a confusing behavior given SMIRNOFF hierarchy rules.
+
+### Bugfixes
+
+- [PR #1846](https://github.com/openforcefield/openff-toolkit/pull/1846): Band-aids issue 
+  [#1842](https://github.com/openforcefield/openff-toolkit/issues/1846), where the Toolkit Showcase example would 
+  sporadically fail when run with one core.
+
+### New features
+
+- [PR #1827](https://github.com/openforcefield/openff-toolkit/pull/1827): Adds `Topology.clear_positions`
+- [PR #1852](https://github.com/openforcefield/openff-toolkit/pull/1852): Adds the `allow_duplicate_smirks` named
+  argument to `ParameterHandler.add_parameter`. Previously it was possible to make a force field with duplicate
+  SMIRKS by loading it from file or combining multiple FFs, so this also lets you do it using the API.
+- [PR #1826](https://github.com/openforcefield/openff-toolkit/pull/1826): Allow writing molecules to `Path`s
+- [PR #1797](https://github.com/openforcefield/openff-toolkit/pull/1797): `Topology.from_pdb` can now load more file-like objects, including 
+  `io.StringIO`.
+- [PR #1808](https://github.com/openforcefield/openff-toolkit/pull/1808): Improves default representation of ValenceDict.
+- [PR #1834](https://github.com/openforcefield/openff-toolkit/pull/1834): Adds `Molecule.get_available_charge_methods` and `BaseWrapper.supported_charge_methods`.
+- [PR #1837](https://github.com/openforcefield/openff-toolkit/pull/1837): Decouples vdW and virtual site parameters.
+
+
+### Improved documentation and warnings
+
+- [PR #1795](https://github.com/openforcefield/openff-toolkit/pull/1795): Add `NAGLToolkitWrapper` to API reference
+- [PR #1796](https://github.com/openforcefield/openff-toolkit/pull/1796): Update docs tooling and fix warnings
+- [PR #1786](https://github.com/openforcefield/openff-toolkit/pull/1786): Describe contributing to documentation notebooks in developers guide.
+- [PR #1845](https://github.com/openforcefield/openff-toolkit/pull/1845): Update convert_all_strings_to_quantity docstring.
+- [PR #1849](https://github.com/openforcefield/openff-toolkit/pull/1849): Add "how are charges assigned?" section to FAQ. 
+- [PR #1798](https://github.com/openforcefield/openff-toolkit/pull/1798): Adds type annotations to most of the codebase.
+
+
+### Tests updated
+- [PR #1836](https://github.com/openforcefield/openff-toolkit/pull/1836): Update tests to not directly call `numpy.random.random` any more (per [NEP 19](https://numpy.org/neps/nep-0019-rng-policy.html#numpy-random))
 
 ## 0.15.2
 
@@ -54,7 +96,7 @@ This release adds compatibility with QCFractal >=0.50.0, but removes compatibilt
 ### Bugfixes
 
 - [PR #1778](https://github.com/openforcefield/openff-toolkit/pull/1778): Ensures SD data tags are preserved in `Molecule.from_openeye` if the input is of type `oechem.OEGraphMol`.
-* [PR #1811](https://github.com/openforcefield/openff-toolkit/pull/1811): Preserves hierarchy data in `_SimpleMolecule.from_molecule`
+- [PR #1811](https://github.com/openforcefield/openff-toolkit/pull/1811): Preserves hierarchy data in `_SimpleMolecule.from_molecule`
 
 ### New features
 
@@ -63,7 +105,6 @@ This release adds compatibility with QCFractal >=0.50.0, but removes compatibilt
 
 
 ### Improved documentation and warnings
-
 - [PR #1732](https://github.com/openforcefield/openff-toolkit/pull/1732): Add documentation describing the use of PDB files with the toolkit.
 - [PR #1804](https://github.com/openforcefield/openff-toolkit/pull/1804): Makes `ForceField.parse_sources` docstring consistent with implementation.
 
@@ -77,7 +118,7 @@ This release adds compatibility with QCFractal >=0.50.0, but removes compatibilt
 
 ### New features
 
-- [PR #1731](https://github.com/openforcefield/openff-toolkit/pull/1731): Suppot SMIRNOFF vdW version 0.5.
+- [PR #1731](https://github.com/openforcefield/openff-toolkit/pull/1731): Support SMIRNOFF vdW version 0.5.
 
 ### Improved documentation and warnings
 

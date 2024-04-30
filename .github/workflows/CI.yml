@@ -27,15 +27,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        python-version: ["3.9", "3.10", "3.11"]
+        os: [ubuntu-latest, macos-12]
+        python-version: ["3.10", "3.11"]
         rdkit: [true, false]
         openeye: [true, false]
         exclude:
           - rdkit: false
             openeye: false
-          - openeye: true
-            python-version: "3.10"
           - openeye: true
             python-version: "3.11"
 
@@ -110,7 +108,7 @@ jobs:
         run: |
           if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
             for cpkg in ${{ env.PACKAGES_TO_REMOVE }}; do
-              if [[ $(conda list | grep $cpkg) ]]; then micromamba remove --force $cpkg --yes ; fi
+              if [[ $(micromamba list | grep $cpkg) ]]; then micromamba remove --force $cpkg --yes ; fi
             done
           fi
 
@@ -135,15 +133,16 @@ jobs:
 
       - name: Environment Information
         run: |
-          conda info
-          conda list
+          micromamba info
+          micromamba list
 
       - name: Check links
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
 
       - name: Run mypy
-        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
+        # subtle differences in Python/mypy versions, just keep it passing on one
+        if: ${{ matrix.rdkit == true && matrix.openeye && matrix.python-version == 3.11 }}
         run: mypy -p "openff.toolkit"
 
       - name: Run unit tests
@@ -154,7 +153,7 @@ jobs:
             PYTEST_ARGS+=" --runslow"
           fi
 
-          python -m pytest $PYTEST_ARGS $COV
+          python -m pytest --durations=20 $PYTEST_ARGS $COV
 
       - name: Run code snippets in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
@@ -169,7 +168,11 @@ jobs:
       - name: Run examples in docstrings
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: |
-          pytest -v --no-cov --doctest-modules --ignore-glob='openff/toolkit/_tests/test_*' --ignore=openff/toolkit/data/ --ignore=openff/toolkit/utils/utils.py openff/
+          pytest openff \
+            -v -x -n logical --no-cov --doctest-modules \
+            --ignore-glob='openff/toolkit/_tests*' \
+            --ignore=openff/toolkit/data/ \
+            --ignore=openff/toolkit/utils/utils.py
 
       - name: Codecov
         uses: codecov/codecov-action@v4
