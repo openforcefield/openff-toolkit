@@ -1609,6 +1609,14 @@ class ParameterList(list):
         return parameter_list
 
 
+class VirtualSiteParameterList(ParameterList):
+    def __getitem__(self, val):
+        raise NotImplementedError(
+            "VirtualSiteHandler does not support __getitem__ lookups due to the "
+            "number of values required to uniquely identify a specific parameter."
+        )
+
+
 # TODO: Rename to better reflect role as parameter base class?
 class ParameterType(_ParameterAttributeHandler):
     """
@@ -3825,6 +3833,16 @@ class VirtualSiteHandler(_NonbondedHandler):
             return_dict[(parent_index,)] = assigned_matches
 
         return return_dict
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._parameters = VirtualSiteParameterList()
+
+    def __getitem__(self, val):
+        raise NotImplementedError(
+            "VirtualSiteHandler does not support __getitem__ lookups due to the "
+            "number of values required to uniquely identify a specific parameter."
+        )
 
 
 ConstraintType = ConstraintHandler.ConstraintType
