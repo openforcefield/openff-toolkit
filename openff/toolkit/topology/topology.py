@@ -2169,10 +2169,7 @@ class Topology(Serializable):
         for molecule in self.molecules:
             stop = start + molecule.n_atoms
             if molecule.conformers is None:
-                if isinstance(molecule, Molecule):
-                    molecule._conformers = [array[start:stop]]
-                else:
-                    molecule.conformers = [array[start:stop]]  # type: ignore[misc]
+                molecule._conformers = [array[start:stop]]
             else:
                 molecule.conformers[0:1] = [array[start:stop]]
             start = stop

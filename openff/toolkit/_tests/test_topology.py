@@ -2240,6 +2240,33 @@ class TestTopologyPositions:
             stop = i * 3 + 8
             assert np.all(mol.conformers[0] == positions[start:stop, :])
 
+    def test_set_positions_simple_molecule(self):
+        """Reproduce issue #1867"""
+        simple = _SimpleMolecule.from_molecule(Molecule.from_smiles("C=O"))
+
+        topology = Topology.from_molecules([simple, simple])
+
+        topology.set_positions(Quantity(np.zeros((topology.n_atoms, 3)), "nanometer"))
+
+        positions = topology.get_positions()
+
+        assert positions.shape == (topology.n_atoms, 3)
+        assert positions.units == "nanometer"
+
+    def test_set_positions_mixed_topology(self):
+        """Reproduce issue #1867"""
+        molecule = Molecule.from_smiles("C=O")
+        simple = _SimpleMolecule.from_molecule(molecule)
+
+        topology = Topology.from_molecules([molecule, simple])
+
+        topology.set_positions(Quantity(np.zeros((topology.n_atoms, 3)), "nanometer"))
+
+        positions = topology.get_positions()
+
+        assert positions.shape == (topology.n_atoms, 3)
+        assert positions.units == "nanometer"
+
     @pytest.fixture()
     def topology(self) -> Topology:
         methane = Molecule.from_mapped_smiles("[H:2][C:1]([H:3])([H:4])[H:5]")
