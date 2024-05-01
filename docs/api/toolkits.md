@@ -1,8 +1,8 @@
 # Toolkit Wrappers and Registries
 
-The toolkit wrappers provide a simple uniform API for accessing minimal functionality of cheminformatics toolkits.
+The toolkit wrappers provide a simple uniform API for accessing some functionality of cheminformatics toolkits. They are used internally by the OpenFF Toolkit to avoid re-implementing existing scientific algorithms, and can be used by users to specify exactly what software is used for any given section of code.
 
-These toolkit wrappers are generally used through a [`ToolkitRegistry`], which can be constructed with a list of toolkits ordered by precedence. 
+These toolkit wrappers are generally used through a [`ToolkitRegistry`], which facilitates combining software with different capabilities and can be constructed with a list of toolkit wrappers ordered by precedence. 
 
 ```python
 >>> from openff.toolkit import ToolkitRegistry, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper
@@ -14,7 +14,7 @@ These toolkit wrappers are generally used through a [`ToolkitRegistry`], which c
 
 ```
 
-The toolkit wrapper's functionality can then be accessed through the registry. The first toolkit in the list that provides a method with the given name will be used:
+The toolkit wrappers' functionality can then be accessed through the registry. The first toolkit in the list that provides a method with the given name will be used:
 
 ```python
 >>> from openff.toolkit import Molecule
@@ -33,7 +33,7 @@ Many functions in the OpenFF Toolkit API include a `toolkit_registry` argument t
 
 ```
 
-For example, differences in `to_smiles` functionality between OpenEye toolkits and The RDKit can be explored by specifying the desired toolkit wrapper:
+For example, differences in `to_smiles` functionality between the OpenEye and RDKit can be explored by specifying the desired toolkit wrapper:
 
 ```python
 >>> molecule.to_smiles(toolkit_registry=RDKitToolkitWrapper())
@@ -52,7 +52,7 @@ The default value of this argument is the [`GLOBAL_TOOLKIT_REGISTRY`], which by 
 
 ```
 
-To temporarily change the state of `GLOBAL_TOOLKIT_REGISTRY`, we provide the `toolkit_registry_manager` context manager.
+To temporarily change the state of `GLOBAL_TOOLKIT_REGISTRY`, we provide the [`toolkit_registry_manager`] context manager.
 
 ```python
 >>> from openff.toolkit.utils import toolkit_registry_manager
@@ -64,26 +64,14 @@ To temporarily change the state of `GLOBAL_TOOLKIT_REGISTRY`, we provide the `to
 
 ```
 
-To change the value of `GLOBAL_TOOLKIT_REGISTRY` (or any registry) for the remainder of the Python process, individual toolkits can be registered or deregistered. This can be useful for debugging and exploring subtly different behavior between toolkit wrappers. To remove `ToolkitWrappers` from a `ToolkitRegistry`, the `deregister_toolkit` method can be used:
-
-```python
->>> print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
-4
->>> GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(RDKitToolkitWrapper)
->>> print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
-3
->>> GLOBAL_TOOLKIT_REGISTRY.register_toolkit(RDKitToolkitWrapper)
->>> print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
-4
-
-```
-
-Note that as with other global attributes in Python, assigning a new toolkit registry to `GLOBAL_TOOLKIT_REGISTRY` is quite difficult to get right and very likely to fail silently - we recommend modifying the existing value instead in most cases.
+For more information about modifying `GLOBAL_TOOLKIT_REGISTRY`, see the [`GLOBAL_TOOLKIT_REGISTRY` API docs].
 
 [`ToolkitRegistry`]: openff.toolkit.utils.toolkits.ToolkitRegistry
 [`ToolkitRegistry.call` API docs]: openff.toolkit.utils.toolkits.ToolkitRegistry.call
 [`ToolkitRegistry.call`]: openff.toolkit.utils.toolkits.ToolkitRegistry.call
 [`GLOBAL_TOOLKIT_REGISTRY`]: openff.toolkit.utils.toolkits.GLOBAL_TOOLKIT_REGISTRY
+[`toolkit_registry_manager`]: openff.toolkit.utils.toolkits.toolkit_registry_manager
+[`GLOBAL_TOOLKIT_REGISTRY` API docs]: openff.toolkit.utils.toolkits.GLOBAL_TOOLKIT_REGISTRY
 
 ```{eval-rst}
 .. currentmodule:: openff.toolkit.utils.toolkits

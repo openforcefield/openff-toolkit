@@ -140,6 +140,29 @@ Temporarily change the global toolkit registry:
 >>> GLOBAL_TOOLKIT_REGISTRY
 <ToolkitRegistry containing The RDKit, AmberTools, Built-in Toolkit>
 
+To change the value of `GLOBAL_TOOLKIT_REGISTRY` (or any registry) for the
+remainder of the Python process, individual toolkits can be registered or
+deregistered. This can be useful for debugging and exploring subtly different
+behavior between toolkit wrappers. To remove `ToolkitWrappers` from a
+`ToolkitRegistry`, the `deregister_toolkit` method can be used:
+
+```python
+>>> print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
+4
+>>> GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(RDKitToolkitWrapper)
+>>> print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
+3
+>>> GLOBAL_TOOLKIT_REGISTRY.register_toolkit(RDKitToolkitWrapper)
+>>> print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
+4
+
+```
+
+Note that as with other global attributes in Python, assigning a new toolkit
+registry to `GLOBAL_TOOLKIT_REGISTRY` is quite difficult to get right and very
+likely to fail silently - we recommend modifying the existing value instead in
+most cases.
+
 See Also
 ========
 toolkit_registry_manager, ToolkitRegistry, ToolkitWrapper
