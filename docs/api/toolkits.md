@@ -52,7 +52,7 @@ The default value of this argument is the [`GLOBAL_TOOLKIT_REGISTRY`], which by 
 
 ```
 
-To temporarily change the state of `GLOBAL_TOOLKIT_REGISTRY`, we provide the [`toolkit_registry_manager`] context manager.
+The [`toolkit_registry_manager`] context manager allows `GLOBAL_TOOLKIT_REGISTRY` to be changed temporarily:
 
 ```python
 >>> from openff.toolkit.utils import toolkit_registry_manager
