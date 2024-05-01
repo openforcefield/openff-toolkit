@@ -37,9 +37,9 @@ For example, differences in `to_smiles` functionality between OpenEye toolkits a
 
 ```python
 >>> molecule.to_smiles(toolkit_registry=RDKitToolkitWrapper())
-[H]c1c(c(c(c(c1[H])[H])C([H])([H])[H])[H])[H]
+'[H][c]1[c]([H])[c]([H])[c]([C]([H])([H])[H])[c]([H])[c]1[H]'
 >>> molecule.to_smiles(toolkit_registry=OpenEyeToolkitWrapper())
-[H][c]1[c]([H])[c]([H])[c]([C]([H])([H])[H])[c]([H])[c]1[H]
+'[H]c1c(c(c(c(c1[H])[H])C([H])([H])[H])[H])[H]'
 
 ```
 
