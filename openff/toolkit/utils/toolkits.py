@@ -108,6 +108,42 @@ GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
     ],
     exception_if_unavailable=False,
 )
+"""
+The toolkit registry used by default when no registry or wrapper is specified.
+
+A toolkit registry is a list of toolkit wrappers used to provide functionality
+not implemented by the OpenFF Toolkit itself. Any given functionality is
+requested from each toolkit in order until one is found that provides it. For
+more information, see :py:class:`ToolkitRegistry`.
+
+To temporarily modify the ``GLOBAL_TOOLKIT_REGISTRY``,
+see :py:func:`toolkit_registry_manager`.
+
+Examples
+========
+
+Check the default toolkit precedence order:
+
+>>> from openff.toolkit import GLOBAL_TOOLKIT_REGISTRY
+>>> GLOBAL_TOOLKIT_REGISTRY.registered_toolkits() # doctest: +ELLIPSIS
+[...]
+
+Temporarily change the global toolkit registry:
+
+>>> from openff.toolkit import ToolkitRegistry, RDKitToolkitWrapper
+>>> from openff.toolkit.utils import toolkit_registry_manager
+>>> with toolkit_registry_manager(ToolkitRegistry([RDKitToolkitWrapper]))):
+>>>     GLOBAL_TOOLKIT_REGISTRY
+<ToolkitRegistry containing The RDKit>
+>>>     mol = Molecule.from_smiles("CCO")
+>>> # when the context manager ends, the default registry is back to normal
+>>> GLOBAL_TOOLKIT_REGISTRY
+<ToolkitRegistry containing The RDKit, AmberTools, Built-in Toolkit>
+
+See Also
+========
+toolkit_registry_manager, ToolkitRegistry, ToolkitWrapper
+"""
 
 
 OPENEYE_AVAILABLE = False
