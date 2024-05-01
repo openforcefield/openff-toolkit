@@ -2,50 +2,59 @@
 
 The toolkit wrappers provide a simple uniform API for accessing minimal functionality of cheminformatics toolkits.
 
-These toolkit wrappers are generally used through a {class}`ToolkitRegistry`, which can be constructed with a desired precedence of toolkits:
+These toolkit wrappers are generally used through a [`ToolkitRegistry`], which can be constructed with a list of toolkits ordered by precedence. 
 
 ```python
->>> from openff.toolkit.utils.toolkits import ToolkitRegistry, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper
->>> toolkit_registry = ToolkitRegistry()
->>> toolkit_precedence = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper]
->>> [ toolkit_registry.register_toolkit(toolkit) for toolkit in toolkit_precedence if toolkit.is_available() ]
-[None, None, None]
+>>> from openff.toolkit import ToolkitRegistry, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper
+>>> toolkit_registry = ToolkitRegistry([
+...     OpenEyeToolkitWrapper, 
+...     RDKitToolkitWrapper, 
+...     AmberToolsToolkitWrapper,
+... ])
 
 ```
 
-The toolkit wrappers can then be accessed through the registry:
+The toolkit wrapper's functionality can then be accessed through the registry. The first toolkit in the list that provides a method with the given name will be used:
 
 ```python
->>> from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
 >>> from openff.toolkit import Molecule
 >>> molecule = Molecule.from_smiles('Cc1ccccc1')
 >>> smiles = toolkit_registry.call('to_smiles', molecule)
 
 ```
 
-The order of toolkits, as specified in `toolkit_precedence` above, determines the order in which
-the called method is resolved, i.e. if the toolkit with highest precedence has a `to_smiles`
-method, that is the toolkit that will be called. If the toolkit with highest precedence does not
-have such a method, it is attempted with other toolkits until one is found. By default, if a toolkit with an appropriately-named method raises an exception of any type, then iteration over the registered toolkits stops and that exception is raised. To continue iteration if specific exceptions are encountered, customize this behavior using the optional `raise_exception_types` keyword argument to `ToolkitRegistry.call`. If no registered
-toolkits have the method, a ValueError is raised, containing a message listing the registered toolkits and exceptions (if any) that were ignored. 
+For further details on how this search is performed and how it handles exceptions, see the [`ToolkitRegistry.call()` API docs].
 
-Alternatively, the global toolkit registry (which will attempt to register any available toolkits) can be used:
+Many functions in the OpenFF Toolkit API include a `toolkit_registry` argument that can be used to specify the toolkit wrappers used by a call to that function. The value of this argument can be either a single toolkit wrapper instance, or an entire toolkit registry:
 
 ```python
->>> from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
->>> len(toolkit_registry.registered_toolkits)
+>>> smiles = molecule.to_smiles(toolkit_registry=RDKitToolkitWrapper())
+>>> smiles = molecule.to_smiles(toolkit_registry=toolkit_registry)
+
+```
+
+For example, differences in `to_smiles` functionality between OpenEye toolkits and The RDKit can be explored by specifying the desired toolkit wrapper:
+
+```python
+>>> molecule.to_smiles(toolkit_registry=RDKitToolkitWrapper())
+[H]c1c(c(c(c(c1[H])[H])C([H])([H])[H])[H])[H]
+>>> molecule.to_smiles(toolkit_registry=OpenEyeToolkitWrapper())
+[H][c]1[c]([H])[c]([H])[c]([C]([H])([H])[H])[c]([H])[c]1[H]
+
+```
+
+The default value of this argument is the [`GLOBAL_TOOLKIT_REGISTRY`], which by default includes all the toolkits that OpenFF recommends for everyday use:
+
+```python
+>>> from openff.toolkit import GLOBAL_TOOLKIT_REGISTRY
+>>> len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits)
 4
 
 ```
 
-Individual toolkits can be registered or deregistered to control the backend that ToolkitRegistry calls resolve to. This can
-be useful for debugging and exploring subtley different behavior between toolkit wrappers.
-
-To temporarily change the state of `GLOBAL_TOOLKIT_REGISTRY`, we provide the `toolkit_registry_manager`
-context manager.
+To temporarily change the state of `GLOBAL_TOOLKIT_REGISTRY`, we provide the `toolkit_registry_manager` context manager.
 
 ```python
->>> from openff.toolkit.utils.toolkits import RDKitToolkitWrapper, AmberToolsToolkitWrapper, GLOBAL_TOOLKIT_REGISTRY
 >>> from openff.toolkit.utils import toolkit_registry_manager
 >>> print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
 4
@@ -55,39 +64,26 @@ context manager.
 
 ```
 
-To remove `ToolkitWrappers` permanently from a `ToolkitRegistry`, the `deregister_toolkit` method can be used:
+To change the value of `GLOBAL_TOOLKIT_REGISTRY` (or any registry) for the remainder of the Python process, individual toolkits can be registered or deregistered. This can be useful for debugging and exploring subtly different behavior between toolkit wrappers. To remove `ToolkitWrappers` from a `ToolkitRegistry`, the `deregister_toolkit` method can be used:
 
 ```python
->>> from openff.toolkit.utils.toolkits import OpenEyeToolkitWrapper, BuiltInToolkitWrapper
->>> from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
->>> print(len(toolkit_registry.registered_toolkits))
+>>> print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
 4
->>> toolkit_registry.deregister_toolkit(RDKitToolkitWrapper)
->>> print(len(toolkit_registry.registered_toolkits))
+>>> GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(RDKitToolkitWrapper)
+>>> print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
 3
->>> toolkit_registry.register_toolkit(RDKitToolkitWrapper)
->>> print(len(toolkit_registry.registered_toolkits))
+>>> GLOBAL_TOOLKIT_REGISTRY.register_toolkit(RDKitToolkitWrapper)
+>>> print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
 4
 
 ```
 
-For example, differences in `to_smiles` functionality between OpenEye toolkits and The RDKit can
-be explored by selecting which toolkit(s) are and are not registered.
+Note that as with other global attributes in Python, assigning a new toolkit registry to `GLOBAL_TOOLKIT_REGISTRY` is quite difficult to get right and very likely to fail silently - we recommend modifying the existing value instead in most cases.
 
-```python
->>> from openff.toolkit.utils.toolkits import OpenEyeToolkitWrapper, GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
->>> from openff.toolkit import Molecule
->>> molecule = Molecule.from_smiles('Cc1ccccc1')
->>> smiles_via_openeye = toolkit_registry.call('to_smiles', molecule)
->>> print(smiles_via_openeye)
-[H]c1c(c(c(c(c1[H])[H])C([H])([H])[H])[H])[H]
-
->>> toolkit_registry.deregister_toolkit(OpenEyeToolkitWrapper)
->>> smiles_via_rdkit = toolkit_registry.call('to_smiles', molecule)
->>> print(smiles_via_rdkit)
-[H][c]1[c]([H])[c]([H])[c]([C]([H])([H])[H])[c]([H])[c]1[H]
-
-```
+[`ToolkitRegistry`]: openff.toolkit.utils.toolkits.ToolkitRegistry
+[`ToolkitRegistry.call` API docs]: openff.toolkit.utils.toolkits.ToolkitRegistry.call
+[`ToolkitRegistry.call`]: openff.toolkit.utils.toolkits.ToolkitRegistry.call
+[`GLOBAL_TOOLKIT_REGISTRY`]: openff.toolkit.utils.toolkits.GLOBAL_TOOLKIT_REGISTRY
 
 ```{eval-rst}
 .. currentmodule:: openff.toolkit.utils.toolkits
@@ -102,11 +98,6 @@ be explored by selecting which toolkit(s) are and are not registered.
     AmberToolsToolkitWrapper
     NAGLToolkitWrapper
     BuiltInToolkitWrapper
-
-.. currentmodule:: openff.toolkit.utils.toolkit_registry
-.. autosummary::
-    :nosignatures:
-    :toctree: generated/
-
+    GLOBAL_TOOLKIT_REGISTRY
     toolkit_registry_manager
 ```
