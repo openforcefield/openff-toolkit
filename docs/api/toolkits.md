@@ -1,4 +1,4 @@
-# Toolkits Wrappers and Registries
+# Toolkit Wrappers and Registries
 
 The toolkit wrappers provide a simple uniform API for accessing minimal functionality of cheminformatics toolkits.
 

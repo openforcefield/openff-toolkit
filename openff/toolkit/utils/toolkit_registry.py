@@ -468,10 +468,10 @@ def toolkit_registry_manager(toolkit_registry: Union[ToolkitRegistry, ToolkitWra
     A context manager that temporarily changes the :py:data:`GLOBAL_TOOLKIT_REGISTRY`.
 
     This can be useful in cases where one would otherwise need to otherwise
-    manually specify the use of a specific ``ToolkitWrapper`` or
-    ``ToolkitRegistry`` repeatedly in a block of code, or in cases where there
-    isn't another way to switch the ``ToolkitWrappers`` used for a particular
-    operation.
+    manually specify the use of a specific :py:class:`ToolkitWrapper` or
+    :py:class:`ToolkitRegistry` repeatedly in a block of code, or in cases where
+    there isn't another way to switch the ``ToolkitWrapper`` used for a
+    particular operation.
 
     Examples
     --------
