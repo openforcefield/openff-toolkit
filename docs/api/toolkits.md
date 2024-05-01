@@ -67,7 +67,7 @@ To temporarily change the state of `GLOBAL_TOOLKIT_REGISTRY`, we provide the [`t
 For more information about modifying `GLOBAL_TOOLKIT_REGISTRY`, see the [`GLOBAL_TOOLKIT_REGISTRY` API docs].
 
 [`ToolkitRegistry`]: openff.toolkit.utils.toolkits.ToolkitRegistry
-[`ToolkitRegistry.call` API docs]: openff.toolkit.utils.toolkits.ToolkitRegistry.call
+[`ToolkitRegistry.call()` API docs]: openff.toolkit.utils.toolkits.ToolkitRegistry.call
 [`ToolkitRegistry.call`]: openff.toolkit.utils.toolkits.ToolkitRegistry.call
 [`GLOBAL_TOOLKIT_REGISTRY`]: openff.toolkit.utils.toolkits.GLOBAL_TOOLKIT_REGISTRY
 [`toolkit_registry_manager`]: openff.toolkit.utils.toolkits.toolkit_registry_manager
