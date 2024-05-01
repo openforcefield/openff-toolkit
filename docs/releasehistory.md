@@ -20,7 +20,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 - [PR #1870](https://github.com/openforcefield/openff-toolkit/pull/1870): Updates examples to use openff-2.2.0, 
   and modernizes use of some API points. 
-- [PR #1787](https://github.com/openforcefield/openff-toolkit/pull/1787): Make toolkit wrapper documentation more discoverable
+- [PR #1787](https://github.com/openforcefield/openff-toolkit/pull/1787): Improve documentation for toolkit wrappers and registries
 
 ## 0.16.0
 
