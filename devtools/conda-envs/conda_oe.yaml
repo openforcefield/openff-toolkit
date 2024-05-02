@@ -9,3 +9,4 @@ dependencies:
   - openeye-toolkits
   - pytest=7.4
   - pytest-rerunfailures
+  - nbval

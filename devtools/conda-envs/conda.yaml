@@ -7,3 +7,4 @@ dependencies:
     # Tests
   - pytest=7.4
   - pytest-rerunfailures
+  - nbval
