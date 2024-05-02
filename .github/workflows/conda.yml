@@ -146,4 +146,4 @@ jobs:
           #  NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs/"
           #fi
 
-          python -m pytest $PYTEST_ARGS $NB_ARGS examples
+          python -m pytest   -r fE -v -x --tb=short  --nbval-lax  --ignore=examples/deprecated examples
