@@ -16,6 +16,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### New features
 
+- [PR #1866](https://github.com/openforcefield/openff-toolkit/pull/1866): Implements a safer AmberTools version check.
+
 ### Improved documentation and warnings
 
 ## 0.16.0
