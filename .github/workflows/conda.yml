@@ -122,28 +122,28 @@ jobs:
 
       - name: Run example scripts
         run: |
-          if [[ ${{ matrix.rdkit }} == false ]]; then
-            PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
-            PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
-          fi
+          #if [[ ${{ matrix.openeye }} == false ]]; then
+          #  PYTEST_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
+          #  PYTEST_ARGS+=" --ignore=examples/QCArchive_interface"
+          #fi
           pytest $PYTEST_ARGS openff/toolkit/_tests/test_examples.py
 
       - name: Run example notebooks
         run: |
-          if [[ ${{ matrix.rdkit }} == false ]]; then
-            NB_ARGS+=" --ignore=examples/QCArchive_interface"
-            NB_ARGS+=" --ignore=examples/visualization"
-            NB_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
-            NB_ARGS+=" --ignore=examples/conformer_energies"
-            NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
-            NB_ARGS+=" --ignore=examples/using_smirnoff_with_amber_protein_forcefield"
-            NB_ARGS+=" --ignore=examples/SMIRNOFF_simulation"
-            NB_ARGS+=" --ignore=examples/toolkit_showcase"
-          fi
+          #if [[ ${{ matrix.rdkit }} == false ]]; then
+          #  NB_ARGS+=" --ignore=examples/QCArchive_interface"
+          #  NB_ARGS+=" --ignore=examples/visualization"
+          #  NB_ARGS+=" --ignore=examples/check_dataset_parameter_coverage"
+          #  NB_ARGS+=" --ignore=examples/conformer_energies"
+          #  NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs"
+          #  NB_ARGS+=" --ignore=examples/using_smirnoff_with_amber_protein_forcefield"
+          #  NB_ARGS+=" --ignore=examples/SMIRNOFF_simulation"
+          #  NB_ARGS+=" --ignore=examples/toolkit_showcase"
+          #fi
 
           # GROMACS builds are not stable on macOS + GHA
-          if [[ ${{ matrix.os }} == macos-latest ]]; then
-            NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs/"
-          fi
+          #if [[ ${{ matrix.os }} == macos-12 ]]; then
+          #  NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs/"
+          #fi
 
           python -m pytest $PYTEST_ARGS $NB_ARGS examples
