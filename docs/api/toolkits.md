@@ -4,19 +4,26 @@ The toolkit wrappers provide a simple uniform API for accessing some functionali
 
 These toolkit wrappers are generally used through a [`ToolkitRegistry`], which facilitates combining software with different capabilities and can be constructed with a list of toolkit wrappers ordered by precedence. 
 
-```python
->>> from openff.toolkit import ToolkitRegistry, OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper
->>> toolkit_registry = ToolkitRegistry([
-...     OpenEyeToolkitWrapper, 
-...     RDKitToolkitWrapper, 
+```pycon
+>>> from openff.toolkit import (
+...     ToolkitRegistry,
+...     OpenEyeToolkitWrapper,
+...     RDKitToolkitWrapper,
 ...     AmberToolsToolkitWrapper,
-... ])
+... )
+>>> toolkit_registry = ToolkitRegistry(
+...     [
+...         OpenEyeToolkitWrapper,
+...         RDKitToolkitWrapper,
+...         AmberToolsToolkitWrapper,
+...     ]
+... )
 
 ```
 
 The toolkit wrappers' functionality can then be accessed through the registry. The first toolkit in the list that provides a method with the given name will be used:
 
-```python
+```pycon
 >>> from openff.toolkit import Molecule
 >>> molecule = Molecule.from_smiles('Cc1ccccc1')
 >>> smiles = toolkit_registry.call('to_smiles', molecule)
@@ -27,7 +34,7 @@ For further details on how this search is performed and how it handles exception
 
 Many functions in the OpenFF Toolkit API include a `toolkit_registry` argument that can be used to specify the toolkit wrappers used by a call to that function. The value of this argument can be either a single toolkit wrapper instance, or an entire toolkit registry:
 
-```python
+```pycon
 >>> smiles = molecule.to_smiles(toolkit_registry=RDKitToolkitWrapper())
 >>> smiles = molecule.to_smiles(toolkit_registry=toolkit_registry)
 
@@ -35,7 +42,7 @@ Many functions in the OpenFF Toolkit API include a `toolkit_registry` argument t
 
 For example, differences in `to_smiles` functionality between the OpenEye and RDKit can be explored by specifying the desired toolkit wrapper:
 
-```python
+```pycon
 >>> molecule.to_smiles(toolkit_registry=RDKitToolkitWrapper())
 '[H][c]1[c]([H])[c]([H])[c]([C]([H])([H])[H])[c]([H])[c]1[H]'
 >>> molecule.to_smiles(toolkit_registry=OpenEyeToolkitWrapper())
@@ -45,7 +52,7 @@ For example, differences in `to_smiles` functionality between the OpenEye and RD
 
 The default value of this argument is the [`GLOBAL_TOOLKIT_REGISTRY`], which by default includes all the toolkits that OpenFF recommends for everyday use:
 
-```python
+```pycon
 >>> from openff.toolkit import GLOBAL_TOOLKIT_REGISTRY
 >>> len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits)
 4
@@ -54,7 +61,7 @@ The default value of this argument is the [`GLOBAL_TOOLKIT_REGISTRY`], which by 
 
 The [`toolkit_registry_manager`] context manager allows `GLOBAL_TOOLKIT_REGISTRY` to be changed temporarily:
 
-```python
+```pycon
 >>> from openff.toolkit.utils import toolkit_registry_manager
 >>> print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
 4
