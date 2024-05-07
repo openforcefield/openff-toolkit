@@ -35,9 +35,15 @@ def _mol_to_ctab_and_aro_key(
 
 class ToolkitWrapper:
     """
-    Toolkit wrapper base class.
+    Base class for wrappers around external software toolkits.
 
     .. warning :: This API is experimental and subject to change.
+
+    See also
+    ========
+    ToolkitRegistry, OpenEyeToolkitWrapper, RDKitToolkitWrapper,
+    AmberToolsToolkitWrapper, NAGLToolkitWrapper, BuiltInToolkitWrapper
+
     """
 
     _is_available: Optional[bool] = None  # True if toolkit is available
