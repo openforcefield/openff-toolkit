@@ -4187,7 +4187,7 @@ class FrozenMolecule(Serializable):
             )
 
         if isinstance(file_path, (str, pathlib.Path)):
-            toolkit.to_file(self, file_path, file_format)
+            toolkit.to_file(self, file_path, file_format)  # type: ignore[attr-defined]
         else:
             toolkit.to_file_obj(self, file_path, file_format)  # type: ignore[attr-defined]
 
