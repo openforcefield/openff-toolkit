@@ -1089,17 +1089,17 @@ class FrozenMolecule(Serializable):
         """``True`` if the molecule has unique atom names, ``False`` otherwise."""
         return _has_unique_atom_names(self)
 
-    def generate_unique_atom_names(self):
+    def generate_unique_atom_names(self, suffix: str = None):
         """
         Generate unique atom names from the element symbol and count.
 
         Names are generated from the elemental symbol and the number of times
-        that element is found in the molecule. The character 'x' is appended to
-        these generated names to reduce the odds that they clash with an atom
-        name or type imported from another source. For example, generated atom
-        names might begin 'C1x', 'H1x', 'O1x', 'C2x', etc.
+        that element is found in the hierarchy element. The character 'x' is
+        appended to these generated names to reduce the odds that they clash
+        with an atom name or type imported from another source. For example,
+        generated atom names might begin 'C1x', 'H1x', 'O1x', 'C2x', etc.
         """
-        return _generate_unique_atom_names(self)
+        return _generate_unique_atom_names(self, suffix)
 
     def _validate(self):
         """
@@ -6123,7 +6123,7 @@ class HierarchyElement:
         """``True`` if the element has unique atom names, ``False`` otherwise."""
         return _has_unique_atom_names(self)
 
-    def generate_unique_atom_names(self):
+    def generate_unique_atom_names(self, suffix: str = "x"):
         """
         Generate unique atom names from the element symbol and count.
 
@@ -6133,7 +6133,7 @@ class HierarchyElement:
         with an atom name or type imported from another source. For example,
         generated atom names might begin 'C1x', 'H1x', 'O1x', 'C2x', etc.
         """
-        return _generate_unique_atom_names(self)
+        return _generate_unique_atom_names(self, suffix)
 
 
 def _has_unique_atom_names(
@@ -6146,7 +6146,9 @@ def _has_unique_atom_names(
     return True
 
 
-def _generate_unique_atom_names(obj: Union[FrozenMolecule, HierarchyElement]):
+def _generate_unique_atom_names(
+    obj: Union[FrozenMolecule, HierarchyElement], suffix: str = "x"
+):
     """
     Generate unique atom names from the element symbol and count.
 
@@ -6162,9 +6164,4 @@ def _generate_unique_atom_names(obj: Union[FrozenMolecule, HierarchyElement]):
     for atom in obj.atoms:
         symbol = atom.symbol
         element_counts[symbol] += 1
-        # TODO: It may be worth exposing this as a user option, i.e. to avoid multiple ligands
-        # parameterized with OpenFF clashing because they have atom names like O1x, H3x, etc.
-        # i.e. an optional argument could enable a user to `generate_unique_atom_names(blah="y")
-        # to have one ligand be O1y, etc.
-        # https://github.com/openforcefield/openff-toolkit/pull/1096#pullrequestreview-767227391
-        atom.name = symbol + str(element_counts[symbol]) + "x"
+        atom.name = symbol + str(element_counts[symbol]) + suffix
