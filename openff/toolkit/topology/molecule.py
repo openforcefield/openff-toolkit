@@ -1099,10 +1099,7 @@ class FrozenMolecule(Serializable):
         with an atom name or type imported from another source. For example,
         generated atom names might begin 'C1x', 'H1x', 'O1x', 'C2x', etc.
         """
-        if suffix == None:
-            return _generate_unique_atom_names(self)
-        else:
-            return _generate_unique_atom_names(self, suffix)
+        return _generate_unique_atom_names(self, suffix)
 
     def _validate(self):
         """
@@ -6128,7 +6125,7 @@ class HierarchyElement:
         """``True`` if the element has unique atom names, ``False`` otherwise."""
         return _has_unique_atom_names(self)
 
-    def generate_unique_atom_names(self, suffix: str = None):
+    def generate_unique_atom_names(self, suffix: str = "x"):
         """
         Generate unique atom names from the element symbol and count.
 
@@ -6138,10 +6135,7 @@ class HierarchyElement:
         with an atom name or type imported from another source. For example,
         generated atom names might begin 'C1x', 'H1x', 'O1x', 'C2x', etc.
         """
-        if suffix == None:
-            return _generate_unique_atom_names(self)
-        else:
-            return _generate_unique_atom_names(self, suffix)
+        return _generate_unique_atom_names(self, suffix)
 
 
 def _has_unique_atom_names(
