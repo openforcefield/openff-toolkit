@@ -9,11 +9,11 @@ if TYPE_CHECKING:
 class OpenFFToolkitException(Exception):
     """Base exception for custom exceptions raised by the OpenFF Toolkit"""
 
-    def __init__(self, msg):
+    def __init__(self, msg: str):
         super().__init__(msg)
         self.msg = msg
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.msg
 
 
@@ -410,7 +410,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
     def __init__(
         self,
         msg: Optional[str] = None,
-        substructure_library: Optional[dict[str, tuple[str, list[str]]]] = None,
+        substructure_library: Optional[dict[str, list[tuple]]] = None,
         omm_top: Optional["OpenMMTopology"] = None,
         unassigned_bonds: Optional[list[tuple[int, int]]] = None,
         unassigned_atoms: Optional[list[int]] = None,

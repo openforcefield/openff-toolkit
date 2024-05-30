@@ -19,11 +19,13 @@ dependencies:
   - openff-amber-ff-ports
   - openff-utilities >=0.1.5
   - openff-interchange-base >=0.3.19
-  # openff-nagl ==0.3.2
+  - openff-nagl-base ~=0.3.7
+  - openff-nagl-models ==0.1.0
   - typing_extensions
     # Toolkit-specific
   - ambertools >=22
-  - rdkit
+    # https://github.com/rdkit/rdkit/issues/7221
+  - rdkit <2023.09.6
     # Test-only/optional/dev/typing
   - pytest
   - pytest-cov

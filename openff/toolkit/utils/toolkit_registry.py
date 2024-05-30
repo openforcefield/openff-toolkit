@@ -5,7 +5,7 @@ __all__ = ("ToolkitRegistry", "toolkit_registry_manager")
 import inspect
 import logging
 from contextlib import contextmanager
-from typing import Union
+from typing import Callable, Optional, Union
 
 from openff.toolkit.utils.ambertools_wrapper import AmberToolsToolkitWrapper
 from openff.toolkit.utils.base_wrapper import ToolkitWrapper
@@ -24,7 +24,18 @@ logger = logging.getLogger(__name__)
 
 class ToolkitRegistry:
     """
-    Registry for ToolkitWrapper objects
+    A registry and precedence list for :py:class:`ToolkitWrapper` objects.
+
+    ``ToolkitRegistry`` allows the OpenFF Toolkit to provide a concise,
+    universal API that can call out to other well-established libraries rather
+    than re-implement algorithms with well-established implementations, while
+    still giving users control over dependencies. It contains a list of
+    :py:class:`ToolkitWrapper` objects, each of which provides some collection
+    of methods that may be requested from the registry. The :py:meth:`call`
+    method takes a name and calls the method of that name on each wrapper until
+    it finds a working implementation, whose result it returns. For details on
+    how this search is conducted and what counts as a working implementation,
+    see that method's API docs.
 
     Examples
     --------
@@ -37,45 +48,54 @@ class ToolkitRegistry:
     >>> toolkit_registry
     <ToolkitRegistry containing OpenEye Toolkit, The RDKit, AmberTools>
 
-    Register all available toolkits (in the order OpenEye, RDKit, AmberTools, built-in)
+    Register all available toolkits (in the order OpenEye, RDKit, AmberTools,
+    built-in)
 
     >>> toolkits = [OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper, BuiltInToolkitWrapper]
     >>> toolkit_registry = ToolkitRegistry(toolkit_precedence=toolkits)
     >>> toolkit_registry
     <ToolkitRegistry containing OpenEye Toolkit, The RDKit, AmberTools, Built-in Toolkit>
 
-    Retrieve the global singleton toolkit registry, which is created when this module is imported from all available
-    toolkits:
+    Retrieve the global singleton toolkit registry, which is created when this
+    module is imported from all available toolkits:
 
-    >>> from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY as toolkit_registry
-    >>> toolkit_registry
+    >>> from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
+    >>> GLOBAL_TOOLKIT_REGISTRY
     <ToolkitRegistry containing OpenEye Toolkit, The RDKit, AmberTools, Built-in Toolkit>
 
-    Note that this will contain different ToolkitWrapper objects based on what toolkits
-    are currently installed.
+    Note that this will contain different ToolkitWrapper objects based on what
+    toolkits are currently installed.
+
+    Call a method on the registered toolkit wrapper with the highest precedence:
+
+    >>> molecule = toolkit_registry.call('from_smiles', 'Cc1ccccc1')
+
+    For more, see the :py:meth:`call` method.
 
     .. warning :: This API is experimental and subject to change.
     """
 
+    _toolkits: list[ToolkitWrapper]
+
     def __init__(
         self,
-        toolkit_precedence=None,
-        exception_if_unavailable=True,
-        _register_imported_toolkit_wrappers=False,
+        toolkit_precedence: Optional[list[type[ToolkitWrapper]]] = None,
+        exception_if_unavailable: bool = True,
+        _register_imported_toolkit_wrappers: bool = False,
     ):
         """
         Create an empty toolkit registry.
 
         Parameters
         ----------
-        toolkit_precedence : list, optional, default=None
+        toolkit_precedence
             List of toolkit wrapper classes, in order of desired precedence when performing molecule operations. If
             None, no toolkits will be registered.
 
-        exception_if_unavailable : bool, optional, default=True
+        exception_if_unavailable
             If True, an exception will be raised if the toolkit is unavailable
 
-        _register_imported_toolkit_wrappers : bool, optional, default=False
+        _register_imported_toolkit_wrappers
             If True, will attempt to register all imported ToolkitWrapper subclasses that can be
             found in the order of toolkit_precedence, if specified. If toolkit_precedence is not
             specified, the default order is [OpenEyeToolkitWrapper, RDKitToolkitWrapper,
@@ -84,7 +104,7 @@ class ToolkitRegistry:
         """
         self._toolkits = list()
 
-        toolkits_to_register = list()
+        toolkit_classes_to_register: list[type[ToolkitWrapper]] = list()
 
         if _register_imported_toolkit_wrappers:
             if toolkit_precedence is None:
@@ -97,19 +117,20 @@ class ToolkitRegistry:
             all_importable_toolkit_wrappers = all_subclasses(ToolkitWrapper)
             for toolkit in toolkit_precedence:
                 if toolkit in all_importable_toolkit_wrappers:
-                    toolkits_to_register.append(toolkit)
+                    toolkit_classes_to_register.append(toolkit)
         else:
             if toolkit_precedence is not None:
-                toolkits_to_register = toolkit_precedence
+                toolkit_classes_to_register = toolkit_precedence
 
-        if toolkits_to_register:
-            for toolkit in toolkits_to_register:
+        if toolkit_classes_to_register:
+            for toolkit in toolkit_classes_to_register:
                 self.register_toolkit(
-                    toolkit, exception_if_unavailable=exception_if_unavailable
+                    toolkit_wrapper=toolkit,
+                    exception_if_unavailable=exception_if_unavailable,
                 )
 
     @property
-    def registered_toolkits(self):
+    def registered_toolkits(self) -> list[ToolkitWrapper]:
         """
         List registered toolkits.
 
@@ -119,12 +140,12 @@ class ToolkitRegistry:
 
         Returns
         -------
-        toolkits : iterable of toolkit objects
+        toolkits
         """
         return list(self._toolkits)
 
     @property
-    def registered_toolkit_versions(self):
+    def registered_toolkit_versions(self) -> dict[str, str]:
         """
         Return a dict containing the version of each registered toolkit.
 
@@ -132,15 +153,140 @@ class ToolkitRegistry:
 
         Returns
         -------
-        toolkit_versions : dict[str, str]
+        toolkit_versions
             A dictionary mapping names and versions of wrapped toolkits
 
         """
-        return dict(
-            (tk.toolkit_name, tk.toolkit_version) for tk in self.registered_toolkits
+        return {tk.toolkit_name: tk.toolkit_version for tk in self.registered_toolkits}
+
+    # TODO: Can we instead register available methods directly with `ToolkitRegistry`,
+    # so we can just use `ToolkitRegistry.method()`?
+    def call(
+        self,
+        method_name: str,
+        *args,
+        raise_exception_types: Optional[list[type[Exception]]] = None,
+        **kwargs,
+    ):
+        """
+        Execute a method with the first registered toolkits that supports it.
+
+        This method searches the registry's precedence list for the first
+        wrapper that has an attribute named ``method_name`` and attempts to
+        call it as a method using the arguments in ``*args`` and ``**kwargs``.
+        If that method raises no exception, its return value is returned.
+
+        By default, if a wrapper with an appropriately-named method raises an
+        exception of any type, then iteration over the registered toolkits
+        stops early and that exception is raised. To limit this behavior to only
+        certain exceptions and otherwise continue iteration, customize this
+        behavior using the optional ``raise_exception_types`` keyword argument.
+        If iteration finishes without finding a wrapper that can successfully
+        call the requested method, a ``ValueError`` is raised, containing a
+        message listing the registered toolkits and any exceptions that
+        occurred.
+
+        Parameters
+        ----------
+        method_name
+            The name of the method to execute
+        raise_exception_types
+            A list of exception-derived types to catch and raise immediately. If
+            ``None``, the first exception encountered will be raised. To ignore
+            all exceptions, set this to the empty list ``[]``.
+
+        Raises
+        ------
+        ValueError
+            If no suitable toolkit wrapper was found in the registry.
+
+        Exception
+            Other forms of exceptions are possible if raise_exception_types is
+            specified. These are defined by the ``ToolkitWrapper`` method being
+            called.
+
+        Examples
+        --------
+
+        Create a molecule, and call the toolkit ``to_smiles()`` method directly
+
+        >>> from openff.toolkit import (
+        ...     Molecule,
+        ...     ToolkitRegistry,
+        ...     AmberToolsToolkitWrapper,
+        ...     RDKitToolkitWrapper,
+        ... )
+        >>> molecule = Molecule.from_smiles('Cc1ccccc1')
+        >>> toolkit_registry = ToolkitRegistry([
+        ...     AmberToolsToolkitWrapper,
+        ...     RDKitToolkitWrapper,
+        ... ])
+        >>> smiles = toolkit_registry.call('to_smiles', molecule)
+
+        Stop if a partial charge assignment method encounters an error during
+        the partial charge calculation (:py:exc:`ChargeCalculationError`), but
+        proceed to the next wrapper for any other exception such as the wrapper
+        not supporting the charge method:
+
+        >>> from openff.toolkit import GLOBAL_TOOLKIT_REGISTRY
+        >>> from openff.toolkit.utils.exceptions import ChargeCalculationError
+        >>> GLOBAL_TOOLKIT_REGISTRY.call(
+        ...     "assign_partial_charges",
+        ...     molecule=Molecule.from_smiles('C'),
+        ...     partial_charge_method="gasteiger",
+        ...     raise_exception_types=[ChargeCalculationError],
+        ... )
+
+        Calling a method that exists on none of the wrappers raises a
+        ``ValueError``:
+
+        >>> from openff.toolkit import ToolkitRegistry, RDKitToolkitWrapper
+        >>> toolkit_registry = ToolkitRegistry([RDKitToolkitWrapper])
+        >>> toolkit_registry.call("there_is_no_spoon") # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        Traceback (most recent call last):
+          ...
+        ValueError: No registered toolkits can provide the capability
+        "there_is_no_spoon" for args "()" and kwargs "{}"
+        Available toolkits are: [ToolkitWrapper around The RDKit version ...]
+        <BLANKLINE>
+
+        """
+        if raise_exception_types is None:
+            raise_exception_types = [Exception]
+
+        errors = list()
+        for toolkit in self._toolkits:
+            if hasattr(toolkit, method_name):
+                method = getattr(toolkit, method_name)
+                try:
+                    return method(*args, **kwargs)
+                except Exception as e:
+                    for exception_type in raise_exception_types:
+                        if isinstance(e, exception_type):
+                            raise e
+                    errors.append((toolkit, e))
+
+        # No toolkit was found to provide the requested capability
+        # TODO: Can we help developers by providing a check for typos in expected method names?
+        msg = (
+            f'No registered toolkits can provide the capability "{method_name}" '
+            f'for args "{args}" and kwargs "{kwargs}"\n'
         )
 
-    def register_toolkit(self, toolkit_wrapper, exception_if_unavailable=True):
+        msg += "Available toolkits are: {}\n".format(self.registered_toolkits)
+        # Append information about toolkits that implemented the method, but could not handle the provided parameters
+        for toolkit, error in errors:
+            msg += f" {toolkit} {type(error)} : {error}\n"
+        raise ValueError(msg)
+
+    def __repr__(self):
+        return f"<ToolkitRegistry containing {', '.join([tk.toolkit_name for tk in self._toolkits])}>"
+
+    def register_toolkit(
+        self,
+        toolkit_wrapper: Union[ToolkitWrapper, type[ToolkitWrapper]],
+        exception_if_unavailable: bool = True,
+    ):
         """
         Register the provided toolkit wrapper class, instantiating an object of it.
 
@@ -153,16 +299,19 @@ class ToolkitRegistry:
 
         Parameters
         ----------
-        toolkit_wrapper : instance or subclass of ToolkitWrapper
+        toolkit_wrapper
             The toolkit wrapper to register or its class.
-        exception_if_unavailable : bool, optional, default=True
+        exception_if_unavailable
             If True, an exception will be raised if the toolkit is unavailable
 
         """
         # Instantiate class if class, or just add if already instantiated.
-        if isinstance(toolkit_wrapper, type):
+        if isinstance(toolkit_wrapper, ToolkitWrapper):
+            self._toolkits.append(toolkit_wrapper)
+
+        elif issubclass(toolkit_wrapper, ToolkitWrapper):
             try:
-                toolkit_wrapper = toolkit_wrapper()
+                _toolkit_wrapper = toolkit_wrapper()
 
             # This exception can be raised by OpenEyeToolkitWrapper
             except LicenseError as license_exception:
@@ -172,17 +321,18 @@ class ToolkitRegistry:
                     logger.warning(license_exception)
                 return
             except ToolkitUnavailableException:
-                msg = "Unable to load toolkit '{}'. ".format(
-                    toolkit_wrapper._toolkit_name
-                )
                 if exception_if_unavailable:
-                    raise ToolkitUnavailableException(msg)
+                    raise ToolkitUnavailableException(
+                        "Unable to load toolkit '{_toolkit_wrapper._toolkit_name}'. "
+                    )
                 return
 
-        # Add toolkit to the registry.
-        self._toolkits.append(toolkit_wrapper)
+            self._toolkits.append(_toolkit_wrapper)
 
-    def deregister_toolkit(self, toolkit_wrapper):
+        else:
+            raise ValueError(f"Given unexpected argument {type(toolkit_wrapper)=}")
+
+    def deregister_toolkit(self, toolkit_wrapper: ToolkitWrapper):
         """
         Remove a ToolkitWrapper from the list of toolkits in this ToolkitRegistry
 
@@ -190,7 +340,7 @@ class ToolkitRegistry:
 
         Parameters
         ----------
-        toolkit_wrapper : instance or subclass of ToolkitWrapper
+        toolkit_wrapper
             The toolkit wrapper to remove from the registry
 
         Raises
@@ -227,7 +377,7 @@ class ToolkitRegistry:
         for toolkit_to_remove in toolkits_to_remove:
             self._toolkits.remove(toolkit_to_remove)
 
-    def add_toolkit(self, toolkit_wrapper):
+    def add_toolkit(self, toolkit_wrapper: ToolkitWrapper):
         """
         Append a ToolkitWrapper onto the list of toolkits in this ToolkitRegistry
 
@@ -235,7 +385,7 @@ class ToolkitRegistry:
 
         Parameters
         ----------
-        toolkit_wrapper : openff.toolkit.utils.ToolkitWrapper
+        toolkit_wrapper
             The ToolkitWrapper object to add to the list of registered toolkits
 
         Raises
@@ -244,33 +394,40 @@ class ToolkitRegistry:
             If toolkit_wrapper is not a ToolkitWrapper or subclass
         """
         if not isinstance(toolkit_wrapper, ToolkitWrapper):
-            msg = "Something other than a ToolkitWrapper object was passed to ToolkitRegistry.add_toolkit()\n"
-            msg += "Given object {} of type {}".format(
-                toolkit_wrapper, type(toolkit_wrapper)
+            raise InvalidToolkitError(
+                "Something other than a ToolkitWrapper object was passed to ToolkitRegistry.add_toolkit()\n"
+                f"Given object {toolkit_wrapper} of type {type(toolkit_wrapper)}"
             )
-            raise InvalidToolkitError(msg)
+
         self._toolkits.append(toolkit_wrapper)
 
     # TODO: Can we automatically resolve calls to methods that are not explicitly defined using some Python magic?
 
-    def resolve(self, method_name):
+    def resolve(self, method_name: str) -> Callable:
         """
+        Get a method with the given name from the first registered toolkit that provides it.
+
         Resolve the requested method name by checking all registered toolkits in
-        order of precedence for one that provides the requested method.
+        order of precedence for one that provides the requested method. Note
+        that this may not be the method used by :py:meth:`call` if the
+        ``raise_exception_types`` argument is passed.
+
 
         Parameters
         ----------
-        method_name : str
+        method_name
             The name of the method to resolve
 
         Returns
         -------
         method
-            The method of the first registered toolkit that provides the requested method name
+            The method of the first registered toolkit that provides the
+            requested method name
 
         Raises
         ------
-        NotImplementedError if the requested method cannot be found among the registered toolkits
+        NotImplementedError
+            if the requested method cannot be found among the registered toolkits
 
         Examples
         --------
@@ -279,7 +436,11 @@ class ToolkitRegistry:
 
         >>> from openff.toolkit import Molecule
         >>> molecule = Molecule.from_smiles('Cc1ccccc1')
-        >>> toolkit_registry = ToolkitRegistry([OpenEyeToolkitWrapper, RDKitToolkitWrapper, AmberToolsToolkitWrapper])
+        >>> toolkit_registry = ToolkitRegistry([
+        ...     OpenEyeToolkitWrapper,
+        ...     RDKitToolkitWrapper,
+        ...     AmberToolsToolkitWrapper
+        ... ])
         >>> method = toolkit_registry.resolve('to_smiles')
         >>> smiles = method(molecule)
 
@@ -293,84 +454,10 @@ class ToolkitRegistry:
 
         # No toolkit was found to provide the requested capability
         # TODO: Can we help developers by providing a check for typos in expected method names?
-        msg = 'No registered toolkits can provide the capability "{}".\n'.format(
-            method_name
+        raise NotImplementedError(
+            f'No registered toolkits can provide the capability "{method_name}".\n'
+            f"Available toolkits are: {self.registered_toolkits}\n"
         )
-        msg += "Available toolkits are: {}\n".format(self.registered_toolkits)
-        raise NotImplementedError(msg)
-
-    # TODO: Can we instead register available methods directly with `ToolkitRegistry`,
-    # so we can just use `ToolkitRegistry.method()`?
-    def call(self, method_name, *args, raise_exception_types=None, **kwargs):
-        """
-        Execute the requested method by attempting to use all registered toolkits in order of precedence.
-
-        ``*args`` and ``**kwargs`` are passed to the desired method, and return values of the method are returned
-
-        This is a convenient shorthand for ``toolkit_registry.resolve_method(method_name)(*args, **kwargs)``
-
-        Parameters
-        ----------
-        method_name : str
-            The name of the method to execute
-        raise_exception_types : list of Exception subclasses, default=None
-            A list of exception-derived types to catch and raise immediately. If None, this will be set to [Exception],
-            which will raise an error immediately if the first ToolkitWrapper in the registry fails. To try each
-            ToolkitWrapper that provides a suitably-named method, set this to the empty list ([]). If all
-            ToolkitWrappers run without raising any exceptions in this list, a single ValueError will be raised
-            containing the each ToolkitWrapper that was tried and the exception it raised.
-
-        Raises
-        ------
-        NotImplementedError if the requested method cannot be found among the registered toolkits
-
-        ValueError if no exceptions in the raise_exception_types list were raised by ToolkitWrappers, and
-        all ToolkitWrappers in the ToolkitRegistry were tried.
-
-        Other forms of exceptions are possible if raise_exception_types is specified.
-        These are defined by the ToolkitWrapper method being called.
-
-        Examples
-        --------
-
-        Create a molecule, and call the toolkit ``to_smiles()`` method directly
-
-        >>> from openff.toolkit import Molecule
-        >>> molecule = Molecule.from_smiles('Cc1ccccc1')
-        >>> toolkit_registry = ToolkitRegistry([OpenEyeToolkitWrapper, RDKitToolkitWrapper])
-        >>> smiles = toolkit_registry.call('to_smiles', molecule)
-
-        """
-        if raise_exception_types is None:
-            raise_exception_types = [Exception]
-
-        errors = list()
-        for toolkit in self._toolkits:
-            if hasattr(toolkit, method_name):
-                method = getattr(toolkit, method_name)
-                try:
-                    return method(*args, **kwargs)
-                except Exception as e:
-                    for exception_type in raise_exception_types:
-                        if isinstance(e, exception_type):
-                            raise e
-                    errors.append((toolkit, e))
-
-        # No toolkit was found to provide the requested capability
-        # TODO: Can we help developers by providing a check for typos in expected method names?
-        msg = (
-            f'No registered toolkits can provide the capability "{method_name}" '
-            f'for args "{args}" and kwargs "{kwargs}"\n'
-        )
-
-        msg += "Available toolkits are: {}\n".format(self.registered_toolkits)
-        # Append information about toolkits that implemented the method, but could not handle the provided parameters
-        for toolkit, error in errors:
-            msg += " {} {} : {}\n".format(toolkit, type(error), error)
-        raise ValueError(msg)
-
-    def __repr__(self):
-        return f"<ToolkitRegistry containing {', '.join([tk.toolkit_name for tk in self._toolkits])}>"
 
 
 # Copied from https://github.com/openforcefield/openff-fragmenter/blob/4a290b866a8ed43eabcbd3231c62b01f0c6d7df6
@@ -378,10 +465,13 @@ class ToolkitRegistry:
 @contextmanager
 def toolkit_registry_manager(toolkit_registry: Union[ToolkitRegistry, ToolkitWrapper]):
     """
-    A context manager that temporarily changes the ToolkitWrappers in the GLOBAL_TOOLKIT_REGISTRY.
-    This can be useful in cases where one would otherwise need to otherwise manually specify the use of a specific
-    ToolkitWrapper or ToolkitRegistry repeatedly in a block of code, or in cases where there isn't another way to
-    switch the ToolkitWrappers used for a particular operation.
+    A context manager that temporarily changes the :py:data:`GLOBAL_TOOLKIT_REGISTRY`.
+
+    This can be useful in cases where one would otherwise need to otherwise
+    manually specify the use of a specific :py:class:`ToolkitWrapper` or
+    :py:class:`ToolkitRegistry` repeatedly in a block of code, or in cases where
+    there isn't another way to switch the ``ToolkitWrapper`` used for a
+    particular operation.
 
     Examples
     --------

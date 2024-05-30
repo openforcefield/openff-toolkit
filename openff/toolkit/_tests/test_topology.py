@@ -529,11 +529,8 @@ class TestTopology:
         for omm_atom, off_atom in zip(pdbfile.topology.atoms(), topology.atoms):
             assert omm_atom.name == off_atom.name
 
-    def test_from_openmm_virtual_sites(self):
-        from openff.toolkit import ForceField
-
+    def test_from_openmm_virtual_sites(self, opc):
         water = Molecule.from_mapped_smiles("[O:1]([H:2])[H:3]")
-        opc = ForceField("opc-1.0.1.offxml")
 
         openmm_topology = opc.create_interchange([water]).to_openmm_topology()
 
@@ -769,6 +766,7 @@ class TestTopology:
     @requires_rdkit
     def test_from_pdb_input_types(self):
         import pathlib
+        from io import StringIO
 
         import openmm.app
 
@@ -779,6 +777,10 @@ class TestTopology:
         Topology.from_pdb(pathlib.Path(protein_path))
 
         with open(protein_path) as f:
+            Topology.from_pdb(f)
+
+        pdb_string = pathlib.Path(protein_path).read_text()
+        with StringIO(pdb_string) as f:
             Topology.from_pdb(f)
 
         with pytest.raises(ValueError, match="Unexpected type.*PDBFile"):
@@ -1710,6 +1712,7 @@ class TestTopology:
 
 @skip_if_missing("nglview")
 class TestTopologyVisaulization:
+    @pytest.mark.slow
     @requires_rdkit
     def test_visualize_basic(self):
         import nglview
@@ -2234,11 +2237,46 @@ class TestTopologyPositions:
             stop = i * 3 + 8
             assert np.all(mol.conformers[0] == positions[start:stop, :])
 
+    def test_set_positions_simple_molecule(self):
+        """Reproduce issue #1867"""
+        simple = _SimpleMolecule.from_molecule(Molecule.from_smiles("C=O"))
+
+        topology = Topology.from_molecules([simple, simple])
+
+        topology.set_positions(Quantity(np.zeros((topology.n_atoms, 3)), "nanometer"))
+
+        positions = topology.get_positions()
+
+        assert positions.shape == (topology.n_atoms, 3)
+        assert positions.units == "nanometer"
+
+    def test_set_positions_mixed_topology(self):
+        """Reproduce issue #1867"""
+        molecule = Molecule.from_smiles("C=O")
+        simple = _SimpleMolecule.from_molecule(molecule)
+
+        topology = Topology.from_molecules([molecule, simple])
+
+        topology.set_positions(Quantity(np.zeros((topology.n_atoms, 3)), "nanometer"))
+
+        positions = topology.get_positions()
+
+        assert positions.shape == (topology.n_atoms, 3)
+        assert positions.units == "nanometer"
+
     @pytest.fixture()
     def topology(self) -> Topology:
         methane = Molecule.from_mapped_smiles("[H:2][C:1]([H:3])([H:4])[H:5]")
         water = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
         topology = Topology.from_molecules([methane] + [water] * 4)
+
+        return topology
+
+    @pytest.fixture()
+    def topology_with_positions(self, topology) -> Topology:
+        # These conformers will obviously overlap, but they'll be the right data type
+        for molecule in topology.molecules:
+            molecule.generate_conformers(n_conformers=1)
 
         return topology
 
@@ -2324,6 +2362,30 @@ class TestTopologyPositions:
         topology.set_positions(positions)
         topology._molecules[0]._conformers = None
         assert topology.get_positions() is None
+
+    def test_clear_and_re_set_positions(self, topology_with_positions):
+        initial_positions = topology_with_positions.get_positions()
+        assert initial_positions is not None
+        assert initial_positions.shape == (topology_with_positions.n_atoms, 3)
+
+        with pytest.raises(
+            ValueError,
+            match="cannot be None.*use clear_positions",
+        ):
+            topology_with_positions.set_positions(None)
+
+        topology_with_positions.clear_positions()
+
+        assert topology_with_positions.get_positions() is None
+
+        for molecule in topology_with_positions.molecules:
+            assert molecule.conformers is None
+
+        # re-set positions back to their original values
+        topology_with_positions.set_positions(initial_positions)
+
+        assert initial_positions is not None
+        assert initial_positions.shape == (topology_with_positions.n_atoms, 3)
 
 
 @requires_rdkit
