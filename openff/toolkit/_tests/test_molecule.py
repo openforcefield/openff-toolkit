@@ -925,6 +925,16 @@ class TestMolecule:
             len(set([atom.name for atom in molecule.atoms])) == molecule.n_atoms
         ) == molecule.has_unique_atom_names
         assert all("x" in a.name for a in molecule.atoms)
+        # generate_unique_atom_names tests
+        # Check that the default works correctly
+        atom_name = molecule.generate_unique_atom_names()
+        assert atom_name.endswith("x")
+        # Check that a non-default string works correctly
+        atom_name = molecule.generate_unique_atom_names(suffix = "y")
+        assert atom_name.endswith("y")
+        # Check that an empty string works correctly
+        atom_name = molecule.generate_unique_atom_names(suffix = "")
+        assert atom_name.endswith("")
 
     inchi_data = [
         {
