@@ -1321,7 +1321,7 @@ class Topology(Serializable):
         import networkx as nx
 
         # Convert all openMM mols to graphs
-        omm_topology_G = nx.Graph()
+        omm_topology_G: nx.classes.graph.Graph = nx.Graph()
         for atom in openmm_topology.atoms():
             if atom.element is None:
                 raise VirtualSitesUnsupportedError(

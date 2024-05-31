@@ -2145,7 +2145,7 @@ class FrozenMolecule(Serializable):
         mol1_netx = to_networkx(mol1)
         mol2_netx = to_networkx(mol2)
 
-        from networkx.algorithms.isomorphism import GraphMatcher  # type: ignore
+        from networkx.algorithms.isomorphism import GraphMatcher
 
         GM = GraphMatcher(
             mol1_netx, mol2_netx, node_match=node_match_func, edge_match=edge_match_func
@@ -2816,7 +2816,7 @@ class FrozenMolecule(Serializable):
         """
         import networkx as nx
 
-        G = nx.Graph()
+        G: nx.classes.graph.Graph = nx.Graph()
         for atom in self.atoms:
             G.add_node(
                 atom.molecule_atom_index,
