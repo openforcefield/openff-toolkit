@@ -1098,8 +1098,17 @@ class FrozenMolecule(Serializable):
         appended to these generated names to reduce the odds that they clash
         with an atom name or type imported from another source. For example,
         generated atom names might begin 'C1x', 'H1x', 'O1x', 'C2x', etc.
+
+        Parameters
+        ----------
+
+        suffix
+            Optional string modification to denote molecule types
         """
-        return _generate_unique_atom_names(self, suffix)
+        if suffix == None:
+            return _generate_unique_atom_names(self)
+        else:
+            return _generate_unique_atom_names(self, suffix)
 
     def _validate(self):
         """
@@ -6123,7 +6132,7 @@ class HierarchyElement:
         """``True`` if the element has unique atom names, ``False`` otherwise."""
         return _has_unique_atom_names(self)
 
-    def generate_unique_atom_names(self, suffix: str = "x"):
+    def generate_unique_atom_names(self, suffix: str = None):
         """
         Generate unique atom names from the element symbol and count.
 
@@ -6132,9 +6141,17 @@ class HierarchyElement:
         appended to these generated names to reduce the odds that they clash
         with an atom name or type imported from another source. For example,
         generated atom names might begin 'C1x', 'H1x', 'O1x', 'C2x', etc.
-        """
-        return _generate_unique_atom_names(self, suffix)
 
+        Parameters
+        ----------
+
+        suffix
+            Optional string modification to denote molecule types
+        """
+        if suffix == None:
+            return _generate_unique_atom_names(self)
+        else:
+            return _generate_unique_atom_names(self, suffix)
 
 def _has_unique_atom_names(
     obj: Union[FrozenMolecule, "_SimpleMolecule", HierarchyElement]
@@ -6157,6 +6174,13 @@ def _generate_unique_atom_names(
     appended to these generated names to reduce the odds that they clash with
     an atom name or type imported from another source. For example, generated
     atom names might begin 'C1x', 'H1x', 'O1x', 'C2x', etc.
+
+    Parameters
+    ----------
+    
+    suffix
+        Optional string modification to denote molecule types
+        - This function contains the only instance of the default string
     """
     from collections import defaultdict
 
