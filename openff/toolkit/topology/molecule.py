@@ -6153,6 +6153,7 @@ class HierarchyElement:
         else:
             return _generate_unique_atom_names(self, suffix)
 
+
 def _has_unique_atom_names(
     obj: Union[FrozenMolecule, "_SimpleMolecule", HierarchyElement]
 ) -> bool:
@@ -6177,7 +6178,7 @@ def _generate_unique_atom_names(
 
     Parameters
     ----------
-    
+
     suffix
         Optional string modification to denote molecule types
         - This function contains the only instance of the default string
