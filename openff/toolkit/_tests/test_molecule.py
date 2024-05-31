@@ -930,10 +930,10 @@ class TestMolecule:
         atom_name = molecule.generate_unique_atom_names()
         assert atom_name.endswith("x")
         # Check that a non-default string works correctly
-        atom_name = molecule.generate_unique_atom_names(suffix = "y")
+        atom_name = molecule.generate_unique_atom_names(suffix="y")
         assert atom_name.endswith("y")
         # Check that an empty string works correctly
-        atom_name = molecule.generate_unique_atom_names(suffix = "")
+        atom_name = molecule.generate_unique_atom_names(suffix="")
         assert atom_name.endswith("")
 
     inchi_data = [
