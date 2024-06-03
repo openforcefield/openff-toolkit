@@ -924,9 +924,7 @@ class TestMolecule:
         assert (
             len(set([atom.name for atom in molecule.atoms])) == molecule.n_atoms
         ) == molecule.has_unique_atom_names
-        assert all(
-            a.name.endswith("x") for a in molecule.atoms
-        )  
+        assert all(a.name.endswith("x") for a in molecule.atoms)
 
     def test_generate_unique_atom_names(self):
         # Create test atoms as opposed to testing with the 'drug_bank'
