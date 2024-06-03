@@ -249,7 +249,7 @@ class _SimpleMolecule:
         #       https://github.com/openforcefield/openff-toolkit/pull/1179#discussion_r808549385
         import networkx as nx
 
-        graph = nx.Graph()
+        graph: nx.classes.graph.Graph = nx.Graph()
 
         for atom_index, atom in enumerate(self.atoms):
             graph.add_node(

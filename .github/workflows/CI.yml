@@ -28,16 +28,16 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-12]
-        python-version: ["3.10", "3.11"]
+        python-version: ["3.10", "3.11", "3.12"]
         rdkit: [true, false]
         openeye: [true, false]
         exclude:
           - rdkit: false
             openeye: false
           - openeye: true
-            python-version: "3.10"
-          - openeye: true
             python-version: "3.11"
+          - openeye: true
+            python-version: "3.12"
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
@@ -80,17 +80,10 @@ jobs:
           create-args: >-
             python=${{ matrix.python-version }}
 
-      - name: Additional info about the build
-        run: |
-          uname -a
-          df -h
-          ulimit -a
-
       - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
         env:
           OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
-        run: |
-          echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
+        run: echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
 
       - name: Install package
         run: |
@@ -103,8 +96,7 @@ jobs:
           python -m pip install .
 
       - name: Install test plugins
-        run: |
-          python -m pip install utilities/test_plugins
+        run: python -m pip install utilities/test_plugins
 
       - name: Remove undesired toolkits
         run: |
@@ -144,7 +136,7 @@ jobs:
 
       - name: Run mypy
         # subtle differences in Python/mypy versions, just keep it passing on one
-        if: ${{ matrix.rdkit == true && matrix.openeye && matrix.python-version == 3.11 }}
+        if: ${{ matrix.rdkit == true && matrix.openeye && matrix.python-version == 3.10 }}
         run: mypy -p "openff.toolkit"
 
       - name: Run unit tests
@@ -159,13 +151,11 @@ jobs:
 
       - name: Run code snippets in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: |
-          pytest -v --no-cov --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
+        run: pytest -v --no-cov --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
 
       - name: Run notebooks in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: |
-          pytest -v --no-cov --durations=5 --nbval --ignore docs/_build/ docs/
+        run: pytest -v --no-cov --nbval --ignore docs/_build/ docs/
 
       - name: Run examples in docstrings
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}

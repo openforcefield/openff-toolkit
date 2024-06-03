@@ -48,7 +48,6 @@ from typing import (
     overload,
 )
 
-import networkx as nx
 import numpy as np
 from openff.units.elements import MASSES, SYMBOLS
 from openff.utilities.exceptions import MissingOptionalDependencyError
@@ -92,6 +91,7 @@ from openff.toolkit.utils.utils import get_data_file_path, requires_package
 
 if TYPE_CHECKING:
     import IPython.display
+    import networkx as nx
     import nglview
     from rdkit.Chem import Mol as RDMol
 
@@ -1948,8 +1948,8 @@ class FrozenMolecule(Serializable):
 
     @staticmethod
     def are_isomorphic(
-        mol1: Union["FrozenMolecule", "_SimpleMolecule", nx.Graph],
-        mol2: Union["FrozenMolecule", "_SimpleMolecule", nx.Graph],
+        mol1: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"],
+        mol2: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"],
         return_atom_map: bool = False,
         aromatic_matching: bool = True,
         formal_charge_matching: bool = True,
@@ -2154,7 +2154,7 @@ class FrozenMolecule(Serializable):
         mol1_netx = to_networkx(mol1)
         mol2_netx = to_networkx(mol2)
 
-        from networkx.algorithms.isomorphism import GraphMatcher  # type: ignore
+        from networkx.algorithms.isomorphism import GraphMatcher
 
         GM = GraphMatcher(
             mol1_netx, mol2_netx, node_match=node_match_func, edge_match=edge_match_func
@@ -2176,7 +2176,7 @@ class FrozenMolecule(Serializable):
 
     def is_isomorphic_with(
         self,
-        other: Union["FrozenMolecule", "_SimpleMolecule", nx.Graph],
+        other: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"],
         **kwargs,
     ) -> bool:
         """
@@ -2794,7 +2794,7 @@ class FrozenMolecule(Serializable):
             if "_molecule_atom_index" in atom.__dict__:
                 del atom.__dict__["_molecule_atom_index"]
 
-    def to_networkx(self) -> nx.Graph:
+    def to_networkx(self) -> "nx.Graph":
         """Generate a NetworkX undirected graph from the molecule.
 
         Nodes are Atoms labeled with atom indices and atomic elements (via the ``element`` node atrribute).
@@ -2825,7 +2825,7 @@ class FrozenMolecule(Serializable):
         """
         import networkx as nx
 
-        G = nx.Graph()
+        G: nx.classes.graph.Graph = nx.Graph()
         for atom in self.atoms:
             G.add_node(
                 atom.molecule_atom_index,
@@ -3550,7 +3550,7 @@ class FrozenMolecule(Serializable):
         return self._hill_formula
 
     @staticmethod
-    def _object_to_hill_formula(obj: Union["FrozenMolecule", nx.Graph]) -> str:
+    def _object_to_hill_formula(obj: Union["FrozenMolecule", "nx.Graph"]) -> str:
         """Take a Molecule or NetworkX graph and generate its Hill formula.
         This provides a backdoor to the old functionality of Molecule.to_hill_formula, which
         was a static method that duck-typed inputs of Molecule or graph objects."""
@@ -4196,7 +4196,7 @@ class FrozenMolecule(Serializable):
             )
 
         if isinstance(file_path, (str, pathlib.Path)):
-            toolkit.to_file(self, file_path, file_format)
+            toolkit.to_file(self, file_path, file_format)  # type: ignore[attr-defined]
         else:
             toolkit.to_file_obj(self, file_path, file_format)  # type: ignore[attr-defined]
 
@@ -5739,7 +5739,7 @@ class Molecule(FrozenMolecule):
             pass
 
 
-def _networkx_graph_to_hill_formula(graph: nx.Graph) -> str:
+def _networkx_graph_to_hill_formula(graph: "nx.Graph") -> str:
     """
     Convert a NetworkX graph to a Hill formula.
 
@@ -5819,6 +5819,8 @@ def _nth_degree_neighbors_from_graphlike(
     neighbors
         tuples (len 2) of atom that are separated by ``n`` bonds.
     """
+    import networkx as nx
+
     graph = graphlike.to_networkx()
 
     for node_i in graph.nodes:

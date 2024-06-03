@@ -4,5 +4,5 @@ This example shows how you can convert an OpenMM `System` generated with the Ope
 
 #### Manifest:
 
-- `convert_to_amber_gromacs.ipynb`: IPython notebook showing how to generate AMBER and GROMACS topology and coordinates files starting from a PDB.
+- `export_with_interchange.ipynyb`: IPython notebook showing how to generate AMBER and GROMACS topology and coordinates files starting from a PDB using Interchange.
 - `1_cyclohexane_1_ethanol.pdb`: PDB file containing one molecule of cyclohexane and one of ethanol in vacuum.

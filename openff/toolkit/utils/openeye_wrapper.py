@@ -842,7 +842,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         oechem.OEAssignHybridization(qmol)
 
-        graph = nx.Graph()
+        graph: nx.classes.graph.Graph = nx.Graph()
         for atom in qmol.GetAtoms():
             atomic_number = atom.GetAtomicNum()
 
@@ -1427,9 +1427,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return molecule
 
-    to_openeye_cache = LRUCache(maxsize=4096)
-
-    @cached(to_openeye_cache, key=_mol_to_ctab_and_aro_key)
+    @cached(LRUCache(maxsize=4096), key=_mol_to_ctab_and_aro_key)
     def _connection_table_to_openeye(
         self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL
     ):

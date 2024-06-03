@@ -30,7 +30,6 @@ from typing import (
 )
 
 import numpy as np
-from networkx import Graph
 from numpy.typing import NDArray
 from openff.units import ensure_quantity
 from typing_extensions import TypeAlias
@@ -71,6 +70,7 @@ from openff.toolkit.utils.utils import get_data_file_path, requires_package
 if TYPE_CHECKING:
     import mdtraj
     import openmm.app
+    from networkx import Graph
     from nglview import NGLWidget
     from openmm.unit import Quantity as OMMQuantity
 
@@ -1321,7 +1321,7 @@ class Topology(Serializable):
         import networkx as nx
 
         # Convert all openMM mols to graphs
-        omm_topology_G = nx.Graph()
+        omm_topology_G: nx.classes.graph.Graph = nx.Graph()
         for atom in openmm_topology.atoms():
             if atom.element is None:
                 raise VirtualSitesUnsupportedError(
@@ -1419,7 +1419,7 @@ class Topology(Serializable):
 
         # Convert all unique mols to graphs
         topology = cls()
-        graph_to_unq_mol: dict[Graph, FrozenMolecule] = {}
+        graph_to_unq_mol: dict["Graph", FrozenMolecule] = {}
         for unq_mol in unique_molecules:
             unq_mol_graph = unq_mol.to_networkx()
             for existing_graph in graph_to_unq_mol.keys():
@@ -2169,10 +2169,7 @@ class Topology(Serializable):
         for molecule in self.molecules:
             stop = start + molecule.n_atoms
             if molecule.conformers is None:
-                if isinstance(molecule, Molecule):
-                    molecule._conformers = [array[start:stop]]
-                else:
-                    molecule.conformers = [array[start:stop]]  # type: ignore[misc]
+                molecule._conformers = [array[start:stop]]
             else:
                 molecule.conformers[0:1] = [array[start:stop]]
             start = stop

@@ -2469,9 +2469,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             offmol.partial_charges = None
         return offmol
 
-    to_rdkit_cache = LRUCache(maxsize=4096)
-
-    @cached(to_rdkit_cache, key=base_wrapper._mol_to_ctab_and_aro_key)
+    @cached(LRUCache(maxsize=4096), key=base_wrapper._mol_to_ctab_and_aro_key)
     def _connection_table_to_rdkit(
         self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL
     ):

@@ -108,6 +108,62 @@ GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
     ],
     exception_if_unavailable=False,
 )
+"""
+The toolkit registry used by default when no registry or wrapper is specified.
+
+A toolkit registry is a list of toolkit wrappers used to provide functionality
+not implemented by the OpenFF Toolkit itself. Any given functionality is
+requested from each toolkit in order until one is found that provides it. For
+more information, see :py:class:`ToolkitRegistry`.
+
+To temporarily modify the ``GLOBAL_TOOLKIT_REGISTRY``,
+see :py:func:`toolkit_registry_manager`.
+
+Examples
+========
+
+Check the default toolkit precedence order:
+
+>>> from openff.toolkit import GLOBAL_TOOLKIT_REGISTRY
+>>> GLOBAL_TOOLKIT_REGISTRY.registered_toolkits() # doctest: +ELLIPSIS
+[...]
+
+Temporarily change the global toolkit registry:
+
+>>> from openff.toolkit import ToolkitRegistry, RDKitToolkitWrapper
+>>> from openff.toolkit.utils import toolkit_registry_manager
+>>> with toolkit_registry_manager(ToolkitRegistry([RDKitToolkitWrapper]))):
+>>>     GLOBAL_TOOLKIT_REGISTRY
+<ToolkitRegistry containing The RDKit>
+>>>     mol = Molecule.from_smiles("CCO")
+>>> # when the context manager ends, the default registry is back to normal
+>>> GLOBAL_TOOLKIT_REGISTRY
+<ToolkitRegistry containing The RDKit, AmberTools, Built-in Toolkit>
+
+To change the value of ``GLOBAL_TOOLKIT_REGISTRY`` for the remainder of the
+Python process, individual toolkits can be added or removed with
+the :py:meth:`ToolkitRegistry.deregister_toolkit`
+and :py:meth:`ToolkitRegistry.register_toolkit` methods. This can be useful for
+debugging and exploring subtly different behavior between toolkit wrappers:
+
+>>> print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
+4
+>>> GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(RDKitToolkitWrapper)
+>>> print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
+3
+>>> GLOBAL_TOOLKIT_REGISTRY.register_toolkit(RDKitToolkitWrapper)
+>>> print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
+4
+
+Note that as with other global attributes in Python, assigning a new toolkit
+registry to ``GLOBAL_TOOLKIT_REGISTRY`` is quite difficult to get right and very
+likely to fail silently - we recommend modifying the existing value instead in
+most cases.
+
+See Also
+========
+toolkit_registry_manager, ToolkitRegistry, ToolkitWrapper
+"""
 
 
 OPENEYE_AVAILABLE = False

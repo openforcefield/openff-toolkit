@@ -6,6 +6,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+
+* #1861 Forbid looking up virtual site parameters by SMIRKS, since a valid SMIRNOFF force field 
+  can have several virtual site parameters with identical SMIRKS.
+
 ## Current development
 
 ### API-breaking changes
@@ -14,9 +18,21 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+- [PR #1868](https://github.com/openforcefield/openff-toolkit/pull/1868): Fixes issue
+  [#1868](https://github.com/openforcefield/openff-toolkit/issues/1868) in which `Topology.set_positions`
+  would sometimes fail if it contained `_SimpleMolecule`s.
+
 ### New features
 
+- [PR #1866](https://github.com/openforcefield/openff-toolkit/pull/1866): Implements a safer AmberTools version check.
+- [PR #1874](https://github.com/openforcefield/openff-toolkit/pull/1874): Improves some loading times by lazy-loading `networkx`.
+
 ### Improved documentation and warnings
+
+- [PR #1878](https://github.com/openforcefield/openff-toolkit/pull/1878): docs: updated docs for SMIRNOFF spec around AMBER/GROMACS
+- [PR #1870](https://github.com/openforcefield/openff-toolkit/pull/1870): Updates examples to use openff-2.2.0, 
+  and modernizes use of some API points. 
+- [PR #1787](https://github.com/openforcefield/openff-toolkit/pull/1787): Improve documentation for toolkit wrappers and registries
 
 ## 0.16.0
 
