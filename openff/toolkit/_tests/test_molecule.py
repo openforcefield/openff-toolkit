@@ -924,10 +924,10 @@ class TestMolecule:
         assert (
             len(set([atom.name for atom in molecule.atoms])) == molecule.n_atoms
         ) == molecule.has_unique_atom_names
-        assert all("x" in a.name for a in molecule.atoms) # fails for xenon, and nothing here checks the x is in the correct place
+        assert all(a.name.endswith("x") for a in molecule.atoms)
+        
         # generate_unique_atom_names tests
-
-    def test_generate_unique_atom_names():
+    def test_generate_unique_atom_names(self):
     # Create test atoms as opposed to testing with the 'drug_bank'
         # Check that the default works correctly
         molecule = create_ethanol()
