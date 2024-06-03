@@ -924,37 +924,39 @@ class TestMolecule:
         assert (
             len(set([atom.name for atom in molecule.atoms])) == molecule.n_atoms
         ) == molecule.has_unique_atom_names
-        assert all("x" in a.name for a in molecule.atoms) # fails for xenon, and nothing here checks the x is in the correct place
+        assert all(
+            "x" in a.name for a in molecule.atoms
+        )  # fails for xenon, and nothing here checks the x is in the correct place
         # generate_unique_atom_names tests
 
     def test_generate_unique_atom_names():
-    # Create test atoms as opposed to testing with the 'drug_bank'
+        # Create test atoms as opposed to testing with the 'drug_bank'
         # Check that the default works correctly
         molecule = create_ethanol()
         molecule.generate_unique_atom_names()
-        assert molecule.atoms[0].name == 'C1x'
-        assert molecule.atoms[1].name == 'C2x'
-        assert molecule.atoms[2].name == 'O1x'
-        assert molecule.atoms[3].name == 'H1x'
-        assert molecule.atoms[4].name == 'H2x'
+        assert molecule.atoms[0].name == "C1x"
+        assert molecule.atoms[1].name == "C2x"
+        assert molecule.atoms[2].name == "O1x"
+        assert molecule.atoms[3].name == "H1x"
+        assert molecule.atoms[4].name == "H2x"
 
         # Check that a non-default string works correctly
         molecule = create_ethanol()
-        molecule.generate_unique_atom_names(suffix = "y")
-        assert molecule.atoms[0].name == 'C1y'
-        assert molecule.atoms[1].name == 'C2y'
-        assert molecule.atoms[2].name == 'O1y'
-        assert molecule.atoms[3].name == 'H1y'
-        assert molecule.atoms[4].name == 'H2y'
+        molecule.generate_unique_atom_names(suffix="y")
+        assert molecule.atoms[0].name == "C1y"
+        assert molecule.atoms[1].name == "C2y"
+        assert molecule.atoms[2].name == "O1y"
+        assert molecule.atoms[3].name == "H1y"
+        assert molecule.atoms[4].name == "H2y"
 
         # Check that an empty string works correctly
         molecule = create_ethanol()
-        molecule.generate_unique_atom_names(suffix = "")
-        assert molecule.atoms[0].name == 'C1'
-        assert molecule.atoms[1].name == 'C2'
-        assert molecule.atoms[2].name == 'O1'
-        assert molecule.atoms[3].name == 'H1'
-        assert molecule.atoms[4].name == 'H2'
+        molecule.generate_unique_atom_names(suffix="")
+        assert molecule.atoms[0].name == "C1"
+        assert molecule.atoms[1].name == "C2"
+        assert molecule.atoms[2].name == "O1"
+        assert molecule.atoms[3].name == "H1"
+        assert molecule.atoms[4].name == "H2"
 
     inchi_data = [
         {
