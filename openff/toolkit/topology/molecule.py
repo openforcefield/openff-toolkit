@@ -1089,7 +1089,7 @@ class FrozenMolecule(Serializable):
         """``True`` if the molecule has unique atom names, ``False`` otherwise."""
         return _has_unique_atom_names(self)
 
-    def generate_unique_atom_names(self, suffix: str = None):
+    def generate_unique_atom_names(self, suffix: str = "x"):
         """
         Generate unique atom names from the element symbol and count.
 
@@ -1103,12 +1103,9 @@ class FrozenMolecule(Serializable):
         ----------
 
         suffix
-            Optional string modification to denote molecule types
+            Optional suffix added to atom names. Assists in denoting molecule types
         """
-        if suffix == None:
-            return _generate_unique_atom_names(self)
-        else:
-            return _generate_unique_atom_names(self, suffix)
+        return _generate_unique_atom_names(self, suffix)
 
     def _validate(self):
         """
@@ -6134,7 +6131,7 @@ class HierarchyElement:
         """``True`` if the element has unique atom names, ``False`` otherwise."""
         return _has_unique_atom_names(self)
 
-    def generate_unique_atom_names(self, suffix: str = None):
+    def generate_unique_atom_names(self, suffix: str = "x"):
         """
         Generate unique atom names from the element symbol and count.
 
@@ -6148,12 +6145,9 @@ class HierarchyElement:
         ----------
 
         suffix
-            Optional string modification to denote molecule types
+            Optional suffix added to atom names. Assists in denoting molecule types
         """
-        if suffix == None:
-            return _generate_unique_atom_names(self)
-        else:
-            return _generate_unique_atom_names(self, suffix)
+        return _generate_unique_atom_names(self, suffix)
 
 
 def _has_unique_atom_names(
@@ -6182,8 +6176,7 @@ def _generate_unique_atom_names(
     ----------
 
     suffix
-        Optional string modification to denote molecule types
-        - This function contains the only instance of the default string
+        Optional suffix added to atom names. Assists in denoting molecule types
     """
     from collections import defaultdict
 

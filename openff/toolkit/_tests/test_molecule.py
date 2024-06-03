@@ -925,7 +925,7 @@ class TestMolecule:
             len(set([atom.name for atom in molecule.atoms])) == molecule.n_atoms
         ) == molecule.has_unique_atom_names
         assert all(
-            "x" in a.name for a in molecule.atoms
+            a.name.endswith("x") for a in molecule.atoms
         )  # fails for xenon, and nothing here checks the x is in the correct place
         # generate_unique_atom_names tests
 
