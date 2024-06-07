@@ -74,7 +74,7 @@ _python_doc_base = "https://docs.python.org/3.7"
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3.7", None),
     "numpy": ("https://numpy.org/doc/stable", None),
-    "scipy": ("https://docs.scipy.org/doc/scipy/reference", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "scikit.learn": ("https://scikit-learn.org/stable", None),
     "openmm": ("http://docs.openmm.org/latest/api-python/", None),
     "rdkit": ("https://www.rdkit.org/docs", None),
@@ -117,7 +117,7 @@ myst_enable_extensions = [
     "replacements",
     "deflist",
 ]
-myst_heading_anchors = 3
+myst_heading_anchors = 4
 
 # Myst NB settings
 # Never execute notebooks - this should be done by CI

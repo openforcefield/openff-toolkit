@@ -10,9 +10,8 @@ import textwrap
 
 import pytest
 
+from openff.toolkit._tests.utils import _get_readme_path
 from openff.toolkit.utils import RDKIT_AVAILABLE, get_data_file_path, temporary_cd
-
-ROOT_DIR_PATH = pathlib.Path(__file__).joinpath("../../../../").resolve()
 
 
 def run_script_file(file_path):
@@ -87,15 +86,10 @@ def find_readme_examples() -> list[str]:
     readme_examples : list[str]
         The list of Python scripts included in the README.md files.
     """
-    if "site-packages" in __file__:
-        # This test file is being collected from the installed package, which
-        # does not provide the README file.
-        # Note that there will likely be a mis-bundled file
-        # $CONDA_PREFIX/lib/python3.x/site-packages/README.md, but this is not
-        # the toolkit's README file!
-        return list()
+    readme_file_path = _get_readme_path()
 
-    readme_file_path = pathlib.Path(__file__).parents[3] / "README.md"
+    if readme_file_path is None:
+        return list()
 
     with open(readme_file_path, "r") as f:
         readme_content = f.read()

@@ -1,7 +1,5 @@
 ## Taking an AMBER system and replacing the ligand parameters with OpenFF parameters
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openforcefield/openff-toolkit/stable?filepath=examples%2Fswap_existing_ligand_parameters_with_openmmforcefields%2F)
-
 These examples illustrate how the [OpenMM Force Fields](http://github.com/openmm/openmmforcefields) utility can be used to parametrize a system by combining Amber and OpenFF force fields.
 
 ### BRD4:inhibitor complex

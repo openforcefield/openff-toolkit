@@ -1,8 +1,8 @@
-name: Weekly test against upstream beta and RC builds
+name: Tests against beta/RC builds
 
 on:
   schedule:
-    - cron: "0 0 * * 0"
+    - cron: "0 3 * * 0"
   workflow_dispatch:
 
 defaults:
@@ -11,21 +11,20 @@ defaults:
 
 jobs:
   test:
-    name: Test beta and RC builds on on ${{ matrix.python-version }}
+    name: Test beta/RC builds on ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os:
           - ubuntu-latest
-          - macos-latest
+          - macos-12
         python-version:
-          - 3.9
+          - "3.11"
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PYTEST_ARGS: -r fE --tb=short -nauto
-      COV: --cov=openff/toolkit --cov-config=setup.cfg --cov-append --cov-report=xml
 
     steps:
       - uses: actions/checkout@v4
@@ -35,15 +34,16 @@ jobs:
       - name: Install environment with ${{ env.JOBNAME }}
         uses: mamba-org/setup-micromamba@v1
         with:
-          environment-file: devtools/conda-envs/beta_rc_env.yaml
+          environment-file: devtools/conda-envs/test_env.yaml
+          condarc: |
+            channels:
+              - conda-forge/label/openmm_rc
+              - conda-forge/label/mdtraj_rc
+              - openeye/label/rc
+              - openeye
+              - conda-forge
           create-args: >-
             python=${{ matrix.python-version }}
-
-      - name: Additional info about the build
-        run: |
-          uname -a
-          df -h
-          ulimit -a
 
       - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
         env:
@@ -57,36 +57,24 @@ jobs:
           python -m pip install .
 
       - name: Install test plugins
-        run: |
-          python -m pip install utilities/test_plugins
+        run: python -m pip install utilities/test_plugins
 
       - name: Environment Information
-        run: |
-          conda info
-          conda list
+        run: micromamba info && micromamba list
 
       - name: Check links
-        run: |
-          pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
+        run: pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
 
       - name: Run mypy
-        run: |
-          mypy --namespace-packages -p "openff.toolkit"
+        run: mypy -p "openff.toolkit"
 
       - name: Run unit tests
         run: |
           PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_examples.py"
           PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_links.py"
           PYTEST_ARGS+=" -m 'slow or not slow'"
-          pytest $PYTEST_ARGS $COV
+          pytest $PYTEST_ARGS
 
       - name: Run code snippets in docs
         run: |
           pytest -v --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
-
-      - name: Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage.xml
-          fail_ci_if_error: true

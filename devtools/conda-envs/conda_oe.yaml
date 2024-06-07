@@ -1,0 +1,13 @@
+name: latest-deployment
+channels:
+  - conda-forge
+  - openeye
+dependencies:
+    # Base depends
+  - openff-toolkit-examples
+    # Tests
+  - openeye-toolkits
+  - pytest=7.4
+  - pytest-rerunfailures
+  - nbval
+  - parmed=3
