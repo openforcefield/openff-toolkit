@@ -3653,8 +3653,14 @@ class VirtualSiteHandler(_NonbondedHandler):
         supported exception, they should open an issue on GitHub explaining their exact
         use case so that we can ensure that exactly what they need is both supported
         and works as expected through expansion of the unit tests.
-        """
 
+        This validation can be disabled by assigning the environment variable
+         `OPENFF_UNSAFE_VSITES=1`.
+        """
+        import os
+
+        if os.environ.get("OPENFF_UNSAFE_VSITES", "0") != "0":
+            return
         supported_connectivity = {
             # We currently expect monovalent lone pairs to be applied to something
             # like a carboxyl group, where the parent of the lone pair has a
@@ -3687,10 +3693,11 @@ class VirtualSiteHandler(_NonbondedHandler):
                 f"unsupported by virtual sites of type {parameter.type}. Atom with "
                 f"smirks index={smirks_index} matched topology atom {atom_index} with "
                 f"connectivity={connectivity}, but it was expected to have connectivity "
-                f"{expected_connectivity}. If this is "
-                f"a use case you would like supported, please describe what it is "
-                f"you are trying to do in an issue on the OpenFF Toolkit GitHub: "
-                f"https://github.com/openforcefield/openff-toolkit/issues"
+                f"{expected_connectivity}. If you are getting this error and aren't "
+                f"developing your own force field, it indicates that the FF you're "
+                f"using never expected to see a molecule like this. If you ARE developing "
+                f"a force field and know that you want to squelch this error, set the "
+                f"environment variable `OPENFF_UNSAFE_VSITES=1`."
             )
 
     def check_handler_compatibility(self, other_handler: "VirtualSiteHandler"):

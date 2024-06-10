@@ -27,6 +27,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1866](https://github.com/openforcefield/openff-toolkit/pull/1866): Implements a safer AmberTools version check.
 - [PR #1874](https://github.com/openforcefield/openff-toolkit/pull/1874): Improves some loading times by lazy-loading `networkx`.
 - [PR #1881](https://github.com/openforcefield/openff-toolkit/pull/1881): Adds an optional suffix parameter to `generate_unique_atom_names`.
+- [PR #1887](https://github.com/openforcefield/openff-toolkit/pull/1887): Allows skipping vsite valence check for parent atoms using the `OPENFF_UNSAFE_VSITES` environment variable. 
 
 ### Improved documentation and warnings
 

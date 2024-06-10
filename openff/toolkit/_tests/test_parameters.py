@@ -2215,25 +2215,44 @@ class TestVirtualSiteHandler:
         assert offxml_string == roundtripped_force_field.to_string()
 
     @pytest.mark.parametrize(
-        "smiles, matched_indices, parameter, expected_raises",
+        "smiles, matched_indices, parameter, expected_raises, unsafe_vsites",
         [
             (
                 "[Cl:1][H:2]",
                 (1, 2),
                 VirtualSiteMocking.bond_charge_parameter("[Cl:1][H:2]"),
                 does_not_raise(),
+                False,
             ),
             (
                 "[N:1]([H:2])([H:3])[H:4]",
                 (1, 2, 3),
                 VirtualSiteMocking.monovalent_parameter("[*:2][N:1][*:3]"),
-                pytest.raises(NotImplementedError, match="please describe what it is"),
+                pytest.raises(
+                    NotImplementedError, match="currently unsupported by virtual sites"
+                ),
+                False,
+            ),
+            (
+                "[N:1]([H:2])([H:3])[H:4]",
+                (1, 2, 3),
+                VirtualSiteMocking.monovalent_parameter("[*:2][N:1][*:3]"),
+                does_not_raise(),
+                True,
             ),
         ],
     )
     def test_validate_found_match(
-        self, smiles, matched_indices, parameter, expected_raises
+        self,
+        monkeypatch,
+        smiles,
+        matched_indices,
+        parameter,
+        expected_raises,
+        unsafe_vsites,
     ):
+        if unsafe_vsites:
+            monkeypatch.setenv("OPENFF_UNSAFE_VSITES", "1")
         molecule = Molecule.from_smiles(smiles, allow_undefined_stereo=True)
         topology: Topology = molecule.to_topology()
 
