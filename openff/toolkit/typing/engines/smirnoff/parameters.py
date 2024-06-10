@@ -3654,7 +3654,10 @@ class VirtualSiteHandler(_NonbondedHandler):
         use case so that we can ensure that exactly what they need is both supported
         and works as expected through expansion of the unit tests.
         """
+        import os
 
+        if os.environ.get("OPENFF_UNSAFE_VSITES", "0") != "0":
+            return
         supported_connectivity = {
             # We currently expect monovalent lone pairs to be applied to something
             # like a carboxyl group, where the parent of the lone pair has a
