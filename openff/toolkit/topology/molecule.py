@@ -1089,17 +1089,23 @@ class FrozenMolecule(Serializable):
         """``True`` if the molecule has unique atom names, ``False`` otherwise."""
         return _has_unique_atom_names(self)
 
-    def generate_unique_atom_names(self):
+    def generate_unique_atom_names(self, suffix: str = "x"):
         """
         Generate unique atom names from the element symbol and count.
 
         Names are generated from the elemental symbol and the number of times
-        that element is found in the molecule. The character 'x' is appended to
-        these generated names to reduce the odds that they clash with an atom
-        name or type imported from another source. For example, generated atom
-        names might begin 'C1x', 'H1x', 'O1x', 'C2x', etc.
+        that element is found in the hierarchy element. The character 'x' is
+        appended to these generated names to reduce the odds that they clash
+        with an atom name or type imported from another source. For example,
+        generated atom names might begin 'C1x', 'H1x', 'O1x', 'C2x', etc.
+
+        Parameters
+        ----------
+
+        suffix
+            Optional suffix added to atom names. Assists in denoting molecule types
         """
-        return _generate_unique_atom_names(self)
+        return _generate_unique_atom_names(self, suffix)
 
     def _validate(self):
         """
@@ -2145,7 +2151,7 @@ class FrozenMolecule(Serializable):
         mol1_netx = to_networkx(mol1)
         mol2_netx = to_networkx(mol2)
 
-        from networkx.algorithms.isomorphism import GraphMatcher  # type: ignore
+        from networkx.algorithms.isomorphism import GraphMatcher
 
         GM = GraphMatcher(
             mol1_netx, mol2_netx, node_match=node_match_func, edge_match=edge_match_func
@@ -2816,7 +2822,7 @@ class FrozenMolecule(Serializable):
         """
         import networkx as nx
 
-        G = nx.Graph()
+        G: nx.classes.graph.Graph = nx.Graph()
         for atom in self.atoms:
             G.add_node(
                 atom.molecule_atom_index,
@@ -6125,7 +6131,7 @@ class HierarchyElement:
         """``True`` if the element has unique atom names, ``False`` otherwise."""
         return _has_unique_atom_names(self)
 
-    def generate_unique_atom_names(self):
+    def generate_unique_atom_names(self, suffix: str = "x"):
         """
         Generate unique atom names from the element symbol and count.
 
@@ -6134,8 +6140,14 @@ class HierarchyElement:
         appended to these generated names to reduce the odds that they clash
         with an atom name or type imported from another source. For example,
         generated atom names might begin 'C1x', 'H1x', 'O1x', 'C2x', etc.
+
+        Parameters
+        ----------
+
+        suffix
+            Optional suffix added to atom names. Assists in denoting molecule types
         """
-        return _generate_unique_atom_names(self)
+        return _generate_unique_atom_names(self, suffix)
 
 
 def _has_unique_atom_names(
@@ -6148,7 +6160,9 @@ def _has_unique_atom_names(
     return True
 
 
-def _generate_unique_atom_names(obj: Union[FrozenMolecule, HierarchyElement]):
+def _generate_unique_atom_names(
+    obj: Union[FrozenMolecule, HierarchyElement], suffix: str = "x"
+):
     """
     Generate unique atom names from the element symbol and count.
 
@@ -6157,6 +6171,12 @@ def _generate_unique_atom_names(obj: Union[FrozenMolecule, HierarchyElement]):
     appended to these generated names to reduce the odds that they clash with
     an atom name or type imported from another source. For example, generated
     atom names might begin 'C1x', 'H1x', 'O1x', 'C2x', etc.
+
+    Parameters
+    ----------
+
+    suffix
+        Optional suffix added to atom names. Assists in denoting molecule types
     """
     from collections import defaultdict
 
@@ -6164,9 +6184,4 @@ def _generate_unique_atom_names(obj: Union[FrozenMolecule, HierarchyElement]):
     for atom in obj.atoms:
         symbol = atom.symbol
         element_counts[symbol] += 1
-        # TODO: It may be worth exposing this as a user option, i.e. to avoid multiple ligands
-        # parameterized with OpenFF clashing because they have atom names like O1x, H3x, etc.
-        # i.e. an optional argument could enable a user to `generate_unique_atom_names(blah="y")
-        # to have one ligand be O1y, etc.
-        # https://github.com/openforcefield/openff-toolkit/pull/1096#pullrequestreview-767227391
-        atom.name = symbol + str(element_counts[symbol]) + "x"
+        atom.name = symbol + str(element_counts[symbol]) + suffix

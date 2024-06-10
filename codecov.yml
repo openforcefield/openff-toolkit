@@ -1,5 +1,3 @@
-
-# Codecov configuration to make it a bit less noisy
 coverage:
   status:
     patch: false
@@ -13,3 +11,5 @@ comment:
   behavior: default
   flags: null
   paths: null
+ignore:
+  - "examples/"

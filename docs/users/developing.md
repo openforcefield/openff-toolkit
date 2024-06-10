@@ -2,10 +2,6 @@
 
 # Developing for the toolkit
 
-:::{contents}
-  :local:
-:::
-
 This guide is written with the understanding that our contributors are NOT professional software developers, but are instead computational chemistry trainees and professionals.
 With this in mind, we aim to use a minimum of bleeding-edge technology and alphabet soup, and we will define any potentially unfamiliar processes or technologies the first time they are mentioned.
 We enforce use of certain practices (tests, formatting, coverage analysis, documentation) primarily because they are worthwhile upfront investments in the long-term sustainability of this project.
