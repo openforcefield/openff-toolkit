@@ -2228,7 +2228,9 @@ class TestVirtualSiteHandler:
                 "[N:1]([H:2])([H:3])[H:4]",
                 (1, 2, 3),
                 VirtualSiteMocking.monovalent_parameter("[*:2][N:1][*:3]"),
-                pytest.raises(NotImplementedError, match="please describe what it is"),
+                pytest.raises(
+                    NotImplementedError, match="currently unsupported by virtual sites"
+                ),
                 False,
             ),
             (
