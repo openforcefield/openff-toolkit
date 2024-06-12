@@ -10,11 +10,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * #1861 Forbid looking up virtual site parameters by SMIRKS, since a valid SMIRNOFF force field 
   can have several virtual site parameters with identical SMIRKS.
 
-## Current development
+## 0.16.1
 
-### API-breaking changes
-
-### Behavior changes
 
 ### Bugfixes
 
