@@ -10,6 +10,12 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * #1861 Forbid looking up virtual site parameters by SMIRKS, since a valid SMIRNOFF force field 
   can have several virtual site parameters with identical SMIRKS.
 
+## Current development
+
+### Bugfixes
+
+- [PR #1890](https://github.com/openforcefield/openff-toolkit/pull/1890): Fixes [#1888](https://github.com/openforcefield/openff-toolkit/pull/1888) in which `ParameterAttribute.unit` was sometimes not validated when stringified.
+
 ## 0.16.1
 
 
