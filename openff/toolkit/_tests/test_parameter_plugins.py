@@ -55,7 +55,7 @@ def test_load_handler_plugins():
     registered_plugin_names = [plugin.__name__ for plugin in registered_plugins]
 
     assert "CustomHandler" in registered_plugin_names
-    assert "BuckinghamHandler" in registered_plugin_names
+    assert "FOOBuckinghamHandler" in registered_plugin_names
 
 
 def test_do_not_load_other_type():
@@ -75,9 +75,9 @@ def test_skip_wrong_subclass(caplog):
 
 def test_buckingham_type():
     """Reproduce, in part, issue #1888."""
-    from custom_plugins.handler_plugins import BuckinghamHandler
+    from custom_plugins.handler_plugins import FOOBuckinghamHandler
 
-    parameter = BuckinghamHandler.BuckinghamType(
+    parameter = FOOBuckinghamHandler.FOOBuckinghamType(
         smirks="[*:1]",
         a="2 kilojoule_per_mole",
         b="1/nanometer",

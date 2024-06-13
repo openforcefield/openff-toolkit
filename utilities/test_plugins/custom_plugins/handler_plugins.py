@@ -13,10 +13,10 @@ class WrongSubclass(list):
 class CustomIOHandler(ParameterIOHandler):
     _FORMAT = "JSON"
 
-class BuckinghamHandler(_NonbondedHandler):
+class FOOBuckinghamHandler(_NonbondedHandler):
     """A custom parameter handler for buckingham interactions."""
 
-    class BuckinghamType(ParameterType):
+    class FOOBuckinghamType(ParameterType):
         """A custom parameter type for buckingham interactions."""
 
         _ELEMENT_NAME = "Atom"
@@ -36,5 +36,5 @@ class BuckinghamHandler(_NonbondedHandler):
             unit=unit.kilojoule_per_mole * unit.nanometer ** 6,
         )
 
-    _TAGNAME = "TestBuckingham"
-    _INFOTYPE = BuckinghamType
+    _TAGNAME = "FOOBuckingham"
+    _INFOTYPE = FOOBuckinghamType
