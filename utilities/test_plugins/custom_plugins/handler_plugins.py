@@ -31,10 +31,9 @@ class BuckinghamHandler(_NonbondedHandler):
                                unit="nanometer**-1",
                                )
 
-        # Define as None, since that's supported
         c = ParameterAttribute(
             default=None,
-            unit=None,
+            unit=unit.kilojoule_per_mole * unit.nanometer ** 6,
         )
 
     _TAGNAME = "TestBuckingham"
