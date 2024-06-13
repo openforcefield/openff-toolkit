@@ -5,19 +5,20 @@ Dictionary (CCD).
 """
 
 import copy
-from copy import deepcopy
 import json
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict, defaultdict
+from copy import deepcopy
 
 import rdkit
-from rdkit import Chem
 from CifFile import ReadCif
 from openff.units.elements import SYMBOLS
+from rdkit import Chem
 
 from openff.toolkit import Molecule
 from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
 
 _SYMBOL_TO_ATOMIC_NUMBER = {v: k for k, v in SYMBOLS.items()}
+
 
 # Amber ff porting functions
 def remove_charge_and_bond_order_from_guanidinium(rdmol):
@@ -677,7 +678,7 @@ class CifSubstructures:
         }
         # Fix PRO smarts substructure
         for aa_name, replacement_list in substructures_to_fix.items():
-            for (old_smarts, new_smarts) in replacement_list:
+            for old_smarts, new_smarts in replacement_list:
                 self.data[aa_name][new_smarts] = self.data[aa_name][old_smarts]
                 self.data[aa_name].pop(old_smarts)
 
@@ -719,7 +720,13 @@ class CifSubstructures:
         Implemented 7/7/23: add-on to existing substructure library to reformat amino acids
             to a new format. Self contained for now to the following function:
         """
-        def add_atom(rdmol, begin_atom_idx, new_atom_smarts, bond_order=Chem.rdchem.BondType.SINGLE):
+
+        def add_atom(
+            rdmol,
+            begin_atom_idx,
+            new_atom_smarts,
+            bond_order=Chem.rdchem.BondType.SINGLE,
+        ):
             # adds atom with single bond, returns new mol
             emol = Chem.RWMol(deepcopy(rdmol))
             new_atom = Chem.AtomFromSmarts(new_atom_smarts)
@@ -735,10 +742,29 @@ class CifSubstructures:
             params = Chem.SmilesParserParams()
             params.removeHs = False
             params.sanitize = True
-            rdmol = Chem.MolFromSmiles(Chem.MolToSmiles(deepcopy(rdmol), isomericSmiles=False, kekuleSmiles=True, canonical=False), params) # create non-query version of substruct
-            Chem.Kekulize(rdmol, clearAromaticFlags=True) # kekulize using molops (regular molecule required here)
-            rdmol = Chem.MolFromSmarts(Chem.MolToSmiles(deepcopy(rdmol), isomericSmiles=False, kekuleSmiles=True, canonical=False)) # remake into query mol
-            current_map_num = 1 + _get_maximum_map_num(rdmol) # do not change existing atom map numbers! 
+            rdmol = Chem.MolFromSmiles(
+                Chem.MolToSmiles(
+                    deepcopy(rdmol),
+                    isomericSmiles=False,
+                    kekuleSmiles=True,
+                    canonical=False,
+                ),
+                params,
+            )  # create non-query version of substruct
+            Chem.Kekulize(
+                rdmol, clearAromaticFlags=True
+            )  # kekulize using molops (regular molecule required here)
+            rdmol = Chem.MolFromSmarts(
+                Chem.MolToSmiles(
+                    deepcopy(rdmol),
+                    isomericSmiles=False,
+                    kekuleSmiles=True,
+                    canonical=False,
+                )
+            )  # remake into query mol
+            current_map_num = 1 + _get_maximum_map_num(
+                rdmol
+            )  # do not change existing atom map numbers!
             for atom in rdmol.GetAtoms():
                 if atom.GetAtomicNum() > 0:
                     if atom.GetAtomMapNum() == 0:
@@ -760,13 +786,12 @@ class CifSubstructures:
                 else:
                     raise Exception
             for bond in rdmol.GetBonds():
-                if bond.GetBondType() == Chem.rdchem.BondType.AROMATIC: 
-                    raise Exception # there should be no aromatic bonds unless kekulization has failed 
+                if bond.GetBondType() == Chem.rdchem.BondType.AROMATIC:
+                    raise Exception  # there should be no aromatic bonds unless kekulization has failed
                 elif bond.GetBondType() == Chem.rdchem.BondType.SINGLE:
                     query = Chem.BondFromSmarts("-")
                     bond.SetQuery(query)
-                
-                
+
             return rdmol
 
         def get_atom_with_map_num(rdmol, map_num):
@@ -786,32 +811,156 @@ class CifSubstructures:
 
         new_subs_dict = OrderedDict()
         #               = [(Smarts without terminal groups   , [ids to add port to],       [ids to add H to],            [id of amide bond carbon])]
-        amino_acid_subs = [(Chem.MolFromSmarts("[N+:1](-[H])(-[H])1[C@@:2]([C:3](=[O:4]))([H:9])[C:5]([H:10])([H:11])[C:6]([H:12])([H:13])[C:7]1([H:14])[H:15]"), [], [], 4),
-                        (Chem.MolFromSmarts("[N+0:1](-[H])1[C@@:2]([C:3](=[O:4]))([H:9])[C:5]([H:10])([H:11])[C:6]([H:12])([H:13])[C:7]1([H:14])[H:15]"), [], [], 3),
-                        (Chem.MolFromSmarts("[N+1:1](-[H])1[C@@:2]([C:3](=[O:4]))([H:9])[C:5]([H:10])([H:11])[C:6]([H:12])([H:13])[C:7]1([H:14])[H:15]"), [0], [], 3),
-                        (Chem.MolFromSmarts("[N+0:1]1[C@@:2]([C:3](=[O:4]))([H:9])[C:5]([H:10])([H:11])[C:6]([H:12])([H:13])[C:7]1([H:14])[H:15]"), [0], [], 2),
-                        (Chem.MolFromSmarts("[N+](-[H])(-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6]([H]))([H:9])[H:10])[H:8]"), [], [], 5),
-                        (Chem.MolFromSmarts("[N+](-[H])(-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6])([H:9])[H:10])[H:8]"), [8], [], 5),
-                        (Chem.MolFromSmarts("[N+](-[H])(-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S-1:6])([H:9])[H:10])[H:8]"), [], [], 5),
-                        (Chem.MolFromSmarts("[N](-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6]([H]))([H:9])[H:10])[H:8]"), [], [], 4),
-                        (Chem.MolFromSmarts("[N](-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6])([H:9])[H:10])[H:8]"), [7], [], 4),
-                        (Chem.MolFromSmarts("[N](-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S-1:6])([H:9])[H:10])[H:8]"), [], [], 4),
-                        (Chem.MolFromSmarts("[N](-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6]([H]))([H:9])[H:10])[H:8]"), [0], [], 3),
-                        (Chem.MolFromSmarts("[N](-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6])([H:9])[H:10])[H:8]"), [0, 6], [], 3),
-                        (Chem.MolFromSmarts("[N](-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S-1:6])([H:9])[H:10])[H:8]"), [0], [], 3),
-                        (Chem.MolFromSmarts("[N:1][C@:2]([C:3](=[O:4]))([C:5]([S+0:6]([H]))([H:9])[H:10])[H:8]"), [0,0], [], 2),
-                        (Chem.MolFromSmarts("[N:1][C@:2]([C:3](=[O:4]))([C:5]([S+0:6])([H:9])[H:10])[H:8]"), [0,0, 5], [], 2),
-                        (Chem.MolFromSmarts("[N:1][C@:2]([C:3](=[O:4]))([C:5]([S-1:6])([H:9])[H:10])[H:8]"), [0,0], [], 2),
-                        (Chem.MolFromSmarts("[N+](-[H])(-[H])(-[H])-[C@](-[H])(-[*])-[C](=[O])"), [], [], 7),
-                        (Chem.MolFromSmarts("[N](-[H])(-[H])-[C@](-[H])(-[*])-[C](=[O])"), [], [], 6),
-                        (Chem.MolFromSmarts("[N](-[H])-[C@](-[H])(-[*])-[C](=[O])"), [0], [], 5),
-                        ]
-        special_cases = {'[C:1](=[O:2])[C:3]([H:4])([H:5])[H:6]': '[*]-[C:1](=[O:2])[C:3]([H:4])([H:5])[H:6]',
-                        '[N:1]([C:2]([H:4])([H:5])[H:6])[H:3]': '[*]-[N:1]([C:2]([H:4])([H:5])[H:6])[H:3]',
-                        '[N:1]([H:2])[H:3]': '[*]-C(=O)[N:1]([H:2])[H:3]',
-                        '[C:1](=[O:2])[N:3]': '[*]-[C:1](=[O:2])[N:3](-[H])[C:4](-[*])(-[*])(-[*])',
-                        '[S:1][S:2]': '[*]-[S:1]-[S:2]-[*]',
-                        }
+        amino_acid_subs = [
+            (
+                Chem.MolFromSmarts(
+                    "[N+:1](-[H])(-[H])1[C@@:2]([C:3](=[O:4]))([H:9])[C:5]([H:10])([H:11])[C:6]([H:12])([H:13])[C:7]1([H:14])[H:15]"
+                ),
+                [],
+                [],
+                4,
+            ),
+            (
+                Chem.MolFromSmarts(
+                    "[N+0:1](-[H])1[C@@:2]([C:3](=[O:4]))([H:9])[C:5]([H:10])([H:11])[C:6]([H:12])([H:13])[C:7]1([H:14])[H:15]"
+                ),
+                [],
+                [],
+                3,
+            ),
+            (
+                Chem.MolFromSmarts(
+                    "[N+1:1](-[H])1[C@@:2]([C:3](=[O:4]))([H:9])[C:5]([H:10])([H:11])[C:6]([H:12])([H:13])[C:7]1([H:14])[H:15]"
+                ),
+                [0],
+                [],
+                3,
+            ),
+            (
+                Chem.MolFromSmarts(
+                    "[N+0:1]1[C@@:2]([C:3](=[O:4]))([H:9])[C:5]([H:10])([H:11])[C:6]([H:12])([H:13])[C:7]1([H:14])[H:15]"
+                ),
+                [0],
+                [],
+                2,
+            ),
+            (
+                Chem.MolFromSmarts(
+                    "[N+](-[H])(-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6]([H]))([H:9])[H:10])[H:8]"
+                ),
+                [],
+                [],
+                5,
+            ),
+            (
+                Chem.MolFromSmarts(
+                    "[N+](-[H])(-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6])([H:9])[H:10])[H:8]"
+                ),
+                [8],
+                [],
+                5,
+            ),
+            (
+                Chem.MolFromSmarts(
+                    "[N+](-[H])(-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S-1:6])([H:9])[H:10])[H:8]"
+                ),
+                [],
+                [],
+                5,
+            ),
+            (
+                Chem.MolFromSmarts(
+                    "[N](-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6]([H]))([H:9])[H:10])[H:8]"
+                ),
+                [],
+                [],
+                4,
+            ),
+            (
+                Chem.MolFromSmarts(
+                    "[N](-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6])([H:9])[H:10])[H:8]"
+                ),
+                [7],
+                [],
+                4,
+            ),
+            (
+                Chem.MolFromSmarts(
+                    "[N](-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S-1:6])([H:9])[H:10])[H:8]"
+                ),
+                [],
+                [],
+                4,
+            ),
+            (
+                Chem.MolFromSmarts(
+                    "[N](-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6]([H]))([H:9])[H:10])[H:8]"
+                ),
+                [0],
+                [],
+                3,
+            ),
+            (
+                Chem.MolFromSmarts(
+                    "[N](-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6])([H:9])[H:10])[H:8]"
+                ),
+                [0, 6],
+                [],
+                3,
+            ),
+            (
+                Chem.MolFromSmarts(
+                    "[N](-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S-1:6])([H:9])[H:10])[H:8]"
+                ),
+                [0],
+                [],
+                3,
+            ),
+            (
+                Chem.MolFromSmarts(
+                    "[N:1][C@:2]([C:3](=[O:4]))([C:5]([S+0:6]([H]))([H:9])[H:10])[H:8]"
+                ),
+                [0, 0],
+                [],
+                2,
+            ),
+            (
+                Chem.MolFromSmarts(
+                    "[N:1][C@:2]([C:3](=[O:4]))([C:5]([S+0:6])([H:9])[H:10])[H:8]"
+                ),
+                [0, 0, 5],
+                [],
+                2,
+            ),
+            (
+                Chem.MolFromSmarts(
+                    "[N:1][C@:2]([C:3](=[O:4]))([C:5]([S-1:6])([H:9])[H:10])[H:8]"
+                ),
+                [0, 0],
+                [],
+                2,
+            ),
+            (
+                Chem.MolFromSmarts("[N+](-[H])(-[H])(-[H])-[C@](-[H])(-[*])-[C](=[O])"),
+                [],
+                [],
+                7,
+            ),
+            (
+                Chem.MolFromSmarts("[N](-[H])(-[H])-[C@](-[H])(-[*])-[C](=[O])"),
+                [],
+                [],
+                6,
+            ),
+            (Chem.MolFromSmarts("[N](-[H])-[C@](-[H])(-[*])-[C](=[O])"), [0], [], 5),
+        ]
+        special_cases = {
+            "[C:1](=[O:2])[C:3]([H:4])([H:5])[H:6]": "[*]-[C:1](=[O:2])[C:3]([H:4])([H:5])[H:6]",
+            "[N:1]([C:2]([H:4])([H:5])[H:6])[H:3]": "[*]-[N:1]([C:2]([H:4])([H:5])[H:6])[H:3]",
+            "[N:1]([H:2])[H:3]": "[*]-C(=O)[N:1]([H:2])[H:3]",
+            "[C:1](=[O:2])[N:3]": "[*]-[C:1](=[O:2])[N:3](-[H])[C:4](-[*])(-[*])(-[*])",
+            "[S:1][S:2]": "[*]-[S:1]-[S:2]-[*]",
+        }
         for res_name, subs in self.data.items():
             res_dict = OrderedDict()
             res_num = 0
@@ -831,7 +980,7 @@ class CifSubstructures:
                 if substruct in special_cases.keys():
                     if special_cases[substruct]:
                         rdmol = Chem.MolFromSmarts(special_cases[substruct])
-                    else: # empty, discard
+                    else:  # empty, discard
                         continue
                 else:
                     # add * where appropriate
@@ -844,14 +993,14 @@ class CifSubstructures:
                     carb = rdmol.GetAtomWithIdx(aa_match[carboxyl_C])
                     if carb.GetDegree() == 2:
                         rdmol = add_atom(rdmol, aa_match[carboxyl_C], "[*]")
-                formated_rdmol= _fill_out_query(rdmol)
+                formated_rdmol = _fill_out_query(rdmol)
                 # In this document, the only new atoms I add are *, so edit the atom names
                 num_new_atoms = formated_rdmol.GetNumAtoms() - len(atom_names)
-                atom_names = atom_names + ["*"]*num_new_atoms
+                atom_names = atom_names + ["*"] * num_new_atoms
                 sub_smarts = Chem.MolToSmarts(formated_rdmol)
                 res_num += 1
 
-                sub_smarts = sub_smarts.replace('&', '')
+                sub_smarts = sub_smarts.replace("&", "")
                 res_dict[sub_smarts] = atom_names
 
             new_subs_dict[res_name] = res_dict
@@ -861,7 +1010,9 @@ class CifSubstructures:
         for res_name, subs in new_subs_dict.items():
             res_num = 0
             for substruct, atom_names in subs.items():
-                check_dict[f"{res_name}_{res_num}"] = [ substruct ]
+                check_dict[f"{res_name}_{res_num}"] = [substruct]
                 res_num += 1
-        RDKitToolkitWrapper()._validate_custom_substructures(custom_substructures=check_dict, forbidden_keys=[]) # errors if any are invalid
+        RDKitToolkitWrapper()._validate_custom_substructures(
+            custom_substructures=check_dict, forbidden_keys=[]
+        )  # errors if any are invalid
         self.data = new_subs_dict
