@@ -12,6 +12,7 @@ setup(
         "openff.toolkit.plugins.handlers": [
             "CustomHandler = custom_plugins.handler_plugins:CustomHandler",
             "WrongSubclass = custom_plugins.handler_plugins:WrongSubclass",
+            "FOOBuckinghamHandler = custom_plugins.handler_plugins:FOOBuckinghamHandler",
         ]
     },
 )
