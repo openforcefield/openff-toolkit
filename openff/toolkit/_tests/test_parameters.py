@@ -1961,7 +1961,27 @@ class TestVirtualSiteHandler:
     Test the creation of a VirtualSiteHandler and the implemented VirtualSiteTypes
     """
 
-    def test_getitem_forbidden(self, opc):
+    def test_int_getitem_okay(self, opc):
+        """Test that ints can be used to lookup virtual site types."""
+        parameter = opc["VirtualSites"].parameters[0]
+
+        assert isinstance(parameter, VirtualSiteHandler.VirtualSiteType)
+        assert parameter.epsilon.m == 0.0
+        assert parameter.type == "DivalentLonePair"
+
+        assert opc["VirtualSites"][0] == parameter
+
+    def test_slice(self, opc):
+        assert len(opc["VirtualSites"].parameters[0:1:2]) == 1
+
+        with pytest.raises(
+            AssertionError,
+            match="must be based on int",
+        ):
+            opc["VirtualSites"].parameters["first":"second"]
+
+    def test_smirks_getitem_forbidden(self, opc):
+        """Test that SMIRKS/ParameterType can NOT be used to lookup virtual site types."""
         smirks = list(opc["VirtualSites"]._parameters)[0].smirks
 
         with pytest.raises(
