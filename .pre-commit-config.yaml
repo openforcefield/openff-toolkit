@@ -1,6 +1,6 @@
 ci:
   autoupdate_schedule: "quarterly"
-files: ^openff|(^examples/((?!deprecated).)*$)|^docs
+files: ^openff|(^examples/((?!deprecated).)*$)|^docs|(^utilities/((?!deprecated).)*$)
 repos:
 - repo: https://github.com/psf/black
   rev: 24.3.0
@@ -15,7 +15,7 @@ repos:
   rev: 7.0.0
   hooks:
   - id: flake8
-    files: ^openff
+    files: ^openff|(^utilities/((?!deprecated).)*$)
     additional_dependencies: [
         'flake8-absolute-import',
         'flake8-no-pep420',
