@@ -342,10 +342,14 @@ class ParameterAttribute:
     def __init__(
         self,
         default: Any = UNDEFINED,
-        unit: Optional[Unit] = None,
+        unit: Unit | str | None = None,
         converter: Optional[Callable] = None,
         docstring: str = "",
     ):
+        if isinstance(unit, str):
+            # be careful with module & variable names
+            unit = Unit(unit)
+
         self.default = default
         self._unit = unit
         self._converter = converter
