@@ -1614,11 +1614,24 @@ class ParameterList(list):
 
 
 class VirtualSiteParameterList(ParameterList):
-    def __getitem__(self, val):
-        raise NotImplementedError(
-            "VirtualSiteHandler does not support __getitem__ lookups due to the "
-            "number of values required to uniquely identify a specific parameter."
-        )
+    def __getitem__(self, val: Union[int, slice, str, "ParameterType"]):  # type: ignore[override]
+        indexable_item: Union[int, slice]
+
+        if isinstance(val, int):
+            indexable_item = val
+        elif isinstance(val, slice):
+            assert (
+                type(val.start) is int and type(val.stop) is int
+            ), "slices must be based on ints"
+            indexable_item = val
+        else:
+            raise NotImplementedError(
+                "VirtualSiteHandler does not support __getitem__ lookups "
+                f"of this type ({type(val)=}) due to the "
+                "number of values required to uniquely identify a specific parameter."
+            )
+
+        return super().__getitem__(indexable_item)
 
 
 # TODO: Rename to better reflect role as parameter base class?
@@ -3850,10 +3863,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         self._parameters = VirtualSiteParameterList()
 
     def __getitem__(self, val):
-        raise NotImplementedError(
-            "VirtualSiteHandler does not support __getitem__ lookups due to the "
-            "number of values required to uniquely identify a specific parameter."
-        )
+        return self.parameters.__getitem__(val)
 
 
 ConstraintType = ConstraintHandler.ConstraintType
