@@ -7,7 +7,7 @@ dependencies:
   - openff-toolkit-examples
     # Tests
   - openeye-toolkits
-  - pytest=7.4
+  - pytest=8
   - pytest-rerunfailures
   - nbval
   - parmed=3
