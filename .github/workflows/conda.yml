@@ -106,4 +106,4 @@ jobs:
 
           python -m pytest $PYTEST_ARGS \
             --pyargs "openff.toolkit" \
-            -m "slow or not slow"
+            -m "slow or not slow" -x
