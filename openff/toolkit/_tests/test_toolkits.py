@@ -33,6 +33,7 @@ from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ChemicalEnvironmentParsingError,
     ConformerGenerationError,
+    EmptyInChiError,
     InChIParseError,
     IncorrectNumConformersError,
     IncorrectNumConformersWarning,
@@ -841,6 +842,16 @@ class TestOpenEyeToolkitWrapper:
 
         with pytest.raises(InChIParseError, match="ksbfksfksfksbfks"):
             Molecule.from_inchi(inchi, toolkit_registry=toolkit)
+
+    def test_empty_inchi(self):
+        """Reproduce Issue #1897"""
+        with pytest.raises(
+            EmptyInChiError,
+            match="Failed to generate",
+        ):
+            Molecule.from_mapped_smiles("[H:5][S:3]#[N+:2][S:1][H:4]").to_inchi(
+                toolkit_registry=OpenEyeToolkitWrapper()
+            )
 
     @pytest.mark.parametrize(
         "molecule",
@@ -2319,6 +2330,16 @@ class TestRDKitToolkitWrapper:
             # turn of the bond order matching as this could move in the aromatic rings
             assert molecule.is_isomorphic_with(
                 mol2, bond_order_matching=False, toolkit_registry=toolkit
+            )
+
+    def test_empty_inchi(self):
+        """Reproduce Issue #1897"""
+        with pytest.raises(
+            EmptyInChiError,
+            match="Failed to generate",
+        ):
+            Molecule.from_mapped_smiles("[H:5][S:3]#[N+:2][S:1][H:4]").to_inchi(
+                toolkit_registry=RDKitToolkitWrapper(),
             )
 
     def test_smiles_charged(self):

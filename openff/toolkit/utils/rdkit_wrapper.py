@@ -30,6 +30,7 @@ from openff.toolkit.utils.exceptions import (
     AmbiguousBondChemicalAssignment,
     ChargeMethodUnavailableError,
     ConformerGenerationError,
+    EmptyInChiError,
     InChIParseError,
     InvalidAromaticityModelError,
     MoleculeParseError,
@@ -2769,6 +2770,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             inchi = Chem.MolToInchi(rdmol, options="-FixedH")
         else:
             inchi = Chem.MolToInchi(rdmol)
+
+        if len(inchi) == 0:
+            raise EmptyInChiError("RDKit failed to generate an InChI for the molecule.")
+
         return inchi
 
     def to_inchikey(self, molecule: "Molecule", fixed_hydrogens: bool = False) -> str:

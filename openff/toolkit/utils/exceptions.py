@@ -135,6 +135,14 @@ class SmilesParsingError(OpenFFToolkitException):
     """
 
 
+class EmptyInChiError(OpenFFToolkitException):
+    """
+    This error is raised when a toolkit returns an empty InChi string, possibly due to bugs
+    in the underlying InChi code. For more context, see
+    https://github.com/openforcefield/openff-toolkit/issues/1897
+    """
+
+
 class NotAttachedToMoleculeError(OpenFFToolkitException):
     """Exception for when a component does not belong to a Molecule object, but is queried"""
 

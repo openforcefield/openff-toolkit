@@ -39,6 +39,7 @@ from openff.toolkit.utils.exceptions import (
     ChargeCalculationError,
     ChargeMethodUnavailableError,
     ConformerGenerationError,
+    EmptyInChiError,
     GAFFAtomTypeWarning,
     InChIParseError,
     InconsistentStereochemistryError,
@@ -1915,6 +1916,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         else:
             inchi = oechem.OEMolToSTDInChI(oemol)
+
+        if len(inchi) == 0:
+            raise EmptyInChiError(
+                "OEChem failed to generate an InChI for the molecule."
+            )
 
         return inchi
 
