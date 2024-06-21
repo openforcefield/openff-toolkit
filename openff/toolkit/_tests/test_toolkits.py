@@ -847,7 +847,7 @@ class TestOpenEyeToolkitWrapper:
         """Reproduce Issue #1897"""
         with pytest.raises(
             EmptyInChiError,
-            match="Failed to generate",
+            match="failed to generate",
         ):
             Molecule.from_mapped_smiles("[H:5][S:3]#[N+:2][S:1][H:4]").to_inchi(
                 toolkit_registry=OpenEyeToolkitWrapper()
@@ -2336,7 +2336,7 @@ class TestRDKitToolkitWrapper:
         """Reproduce Issue #1897"""
         with pytest.raises(
             EmptyInChiError,
-            match="Failed to generate",
+            match="failed to generate",
         ):
             Molecule.from_mapped_smiles("[H:5][S:3]#[N+:2][S:1][H:4]").to_inchi(
                 toolkit_registry=RDKitToolkitWrapper(),
