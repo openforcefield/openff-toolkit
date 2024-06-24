@@ -342,7 +342,7 @@ class ParameterAttribute:
     def __init__(
         self,
         default: Any = UNDEFINED,
-        unit: Unit | str | None = None,
+        unit: Union[Unit, str, None] = None,
         converter: Optional[Callable] = None,
         docstring: str = "",
     ):
