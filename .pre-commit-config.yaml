@@ -32,7 +32,7 @@ repos:
       args:
         - '--select=F'
 - repo: https://github.com/adamchainz/blacken-docs
-  rev: 1.16.0
+  rev: 1.18.0
   hooks:
     - id: blacken-docs
       files: ^docs/.*\.(rst|md)$
