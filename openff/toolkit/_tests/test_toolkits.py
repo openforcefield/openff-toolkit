@@ -843,15 +843,18 @@ class TestOpenEyeToolkitWrapper:
         with pytest.raises(InChIParseError, match="ksbfksfksfksbfks"):
             Molecule.from_inchi(inchi, toolkit_registry=toolkit)
 
-    def test_empty_inchi(self):
+    @pytest.mark.parametrize("method", ["to_inchi", "to_inchikey"])
+    def test_empty_inchi(self, method):
         """Reproduce Issue #1897"""
         with pytest.raises(
             EmptyInChiError,
-            match="failed to generate",
+            match="failed to generate" + (".*key" if method == "to_inchikey" else ""),
         ):
-            Molecule.from_mapped_smiles("[H:5][S:3]#[N+:2][S:1][H:4]").to_inchi(
-                toolkit_registry=OpenEyeToolkitWrapper()
-            )
+            # call either .to_inchi or .to_inchikey
+            getattr(
+                Molecule.from_mapped_smiles("[H:5][S:3]#[N+:2][S:1][H:4]"),
+                method,
+            )(toolkit_registry=OpenEyeToolkitWrapper())
 
     @pytest.mark.parametrize(
         "molecule",
@@ -2332,15 +2335,18 @@ class TestRDKitToolkitWrapper:
                 mol2, bond_order_matching=False, toolkit_registry=toolkit
             )
 
-    def test_empty_inchi(self):
+    @pytest.mark.parametrize("method", ["to_inchi", "to_inchikey"])
+    def test_empty_inchi(self, method):
         """Reproduce Issue #1897"""
         with pytest.raises(
             EmptyInChiError,
-            match="failed to generate",
+            match="failed to generate" + (".*key" if method == "to_inchikey" else ""),
         ):
-            Molecule.from_mapped_smiles("[H:5][S:3]#[N+:2][S:1][H:4]").to_inchi(
-                toolkit_registry=RDKitToolkitWrapper(),
-            )
+            # call either .to_inchi or .to_inchikey
+            getattr(
+                Molecule.from_mapped_smiles("[H:5][S:3]#[N+:2][S:1][H:4]"),
+                method,
+            )(toolkit_registry=RDKitToolkitWrapper())
 
     def test_smiles_charged(self):
         """Test RDKitWrapper functions for reading/writing charged SMILES"""
