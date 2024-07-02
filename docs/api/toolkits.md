@@ -25,8 +25,8 @@ The toolkit wrappers' functionality can then be accessed through the registry. T
 
 ```pycon
 >>> from openff.toolkit import Molecule
->>> molecule = Molecule.from_smiles('Cc1ccccc1')
->>> smiles = toolkit_registry.call('to_smiles', molecule)
+>>> molecule = Molecule.from_smiles("Cc1ccccc1")
+>>> smiles = toolkit_registry.call("to_smiles", molecule)
 
 ```
 
@@ -65,8 +65,11 @@ The [`toolkit_registry_manager`] context manager allows `GLOBAL_TOOLKIT_REGISTRY
 >>> from openff.toolkit.utils import toolkit_registry_manager
 >>> print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
 4
->>> with toolkit_registry_manager(ToolkitRegistry([RDKitToolkitWrapper(), AmberToolsToolkitWrapper()])):
+>>> with toolkit_registry_manager(
+...     ToolkitRegistry([RDKitToolkitWrapper(), AmberToolsToolkitWrapper()])
+... ):
 ...     print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
+...
 2
 
 ```
