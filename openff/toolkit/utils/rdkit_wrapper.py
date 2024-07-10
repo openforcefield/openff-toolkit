@@ -2761,6 +2761,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         --------
         inchi
             The InChI string of the molecule.
+
+        Raises
+        ------
+        EmptyInChiError
+            If RDKit failed to generate an InChI for the molecule
         """
 
         from rdkit import Chem
@@ -2797,6 +2802,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         --------
         inchi_key
             The InChIKey representation of the molecule.
+
+        Raises
+        ------
+        EmptyInChiError
+            If RDKit failed to generate an InChI for the molecule
         """
 
         from rdkit import Chem
@@ -2806,6 +2816,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             inchi_key = Chem.MolToInchiKey(rdmol, options="-FixedH")
         else:
             inchi_key = Chem.MolToInchiKey(rdmol)
+
+        if len(inchi_key) == 0:
+            raise EmptyInChiError(
+                "RDKit failed to generate an InChI key for the molecule."
+            )
+
         return inchi_key
 
     def get_tagged_smarts_connectivity(self, smarts: str):

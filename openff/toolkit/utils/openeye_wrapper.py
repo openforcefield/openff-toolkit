@@ -1903,6 +1903,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         --------
         inchi: str
             The InChI string of the molecule.
+
+        Raises
+        ------
+        EmptyInChiError
+            If OEChem failed to generate an InChI for the molecule
         """
 
         from openeye import oechem
@@ -1945,6 +1950,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         --------
         inchi_key
             The InChIKey representation of the molecule.
+
+        Raises
+        ------
+        EmptyInChiError
+            If OEChem failed to generate an InChI for the molecule
         """
 
         from openeye import oechem
@@ -1958,6 +1968,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         else:
             inchi_key = oechem.OEMolToSTDInChIKey(oemol)
+
+        if len(inchi_key) == 0:
+            raise EmptyInChiError(
+                "OEChem failed to generate an InChI key for the molecule."
+            )
 
         return inchi_key
 
