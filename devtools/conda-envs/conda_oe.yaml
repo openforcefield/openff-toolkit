@@ -6,7 +6,7 @@ dependencies:
     # Base depends
   - openff-toolkit-examples
     # Tests
-  - openeye-toolkits
+  - openeye-toolkits =2024.1.0
   - pytest=7.4
   - pytest-rerunfailures
   - nbval
