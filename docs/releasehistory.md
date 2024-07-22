@@ -7,11 +7,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `micro` increments represent bugfix releases or improvements in documentation
 
 
-## Current development
+## 0.16.2
 
 ### Bugfixes
 
-- [PR #1898](https://github.com/openforcefield/openff-toolkit/pull/1898) and [PR #1904](https://github.com/openforcefield/openff-toolkit/pull/1904): Fixes [#1897](https://github.com/openforcefield/openff-toolkit/pull/1897) in which `to_inchi` methods would return an empty string in some rare cases. Now these cases result in an `EmptyInchiError` being raised. 
+- [PR #1898](https://github.com/openforcefield/openff-toolkit/pull/1898) and [PR #1904](https://github.com/openforcefield/openff-toolkit/pull/1904): Fixes [#1897](https://github.com/openforcefield/openff-toolkit/pull/1897) in which `to_inchi` and `to_inchikey` methods would return an empty string in some rare cases. Now these cases result in an `EmptyInchiError` being raised. 
 - [PR #1890](https://github.com/openforcefield/openff-toolkit/pull/1890): Fixes [#1888](https://github.com/openforcefield/openff-toolkit/pull/1888) in which `ParameterAttribute.unit` was sometimes not validated when stringified.
 - [PR #1894](https://github.com/openforcefield/openff-toolkit/pull/1894): Fixes [#1893](https://github.com/openforcefield/openff-toolkit/issues/1893) in which int-based virtual site parameter lookups were mistakenly forbidden in changes in 0.16.0.
 
