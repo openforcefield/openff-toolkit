@@ -856,6 +856,11 @@ class TestParameterList:
         with pytest.raises(ValueError, match="is not in list"):
             parameters.index(p4)
 
+        with pytest.raises(TypeError, match="non-None values for start"):
+            parameters.index("[*:1]", start=1)
+        with pytest.raises(TypeError, match="non-None values for stop"):
+            parameters.index("[*:1]", stop=-1)
+
     def test_index_duplicates(self):
         """Test ParameterList.index when multiple parameters have identical SMIRKS"""
         p1 = ParameterType(smirks="[*:1]")

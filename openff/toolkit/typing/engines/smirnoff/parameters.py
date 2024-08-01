@@ -1488,7 +1488,7 @@ class ParameterList(list):
         # TODO: Check if other ParameterList contains the same ParameterTypes?
         super().extend(other)
 
-    def index(self, item):
+    def index(self, item, start=None, stop=None):
         """
         Get the numerical index of a ParameterType object or SMIRKS in this ParameterList.
         Raises ParameterLookupError if the item is not found.
@@ -1497,6 +1497,10 @@ class ParameterList(list):
         ----------
         item
             The parameter or SMIRKS to look up in this ParameterList
+        start
+            Unsupported, added to align method signature with list.index
+        stop
+            Unsupported, added to align method signature with list.index
 
         Returns
         -------
@@ -1508,6 +1512,14 @@ class ParameterList(list):
         ParameterLookupError if SMIRKS pattern is passed in but not found
 
         """
+        if start is not None:
+            raise TypeError(
+                "ParameterList.index does not support non-None values for start."
+            )
+        if stop is not None:
+            raise TypeError(
+                "ParameterList.index does not support non-None values for stop."
+            )
         if isinstance(item, ParameterType):
             return super().index(item)
         else:
