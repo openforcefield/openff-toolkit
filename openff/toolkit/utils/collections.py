@@ -205,9 +205,13 @@ class ValidatedDict(dict):
 
     def update(self, *args, **kwargs):
         if len(args) != 1:
-            raise TypeError(f"ValidatedDict.update expected exactly one positional argument, got {len(args)} instead.")
+            raise TypeError(
+                f"ValidatedDict.update expected exactly one positional argument, got {len(args)} instead."
+            )
         if len(kwargs) != 0:
-            raise TypeError(f"ValidatedDict.update does not accept named arguments, got {kwargs} instead.")
+            raise TypeError(
+                f"ValidatedDict.update does not accept named arguments, got {kwargs} instead."
+            )
         other = self._convert_and_validate(dict(args[0]))
         super().update(other)
 

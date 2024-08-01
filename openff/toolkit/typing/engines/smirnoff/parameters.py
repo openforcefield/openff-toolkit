@@ -1513,9 +1513,13 @@ class ParameterList(list):
 
         """
         if start is not None:
-            raise TypeError("ParameterList.index does not support non-None values for start.")
+            raise TypeError(
+                "ParameterList.index does not support non-None values for start."
+            )
         if stop is not None:
-            raise TypeError("ParameterList.index does not support non-None values for stop.")
+            raise TypeError(
+                "ParameterList.index does not support non-None values for stop."
+            )
         if isinstance(item, ParameterType):
             return super().index(item)
         else:
