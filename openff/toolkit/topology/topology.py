@@ -27,6 +27,7 @@ from typing import (
     Optional,
     TextIO,
     Union,
+    overload,
 )
 
 import numpy as np
@@ -2390,11 +2391,39 @@ class Topology(Serializable):
                 return molecule.bond(bond_molecule_index)
             this_molecule_start_index += molecule.n_bonds
 
-    def add_molecule(self, molecule: MoleculeLike) -> int:
-        """Add a copy of the molecule to the topology"""
-        idx = self._add_molecule_keep_cache(molecule)
-        self._invalidate_cached_properties()
-        return idx
+    @overload
+    def add_molecule(self, molecule: MoleculeLike) -> int: ...
+
+    @overload
+    def add_molecule(self, molecule: list[MoleculeLike]) -> list[int]: ...
+
+    def add_molecule(
+        self,
+        molecule: MoleculeLike | list[MoleculeLike],
+    ) -> int | list[int]:
+        """Add a molecule or multiple molecules to the topology."""
+        if isinstance(molecule, list):
+
+            indices = [
+                self._add_molecule_keep_cache(iter_molecule)
+                for iter_molecule in molecule
+            ]
+
+            self._invalidate_cached_properties()
+
+            return indices
+
+        elif isinstance(molecule, (Molecule, _SimpleMolecule)):
+
+            idx = self._add_molecule_keep_cache(molecule)
+
+            self._invalidate_cached_properties()
+
+            return idx
+
+        else:
+
+            raise ValueError(f"Invalid type {type(molecule)} for Topology.add_molecule")
 
     def _add_molecule_keep_cache(self, molecule: MoleculeLike) -> int:
         self._molecules.append(deepcopy(molecule))

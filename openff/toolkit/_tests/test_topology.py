@@ -144,6 +144,31 @@ class TestTopology:
         assert not topology.is_periodic
         assert len(topology.constrained_atom_pairs.items()) == 0
 
+    @pytest.mark.timeout(5)
+    def test_from_molecule_multiple(self):
+        """
+        Test that add_molecule on a list of many molecules is quick.
+
+        See issue #1916
+        """
+        water = create_water()
+
+        topology = Topology()
+
+        topology.add_molecule(10_000 * [water])
+
+        assert topology.n_molecules == 10_000
+
+    def test_from_molecule_bad_argument(self):
+        with pytest.raises(
+            ValueError,
+            match="Invalid type.*Topology",
+        ):
+
+            topology = Topology()
+
+            topology.add_molecule(create_water().to_topology())
+
     def test_reinitialization_box_vectors(self):
         topology = Topology()
         assert Topology(topology).box_vectors is None
