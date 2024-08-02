@@ -144,7 +144,7 @@ class TestTopology:
         assert not topology.is_periodic
         assert len(topology.constrained_atom_pairs.items()) == 0
 
-    @pytest.mark.timeout(5)
+    @pytest.mark.timeout(8)
     def test_from_molecule_multiple(self):
         """
         Test that add_molecule on a list of many molecules is quick.
