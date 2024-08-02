@@ -16,6 +16,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### New features
 
+- [PR #1920](https://github.com/openforcefield/openff-toolkit/pull/1920): Allows `Topology.add_molecule` to take a list of molecule, which is faster when adding many molecules.
+
 ### Improved documentation and warnings
 
 
