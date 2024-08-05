@@ -164,7 +164,7 @@ class TestTopology:
 
         assert topology.n_molecules == 10_000
 
-        assert indices == [*range(10_000)]
+        assert indices == [*range(1, 10_001)]
 
     def test_from_molecule_nonlist(self):
         topology = Topology()
