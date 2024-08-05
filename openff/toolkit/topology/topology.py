@@ -2401,11 +2401,9 @@ class Topology(Serializable):
         """
         if isinstance(molecule, (Molecule, _SimpleMolecule)):
 
-            idx = self._add_molecule_keep_cache(molecule)
-
-            self._invalidate_cached_properties()
-
-            return idx
+            # Route everything through add_molecules for simplicity; the overhead of
+            # making a list and grabbing the first element should be negligible
+            return self.add_molecules([molecule])[0]
 
         else:
 

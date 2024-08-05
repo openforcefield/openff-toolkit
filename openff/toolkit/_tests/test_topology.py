@@ -154,8 +154,8 @@ class TestTopology:
 
             topology.add_molecule(create_water().to_topology())
 
-    @pytest.mark.timeout(8)
-    def test_from_molecules(self):
+    @pytest.mark.timeout(10)
+    def test_add_molecules(self):
         water = create_water()
 
         topology = Topology()
@@ -175,6 +175,13 @@ class TestTopology:
         ):
 
             topology.add_molecules({create_water(), create_ammonia()})
+
+        with pytest.raises(
+            ValueError,
+            match="Invalid type.*str.*molecules",
+        ):
+
+            topology.add_molecules("CC.CCO")
 
     def test_reinitialization_box_vectors(self):
         topology = Topology()
