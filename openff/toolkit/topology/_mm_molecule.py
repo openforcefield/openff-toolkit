@@ -10,6 +10,7 @@ TypedMolecule TODOs
 
 """
 
+import functools
 from typing import TYPE_CHECKING, Generator, Iterable, NoReturn, Optional, Union
 
 from openff.units.elements import MASSES, SYMBOLS
@@ -618,7 +619,7 @@ class _SimpleAtom:
                 if atom is not self:
                     yield atom
 
-    @property
+    @functools.cached_property
     def molecule_atom_index(self) -> int:
         return self.molecule.atoms.index(self)
 

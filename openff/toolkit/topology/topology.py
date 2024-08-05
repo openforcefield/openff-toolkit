@@ -2390,11 +2390,50 @@ class Topology(Serializable):
                 return molecule.bond(bond_molecule_index)
             this_molecule_start_index += molecule.n_bonds
 
-    def add_molecule(self, molecule: MoleculeLike) -> int:
-        """Add a copy of the molecule to the topology"""
-        idx = self._add_molecule_keep_cache(molecule)
-        self._invalidate_cached_properties()
-        return idx
+    def add_molecule(
+        self,
+        molecule: MoleculeLike,
+    ) -> int:
+        """
+        Add a molecule to the topology.
+
+        To add multiple molecules, particularly many times, use `add_molecules` for better performance.
+        """
+        if isinstance(molecule, (Molecule, _SimpleMolecule)):
+
+            # Route everything through add_molecules for simplicity; the overhead of
+            # making a list and grabbing the first element should be negligible
+            return self.add_molecules([molecule])[0]
+
+        else:
+
+            raise ValueError(f"Invalid type {type(molecule)} for Topology.add_molecule")
+
+    def add_molecules(
+        self,
+        molecules: list[MoleculeLike],
+    ) -> list[int]:
+        """
+        Add molecules to the topology.
+
+        To add a single molecule to the topology, use `add_molecule`.
+        """
+
+        if isinstance(molecules, list):
+
+            indices = [
+                self._add_molecule_keep_cache(molecule) for molecule in molecules
+            ]
+
+            self._invalidate_cached_properties()
+
+            return indices
+
+        else:
+
+            raise ValueError(
+                f"Invalid type {type(molecules)} for Topology.add_molecules"
+            )
 
     def _add_molecule_keep_cache(self, molecule: MoleculeLike) -> int:
         self._molecules.append(deepcopy(molecule))
