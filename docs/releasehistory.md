@@ -14,6 +14,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+- [PR #1923](https://github.com/openforcefield/openff-toolkit/pull/1923): `Topology.add_molecule` and `Topology.add_molecules` now return indices starting at 0. Previously, these indices started at 1, which does not match other indexing in the toolkit.
+
 ### New features
 
 - [PR #1920](https://github.com/openforcefield/openff-toolkit/pull/1920): Adds `Topology.add_molecules`, which takes a list of `Molecule`s and is faster when adding many molecules.

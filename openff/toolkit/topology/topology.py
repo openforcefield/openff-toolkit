@@ -2437,7 +2437,9 @@ class Topology(Serializable):
 
     def _add_molecule_keep_cache(self, molecule: MoleculeLike) -> int:
         self._molecules.append(deepcopy(molecule))
-        return len(self._molecules)
+
+        # Ensure this is 0-indexed
+        return len(self._molecules) - 1
 
     def add_constraint(self, iatom, jatom, distance=True):
         """

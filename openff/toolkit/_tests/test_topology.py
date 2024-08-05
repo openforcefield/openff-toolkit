@@ -144,6 +144,21 @@ class TestTopology:
         assert not topology.is_periodic
         assert len(topology.constrained_atom_pairs.items()) == 0
 
+    def test_add_molecule_index(self):
+        """Ensure the index of added molecules is 0-indexed."""
+        topology = Topology()
+
+        index = topology.add_molecule(create_ammonia())
+
+        assert index == 0 == topology.n_molecules - 1
+
+        # Ensure that same index can immediately be used as a lookup
+        topology.molecule(index)
+
+        next_index = topology.add_molecule(create_ethanol())
+
+        assert next_index == 1 == topology.n_molecules - 1
+
     def test_from_molecule_bad_argument(self):
         with pytest.raises(
             ValueError,
@@ -164,7 +179,7 @@ class TestTopology:
 
         assert topology.n_molecules == 10_000
 
-        assert indices == [*range(1, 10_001)]
+        assert indices == [*range(10_000)]
 
     def test_from_molecule_nonlist(self):
         topology = Topology()
