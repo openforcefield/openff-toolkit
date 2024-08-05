@@ -276,19 +276,19 @@ def convert_all_strings_to_quantity(
 
 
 @overload
-def convert_all_quantities_to_string(  # noqa: E704
+def convert_all_quantities_to_string(
     smirnoff_data: list[Quantity],
 ) -> list[str]: ...
 
 
 @overload
-def convert_all_quantities_to_string(  # noqa: E704
+def convert_all_quantities_to_string(
     smirnoff_data: dict,
 ) -> Union[list[str], dict[str, Any]]: ...
 
 
 @overload
-def convert_all_quantities_to_string(  # noqa: E704
+def convert_all_quantities_to_string(
     smirnoff_data: "Quantity",
 ) -> Union[str, list[str], dict[str, Any]]: ...
 
