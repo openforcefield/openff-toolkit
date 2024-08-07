@@ -606,7 +606,9 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
             # Only the first match is assigned, so throw out the others
             assigned_resname = next(iter(matched_resnames), "No match")
 
-            residues[(input_resname, input_resnum, input_chain)].add(assigned_resname)
+            residues[(input_resname, input_resnum, input_chain)].add(
+                assigned_resname.upper()
+            )
 
         # Filter out residues where assigned resname doesn't match the input
         residues = {
