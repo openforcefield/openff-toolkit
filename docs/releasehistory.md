@@ -22,6 +22,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Improved documentation and warnings
 
+- [PR #1926](https://github.com/openforcefield/openff-toolkit/pull/1926): Less noisy hints when the chemistry of a PDB file cannot be identified.
+
 
 ## 0.16.2
 
