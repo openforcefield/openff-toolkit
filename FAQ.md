@@ -175,3 +175,12 @@ Constraints can be removed from bonds involving hydrogen by removing the corresp
 ```python
 del forcefield['Constraints']["[#1:1]-[*:2]"]
 ```
+
+## How can I transfer my prepared system to HPC resources for simulation?
+
+OpenFF recommends exporting a prepared `Interchange` to the target MD engine and using the MD engine's recommended method to transfer it to HPC resources. This way, no additional dependencies need to be installed on the HPC resource to use OpenFF tools during preparation. For most MD engines, simply transfer the files produced by the appropriate [`Interchange.to_*()`] methods. For OpenMM, create a `System` Python object with [`Interchange.to_openmm_system()`] or [`ForceField.create_openmm_system()`] and transfer it by [serializing to XML]. 
+
+[`Interchange.to_*()`]: https://docs.openforcefield.org/projects/interchange/en/stable/_autosummary/openff.interchange.Interchange.html
+[`Interchange.to_openmm_system()`]: https://docs.openforcefield.org/projects/interchange/en/stable/_autosummary/openff.interchange.Interchange.html#openff.interchange.Interchange.to_openmm_system
+[`ForceField.create_openmm_system()`]: https://docs.openforcefield.org/projects/toolkit/en/stable/api/generated/openff.toolkit.typing.engines.smirnoff.ForceField.html#openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system
+[serializing to XML]: https://openmm.github.io/openmm-cookbook/latest/notebooks/cookbook/Saving%20Systems%20to%20XML%20Files.html
