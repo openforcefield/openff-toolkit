@@ -604,7 +604,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
             input_chain: str = atom.residue.chain.id
             matched_resnames = self.matches[atom.index]
             # Only the first match is assigned, so throw out the others
-            assigned_resname = next(iter(matched_resnames), "No match")
+            assigned_resname = next(iter(matched_resnames), "No match").upper()
 
             residues[(input_resname, input_resnum, input_chain)].add(assigned_resname)
 

@@ -14,15 +14,22 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
-- [PR #1923](https://github.com/openforcefield/openff-toolkit/pull/1923): `Topology.add_molecule` and `Topology.add_molecules` now return indices starting at 0. Previously, these indices started at 1, which does not match other indexing in the toolkit.
+### New features
+
+### Improved documentation and warnings
+- [PR #1925](https://github.com/openforcefield/openff-toolkit/pull/1925): Adds a FAQ entry describing how to send a prepared system to HPC resources.
+
+
+## 0.16.3
 
 ### New features
 
 - [PR #1920](https://github.com/openforcefield/openff-toolkit/pull/1920): Adds `Topology.add_molecules`, which takes a list of `Molecule`s and is faster when adding many molecules.
 
-### Improved documentation and warnings
+### Bugfixes
 
-- [PR #1925](https://github.com/openforcefield/openff-toolkit/pull/1925): Adds a FAQ entry describing how to send a prepared system to HPC resources.
+- [PR #1923](https://github.com/openforcefield/openff-toolkit/pull/1923): `Topology.add_molecule` and `Topology.add_molecules` now return indices starting at 0. Previously, these indices started at 1, which does not match other indexing in the toolkit.
+- [PR #1926](https://github.com/openforcefield/openff-toolkit/pull/1926): Less noisy hints when the chemistry of a PDB file cannot be identified.
 
 ## 0.16.2
 
