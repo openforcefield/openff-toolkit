@@ -17,6 +17,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### New features
 
 ### Improved documentation and warnings
+- [PR #1925](https://github.com/openforcefield/openff-toolkit/pull/1925): Adds a FAQ entry describing how to send a prepared system to HPC resources.
 
 
 ## 0.16.3
