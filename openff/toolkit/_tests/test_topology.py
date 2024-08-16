@@ -198,6 +198,22 @@ class TestTopology:
 
             topology.add_molecules("CC.CCO")
 
+    def test_add_simple_molecule_atom_names(self):
+        """Reproduce issue #1927"""
+        simple = _SimpleMolecule.from_molecule(Molecule.from_smiles("C"))
+
+        for index, letter in enumerate("BLAHB"):
+            simple.atom(index).name = letter
+
+        topology = Topology()
+        topology.add_molecule(simple)
+
+        assert topology.atom(0).name == "B"
+        assert topology.atom(1).name == "L"
+        assert topology.atom(2).name == "A"
+        assert topology.atom(3).name == "H"
+        assert topology.atom(4).name == "B"
+
     def test_reinitialization_box_vectors(self):
         topology = Topology()
         assert Topology(topology).box_vectors is None

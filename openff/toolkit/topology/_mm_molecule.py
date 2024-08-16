@@ -627,6 +627,7 @@ class _SimpleAtom:
         atom_dict: dict[str, Union[dict, str, int]] = dict()
         atom_dict["metadata"] = dict(self.metadata)
         atom_dict["atomic_number"] = self._atomic_number
+        atom_dict["name"] = self._name
 
         keys_to_skip = ["metadata", "molecule", "bonds"]
 
@@ -636,6 +637,7 @@ class _SimpleAtom:
             if attr_name in keys_to_skip:
                 continue
             atom_dict[attr_name] = attr_val
+
         return atom_dict
 
     @classmethod
