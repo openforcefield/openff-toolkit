@@ -6,19 +6,14 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-## Current development
-
-### API-breaking changes
-
-### Behavior changes
+## 0.16.4
 
 ### Bugfixes
 
-### New features
+- [PR #1928](https://github.com/openforcefield/openff-toolkit/pull/1928): Fixes a bug in which atom names were lost when adding `_SimpleMolecule` to a topology or serializing through a dictionary.
 
 ### Improved documentation and warnings
 - [PR #1925](https://github.com/openforcefield/openff-toolkit/pull/1925): Adds a FAQ entry describing how to send a prepared system to HPC resources.
-
 
 ## 0.16.3
 
