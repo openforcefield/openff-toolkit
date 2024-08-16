@@ -246,6 +246,17 @@ class TestMMMolecule:
         water.atom(1).name = "foo"
         assert water.has_unique_atom_names is False
 
+    def test_atom_names_roundtrip(self, water):
+        water.atom(0).name = "FOO"
+        water.atom(1).name = "BAR"
+        water.atom(2).name = "BAZ"
+
+        roundtrip = copy.deepcopy(water)
+
+        assert roundtrip.atom(0).name == "FOO"
+        assert roundtrip.atom(1).name == "BAR"
+        assert roundtrip.atom(2).name == "BAZ"
+
 
 class TestImpropers:
     @pytest.mark.parametrize(
