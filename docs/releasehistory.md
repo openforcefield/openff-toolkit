@@ -13,7 +13,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1928](https://github.com/openforcefield/openff-toolkit/pull/1928): Fixes a bug in which atom names were lost when adding `_SimpleMolecule` to a topology or serializing through a dictionary.
 
 ### Improved documentation and warnings
+
 - [PR #1925](https://github.com/openforcefield/openff-toolkit/pull/1925): Adds a FAQ entry describing how to send a prepared system to HPC resources.
+- [PR #1926](https://github.com/openforcefield/openff-toolkit/pull/1926): Improves hints in `UnAssignedChemistryInPDBError`.
 
 ## 0.16.3
 
