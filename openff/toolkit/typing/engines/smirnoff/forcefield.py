@@ -1399,7 +1399,7 @@ class ForceField:
         """
         from openff.interchange import Interchange
 
-        from openff.toolkit import Molecule, unit
+        from openff.toolkit import Molecule
 
         if not isinstance(molecule, Molecule):
             raise ValueError(
@@ -1412,9 +1412,11 @@ class ForceField:
                 c.m
                 for c in Interchange.from_smirnoff(
                     force_field=self, topology=[molecule], **kwargs
-                )["Electrostatics"].charges.values()
+                )["Electrostatics"]
+                ._get_charges()
+                .values()
             ],
-            unit.elementary_charge,
+            "elementary_charge",
         )
 
     def __getitem__(self, val: Union[str, ParameterHandler]) -> ParameterHandler:
