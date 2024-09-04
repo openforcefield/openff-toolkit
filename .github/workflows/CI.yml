@@ -66,6 +66,13 @@ jobs:
               echo "PACKAGES_TO_REMOVE=openeye-toolkits" >> $GITHUB_ENV
           fi
 
+          if [[ ${{ matrix.openeye }} == false && ${{ matrix.rdkit }} == false ]]; then
+              echo "ENVFILE=no_toolkits" >> $GITHUB_ENV
+              echo "JOBNAME=No wrapped toolkits" >> $GITHUB_ENV
+              echo "TOOLKIT_CHECKS=" >> $GITHUB_ENV
+              echo "PACKAGES_TO_REMOVE=openeye-toolkits ambertools rdkit" >> $GITHUB_ENV
+          fi
+
       - name: Install environment with ${{ env.JOBNAME }}
         uses: mamba-org/setup-micromamba@v1
         with:
