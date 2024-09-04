@@ -31,13 +31,6 @@ jobs:
         python-version: ["3.10", "3.11", "3.12"]
         rdkit: [true, false]
         openeye: [true, false]
-        exclude:
-          - rdkit: false
-            openeye: false
-          - openeye: true
-            python-version: "3.11"
-          - openeye: true
-            python-version: "3.12"
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
@@ -71,6 +64,13 @@ jobs:
               echo "JOBNAME=RDKit" >> $GITHUB_ENV
               echo "TOOLKIT_CHECKS=RDKIT" >> $GITHUB_ENV
               echo "PACKAGES_TO_REMOVE=openeye-toolkits" >> $GITHUB_ENV
+          fi
+
+          if [[ ${{ matrix.openeye }} == false && ${{ matrix.rdkit }} == false ]]; then
+              echo "ENVFILE=no_toolkits" >> $GITHUB_ENV
+              echo "JOBNAME=No wrapped toolkits" >> $GITHUB_ENV
+              echo "TOOLKIT_CHECKS=" >> $GITHUB_ENV
+              echo "PACKAGES_TO_REMOVE=openeye-toolkits ambertools rdkit" >> $GITHUB_ENV
           fi
 
       - name: Install environment with ${{ env.JOBNAME }}

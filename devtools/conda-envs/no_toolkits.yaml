@@ -1,0 +1,53 @@
+name: openff-toolkit-test
+channels:
+  - conda-forge
+dependencies:
+    # Base depends
+  - python
+  - pip
+  - packaging
+  - numpy
+  - networkx
+  - cachetools
+  - cached-property
+  - xmltodict
+  - python-constraint
+  - openmm >=7.6
+  - openff-forcefields >=2023.05.1
+  - smirnoff99Frosst
+  - openff-units =0.2.0
+  - openff-amber-ff-ports
+  - openff-utilities >=0.1.5
+  - openff-interchange-base >=0.3.19
+  - openff-nagl-base ~=0.4.0
+  - openff-nagl-models ==0.3.0
+    # Toolkit-specific
+    # Test-only/optional/dev/typing
+  - pytest
+  - pytest-cov
+  - pytest-xdist
+  - pytest-rerunfailures
+  - pytest-timeout
+  - pyyaml
+  - toml
+  - bson
+  - msgpack-python
+  - qcelemental
+  - qcportal >=0.50
+  - qcengine
+  - nglview
+  - mdtraj
+  - nbval
+  # No idea why this is necessary, see https://github.com/openforcefield/openff-toolkit/pull/1821
+  - nomkl
+  - mypy
+  - typing_extensions
+  - pydantic =1
+  - pip:
+    - types-setuptools
+    - types-toml
+    - types-PyYAML
+    - types-networkx
+    - types-xmltodict
+    - types-cachetools
+    - mongo-types
