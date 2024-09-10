@@ -1,4 +1,3 @@
-# noqa: INP001
 """
 openff-test-parameter-plugins
 A test package used to ensure that parameterhandler plugins are handled correctly

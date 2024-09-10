@@ -2,15 +2,16 @@
 openff-toolkit
 A modern, extensible library for molecular mechanics force field science from the Open Force Field Consortium.
 """
-from setuptools import setup, find_namespace_packages
+from setuptools import find_namespace_packages, setup
+
 import versioneer
 
 short_description = __doc__.split("\n")
 
 try:
-    with open("README.md", "r") as handle:
+    with open("README.md") as handle:
         long_description = handle.read()
-except IOError:
+except OSError:
     long_description = "\n".join(short_description[2:]),
 
 

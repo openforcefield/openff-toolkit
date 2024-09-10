@@ -86,13 +86,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     # TODO: Add TDT support
     _toolkit_file_read_formats = ["SDF", "MOL", "SMI"]
-    _toolkit_file_write_formats = [
-        "SDF",
-        "MOL",
-        "SMI",
-        "PDB",
-        "TDT",
-    ]
+    _toolkit_file_write_formats = ["SDF", "MOL", "SMI", "PDB", "TDT"]
 
     def __init__(self):
         super().__init__()
@@ -178,7 +172,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 allow_undefined_stereo=allow_undefined_stereo,
             )
         raise NotImplementedError(
-            "Cannot create Molecule from {} object".format(type(obj))
+            f"Cannot create Molecule from {type(obj)} object"
         )
 
     def from_pdb_and_smiles(
@@ -1668,7 +1662,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         _cls=None,
         make_carboxylic_acids_cis: bool = False,
     ):
-        """
+        r"""
         Generate molecule conformers using RDKit.
 
         .. warning :: This API is experimental and subject to change.
@@ -2353,7 +2347,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 else:
                     raise UndefinedStereochemistryError(
                         "In from_rdkit: Expected atom stereochemistry of R or S. "
-                        "Got {} instead.".format(stereo_code)
+                        f"Got {stereo_code} instead."
                     )
 
             res = rda.GetPDBResidueInfo()
@@ -2427,9 +2421,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 stereochemistry = "E"
             elif tag == Chem.BondStereo.STEREOTRANS or tag == Chem.BondStereo.STEREOCIS:
                 raise ValueError(
-                    "Expected RDKit bond stereochemistry of E or Z, got {} instead".format(
-                        tag
-                    )
+                    f"Expected RDKit bond stereochemistry of E or Z, got {tag} instead"
                 )
             offb._stereochemistry = stereochemistry
             fractional_bond_order = None
@@ -2710,7 +2702,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 bond.atom2.molecule_atom_index,
             )
             rdbond = rdmol.GetBondBetweenAtoms(*atom_indices)
-            if not (bond.fractional_bond_order is None):
+            if bond.fractional_bond_order is not None:
                 rdbond.SetDoubleProp(
                     "fractional_bond_order", bond.fractional_bond_order
                 )
@@ -2725,7 +2717,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 rdmol.AddConformer(rdmol_conformer, assignId=True)
 
         # Retain charges, if present
-        if not (molecule._partial_charges is None):
+        if molecule._partial_charges is not None:
             rdk_indexed_charges = np.zeros(shape=molecule.n_atoms, dtype=float)
             for atom_idx, charge in enumerate(molecule._partial_charges):
                 charge_unitless = charge.m_as(unit.elementary_charge)
@@ -3223,10 +3215,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         if len(undefined_atom_indices) > 0:
             msg += "Undefined chiral centers are:\n"
             for undefined_atom_idx in undefined_atom_indices:
-                msg += " - Atom {symbol} (index {index})\n".format(
-                    symbol=rdmol.GetAtomWithIdx(undefined_atom_idx).GetSymbol(),
-                    index=undefined_atom_idx,
-                )
+                msg += f" - Atom {rdmol.GetAtomWithIdx(undefined_atom_idx).GetSymbol()} (index {undefined_atom_idx})\n"
 
         # Details about undefined bond.
         if len(undefined_bond_indices) > 0:
@@ -3234,12 +3223,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             for undefined_bond_idx in undefined_bond_indices:
                 bond = rdmol.GetBondWithIdx(undefined_bond_idx)
                 atom1, atom2 = bond.GetBeginAtom(), bond.GetEndAtom()
-                msg += " - Bond {bindex} (atoms {aindex1}-{aindex2} of element ({symbol1}-{symbol2})\n".format(
-                    bindex=undefined_bond_idx,
-                    aindex1=atom1.GetIdx(),
-                    aindex2=atom2.GetIdx(),
-                    symbol1=atom1.GetSymbol(),
-                    symbol2=atom2.GetSymbol(),
+                msg += (
+                    f" - Bond {undefined_bond_idx} (atoms {atom1.GetIdx()}-{atom2.GetIdx()} of element "
+                    "({atom1.GetSymbol()}-{atom2.GetSymbol()})\n"
                 )
 
         raise UndefinedStereochemistryError(err_msg_prefix + msg)

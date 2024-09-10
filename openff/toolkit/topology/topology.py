@@ -703,8 +703,7 @@ class Topology(Serializable):
         # Yields instead of returning the list itself. This prevents user from modifying the list
         # outside the Topology's knowledge. This is essential to make sure that atom index caches
         # invalidate themselves during appropriate events.
-        for molecule in self._molecules:
-            yield molecule
+        yield from self._molecules
 
     def molecule(self, index: int) -> Union[Molecule, _SimpleMolecule]:
         """
@@ -739,8 +738,7 @@ class Topology(Serializable):
         atoms
         """
         for molecule in self._molecules:
-            for atom in molecule.atoms:
-                yield atom
+            yield from molecule.atoms
 
     def atom_index(self, atom: "Atom") -> int:
         """
@@ -831,8 +829,7 @@ class Topology(Serializable):
         bonds
         """
         for molecule in self.molecules:
-            for bond in molecule.bonds:
-                yield bond
+            yield from molecule.bonds
 
     @property
     def n_angles(self) -> int:
@@ -843,8 +840,7 @@ class Topology(Serializable):
     def angles(self) -> Generator[tuple["Atom", ...], None, None]:
         """Iterator over the angles in this Topology. Returns a Generator of tuple[Atom]."""
         for molecule in self._molecules:
-            for angle in molecule.angles:
-                yield angle
+            yield from molecule.angles
 
     @property
     def n_propers(self) -> int:
@@ -855,8 +851,7 @@ class Topology(Serializable):
     def propers(self) -> Generator[tuple[Union["Atom", _SimpleAtom], ...], None, None]:
         """Iterable of tuple[Atom]: iterator over the proper torsions in this Topology."""
         for molecule in self.molecules:
-            for proper in molecule.propers:
-                yield proper
+            yield from molecule.propers
 
     @property
     def n_impropers(self) -> int:
@@ -867,8 +862,7 @@ class Topology(Serializable):
     def impropers(self) -> Generator[tuple["Atom", ...], None, None]:
         """Generator of tuple[Atom]: iterator over the possible improper torsions in this Topology."""
         for molecule in self._molecules:
-            for improper in molecule.impropers:
-                yield improper
+            yield from molecule.impropers
 
     @property
     def smirnoff_impropers(
@@ -908,8 +902,7 @@ class Topology(Serializable):
 
         """
         for molecule in self.molecules:
-            for smirnoff_improper in molecule.smirnoff_impropers:
-                yield smirnoff_improper
+            yield from molecule.smirnoff_impropers
 
     @property
     def amber_impropers(
@@ -940,8 +933,7 @@ class Topology(Serializable):
         impropers, smirnoff_impropers
         """
         for molecule in self.molecules:
-            for amber_improper in molecule.amber_impropers:
-                yield amber_improper
+            yield from molecule.amber_impropers
 
     def nth_degree_neighbors(self, n_degrees: int):
         """
@@ -968,8 +960,7 @@ class Topology(Serializable):
         passed.
         """
         for molecule in self.molecules:
-            for pair in molecule.nth_degree_neighbors(n_degrees=n_degrees):
-                yield pair
+            yield from molecule.nth_degree_neighbors(n_degrees=n_degrees)
 
     class _ChemicalEnvironmentMatch:
         """Represents the match of a given chemical environment query, storing
@@ -1419,7 +1410,7 @@ class Topology(Serializable):
 
         # Convert all unique mols to graphs
         topology = cls()
-        graph_to_unq_mol: dict["Graph", FrozenMolecule] = {}
+        graph_to_unq_mol: dict[Graph, FrozenMolecule] = {}
         for unq_mol in unique_molecules:
             unq_mol_graph = unq_mol.to_networkx()
             for existing_graph in graph_to_unq_mol.keys():
@@ -1435,9 +1426,7 @@ class Topology(Serializable):
                 )[0]:
                     msg = (
                         "Error: Two unique molecules have indistinguishable "
-                        "graphs: {} and {}".format(
-                            unq_mol, graph_to_unq_mol[existing_graph]
-                        )
+                        f"graphs: {unq_mol} and {graph_to_unq_mol[existing_graph]}"
                     )
                     raise DuplicateUniqueMoleculeError(msg)
             graph_to_unq_mol[unq_mol_graph] = unq_mol
@@ -1742,7 +1731,7 @@ class Topology(Serializable):
             "proteins/aa_residues_substructures_explicit_bond_orders_with_caps_explicit_connectivity.json"
         )
 
-        with open(substructure_file_path, "r") as subfile:
+        with open(substructure_file_path) as subfile:
             substructure_dictionary = json.load(
                 subfile
             )  # preserving order is useful later when saving metadata
@@ -1782,7 +1771,7 @@ class Topology(Serializable):
                 smi = label_mol.to_smiles(mapped=True)
                 # remove unmapped atoms from mapped smiles. This will catch things like
                 # `[H]` and `[Cl]` but not anything with 3 characters like `[H:1]`
-                smi = re.sub("\[[A-Za-z]{1,2}\]", "[*]", smi)
+                smi = re.sub(r"\[[A-Za-z]{1,2}\]", "[*]", smi)
                 # Remove any orphaned () that remain
                 smi = smi.replace("()", "")
 
@@ -2131,7 +2120,7 @@ class Topology(Serializable):
 
     def set_positions(self, array: Quantity):
         """
-        Set the positions in a topology by copying from a single n×3 array.
+        Set the positions in a topology by copying from a single (n, 3) array.
 
         Note that modifying the original array will not update the positions
         in the topology; it must be passed again to ``set_positions()``.
@@ -2273,7 +2262,7 @@ class Topology(Serializable):
         else:
             raise ValueError(
                 "Invalid input passed to is_bonded(). Expected ints or `Atom`s, "
-                "got {} and {}".format(type(i), type(j))
+                f"got {type(i)} and {type(j)}"
             )
 
         for bond in atomi.bonds:
@@ -2283,7 +2272,7 @@ class Topology(Serializable):
                 if atom == atomj:
                     return bond
 
-        raise NotBondedError("No bond between atom {} and {}".format(i, j))
+        raise NotBondedError(f"No bond between atom {i} and {j}")
 
     def is_bonded(self, i: Union[int, "Atom"], j: Union[int, "Atom"]) -> bool:
         """Returns True if the two atoms are bonded
@@ -2599,8 +2588,7 @@ class Topology(Serializable):
         """
         for molecule in self._molecules:
             if hasattr(molecule, iter_name):
-                for item in getattr(molecule, iter_name):
-                    yield item
+                yield from getattr(molecule, iter_name)
 
     def __getattr__(self, name: str) -> list["HierarchyElement"]:
         """If a requested attribute is not found, check the hierarchy schemes"""

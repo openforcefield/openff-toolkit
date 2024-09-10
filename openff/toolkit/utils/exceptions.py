@@ -426,8 +426,8 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
     ):
         if omm_top is not None:
             self.omm_top = omm_top
-            self._atoms: list["OpenMMAtom"] = list(omm_top.atoms())
-            self._bonds: list[tuple["OpenMMAtom", "OpenMMAtom"]] = list(omm_top.bonds())
+            self._atoms: list[OpenMMAtom] = list(omm_top.atoms())
+            self._bonds: list[tuple[OpenMMAtom, OpenMMAtom]] = list(omm_top.bonds())
 
         if not (substructure_library):
             substructure_library = {}

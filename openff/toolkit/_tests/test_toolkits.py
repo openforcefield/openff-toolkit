@@ -1228,7 +1228,7 @@ class TestOpenEyeToolkitWrapper:
         )
 
         # Test loading from file-like object
-        with open(filename, "r") as infile:
+        with open(filename) as infile:
             molecule2 = Molecule(
                 infile, file_format="MOL2", toolkit_registry=toolkit_wrapper
             )
@@ -4585,7 +4585,7 @@ class TestToolkitRegistry:
         # Keep a copy of the original registry since this is a "global" variable accessible to other modules
         from copy import deepcopy
 
-        global_registry_copy = deepcopy(GLOBAL_TOOLKIT_REGISTRY)
+        global_registry_copy = deepcopy(GLOBAL_TOOLKIT_REGISTRY)  # noqa: F823
         first_toolkit = type(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits[0])
         num_toolkits = len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits)
 
@@ -4595,7 +4595,7 @@ class TestToolkitRegistry:
             type(tk) for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits
         ]
         assert (
-            len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits) == num_toolkits - 1  # noqa
+            len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits) == num_toolkits - 1
         )
 
         GLOBAL_TOOLKIT_REGISTRY = deepcopy(global_registry_copy)  # noqa
