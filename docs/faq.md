@@ -1,2 +1,0 @@
-:::{include} ../FAQ.md
-:::
