@@ -171,5 +171,5 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage.xml
-          disable-search: true
+          disable_search: true
           fail_ci_if_error: true
