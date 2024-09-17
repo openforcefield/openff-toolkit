@@ -2581,9 +2581,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # Something is wrong.
             err_msg = (
                 "Unknown atom stereochemistry encountered in to_rdkit. "
-                "Desired stereochemistry: {}. Set stereochemistry {}".format(
-                    atom.stereochemistry, rdatom.GetProp("_CIPCode")
-                )
+                f"Desired stereochemistry: {atom.stereochemistry}. "
+                f"Set stereochemistry {rdatom.GetProp('_CIPCode')}"
             )
             raise RuntimeError(err_msg)
 
