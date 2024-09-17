@@ -12,7 +12,7 @@ select = ["I", "E", "F", "W", "NPY", "UP", "RUF"]
 "openff/toolkit/_tests/**/*.py" = ["E501"]
 "openff/toolkit/typing/engines/smirnoff.parameters.py" = ["RUF012"]
 "openff/toolkit/_tests/_stale_tests.py" = ["F821"]
-"docs/users/molecule_cookbook.ipynb" = ["F821"]
+"docs/users/molecule_cookbook.ipynb" = ["F821", "E402"]
 "examples/visualization/visualization.ipynb" = ["F821"]
 
 [tool.ruff.lint.isort]
