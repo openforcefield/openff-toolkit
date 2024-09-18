@@ -20,7 +20,7 @@ def find_readme_links() -> list[str]:
         return list()
 
     else:
-        with open(readme_file_path.as_posix(), "r") as f:
+        with open(readme_file_path.as_posix()) as f:
             readme_content = f.read()
 
         return re.findall("http[s]?://(?:[0-9a-zA-Z]|[-/.%:_])+", readme_content)
@@ -56,7 +56,7 @@ def test_readme_links(readme_link):
     # Try to connect 5 times, keeping track of exceptions so useful feedback can be provided.
     success = False
     exception = None
-    for retry in range(5):  # noqa: B007
+    for retry in range(5):
         try:
             urlopen(request)
             success = True

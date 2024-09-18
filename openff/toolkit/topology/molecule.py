@@ -280,7 +280,7 @@ class Atom(Particle):
         self._molecule = molecule
         # From Jeff: I'm going to assume that this is implicit in the parent Molecule's ordering of atoms
         # self._molecule_atom_index = molecule_atom_index
-        self._bonds: list["Bond"] = list()
+        self._bonds: list[Bond] = list()
 
         if metadata is None:
             self._metadata = AtomMetadataDict()
@@ -577,9 +577,7 @@ class Atom(Particle):
 
     def __str__(self):
         # TODO: Also include which molecule this atom belongs to?
-        return "<Atom name='{}' atomic number='{}'>".format(
-            self._name, self._atomic_number
-        )
+        return f"<Atom name='{self._name}' atomic number='{self._atomic_number}'>"
 
 
 # =============================================================================================
@@ -2448,7 +2446,7 @@ class FrozenMolecule(Serializable):
         rotated = rotated + c
 
         # Update the coordinates
-        cooh_xyz[trans_indices_h] = rotated.reshape((-1))
+        cooh_xyz[trans_indices_h] = rotated.reshape(-1)
 
         # Update conformers with rotated coordinates
         conformers[:, cooh_indices, :] = cooh_xyz
@@ -3655,13 +3653,13 @@ class FrozenMolecule(Serializable):
 
         Create a molecule from an IUPAC name
 
-        >>> molecule = Molecule.from_iupac('4-[(4-methylpiperazin-1-yl)methyl]-N-(4-methyl-3-{[4-(pyridin-3-yl)pyrimidin-2-yl]amino}phenyl)benzamide')  # noqa
+        >>> molecule = Molecule.from_iupac('4-[(4-methylpiperazin-1-yl)methyl]-N-(4-methyl-3-{[4-(pyridin-3-yl)pyrimidin-2-yl]amino}phenyl)benzamide')
 
         Create a molecule from a common name
 
         >>> molecule = Molecule.from_iupac('imatinib')
 
-        """
+        """  # noqa: E501
         if isinstance(toolkit_registry, ToolkitRegistry):
             molecule = toolkit_registry.call(
                 "from_iupac",
@@ -3752,7 +3750,7 @@ class FrozenMolecule(Serializable):
         # TODO: Ensure we are dealing with an OpenFF Topology object
         if topology.n_molecules != 1:
             raise ValueError("Topology must contain exactly one molecule")
-        molecule = [i for i in topology.molecules][0]
+        molecule = next(iter(topology.molecules))
         return cls(molecule)
 
     def to_topology(self):
@@ -4024,7 +4022,7 @@ class FrozenMolecule(Serializable):
                 "proteins/aa_residues_substructures_explicit_bond_orders_with_caps.json"
             )
 
-        with open(substructure_file_path, "r") as subfile:
+        with open(substructure_file_path) as subfile:
             substructure_dictionary = json.load(subfile)
 
         offmol = toolkit_registry.call(
@@ -4097,14 +4095,12 @@ class FrozenMolecule(Serializable):
 
         if len(conformers) == 1:
             end: Union[str, int] = ""
-            title = (
-                lambda frame: f'{self.name if self.name != "" else self.hill_formula}{frame}\n'
-            )
+            def title(frame):
+                return f"{self.name if self.name != '' else self.hill_formula}{frame}\n"
         else:
             end = 1
-            title = (
-                lambda frame: f'{self.name if self.name != "" else self.hill_formula} Frame {frame}\n'
-            )
+            def title(frame):
+                return f"{self.name if self.name != '' else self.hill_formula} Frame {frame}\n"
 
         # check if we have a file path or an open file object
         if isinstance(file_path, str):
@@ -4985,7 +4981,7 @@ class FrozenMolecule(Serializable):
 
         if any(
             not (isinstance(i, int) and 0 <= i < self.n_atoms)
-            for i in [*new_to_cur] + [*cur_to_new]
+            for i in [*new_to_cur, *cur_to_new]
         ):
             raise RemapIndexError(
                 f"All indices in a mapping_dict for a molecule with {self.n_atoms}"
@@ -5308,7 +5304,7 @@ class Molecule(FrozenMolecule):
              ``other``?
 
         """
-        super(Molecule, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     # TODO: Change this to add_atom(Atom) to improve encapsulation and extensibility?
     def add_atom(
@@ -5640,7 +5636,7 @@ class Molecule(FrozenMolecule):
             substructure_file_path = get_data_file_path(
                 "proteins/aa_residues_substructures_with_caps.json"
             )
-        with open(substructure_file_path, "r") as subfile:
+        with open(substructure_file_path) as subfile:
             substructure_dictionary = json.load(subfile)
 
         # TODO: Think of a better way to deal with no strict chirality case
@@ -5890,7 +5886,7 @@ class HierarchyScheme:
         ):
             raise TypeError(
                 f"'uniqueness_criteria' kwarg must be a list or a tuple of strings,"
-                f" received {repr(uniqueness_criteria)} "
+                f" received {uniqueness_criteria!r} "
                 f"(type {type(uniqueness_criteria)}) instead."
             )
 
@@ -5898,13 +5894,13 @@ class HierarchyScheme:
             if type(criterion) is not str:
                 raise TypeError(
                     f"Each item in the 'uniqueness_criteria' kwarg must be a string,"
-                    f" received {repr(criterion)} "
+                    f" received {criterion!r} "
                     f"(type {type(criterion)}) instead."
                 )
 
         if type(iterator_name) is not str:
             raise TypeError(
-                f"'iterator_name' kwarg must be a string, received {repr(iterator_name)} "
+                f"'iterator_name' kwarg must be a string, received {iterator_name!r} "
                 f"(type {type(iterator_name)}) instead."
             )
         self.parent = parent
@@ -5945,7 +5941,7 @@ class HierarchyScheme:
 
         self.hierarchy_elements = list()
         # Determine which atoms should get added to which HierarchyElements
-        hier_eles_to_add: defaultdict[tuple[Union[int, str]], list["Atom"]] = (
+        hier_eles_to_add: defaultdict[tuple[Union[int, str]], list[Atom]] = (
             defaultdict(list)
         )
         for atom in self.parent.atoms:
