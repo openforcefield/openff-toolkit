@@ -405,6 +405,8 @@ class OpenEyeImportError(OpenFFToolkitException):
 class MultipleMoleculesInPDBError(OpenFFToolkitException):
     """Error raised when a multiple molecules are found when one was expected"""
 
+class MultipleComponentsInMoleculeWarning(UserWarning):
+    """Warning emitted when user attempts to make an OpenFF Molecule with multiple disconnected components"""
 
 class WrongShapeError(OpenFFToolkitException):
     """Error raised when an array of the wrong shape is found"""

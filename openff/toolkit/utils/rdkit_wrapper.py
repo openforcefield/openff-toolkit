@@ -44,6 +44,7 @@ from openff.toolkit.utils.exceptions import (
     ToolkitUnavailableException,
     UnassignedChemistryInPDBError,
     UndefinedStereochemistryError,
+    MultipleComponentsInMoleculeWarning,
 )
 
 if TYPE_CHECKING:
@@ -2248,9 +2249,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                           "rdkit.Chem.AllChem.GetMolfrags(rdmol, asMols=True) or splitting input SMILES at '.' to get "
                           "separate molecules and pass them to from_rdkit one at a time. While this is supported for "
                           "legacy reasons, OpenFF Molecule objects are not supposed to contain disconnected chemical "
-                          "graphs and this may result in undefined behavior later on. The OpenFF ecosystem is built to "
-                          "handle multiple molecules, but they should be in a Topology object, ex: "
+                          "graphs and this may result in undefined behavior later on. The OpenFF ecosystem is built "
+                          "to handle multiple molecules, but they should be in a Topology object, ex: "
                           "top = Topology.from_molecules([mol1, mol2])",
+                          MultipleComponentsInMoleculeWarning,
                           stacklevel=2
                           )
 
