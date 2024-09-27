@@ -34,6 +34,7 @@ from openff.toolkit.utils.exceptions import (
     InChIParseError,
     InvalidAromaticityModelError,
     MoleculeParseError,
+    MultipleComponentsInMoleculeWarning,
     NonUniqueSubstructureName,
     NotAttachedToMoleculeError,
     RadicalsNotSupportedError,
@@ -44,7 +45,6 @@ from openff.toolkit.utils.exceptions import (
     ToolkitUnavailableException,
     UnassignedChemistryInPDBError,
     UndefinedStereochemistryError,
-    MultipleComponentsInMoleculeWarning,
 )
 
 if TYPE_CHECKING:

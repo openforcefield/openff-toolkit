@@ -39,11 +39,11 @@ from openff.toolkit.utils.exceptions import (
     IncorrectNumConformersWarning,
     InvalidIUPACNameError,
     InvalidToolkitError,
+    MultipleComponentsInMoleculeWarning,
     NotAttachedToMoleculeError,
     RadicalsNotSupportedError,
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
-    MultipleComponentsInMoleculeWarning,
 )
 from openff.toolkit.utils.toolkits import (
     GLOBAL_TOOLKIT_REGISTRY,

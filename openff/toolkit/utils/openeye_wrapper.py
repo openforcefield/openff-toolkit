@@ -47,6 +47,7 @@ from openff.toolkit.utils.exceptions import (
     InvalidAromaticityModelError,
     InvalidIUPACNameError,
     LicenseError,
+    MultipleComponentsInMoleculeWarning,
     NotAttachedToMoleculeError,
     OpenEyeError,
     OpenEyeImportError,
@@ -55,7 +56,6 @@ from openff.toolkit.utils.exceptions import (
     ToolkitUnavailableException,
     UnassignedChemistryInPDBError,
     UndefinedStereochemistryError,
-    MultipleComponentsInMoleculeWarning,
 )
 from openff.toolkit.utils.utils import inherit_docstrings
 
