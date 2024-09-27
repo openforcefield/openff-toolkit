@@ -2232,6 +2232,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         """
         from rdkit import Chem
+        from rdkit.Chem import AllChem
 
         if _cls is None:
             from openff.toolkit.topology.molecule import Molecule
@@ -2240,6 +2241,17 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # Make a copy of the RDKit Mol as we'll need to change it (e.g. assign stereo).
         rdmol = Chem.Mol(rdmol)
+
+        frags = AllChem.GetMolFrags(rdmol)
+        if len(frags) > 1:
+            warnings.warn("RDKit Molecule passed to from_rdkit consists of more than one molecule, consider running "
+                          "rdkit.Chem.AllChem.GetMolfrags(rdmol, asMols=True) or splitting input SMILES at '.' to get separate molecules and pass them "
+                          "to from_rdkit one at a time. While this is supported for legacy reasons, OpenFF Molecule "
+                          "objects are not supposed to contain disconnected chemical graphs and this may result in "
+                          "undefined behavior. The OpenFF ecosystem is perfectly capable of handling multiple "
+                          "molecules, you just have to add them together in an OpenFF Topology object.",
+                          stacklevel=2
+                          )
 
         if not hydrogens_are_explicit:
             rdmol = Chem.AddHs(rdmol, addCoords=True)

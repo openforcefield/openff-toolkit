@@ -725,6 +725,14 @@ class TestOpenEyeToolkitWrapper:
 
         OpenEyeToolkitWrapper().from_openeye(oemol)
 
+    def test_from_openeye_multiple_molecule(self):
+        """Test that parsing a OEMol that is actually multiple disconnected molecules raises a warning"""
+        from openeye import oechem
+        oemol = oechem.OEMol()
+        oechem.OESmilesToMol(oemol, "C.N")
+        with pytest.warns(match="more than one molecule"):
+            OpenEyeToolkitWrapper().from_openeye(oemol)
+
     def test_from_openeye_implicit_hydrogen(self):
         """
         Test OpenEyeToolkitWrapper for loading a molecule with implicit
@@ -2653,6 +2661,13 @@ class TestRDKitToolkitWrapper:
         rdmol = Chem.MolFromSmiles("[Zn+2]")
 
         RDKitToolkitWrapper().from_rdkit(rdmol)
+
+    def test_from_rdkit_multiple_molecule(self):
+        """Test that parsing a rdmol that is actually multiple disconnected molecules raises a warning"""
+        from rdkit import Chem
+        rdmol = Chem.MolFromSmiles("C.N")
+        with pytest.warns(match="more than one molecule"):
+            RDKitToolkitWrapper().from_rdkit(rdmol)
 
     @pytest.mark.parametrize(
         "smiles, expected_map", [("[Cl:1][Cl]", {0: 1}), ("[Cl:1][Cl:2]", {0: 1, 1: 2})]
