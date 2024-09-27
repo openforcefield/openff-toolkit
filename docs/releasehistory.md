@@ -6,6 +6,13 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+## Current development
+
+### Improved warnings and documentation
+
+- [PR #1939](https://github.com/openforcefield/openff-toolkit/pull/1939): Resolves [#1587](https://github.com/openforcefield/openff-toolkit/pull/1587) by emitting a warning when from_openeye or from_rdkit try to load a molecule with multiple disconnected components. 
+
+
 ## 0.16.4
 
 ### Bugfixes
