@@ -6,6 +6,7 @@ the `OpenEye Toolkit <https://docs.eyesopen.com/toolkits/python/quickstart-pytho
 __all__ = ("OpenEyeToolkitWrapper",)
 
 
+import zstandard  # noqa
 import importlib
 import logging
 import pathlib
