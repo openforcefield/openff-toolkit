@@ -1398,9 +1398,7 @@ class ForceField:
                 c.m
                 for c in Interchange.from_smirnoff(
                     force_field=self, topology=[molecule], **kwargs
-                )["Electrostatics"]
-                ._get_charges()
-                .values()
+                )["Electrostatics"].charges.values()
             ],
             "elementary_charge",
         )
