@@ -34,6 +34,7 @@ from openff.toolkit.utils.exceptions import (
     InChIParseError,
     InvalidAromaticityModelError,
     MoleculeParseError,
+    MultipleComponentsInMoleculeWarning,
     NonUniqueSubstructureName,
     NotAttachedToMoleculeError,
     RadicalsNotSupportedError,
@@ -2232,6 +2233,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         """
         from rdkit import Chem
+        from rdkit.Chem import AllChem
 
         if _cls is None:
             from openff.toolkit.topology.molecule import Molecule
@@ -2240,6 +2242,19 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # Make a copy of the RDKit Mol as we'll need to change it (e.g. assign stereo).
         rdmol = Chem.Mol(rdmol)
+
+        frags = AllChem.GetMolFrags(rdmol)
+        if len(frags) > 1:
+            warnings.warn("RDKit Molecule passed to from_rdkit consists of more than one molecule, consider running "
+                          "rdkit.Chem.AllChem.GetMolfrags(rdmol, asMols=True) or splitting input SMILES at '.' to get "
+                          "separate molecules and pass them to from_rdkit one at a time. While this is supported for "
+                          "legacy reasons, OpenFF Molecule objects are not supposed to contain disconnected chemical "
+                          "graphs and this may result in undefined behavior later on. The OpenFF ecosystem is built "
+                          "to handle multiple molecules, but they should be in a Topology object, ex: "
+                          "top = Topology.from_molecules([mol1, mol2])",
+                          MultipleComponentsInMoleculeWarning,
+                          stacklevel=2
+                          )
 
         if not hydrogens_are_explicit:
             rdmol = Chem.AddHs(rdmol, addCoords=True)

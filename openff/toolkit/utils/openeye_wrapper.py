@@ -11,6 +11,7 @@ import logging
 import pathlib
 import re
 import tempfile
+import warnings
 from collections import defaultdict
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Optional, Union
@@ -46,6 +47,7 @@ from openff.toolkit.utils.exceptions import (
     InvalidAromaticityModelError,
     InvalidIUPACNameError,
     LicenseError,
+    MultipleComponentsInMoleculeWarning,
     NotAttachedToMoleculeError,
     OpenEyeError,
     OpenEyeImportError,
@@ -1061,8 +1063,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             except KeyError:
                 pass
             else:
-                import warnings
-
                 warn_msg = (
                     f'OpenEye interpreted the type "{atom_type}" in {file_path}{molecule.name}'
                     f" as {element_name}. Does your mol2 file uses Tripos SYBYL atom types?"
@@ -1202,6 +1202,20 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         }
 
         oemol = oechem.OEMol(oemol)
+
+        components = oechem.OEDetermineComponents(oemol)
+        if components[0] > 1:
+            warnings.warn("OpenEye OEMol passed to from_openeye consists of more than one molecule, consider running "
+                          "something like https://docs.eyesopen.com/toolkits/python/oechemtk/oechem_examples/"
+                          "oechem_example_parts2mols.html or splitting input SMILES at '.'s to get separate molecules "
+                          "and pass them to from_openeye one at a time. While this is supported for "
+                          "legacy reasons, OpenFF Molecule objects are not supposed to contain disconnected chemical "
+                          "graphs and this may result in undefined behavior later on. The OpenFF ecosystem is built "
+                          "to handle multiple molecules, but they should be in a Topology object, ex: "
+                          "top = Topology.from_molecules([mol1, mol2])",
+                          MultipleComponentsInMoleculeWarning,
+                          stacklevel=2
+                          )
 
         # Add explicit hydrogens if they're implicit
         if oechem.OEHasImplicitHydrogens(oemol):
