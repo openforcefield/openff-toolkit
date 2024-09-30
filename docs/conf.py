@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 #
 # openff-toolkit documentation build configuration file, created by
 # sphinx-quickstart on Sun Dec  3 23:12:54 2017.
@@ -19,12 +18,12 @@
 #
 import os
 import sys
+from importlib.util import find_spec as find_import_spec
+
+import openff.toolkit
 
 sys.path.insert(0, os.path.abspath("."))
 
-import sphinx
-
-import openff.toolkit
 
 # -- General configuration ------------------------------------------------
 
@@ -128,8 +127,6 @@ nb_execution_mode = "off"
 # sphinx-notfound-page
 # https://github.com/readthedocs/sphinx-notfound-page
 # Renders a 404 page with absolute links
-from importlib.util import find_spec as find_import_spec
-
 if find_import_spec("notfound"):
     extensions.append("notfound.extension")
 
@@ -292,7 +289,10 @@ texinfo_documents = [
         "OpenFF Toolkit Documentation",
         author,
         "openff-toolkit",
-        "A modern, extensible library for molecular mechanics force field science from the Open Force Field Consortium.",
+        (
+            "A modern, extensible library for molecular mechanics force field science from the Open Force "
+            "Field Consortium.",
+        ),
         "Miscellaneous",
     ),
 ]

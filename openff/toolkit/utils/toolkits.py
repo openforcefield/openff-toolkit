@@ -209,8 +209,6 @@ if not any_toolkits:  # pragma: no cover
     msg += "Please install at least one of the following basic toolkits:\n"
     for wrapper in all_subclasses(ToolkitWrapper):
         if wrapper.toolkit_name is not None:
-            msg += "{} : {}\n".format(
-                wrapper._toolkit_name, wrapper._toolkit_installation_instructions
-            )
+            msg += f"{wrapper._toolkit_name} : {wrapper._toolkit_installation_instructions}\n"
     # TODO: Make this a warning!?
     print(msg)

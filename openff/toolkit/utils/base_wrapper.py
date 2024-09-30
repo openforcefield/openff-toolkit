@@ -66,9 +66,7 @@ class ToolkitWrapper:
             @wraps(func)
             def wrapped_function(*args, **kwargs):
                 if not cls.is_available():
-                    msg = "This function requires the {} toolkit".format(
-                        cls._toolkit_name
-                    )
+                    msg = f"This function requires the {cls._toolkit_name} toolkit"
                     raise ToolkitUnavailableException(msg)
                 value = func(*args, **kwargs)
                 return value

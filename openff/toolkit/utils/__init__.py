@@ -6,6 +6,7 @@ from openff.toolkit.utils.constants import (
     DEFAULT_CHARGE_MODEL,
     DEFAULT_FRACTIONAL_BOND_ORDER_MODEL,
 )
+from openff.toolkit.utils.toolkit_registry import toolkit_registry_manager
 from openff.toolkit.utils.toolkits import (
     AMBERTOOLS_AVAILABLE,
     BASIC_CHEMINFORMATICS_TOOLKITS,
@@ -53,4 +54,3 @@ from openff.toolkit.utils.utils import (
     temporary_cd,
     unit_to_string,
 )
-from openff.toolkit.utils.toolkit_registry import toolkit_registry_manager

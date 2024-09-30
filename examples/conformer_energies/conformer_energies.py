@@ -144,7 +144,11 @@ def compute_conformer_energies_from_file(filename):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Perform energy minimization on a molecule, potentially with many conformers. For each conformer, this script will provide the initial energy, minimized energy, and RMSD between the initial and minimized structure (both as STDOUT and a csv file). The minimized conformers will be written out to SDF."
+        description=(
+            "Perform energy minimization on a molecule, potentially with many conformers. For each conformer, this "
+            "script will provide the initial energy, minimized energy, and RMSD between the initial and minimized "
+            "structure (both as STDOUT and a csv file). The minimized conformers will be written out to SDF."
+        ),
     )
     parser.add_argument(
         "-f", "--filename", help="Name of an input file containing conformers"

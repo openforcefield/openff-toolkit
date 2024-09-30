@@ -1987,7 +1987,7 @@ class TestVirtualSiteHandler:
 
     def test_smirks_getitem_forbidden(self, opc):
         """Test that SMIRKS/ParameterType can NOT be used to lookup virtual site types."""
-        smirks = list(opc["VirtualSites"]._parameters)[0].smirks
+        smirks = next(iter(opc["VirtualSites"]._parameters)).smirks
 
         with pytest.raises(
             NotImplementedError,

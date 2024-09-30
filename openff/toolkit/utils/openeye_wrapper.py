@@ -11,6 +11,7 @@ import logging
 import pathlib
 import re
 import tempfile
+import warnings
 from collections import defaultdict
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Optional, Union
@@ -22,7 +23,7 @@ from typing_extensions import TypeAlias
 from openff.toolkit import Quantity, unit
 
 if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import FrozenMolecule, Molecule, Bond, Atom
+    from openff.toolkit.topology.molecule import Atom, Bond, FrozenMolecule, Molecule
 
 from openff.units.elements import SYMBOLS
 
@@ -46,6 +47,7 @@ from openff.toolkit.utils.exceptions import (
     InvalidAromaticityModelError,
     InvalidIUPACNameError,
     LicenseError,
+    MultipleComponentsInMoleculeWarning,
     NotAttachedToMoleculeError,
     OpenEyeError,
     OpenEyeImportError,
@@ -313,7 +315,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 _cls=_cls,
             )
         raise NotImplementedError(
-            "Cannot create Molecule from {} object".format(type(obj))
+            f"Cannot create Molecule from {type(obj)} object"
         )
 
     def _polymer_openmm_topology_to_offmol(
@@ -665,7 +667,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         # Remove all but the first conformer when writing to SDF as we only support single conformer format
         if (file_format.lower() == "sdf") and oemol.NumConfs() > 1:
-            conf1 = [conf for conf in oemol.GetConfs()][0]
+            conf1 = next(iter(oemol.GetConfs()))
             flat_coords = list()
             for coord in conf1.GetCoords().values():
                 flat_coords.extend(coord)
@@ -1061,8 +1063,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             except KeyError:
                 pass
             else:
-                import warnings
-
                 warn_msg = (
                     f'OpenEye interpreted the type "{atom_type}" in {file_path}{molecule.name}'
                     f" as {element_name}. Does your mol2 file uses Tripos SYBYL atom types?"
@@ -1203,6 +1203,20 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         oemol = oechem.OEMol(oemol)
 
+        components = oechem.OEDetermineComponents(oemol)
+        if components[0] > 1:
+            warnings.warn("OpenEye OEMol passed to from_openeye consists of more than one molecule, consider running "
+                          "something like https://docs.eyesopen.com/toolkits/python/oechemtk/oechem_examples/"
+                          "oechem_example_parts2mols.html or splitting input SMILES at '.'s to get separate molecules "
+                          "and pass them to from_openeye one at a time. While this is supported for "
+                          "legacy reasons, OpenFF Molecule objects are not supposed to contain disconnected chemical "
+                          "graphs and this may result in undefined behavior later on. The OpenFF ecosystem is built "
+                          "to handle multiple molecules, but they should be in a Topology object, ex: "
+                          "top = Topology.from_molecules([mol1, mol2])",
+                          MultipleComponentsInMoleculeWarning,
+                          stacklevel=2
+                          )
+
         # Add explicit hydrogens if they're implicit
         if oechem.OEHasImplicitHydrogens(oemol):
             oechem.OEAddExplicitHydrogens(oemol)
@@ -1234,25 +1248,22 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         if unspec_chiral or unspec_db:
 
             def oeatom_to_str(oeatom) -> str:
-                return "atomic num: {}, name: {}, idx: {}, aromatic: {}, chiral: {}".format(
-                    oeatom.GetAtomicNum(),
-                    oeatom.GetName(),
-                    oeatom.GetIdx(),
-                    oeatom.IsAromatic(),
-                    oeatom.IsChiral(),
+                return (
+                    f"atomic num: {oeatom.GetAtomicNum()}, "
+                    f"name: {oeatom.GetName()}, "
+                    f"idx: {oeatom.GetIdx()}, "
+                    f"aromatic: {oeatom.IsAromatic()}, "
+                    f"chiral: {oeatom.IsChiral()}"
                 )
+
 
             def oebond_to_str(oebond) -> str:
-                return "order: {}, chiral: {}".format(
-                    oebond.GetOrder(), oebond.IsChiral()
-                )
+                return f"order: {oebond.GetOrder()}, chiral: {oebond.IsChiral()}"
 
             def describe_oeatom(oeatom) -> str:
-                description = "Atom {} with bonds:".format(oeatom_to_str(oeatom))
+                description = f"Atom {oeatom_to_str(oeatom)} with bonds:"
                 for oebond in oeatom.GetBonds():
-                    description += "\nbond {} to atom {}".format(
-                        oebond_to_str(oebond), oeatom_to_str(oebond.GetNbr(oeatom))
-                    )
+                    description += f"\nbond {oebond_to_str(oebond)} to atom {oeatom_to_str(oebond.GetNbr(oeatom))}"
                 return description
 
             if (
@@ -1513,8 +1524,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             atom2_index = bond.molecule.atoms.index(bond.atom2)
             # Set arbitrary initial stereochemistry
             oeatom1, oeatom2 = oemol_atoms[atom1_index], oemol_atoms[atom2_index]
-            oeatom1_neighbor = [n for n in oeatom1.GetAtoms() if not n == oeatom2][0]
-            oeatom2_neighbor = [n for n in oeatom2.GetAtoms() if not n == oeatom1][0]
+            oeatom1_neighbor = next(n for n in oeatom1.GetAtoms() if not n == oeatom2)
+            oeatom2_neighbor = next(n for n in oeatom2.GetAtoms() if not n == oeatom1)
             # oebond.SetStereo([oeatom1, oeatom2], oechem.OEBondStereo_CisTrans, oechem.OEBondStereo_Cis)
             oebond.SetStereo(
                 [oeatom1_neighbor, oeatom2_neighbor],
@@ -1558,7 +1569,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         molecule: "FrozenMolecule",
         aromaticity_model: str = DEFAULT_AROMATICITY_MODEL,
     ):
-        """
+        r"""
         Create an OpenEye molecule using the specified aromaticity model
 
         ``OEAtom`` s have a different set of allowed value for partial
@@ -2226,7 +2237,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         clear_existing: bool = True,
         make_carboxylic_acids_cis: bool = False,
     ):
-        """
+        r"""
         Generate molecule conformers using OpenEye Omega.
 
         .. warning :: This API is experimental and subject to change.

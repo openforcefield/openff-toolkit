@@ -586,7 +586,7 @@ class MappedParameterAttribute(ParameterAttribute):
 
 
 class IndexedMappedParameterAttribute(ParameterAttribute):
-    """The attribute of a parameter with an unspecified number of terms, where
+    r"""The attribute of a parameter with an unspecified number of terms, where
     each term is a mapping.
 
     Some parameters can be associated to multiple terms,
@@ -1067,14 +1067,14 @@ class _ParameterAttributeHandler:
                     for key, val in mapping.items():
                         attrib_name_indexed, attrib_name_mapped = attrib_name.split("_")
                         smirnoff_dict[
-                            f"{attrib_name_indexed}{str(idx + 1)}_{attrib_name_mapped}{key}"
+                            f"{attrib_name_indexed}{idx + 1!s}_{attrib_name_mapped}{key}"
                         ] = val
             elif attrib_name in indexed_attribs:
                 for idx, val in enumerate(attrib_value):
                     smirnoff_dict[attrib_name + str(idx + 1)] = val
             elif attrib_name in mapped_attribs:
                 for key, val in attrib_value.items():
-                    smirnoff_dict[f"{attrib_name}{str(key)}"] = val
+                    smirnoff_dict[f"{attrib_name}{key!s}"] = val
             elif attrib_name == "version":
                 smirnoff_dict[attrib_name] = str(attrib_value)
             else:
@@ -1105,7 +1105,7 @@ class _ParameterAttributeHandler:
                 return indexed_mapped_attr_value[index][key]
             except (IndexError, KeyError) as err:
                 raise MissingIndexedAttributeError(
-                    f"{str(err)} '{item}' is out of bounds for indexed attribute '{attr_name}'"
+                    f"{err!s} '{item}' is out of bounds for indexed attribute '{attr_name}'"
                 )
 
         # Otherwise, try indexed attribute
@@ -1155,7 +1155,7 @@ class _ParameterAttributeHandler:
                 return
             except (IndexError, KeyError) as err:
                 raise MissingIndexedAttributeError(
-                    f"{str(err)} '{key}' is out of bounds for indexed attribute '{attr_name}'"
+                    f"{err!s} '{key}' is out of bounds for indexed attribute '{attr_name}'"
                 )
 
         # Otherwise, try indexed attribute
@@ -1648,7 +1648,7 @@ class VirtualSiteParameterList(ParameterList):
 
 # TODO: Rename to better reflect role as parameter base class?
 class ParameterType(_ParameterAttributeHandler):
-    """
+    r"""
     Base class for SMIRNOFF parameter types.
 
     This base class provides utilities to create new parameter types. See
@@ -2276,9 +2276,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             matches.update(matches_for_this_type)
 
             logger.debug(
-                "{:64} : {:8} matches".format(
-                    parameter_type.smirks, len(matches_for_this_type)
-                )
+                f"{parameter_type.smirks:64} : {len(matches_for_this_type):8} matches"
             )
 
         logger.debug(f"{len(matches)} matches identified")
@@ -2425,10 +2423,8 @@ class ParameterHandler(_ParameterAttributeHandler):
                 )
             if abs(this_val - other_val) > tolerance:
                 raise IncompatibleParameterError(
-                    "Difference between '{}' values is beyond allowed tolerance {}. "
-                    "(handler value: {}, incompatible value: {}".format(
-                        attr, tolerance, this_val, other_val
-                    )
+                    f"Difference between '{attr}' values is beyond allowed tolerance {tolerance}. "
+                    f"(handler value: {this_val}, incompatible value: {other_val}"
                 )
 
     def __getitem__(self, val):

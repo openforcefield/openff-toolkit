@@ -1,6 +1,5 @@
-import sys
 import json
-
+import sys
 
 release_tag = sys.argv[1]
 python_version = sys.argv[2]

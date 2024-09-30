@@ -405,6 +405,8 @@ class OpenEyeImportError(OpenFFToolkitException):
 class MultipleMoleculesInPDBError(OpenFFToolkitException):
     """Error raised when a multiple molecules are found when one was expected"""
 
+class MultipleComponentsInMoleculeWarning(UserWarning):
+    """Warning emitted when user attempts to make an OpenFF Molecule with multiple disconnected components"""
 
 class WrongShapeError(OpenFFToolkitException):
     """Error raised when an array of the wrong shape is found"""
@@ -426,8 +428,8 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
     ):
         if omm_top is not None:
             self.omm_top = omm_top
-            self._atoms: list["OpenMMAtom"] = list(omm_top.atoms())
-            self._bonds: list[tuple["OpenMMAtom", "OpenMMAtom"]] = list(omm_top.bonds())
+            self._atoms: list[OpenMMAtom] = list(omm_top.atoms())
+            self._bonds: list[tuple[OpenMMAtom, OpenMMAtom]] = list(omm_top.bonds())
 
         if not (substructure_library):
             substructure_library = {}

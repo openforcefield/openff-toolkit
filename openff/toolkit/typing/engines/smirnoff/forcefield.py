@@ -98,7 +98,7 @@ def _get_installed_offxml_dir_paths() -> list[str]:
 
 
 def get_available_force_fields(full_paths=False):
-    """
+    r"""
     Get the filenames of all available .offxml force field files.
 
     Availability is determined by what is discovered through the
@@ -388,12 +388,9 @@ class ForceField:
                 parse(str(version)) < parse(str(self._MIN_SUPPORTED_SMIRNOFF_VERSION))
             ):
                 raise SMIRNOFFVersionError(
-                    "SMIRNOFF offxml file was written with version {}, but this version of ForceField only supports "
-                    "version {} to version {}".format(
-                        version,
-                        self._MIN_SUPPORTED_SMIRNOFF_VERSION,
-                        self._MAX_SUPPORTED_SMIRNOFF_VERSION,
-                    )
+                    f"SMIRNOFF offxml file was written with version {version}, but this version of "
+                    f"ForceField only supports version {self._MIN_SUPPORTED_SMIRNOFF_VERSION} to "
+                    f"version {self._MAX_SUPPORTED_SMIRNOFF_VERSION}"
                 )
 
     @property
@@ -530,12 +527,9 @@ class ForceField:
             if tagname is not None:
                 if tagname in self._parameter_handler_classes:
                     raise ParameterHandlerRegistrationError(
-                        "Attempting to register ParameterHandler {}, which provides a parser for tag"
-                        " '{}', but ParameterHandler {} has already been registered to handle that tag.".format(
-                            parameter_handler_class,
-                            tagname,
-                            self._parameter_handler_classes[tagname],
-                        )
+                        f"Attempting to register ParameterHandler {parameter_handler_class}, which provides a parser "
+                        "for tag '{tagname}', but ParameterHandler {self._parameter_handler_classes[tagname]} has "
+                        "already been registered to handle that tag."
                     )
                 self._parameter_handler_classes[tagname] = parameter_handler_class
 
@@ -565,12 +559,10 @@ class ForceField:
             if serialization_format is not None:
                 if serialization_format in self._parameter_io_handler_classes.keys():
                     raise ParameterHandlerRegistrationError(
-                        "Attempting to register ParameterIOHandler {}, which provides a IO parser for format "
-                        "'{}', but ParameterIOHandler {} has already been registered to handle that tag.".format(
-                            parameter_io_handler_class,
-                            serialization_format,
-                            self._parameter_io_handler_classes[serialization_format],
-                        )
+                        f"Attempting to register ParameterIOHandler {parameter_io_handler_class}, which provides a IO "
+                        "parser for format '{serialization_format}', but ParameterIOHandler "
+                        "{self._parameter_io_handler_classes[serialization_format]} has already been registered to "
+                        "handle that tag."
                     )
                 self._parameter_io_handler_classes[serialization_format] = (
                     parameter_io_handler_class
@@ -596,10 +588,8 @@ class ForceField:
         tagname = parameter_handler._TAGNAME
         if tagname in self._parameter_handlers.keys():
             raise ParameterHandlerRegistrationError(
-                "Tried to register parameter handler '{}' for tag '{}', but "
-                "tag is already registered to {}".format(
-                    parameter_handler, tagname, self._parameter_handlers[tagname]
-                )
+                f"Tried to register parameter handler '{parameter_handler}' for tag '{tagname}', but "
+                f"tag is already registered to {self._parameter_handlers[tagname]}"
             )
 
         self._parameter_handlers[parameter_handler._TAGNAME] = parameter_handler
@@ -623,12 +613,8 @@ class ForceField:
         io_format = parameter_io_handler._FORMAT
         if io_format in self._parameter_io_handlers.keys():
             raise ParameterHandlerRegistrationError(
-                "Tried to register parameter IO handler '{}' for tag '{}', but "
-                "tag is already registered to {}".format(
-                    parameter_io_handler,
-                    io_format,
-                    self._parameter_io_handlers[io_format],
-                )
+                f"Tried to register parameter IO handler '{parameter_io_handler}' for tag '{io_format}', but "
+                f"tag is already registered to {self._parameter_io_handlers[io_format]}"
             )
         self._parameter_io_handlers[io_format] = parameter_io_handler
 
@@ -842,11 +828,11 @@ class ForceField:
         l1_dict["aromaticity_model"] = self._aromaticity_model
 
         # Write out author and date (if they have been set)
-        if not (self._author is None):
+        if self._author is not None:
             l1_dict["Author"] = self._author
 
         # Write out author and date (if they have been set)
-        if not (self._date is None):
+        if self._date is not None:
             l1_dict["Date"] = self._date
 
         for parameter_handler in self._parameter_handlers.values():
@@ -906,7 +892,7 @@ class ForceField:
             smirnoff_data = convert_0_2_smirnoff_to_0_3(smirnoff_data)
 
         # Ensure that SMIRNOFF is a top-level key of the dict
-        if not ("SMIRNOFF" in smirnoff_data):
+        if "SMIRNOFF" not in smirnoff_data:
             raise SMIRNOFFParseError(
                 "'SMIRNOFF' must be a top-level key in the SMIRNOFF object model"
             )
@@ -1077,7 +1063,7 @@ class ForceField:
                 f"{exception_type}\n{exception_msg}\n"
             )
 
-        raise IOError(msg)
+        raise OSError(msg)
 
     def to_string(
         self,

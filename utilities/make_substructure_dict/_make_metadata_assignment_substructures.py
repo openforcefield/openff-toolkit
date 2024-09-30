@@ -1,4 +1,3 @@
-# noqa: INP001
 import os
 
 from _cif_to_substructure_dict import CifSubstructures

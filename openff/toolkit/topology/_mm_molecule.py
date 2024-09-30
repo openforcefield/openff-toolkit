@@ -55,9 +55,7 @@ class _SimpleMolecule:
         else:
             raise ValueError(
                 "Invalid inputs to molecule._add_bond. Expected ints or Atoms. "
-                "Received {} (type {}) and {} (type {}) ".format(
-                    atom1, type(atom1), atom2, type(atom2)
-                )
+                f"Received {atom1} (type {type(atom1)}) and {atom2} (type {type(atom2)}) "
             )
         bond = _SimpleBond(atom1_atom, atom2_atom, **kwargs)
         self.bonds.append(bond)
@@ -346,7 +344,7 @@ class _SimpleMolecule:
             )
             for conf in self._conformers:
                 conf_unitless = conf.m_as(unit.angstrom)
-                conf_serialized, conf_shape = serialize_numpy((conf_unitless))
+                conf_serialized, conf_shape = serialize_numpy(conf_unitless)
                 molecule_dict["conformers"].append(conf_serialized)
 
         molecule_dict["hierarchy_schemes"] = dict()

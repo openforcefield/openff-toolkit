@@ -114,9 +114,7 @@ def test_electrostatics_options(self):
         # Change electrostatics method
         forcefield.forces["Electrostatics"].method = method
         f = partial(check_system_creation_from_molecule, forcefield, molecule)
-        f.description = "Testing {} parameter assignment using molecule {}".format(
-            offxml_file_path, molecule.name
-        )
+        f.description = f"Testing {offxml_file_path} parameter assignment using molecule {molecule.name}"
         # yield f
     # TODO: Implement a similar test, where we compare OpenMM energy evals from an
     #       AMBER-parameterized system to OFF-parameterized systems

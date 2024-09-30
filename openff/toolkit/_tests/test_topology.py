@@ -606,7 +606,7 @@ class TestTopology:
 
         with pytest.raises(
             VirtualSitesUnsupportedError,
-            match="Atom <Atom 3 \(EP\) of chain 0 residue 0 \(UNK\)>.* a virtual site",
+            match=r"Atom <Atom 3 \(EP\) of chain 0 residue 0 \(UNK\)>.* a virtual site",
         ):
             Topology.from_openmm(
                 openmm_topology,
@@ -781,7 +781,7 @@ class TestTopology:
 
         ligand = Molecule.from_file(get_data_file_path("molecules/PT2385.sdf"))
         stereoisomer1 = Molecule.from_smiles("[C@H](Cl)(F)/C=C/F")
-        stereoisomer2 = Molecule.from_smiles("[C@@H](Cl)(F)/C=C\F")
+        stereoisomer2 = Molecule.from_smiles(r"[C@@H](Cl)(F)/C=C\F")
 
         top = Topology.from_pdb(
             get_data_file_path("proteins/5tbm_complex_solv.pdb"),
@@ -2027,7 +2027,7 @@ class TestTopologySerialization:
 
         assert roundtrip.n_molecules == n_molecules
         assert roundtrip.n_atoms == oleic_acid.n_atoms * n_molecules
-        assert [*roundtrip.molecules][0].n_conformers == n_conformers
+        assert next(iter(roundtrip.molecules)).n_conformers == n_conformers
 
 
 @pytest.mark.parametrize(
