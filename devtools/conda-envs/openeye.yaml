@@ -1,11 +1,12 @@
 name: openff-toolkit-test-openeye
 channels:
+  - conda-forge/label/openff-interchange_rc
   - openeye
   - conda-forge
 dependencies:
     # Base depends
   - python
-  - pydantic =1
+  - pydantic
   - packaging
   - numpy
   - networkx
@@ -19,7 +20,7 @@ dependencies:
   - openff-units =0.2.0
   - openff-amber-ff-ports
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.3.19
+  - openff-interchange-base >=0.4.0beta1
   - openff-nagl-base ~=0.4.0
   - openff-nagl-models ==0.3.0
   - typing_extensions
@@ -40,3 +41,5 @@ dependencies:
   - mdtraj
   - nglview
   - parmed =3
+  - pip:
+    - git+https://github.com/openforcefield/openff-interchange.git@fix-1052
