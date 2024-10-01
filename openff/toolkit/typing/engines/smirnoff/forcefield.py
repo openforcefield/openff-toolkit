@@ -30,7 +30,7 @@ from typing import IO, TYPE_CHECKING, Any, Optional, Union
 
 from packaging.version import Version
 
-from openff.toolkit import Quantity
+from openff.toolkit import Quantity, unit
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
@@ -1400,7 +1400,7 @@ class ForceField:
                     force_field=self, topology=[molecule], **kwargs
                 )["Electrostatics"].charges.values()
             ],
-            "elementary_charge",
+            unit.elementary_charge,
         )
 
     def __getitem__(self, val: Union[str, ParameterHandler]) -> ParameterHandler:
