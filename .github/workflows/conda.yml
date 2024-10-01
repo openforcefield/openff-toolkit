@@ -38,6 +38,7 @@ jobs:
         uses: mamba-org/setup-micromamba@v1
         if: ${{ matrix.openeye == 'false' }}
         with:
+          micromamba-version: '1.5.10-0'
           environment-file: devtools/conda-envs/conda.yaml
           create-args: >-
             python=${{ matrix.python-version }}
@@ -45,6 +46,7 @@ jobs:
         uses: mamba-org/setup-micromamba@v1
         if: ${{ matrix.openeye == 'true' }}
         with:
+          micromamba-version: '1.5.10-0'
           environment-file: devtools/conda-envs/conda_oe.yaml
           create-args: >-
             python=${{ matrix.python-version }}

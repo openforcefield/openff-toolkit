@@ -34,11 +34,14 @@ jobs:
       - name: Install environment with ${{ env.JOBNAME }}
         uses: mamba-org/setup-micromamba@v1
         with:
+          micromamba-version: '1.5.10-0'
           environment-file: devtools/conda-envs/test_env.yaml
           condarc: |
             channels:
               - conda-forge/label/openmm_rc
               - conda-forge/label/mdtraj_rc
+              - conda-forge/label/openff-toolkit_rc
+              - conda-forge/label/openff-interchange_rc
               - openeye/label/rc
               - openeye
               - conda-forge
