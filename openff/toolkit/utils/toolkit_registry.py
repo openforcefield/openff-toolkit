@@ -273,7 +273,7 @@ class ToolkitRegistry:
             f'for args "{args}" and kwargs "{kwargs}"\n'
         )
 
-        msg += "Available toolkits are: {}\n".format(self.registered_toolkits)
+        msg += f"Available toolkits are: {self.registered_toolkits}\n"
         # Append information about toolkits that implemented the method, but could not handle the provided parameters
         for toolkit, error in errors:
             msg += f" {toolkit} {type(error)} : {error}\n"

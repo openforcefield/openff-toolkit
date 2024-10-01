@@ -1,4 +1,3 @@
-# noqa: INP001
 from openff.toolkit import unit
 from openff.toolkit.typing.engines.smirnoff import ParameterHandler, ParameterIOHandler
 from openff.toolkit.typing.engines.smirnoff.parameters import (

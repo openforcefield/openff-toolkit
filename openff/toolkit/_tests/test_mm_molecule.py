@@ -137,7 +137,7 @@ class TestMMMolecule:
         for atom_index in range(roundtrip.n_atoms):
             assert (
                 roundtrip.atom(atom_index).atomic_number
-                == water.atom(atom_index).atomic_number  # noqa
+                == water.atom(atom_index).atomic_number
             )
 
     def test_dict_roundtrip_conformers(self, water):

@@ -39,6 +39,7 @@ from openff.toolkit.utils.exceptions import (
     IncorrectNumConformersWarning,
     InvalidIUPACNameError,
     InvalidToolkitError,
+    MultipleComponentsInMoleculeWarning,
     NotAttachedToMoleculeError,
     RadicalsNotSupportedError,
     ToolkitUnavailableException,
@@ -725,6 +726,14 @@ class TestOpenEyeToolkitWrapper:
 
         OpenEyeToolkitWrapper().from_openeye(oemol)
 
+    def test_from_openeye_multiple_molecule(self):
+        """Test that parsing a OEMol that is actually multiple disconnected molecules raises a warning"""
+        from openeye import oechem
+        oemol = oechem.OEMol()
+        oechem.OESmilesToMol(oemol, "C.N")
+        with pytest.warns(MultipleComponentsInMoleculeWarning, match="more than one molecule", ):
+            OpenEyeToolkitWrapper().from_openeye(oemol)
+
     def test_from_openeye_implicit_hydrogen(self):
         """
         Test OpenEyeToolkitWrapper for loading a molecule with implicit
@@ -1228,7 +1237,7 @@ class TestOpenEyeToolkitWrapper:
         )
 
         # Test loading from file-like object
-        with open(filename, "r") as infile:
+        with open(filename) as infile:
             molecule2 = Molecule(
                 infile, file_format="MOL2", toolkit_registry=toolkit_wrapper
             )
@@ -2653,6 +2662,13 @@ class TestRDKitToolkitWrapper:
         rdmol = Chem.MolFromSmiles("[Zn+2]")
 
         RDKitToolkitWrapper().from_rdkit(rdmol)
+
+    def test_from_rdkit_multiple_molecule(self):
+        """Test that parsing a rdmol that is actually multiple disconnected molecules raises a warning"""
+        from rdkit import Chem
+        rdmol = Chem.MolFromSmiles("C.N")
+        with pytest.warns(MultipleComponentsInMoleculeWarning, match="more than one molecule"):
+            RDKitToolkitWrapper().from_rdkit(rdmol)
 
     @pytest.mark.parametrize(
         "smiles, expected_map", [("[Cl:1][Cl]", {0: 1}), ("[Cl:1][Cl:2]", {0: 1, 1: 2})]
@@ -4585,7 +4601,7 @@ class TestToolkitRegistry:
         # Keep a copy of the original registry since this is a "global" variable accessible to other modules
         from copy import deepcopy
 
-        global_registry_copy = deepcopy(GLOBAL_TOOLKIT_REGISTRY)
+        global_registry_copy = deepcopy(GLOBAL_TOOLKIT_REGISTRY)  # noqa: F823
         first_toolkit = type(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits[0])
         num_toolkits = len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits)
 
@@ -4595,7 +4611,7 @@ class TestToolkitRegistry:
             type(tk) for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits
         ]
         assert (
-            len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits) == num_toolkits - 1  # noqa
+            len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits) == num_toolkits - 1
         )
 
         GLOBAL_TOOLKIT_REGISTRY = deepcopy(global_registry_copy)  # noqa
