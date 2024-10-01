@@ -30,7 +30,7 @@ from typing import IO, TYPE_CHECKING, Any, Optional, Union
 
 from packaging.version import Version
 
-from openff.toolkit import Quantity, unit
+from openff.toolkit import Quantity
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
@@ -1383,9 +1383,7 @@ class ForceField:
         charge calculation to be cached.
 
         """
-        from openff.interchange import Interchange
-
-        from openff.toolkit import Molecule
+        from openff.toolkit import Molecule, unit
 
         if not isinstance(molecule, Molecule):
             raise ValueError(
@@ -1396,8 +1394,8 @@ class ForceField:
         return Quantity(
             [
                 c.m
-                for c in Interchange.from_smirnoff(
-                    force_field=self, topology=[molecule], **kwargs
+                for c in self.create_interchange(
+                    topology=molecule.to_topology(), **kwargs,
                 )["Electrostatics"].charges.values()
             ],
             unit.elementary_charge,
