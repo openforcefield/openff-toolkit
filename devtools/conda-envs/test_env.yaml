@@ -24,8 +24,8 @@ dependencies:
   - openff-nagl-models ==0.3.0
     # Toolkit-specific
   - ambertools >=22
-    # https://github.com/rdkit/rdkit/issues/7221 ... and others!
-  - rdkit !=2024.03.6
+    # https://github.com/rdkit/rdkit/issues/7221 and https://github.com/rdkit/rdkit/issues/7583
+  - rdkit !=2024.03.6,!=2024.03.5
   - openeye-toolkits
     # Test-only/optional/dev/typing
   - pytest
