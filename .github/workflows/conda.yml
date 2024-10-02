@@ -38,15 +38,17 @@ jobs:
         uses: mamba-org/setup-micromamba@v1
         if: ${{ matrix.openeye == 'false' }}
         with:
-          micromamba-version: '1.5.10-0'
           environment-file: devtools/conda-envs/conda.yaml
           create-args: >-
             python=${{ matrix.python-version }}
+          # default - will pull down 2.0 which we don't want!
+          # micromamba-version: latest
+          # pin to latest 1.x release
+          micromamba-version: "1.5.10-0"
       - name: Install from conda with OpenEye
         uses: mamba-org/setup-micromamba@v1
         if: ${{ matrix.openeye == 'true' }}
         with:
-          micromamba-version: '1.5.10-0'
           environment-file: devtools/conda-envs/conda_oe.yaml
           create-args: >-
             python=${{ matrix.python-version }}
