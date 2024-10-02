@@ -47,6 +47,10 @@ jobs:
               - conda-forge
           create-args: >-
             python=${{ matrix.python-version }}
+          # default - will pull down 2.0 which we don't want!
+          # micromamba-version: latest
+          # pin to latest 1.x release
+          micromamba-version: "1.5.10-0"
 
       - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
         env:

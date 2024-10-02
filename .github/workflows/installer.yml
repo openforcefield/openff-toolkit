@@ -109,4 +109,3 @@ jobs:
         # This should work if run directly at release time, but a safer approach would be
         # to `git checkout` the corresponding tag of the release, see PR #577
         pytest $PYTEST_ARGS ../
-

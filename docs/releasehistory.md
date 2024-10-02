@@ -8,10 +8,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
-### Improved warnings and documentation
-
-- [PR #1939](https://github.com/openforcefield/openff-toolkit/pull/1939): Resolves [#1587](https://github.com/openforcefield/openff-toolkit/pull/1587) by emitting a warning when from_openeye or from_rdkit try to load a molecule with multiple disconnected components. 
-
+### Improved documentation and warnings
+- [PR #1939](https://github.com/openforcefield/openff-toolkit/pull/1939): Resolves [#1587](https://github.com/openforcefield/openff-toolkit/pull/1587) by emitting a warning when from_openeye or from_rdkit try to load a molecule with multiple disconnected components.
+- [PR #1934](https://github.com/openforcefield/openff-toolkit/pull/1934): Fold the Toolkit FAQ into the new org-level FAQ: <https://docs.openforcefield.org/faq>
 
 ## 0.16.4
 
@@ -39,7 +38,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
-- [PR #1898](https://github.com/openforcefield/openff-toolkit/pull/1898) and [PR #1904](https://github.com/openforcefield/openff-toolkit/pull/1904): Fixes [#1897](https://github.com/openforcefield/openff-toolkit/pull/1897) in which `to_inchi` and `to_inchikey` methods would return an empty string in some rare cases. Now these cases result in an `EmptyInchiError` being raised. 
+- [PR #1898](https://github.com/openforcefield/openff-toolkit/pull/1898) and [PR #1904](https://github.com/openforcefield/openff-toolkit/pull/1904): Fixes [#1897](https://github.com/openforcefield/openff-toolkit/pull/1897) in which `to_inchi` and `to_inchikey` methods would return an empty string in some rare cases. Now these cases result in an `EmptyInchiError` being raised.
 - [PR #1890](https://github.com/openforcefield/openff-toolkit/pull/1890): Fixes [#1888](https://github.com/openforcefield/openff-toolkit/pull/1888) in which `ParameterAttribute.unit` was sometimes not validated when stringified.
 - [PR #1894](https://github.com/openforcefield/openff-toolkit/pull/1894): Fixes [#1893](https://github.com/openforcefield/openff-toolkit/issues/1893) in which int-based virtual site parameter lookups were mistakenly forbidden in changes in 0.16.0.
 
@@ -60,30 +59,30 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1866](https://github.com/openforcefield/openff-toolkit/pull/1866): Implements a safer AmberTools version check.
 - [PR #1874](https://github.com/openforcefield/openff-toolkit/pull/1874): Improves some loading times by lazy-loading `networkx`.
 - [PR #1881](https://github.com/openforcefield/openff-toolkit/pull/1881): Adds an optional suffix parameter to `generate_unique_atom_names`.
-- [PR #1887](https://github.com/openforcefield/openff-toolkit/pull/1887): Allows skipping vsite valence check for parent atoms using the `OPENFF_UNSAFE_VSITES` environment variable. 
+- [PR #1887](https://github.com/openforcefield/openff-toolkit/pull/1887): Allows skipping vsite valence check for parent atoms using the `OPENFF_UNSAFE_VSITES` environment variable.
 
 ### Improved documentation and warnings
 
 - [PR #1878](https://github.com/openforcefield/openff-toolkit/pull/1878): docs: updated docs for SMIRNOFF spec around AMBER/GROMACS
-- [PR #1870](https://github.com/openforcefield/openff-toolkit/pull/1870): Updates examples to use openff-2.2.0, 
-  and modernizes use of some API points. 
+- [PR #1870](https://github.com/openforcefield/openff-toolkit/pull/1870): Updates examples to use openff-2.2.0,
+  and modernizes use of some API points.
 - [PR #1787](https://github.com/openforcefield/openff-toolkit/pull/1787): Improve documentation for toolkit wrappers and registries
-- [PR #1886](https://github.com/openforcefield/openff-toolkit/pull/1886): Update docs to build with myst-parser version 3. 
+- [PR #1886](https://github.com/openforcefield/openff-toolkit/pull/1886): Update docs to build with myst-parser version 3.
 
 ## 0.16.0
 
 ### Behavior changes
 
-- [PR #1852](https://github.com/openforcefield/openff-toolkit/pull/1852): Fixes issue 
-  [#1363](https://github.com/openforcefield/openff-toolkit/issues/1363): If multiple parameters have identical 
-  SMIRKS, calls to `ParameterHandler[smirks]` and `ParameterList[smirks]` will now return the LAST parameter 
-  with a matching SMIRKS. Previously this would return the FIRST parameter with a matching SMIRKS, which was 
+- [PR #1852](https://github.com/openforcefield/openff-toolkit/pull/1852): Fixes issue
+  [#1363](https://github.com/openforcefield/openff-toolkit/issues/1363): If multiple parameters have identical
+  SMIRKS, calls to `ParameterHandler[smirks]` and `ParameterList[smirks]` will now return the LAST parameter
+  with a matching SMIRKS. Previously this would return the FIRST parameter with a matching SMIRKS, which was
   a confusing behavior given SMIRNOFF hierarchy rules.
 
 ### Bugfixes
 
-- [PR #1846](https://github.com/openforcefield/openff-toolkit/pull/1846): Band-aids issue 
-  [#1842](https://github.com/openforcefield/openff-toolkit/issues/1846), where the Toolkit Showcase example would 
+- [PR #1846](https://github.com/openforcefield/openff-toolkit/pull/1846): Band-aids issue
+  [#1842](https://github.com/openforcefield/openff-toolkit/issues/1846), where the Toolkit Showcase example would
   sporadically fail when run with one core.
 
 ### New features
@@ -93,7 +92,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
   argument to `ParameterHandler.add_parameter`. Previously it was possible to make a force field with duplicate
   SMIRKS by loading it from file or combining multiple FFs, so this also lets you do it using the API.
 - [PR #1826](https://github.com/openforcefield/openff-toolkit/pull/1826): Allow writing molecules to `Path`s
-- [PR #1797](https://github.com/openforcefield/openff-toolkit/pull/1797): `Topology.from_pdb` can now load more file-like objects, including 
+- [PR #1797](https://github.com/openforcefield/openff-toolkit/pull/1797): `Topology.from_pdb` can now load more file-like objects, including
   `io.StringIO`.
 - [PR #1808](https://github.com/openforcefield/openff-toolkit/pull/1808): Improves default representation of ValenceDict.
 - [PR #1834](https://github.com/openforcefield/openff-toolkit/pull/1834): Adds `Molecule.get_available_charge_methods` and `BaseWrapper.supported_charge_methods`.
@@ -106,7 +105,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1796](https://github.com/openforcefield/openff-toolkit/pull/1796): Update docs tooling and fix warnings
 - [PR #1786](https://github.com/openforcefield/openff-toolkit/pull/1786): Describe contributing to documentation notebooks in developers guide.
 - [PR #1845](https://github.com/openforcefield/openff-toolkit/pull/1845): Update convert_all_strings_to_quantity docstring.
-- [PR #1849](https://github.com/openforcefield/openff-toolkit/pull/1849): Add "how are charges assigned?" section to FAQ. 
+- [PR #1849](https://github.com/openforcefield/openff-toolkit/pull/1849): Add "how are charges assigned?" section to FAQ.
 - [PR #1798](https://github.com/openforcefield/openff-toolkit/pull/1798): Adds type annotations to most of the codebase.
 
 
@@ -133,7 +132,7 @@ This release adds compatibility with QCFractal >=0.50.0, but removes compatibilt
 ### API-breaking changes
 
 - [PR #1760](https://github.com/openforcefield/openff-toolkit/pull/1760): Removes the private, unused `ParameterHandler._OPENMMTYPE` attribute.
-- [PR #1763](https://github.com/openforcefield/openff-toolkit/pull/1763): Updates the OpenFF Toolkit to be compatible with QCFractal >= 0.50. Removes the `client` named argument from `Molecule.from_qcschema`. 
+- [PR #1763](https://github.com/openforcefield/openff-toolkit/pull/1763): Updates the OpenFF Toolkit to be compatible with QCFractal >= 0.50. Removes the `client` named argument from `Molecule.from_qcschema`.
 
 ### Behavior changes
 
@@ -199,7 +198,7 @@ This release adds compatibility with QCFractal >=0.50.0, but removes compatibilt
 ### Improved documentation and warnings
 
 - [PR #1709](https://github.com/openforcefield/openff-toolkit/pull/1709): Update molecule cookbook to use the maximally capable `Topology.from_pdb` in lieu of the more limited `Molecule.from_pdb_and_smiles` and `Molecule.from_polymer_pdb`.
-- [PR #1719](https://github.com/openforcefield/openff-toolkit/pull/1719): Remove out-of-date and unused `examples/environment.yaml` and various examples updates.  
+- [PR #1719](https://github.com/openforcefield/openff-toolkit/pull/1719): Remove out-of-date and unused `examples/environment.yaml` and various examples updates.
 
 ## 0.14.3
 
@@ -375,27 +374,27 @@ This release adds compatibility with QCFractal >=0.50.0, but removes compatibilt
 
 ### Behavior changes
 - [PR #1462](https://github.com/openforcefield/openff-toolkit/pull/1462): Makes residue
-  numbers added by `Molecule.perceive_residues` strings (previously they were ints), to 
-  match the behavior of `Topology.from_openmm` and other hierarchy info-setting methods. 
+  numbers added by `Molecule.perceive_residues` strings (previously they were ints), to
+  match the behavior of `Topology.from_openmm` and other hierarchy info-setting methods.
 
 ### Bugfixes
 - [PR #1459](https://github.com/openforcefield/openff-toolkit/pull/1459): Fixes
-  [#1430](https://github.com/openforcefield/openff-toolkit/issues/1430), where 
-  `Topology.from_openmm` would mis-assign atom names (and probably also 
+  [#1430](https://github.com/openforcefield/openff-toolkit/issues/1430), where
+  `Topology.from_openmm` would mis-assign atom names (and probably also
   hierarchy metadata as well).
 - [PR #1462](https://github.com/openforcefield/openff-toolkit/pull/1462): Fixes
-  [#1461](https://github.com/openforcefield/openff-toolkit/issues/1461), where the 
-  default `Molecule.residues` iterator wouldn't sort by residue number correctly 
+  [#1461](https://github.com/openforcefield/openff-toolkit/issues/1461), where the
+  default `Molecule.residues` iterator wouldn't sort by residue number correctly
   when residue information was added by `Molecule.perceive_residues`.
 
 
 ## 0.11.3 Bugfix release
 
 
-- [PR #1460](https://github.com/openforcefield/openff-toolkit/pull/1460): Disables error causing 
-  [Issue #1432](https://github.com/openforcefield/openff-toolkit/issues/1432), where 
-  `Molecule.from_polymer_pdb` would sometimes issue stereochemistry errors when reading valid 
-  PDBs using the RDKit backend.  
+- [PR #1460](https://github.com/openforcefield/openff-toolkit/pull/1460): Disables error causing
+  [Issue #1432](https://github.com/openforcefield/openff-toolkit/issues/1432), where
+  `Molecule.from_polymer_pdb` would sometimes issue stereochemistry errors when reading valid
+  PDBs using the RDKit backend.
 
 
 ### Bugfixes
@@ -427,15 +426,15 @@ This release adds compatibility with QCFractal >=0.50.0, but removes compatibilt
 
 ### Behavior changes
 - [PR #1398](https://github.com/openforcefield/openff-toolkit/pull/1398): Updates the `Bond.bond_order` setter to only accept int values.
-- [PR #1236](https://github.com/openforcefield/openff-toolkit/pull/1236): `from_rdkit` and `from_openeye` now 
-  raise an `RadicalsNotSupportedError` when loading radicals. It's not clear that the OpenFF Toolkit was ever safely 
-  handling radicals - they appear to be the root cause of many instances of unintended hydrogen addition and other 
-  connection table changes. If this change affects a workflow that was previously working correctly, please let us 
-  know on [this issue](https://github.com/openforcefield/openff-toolkit/issues/1075) so we can refine this behavior. 
+- [PR #1236](https://github.com/openforcefield/openff-toolkit/pull/1236): `from_rdkit` and `from_openeye` now
+  raise an `RadicalsNotSupportedError` when loading radicals. It's not clear that the OpenFF Toolkit was ever safely
+  handling radicals - they appear to be the root cause of many instances of unintended hydrogen addition and other
+  connection table changes. If this change affects a workflow that was previously working correctly, please let us
+  know on [this issue](https://github.com/openforcefield/openff-toolkit/issues/1075) so we can refine this behavior.
 
 ### Examples changed
 - [PR #1236](https://github.com/openforcefield/openff-toolkit/pull/1236): `examples/check_dataset_parameter_coverage` has
-  been deprecated. 
+  been deprecated.
 
 ### Bug fixes
 - [PR #1400](https://github.com/openforcefield/openff-toolkit/pull/1400): Fixes a bug where `Molecule.from_pdb_and_smiles` could incorrectly order coordinates.
@@ -572,7 +571,7 @@ The following classes and methods have been **removed** from `openff.toolkit.typ
 - `ParameterHandler.check_partial_bond_orders_from_molecules_duplicates()`
 - `ParameterHandler.assign_partial_bond_orders_from_molecules()`
 
-In addition, the `ParameterHandler.create_force()` method has been deprecated and its functionality has been removed. It will be removed in a future release. 
+In addition, the `ParameterHandler.create_force()` method has been deprecated and its functionality has been removed. It will be removed in a future release.
 
 The `return_topology` argument of `create_openmm_system` has also been deprecated, and will be removed in 0.12.0. To create an OpenMM topology, use `Interchange`:
 
@@ -779,10 +778,10 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 ### Additional changes and bugfixes
 
 - [PR #1105](https://github.com/openforcefield/openff-toolkit/pull/1105), [PR #1195](https://github.com/openforcefield/openff-toolkit/pull/1195), [PR #1301](https://github.com/openforcefield/openff-toolkit/pull/1301), [PR #1331](https://github.com/openforcefield/openff-toolkit/pull/1331), [PR #1322](https://github.com/openforcefield/openff-toolkit/pull/1322), [PR #1372](https://github.com/openforcefield/openff-toolkit/pull/1372): Add `Molecule.from_polymer_pdb`
-- [PR #1377](https://github.com/openforcefield/openff-toolkit/pull/1377): Adds 
-  `Topology.unique_molecules`, which largely replaces `Topology.reference_molecules`. 
-- [PR #1313](https://github.com/openforcefield/openff-toolkit/pull/1313): Fixes 
-  [Issue #1287](https://github.com/openforcefield/openff-toolkit/issues/1287), where  
+- [PR #1377](https://github.com/openforcefield/openff-toolkit/pull/1377): Adds
+  `Topology.unique_molecules`, which largely replaces `Topology.reference_molecules`.
+- [PR #1313](https://github.com/openforcefield/openff-toolkit/pull/1313): Fixes
+  [Issue #1287](https://github.com/openforcefield/openff-toolkit/issues/1287), where
   `OpenEyeToolkitWrapper.assign_partial_charges` didn't request symmetrized charges when
   the charge model was set to `AM1-Mulliken`.
 - [PR #1348](https://github.com/openforcefield/openff-toolkit/pull/1348): Allows
@@ -862,20 +861,20 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
   [`Atom.atomic_number`](openff.toolkit.topology.Atom.atomic_number).
 - [PR #1209](https://github.com/openforcefield/openforcefield/pull/1209): Fixes
   [Issue #1073](https://github.com/openforcefield/openff-toolkit/issues/1073), where the
-  `fractional_bondorder_method` kwarg to the 
-  [`BondHandler`](openff.toolkit.typing.engines.smirnoff.parameters.BondHandler) initializer 
+  `fractional_bondorder_method` kwarg to the
+  [`BondHandler`](openff.toolkit.typing.engines.smirnoff.parameters.BondHandler) initializer
   was being ignored.
 - [PR #1214](https://github.com/openforcefield/openforcefield/pull/1214): A long overdue fix
   for [Issue #837](https://github.com/openforcefield/openff-toolkit/issues/837)! If OpenEye is
   available, the `ToolkitAM1BCCHandler` will use the ELF10 method to select conformers for AM1BCC
-  charge assignment. 
+  charge assignment.
 - [PR #1160](https://github.com/openforcefield/openforcefield/pull/1160): Fixes the bug identified in
-  [Issue #1159](https://github.com/openforcefield/openff-toolkit/issues/1159), in which the order of 
-  atoms defining a `BondChargeVirtualSite` (and possibly other virtual sites types too) might be reversed 
+  [Issue #1159](https://github.com/openforcefield/openff-toolkit/issues/1159), in which the order of
+  atoms defining a `BondChargeVirtualSite` (and possibly other virtual sites types too) might be reversed
   if the `match` attribute of the virtual site has a value of `"once"`.
 - [PR #1231](https://github.com/openforcefield/openforcefield/pull/1231): Fixes
   [Issue #1181](https://github.com/openforcefield/openff-toolkit/issues/1181) and
-  [Issue #1190](https://github.com/openforcefield/openff-toolkit/issues/1190), where in rare cases 
+  [Issue #1190](https://github.com/openforcefield/openff-toolkit/issues/1190), where in rare cases
   double bond stereo would cause `to_rdkit` to raise an error. The transfer of double bond stereochemistry
   from OpenFF's E/Z representation to RDKit's local representation is now handled as a constraint
   satisfaction problem.
@@ -884,7 +883,7 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 - [PR #1368](https://github.com/openforcefield/openff-toolkit/pull/1368): Adds the `ensure_unique_atom_names` argument to the `Topology.to_file()`, which mimics the same argument in `Topology.to_openmm()`. Renames the `keepIds` argument to `keep_ids`. Renames the `filename` argument to `file` and allows a file-like object to be passed instead of a filename. Makes the `positions` argument optional; if it is not given, positions are take from the first conformer of each molecule in the Topology.
 - [PR #1290](https://github.com/openforcefield/openforcefield/pull/1290): Fixes
   [Issue #1216](https://github.com/openforcefield/openff-toolkit/issues/1216) by adding internal logic to handle
-  the possibility that multiple vsites share the same parent atom, and makes the return value of 
+  the possibility that multiple vsites share the same parent atom, and makes the return value of
   `VirtualSiteHandler.find_matches` be closer to the base class.
 
 ### Examples added
@@ -903,14 +902,14 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 
 ## 0.10.5 Bugfix release
 
-- [PR #1252](https://github.com/openforcefield/openforcefield/pull/1252): Refactors virtual 
+- [PR #1252](https://github.com/openforcefield/openforcefield/pull/1252): Refactors virtual
   site support, resolving
-  [Issue #1235](https://github.com/openforcefield/openff-toolkit/issues/1235), 
-  [Issue #1233](https://github.com/openforcefield/openff-toolkit/issues/1233), 
+  [Issue #1235](https://github.com/openforcefield/openff-toolkit/issues/1235),
+  [Issue #1233](https://github.com/openforcefield/openff-toolkit/issues/1233),
   [Issue #1222](https://github.com/openforcefield/openff-toolkit/issues/1222),
   [Issue #1221](https://github.com/openforcefield/openff-toolkit/issues/1221), and
   [Issue #1206](https://github.com/openforcefield/openff-toolkit/issues/1206).
-  
+
   - Attempts to make virtual site handler more resilient through code simplification.
   - Virtual sites are now associated with a particular 'parent' atom, rather than with a set of atoms. In particular, when checking if a v-site has been assigned we now only check the main 'parent' atom associated with the v-site, rather than all additional orientation atoms. As an example, if a force field contained a bond-charge v-site that matches [O:1]=[C:2] and a monovalent lone pair that matches [O:1]=[C:2]-[*:3] in that order, then only the monovalent lone pair will be assigned to formaldehyde as the oxygen is the main atom that would be associated with both v-sites, and the monovalent lone pair appears later in the hierarchy. This constitutes a behaviour change over previous versions.
   - All v-site exclusion policies have been removed except for 'parents' which has been updated to match [OFF-EP 0006](https://openforcefield.github.io/standards/enhancement-proposals/off-ep-0006/).
@@ -1024,13 +1023,13 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 - [PR #1153](https://github.com/openforcefield/openforcefield/pull/1153): Fixes
   [Issue #1152](https://github.com/openforcefield/openff-toolkit/issues/1052) in which running
   [`Molecule.generate_conformers`](openff.toolkit.topology.Molecule.generate_conformers)
-  using the OpenEye backend would use the stereochemistry from an existing conformer instead 
-  of the stereochemistry from the molecular graph, leading to undefined behavior if the molecule had a 2D conformer. 
+  using the OpenEye backend would use the stereochemistry from an existing conformer instead
+  of the stereochemistry from the molecular graph, leading to undefined behavior if the molecule had a 2D conformer.
 - [PR #1158](https://github.com/openforcefield/openff-toolkit/pull/1158): Fixes the default
   representation of [`Molecule`](openff.toolkit.topology.Molecule) failing in Jupyter notebooks when
   NGLview is not installed.
-- [PR #1151](https://github.com/openforcefield/openforcefield/pull/1151): Fixes 
-  [Issue #1150](https://github.com/openforcefield/openff-toolkit/issues/1150), in which calling 
+- [PR #1151](https://github.com/openforcefield/openforcefield/pull/1151): Fixes
+  [Issue #1150](https://github.com/openforcefield/openff-toolkit/issues/1150), in which calling
   [`Molecule.assign_fractional_bond_orders`](openff.toolkit.topology.Molecule.assign_fractional_bond_orders)
   with all default arguments would lead to an error as a result of trying to lowercase `None`.
 - [PR #1149](https://github.com/openforcefield/openforcefield/pull/1149):
@@ -1077,13 +1076,13 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
   [`Molecule.generate_conformers`](openff.toolkit.topology.Molecule.generate_conformers), but only
   when the `toolkit_registry` argument is a
   [`ToolkitWrapper`](openff.toolkit.utils.toolkits.ToolkitWrapper), not when it is a
-  [`ToolkitRegistry`](openff.toolkit.utils.toolkits.ToolkitRegistry). 
+  [`ToolkitRegistry`](openff.toolkit.utils.toolkits.ToolkitRegistry).
 - [PR #1046](https://github.com/openforcefield/openforcefield/pull/1046): Changes OFFXML output to
-  replace tabs with 4 spaces to standardize representation in different text viewers. 
-- [PR #1001](https://github.com/openforcefield/openff-toolkit/pull/1001): RDKit `Mol` objects 
+  replace tabs with 4 spaces to standardize representation in different text viewers.
+- [PR #1001](https://github.com/openforcefield/openff-toolkit/pull/1001): RDKit `Mol` objects
   created through the [`Molecule.to_rdkit()`](openff.toolkit.topology.Molecule.to_rdkit)
   method have the `NoImplicit` property set to `True` on all atoms. This prevents RDKit from
-  incorrectly adding hydrogen atoms to to molecule. 
+  incorrectly adding hydrogen atoms to to molecule.
 - [PR #1058](https://github.com/openforcefield/openforcefield/pull/1058): Removes the unimplemented methods
   `ForceField.create_parmed_structure`, `Topology.to_parmed`, and `Topology.from_parmed`.
 - [PR #1065](https://github.com/openforcefield/openforcefield/pull/1065): The example `conformer_energies.py` script
@@ -1094,19 +1093,19 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
   with larger molecules. No adverse side effects
   were found in testing, but bad behavior may possibly exist in some unknown cases.
   Note that the default behavior for other parameter handlers was not updated.
-- [PR #1001](https://github.com/openforcefield/openff-toolkit/pull/1001): Revamped the 
-  [`Molecule.visualize()`](openff.toolkit.topology.Molecule.visualize) method's `rdkit` 
+- [PR #1001](https://github.com/openforcefield/openff-toolkit/pull/1001): Revamped the
+  [`Molecule.visualize()`](openff.toolkit.topology.Molecule.visualize) method's `rdkit`
   backend for more pleasing and idiomatic 2D visualization by default.
 - [PR #1087](https://github.com/openforcefield/openff-toolkit/pull/1087): Fixes
   [Issue #1073](https://github.com/openforcefield/openff-toolkit/issues/1073) in which
-  `Molecule.__repr__` fails if the molecule can not be represented as 
+  `Molecule.__repr__` fails if the molecule can not be represented as
   a SMILES pattern. Now, if SMILES generation fails, the molecule will be described by its Hill formula.
 - [PR #1052](https://github.com/openforcefield/openff-toolkit/pull/1052): Fixes
   [Issue #986](https://github.com/openforcefield/openff-toolkit/issues/986)
   by raising a subclass of `AttributeError` in
   `_ParameterAttributeHandler.__getattr__`
 - [PR #1030](https://github.com/openforcefield/openforcefield/pull/1030): Fixes a bug
-  in which the expectations for capitalization for values of `bond_order_model` attributes and 
+  in which the expectations for capitalization for values of `bond_order_model` attributes and
   keywords are inconsistent.
 - [PR #1101](https://github.com/openforcefield/openff-toolkit/pull/1101): Fixes a bug
   in which calling `to_qcschema` on a molecule with no connectivity feeds
@@ -1114,12 +1113,12 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 
 ### Tests updated
 - [PR #1017](https://github.com/openforcefield/openforcefield/pull/1017): Ensures that OpenEye-only CI builds really
-  do lack both AmberTools and RDKit.  
+  do lack both AmberTools and RDKit.
 
 ### Improved documentation and warnings
  - [PR #1065](https://github.com/openforcefield/openforcefield/pull/1017): Example notebooks were updated to use the
    Sage Open Force Field
- - [PR #1062](https://github.com/openforcefield/openforcefield/pull/1062): 
+ - [PR #1062](https://github.com/openforcefield/openforcefield/pull/1062):
    Rewrote installation guide for clarity and comprehensiveness.
 
 ## 0.10.0 Improvements for force field fitting
@@ -1137,33 +1136,33 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 
 ### New features and behaviors changed
 
-- [PR #1027](https://github.com/openforcefield/openforcefield/pull/1027): Corrects interconversion of Molecule objects 
-  with OEMol objects by ensuring atom names are correctly accessible via the `OEAtomBase.GetName()` and 
-  `OEAtomBase.SetName()` methods, rather that the non-standard `OEAtomBase.GetData("name")` and 
+- [PR #1027](https://github.com/openforcefield/openforcefield/pull/1027): Corrects interconversion of Molecule objects
+  with OEMol objects by ensuring atom names are correctly accessible via the `OEAtomBase.GetName()` and
+  `OEAtomBase.SetName()` methods, rather that the non-standard `OEAtomBase.GetData("name")` and
   `OEAtomBase.SetData("name", name)`.
 - [PR #1007](https://github.com/openforcefield/openforcefield/pull/1007): Resolves
-  [Issue #456](https://github.com/openforcefield/openff-toolkit/issues/456) by adding the 
-  `normalize_partial_charges` (default is `True`) keyword argument to 
+  [Issue #456](https://github.com/openforcefield/openff-toolkit/issues/456) by adding the
+  `normalize_partial_charges` (default is `True`) keyword argument to
   [`Molecule.assign_partial_charges`](openff.toolkit.topology.Molecule.assign_partial_charges),
-  [`AmberToolsToolkitWrapper.assign_partial_charges`](openff.toolkit.utils.toolkits.AmberToolsToolkitWrapper.assign_partial_charges),  
-  [`OpenEyeToolkitWrapper.assign_partial_charges`](openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.assign_partial_charges), 
+  [`AmberToolsToolkitWrapper.assign_partial_charges`](openff.toolkit.utils.toolkits.AmberToolsToolkitWrapper.assign_partial_charges),
+  [`OpenEyeToolkitWrapper.assign_partial_charges`](openff.toolkit.utils.toolkits.OpenEyeToolkitWrapper.assign_partial_charges),
   [`RDKitToolkitWrapper.assign_partial_charges`](openff.toolkit.utils.toolkits.RDKitToolkitWrapper.assign_partial_charges), and
   [`BuiltInToolkitWrapper.assign_partial_charges`](openff.toolkit.utils.toolkits.BuiltInToolkitWrapper.assign_partial_charges).
   This adds an offset to each atom's partial charge to ensure that their sum is equal to the net charge on the molecule
-  (to the limit of a python float's precision, generally less than 1e-6 electron charge). **Note that, because this new 
+  (to the limit of a python float's precision, generally less than 1e-6 electron charge). **Note that, because this new
   behavior is ON by default, it may slightly affect the partial charges and energies of systems generated by running
   [`create_openmm_system`](openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system).**
 - [PR #954](https://github.com/openforcefield/openforcefield/pull/954): Adds
   [`LibraryChargeType.from_molecule`](openff.toolkit.typing.engines.smirnoff.parameters.LibraryChargeHandler.LibraryChargeType.from_molecule)
-  which returns a 
+  which returns a
   [`LibraryChargeType`](openff.toolkit.typing.engines.smirnoff.parameters.LibraryChargeHandler.LibraryChargeType)
    object that will match the full molecule being parameterized, and assign
   it the same partial charges as are set on the input molecule.
 - [PR #923](https://github.com/openforcefield/openforcefield/pull/923): Adds `Molecule.nth_degree_neighbors`,
-  `Topology.nth_degree_neighbors`, `TopologyMolecule.nth_degree_neighbors`, which returns pairs of atoms that 
+  `Topology.nth_degree_neighbors`, `TopologyMolecule.nth_degree_neighbors`, which returns pairs of atoms that
   are separated in a molecule or topology by _exactly_ N atoms.
 - [PR #917](https://github.com/openforcefield/openforcefield/pull/917):
-  [`ForceField.create_openmm_system`](openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system) 
+  [`ForceField.create_openmm_system`](openff.toolkit.typing.engines.smirnoff.ForceField.create_openmm_system)
   now ensures that the cutoff of the `NonbondedForce` is set to
   the cutoff of the `vdWHandler` when it and a `Electrostatics` handler are present in the force field.
 - [PR #850](https://github.com/openforcefield/openforcefield/pull/850):
@@ -1188,8 +1187,8 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
     - `VirtualSite.local_frame_position`
   - Adding virtual sites via the `Molecule` API now have defaults for `sigma`, `epsilon`, and `charge_increment`
     set to 0 with appropriate units, rather than `None`
-- [PR #956](https://github.com/openforcefield/openforcefield/pull/956): Added 
-  `ForceField.get_partial_charges()` to more easily compute the partial charges assigned by a force field for a 
+- [PR #956](https://github.com/openforcefield/openforcefield/pull/956): Added
+  `ForceField.get_partial_charges()` to more easily compute the partial charges assigned by a force field for a
   molecule.
 - [PR  #1006](https://github.com/openforcefield/openff-toolkit/pull/1006):
   Two behavior changes in the SMILES output for `to_file()` and `to_file_obj()`:
@@ -1249,8 +1248,8 @@ The `compute_partial_charges_am1bcc()` methods of the `Molecule`, `AmberToolsToo
 - [PR #997](https://github.com/openforcefield/openff-toolkit/pull/997):
   Several XML snippets in `test_forcefield.py` that were scattered around inside of classes and
   functions are now moved to the module level.
-  
-  
+
+
 ## 0.9.2 Minor feature and bugfix release
 
 ### New features and behaviors changed
@@ -1611,7 +1610,7 @@ More details and examples of this change are available in [The ChargeIncrementMo
   - `Molecule.add_monovalent_lone_pair_virtual_site`
   - `Molecule.add_divalent_lone_pair_virtual_site`
   - `Molecule.add_trivalent_lone_pair_virtual_site`
-    
+
   now only accept a list of atoms, not a list of integers, to define to parent atoms
 
 - [PR #548](https://github.com/openforcefield/openff-toolkit/pull/548): Removes
@@ -1959,7 +1958,7 @@ Full details of how to define a torsion-interpolating SMIRNOFF force fields are 
 - [PR #558](https://github.com/openforcefield/openff-toolkit/pull/558): Removes
   `TopologyMolecule.topology_particle_start_index`, since the [`Topology`](openff.toolkit.topology.Topology)
   particle indexing system now orders `TopologyVirtualSites` after all atoms. `TopologyMolecule.atom_start_topology_index`
-  and `TopologyMolecule.virtual_particle_start_topology_index` are still available to access the appropriate values in the 
+  and `TopologyMolecule.virtual_particle_start_topology_index` are still available to access the appropriate values in the
   respective topology indexing systems.
 - [PR #508](https://github.com/openforcefield/openff-toolkit/pull/508):
   `OpenEyeToolkitWrapper.compute_wiberg_bond_orders` is now
@@ -2069,10 +2068,10 @@ Full details of how to define a torsion-interpolating SMIRNOFF force fields are 
 - [PR #573](https://github.com/openforcefield/openff-toolkit/pull/573):
   Adds `quacpac` error output to `quacpac` failure in `Molecule.compute_partial_charges_am1bcc`.
 - [PR #560](https://github.com/openforcefield/openff-toolkit/issues/560): Added visualization method to the the Molecule class.
-- [PR #620](https://github.com/openforcefield/openff-toolkit/pull/620): Added the ability to register parameter handlers via entry 
+- [PR #620](https://github.com/openforcefield/openff-toolkit/pull/620): Added the ability to register parameter handlers via entry
   point plugins. This functionality is accessible by initializing a `ForceField` with the `load_plugins=True` keyword argument.
 - [PR #582](https://github.com/openforcefield/openff-toolkit/pull/582): Added fractional bond order interpolation
-  Adds `return_topology` kwarg to `Forcefield.create_openmm_system`, which returns the processed topology along with the OpenMM 
+  Adds `return_topology` kwarg to `Forcefield.create_openmm_system`, which returns the processed topology along with the OpenMM
   `System` when `True` (default `False`).
 
 ### Tests added
@@ -2135,8 +2134,8 @@ Full details of how to define a torsion-interpolating SMIRNOFF force fields are 
 
 ### Bugfixes
 - [PR #558](https://github.com/openforcefield/openff-toolkit/pull/558): Fixes a bug where
-  `TopologyVirtualSite.atoms` would not correctly apply `TopologyMolecule` atom ordering 
-  on top of the reference molecule ordering, in cases where the same molecule appears multiple times, 
+  `TopologyVirtualSite.atoms` would not correctly apply `TopologyMolecule` atom ordering
+  on top of the reference molecule ordering, in cases where the same molecule appears multiple times,
   but in a different order, in the same Topology.
 - [Issue #460](https://github.com/openforcefield/openff-toolkit/issues/460): Creates unique atom
   names in [`Topology.to_openmm`](openff.toolkit.topology.Topology.to_openmm) if the existing
@@ -2436,7 +2435,7 @@ which are now accessible as `torsion.k1`, `torsion.k2`, etc. (the previous acces
 ### Bugfixes
 - [PR #385](https://github.com/openforcefield/openff-toolkit/pull/385): Fixes
   [Issue #346](https://github.com/openforcefield/openff-toolkit/issues/346) by
-  having `OpenEyeToolkitWrapper.compute_partial_charges_am1bcc` fall back to 
+  having `OpenEyeToolkitWrapper.compute_partial_charges_am1bcc` fall back to
   using standard AM1-BCC if AM1-BCC ELF10 charge generation raises
   an error about "trans COOH conformers"
 - [PR #399](https://github.com/openforcefield/openff-toolkit/pull/399): Fixes
