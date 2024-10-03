@@ -140,7 +140,10 @@ jobs:
 
       - name: Run mypy
         # subtle differences in Python/mypy versions, just keep it passing on one
-        if: ${{ matrix.rdkit == true && matrix.openeye && matrix.python-version == 3.10 }}
+        # prefer having htis back to rdkit == true, but builds often have bugs in stubs and
+        # there are other bugs/subtleties (in the source code and builds) that reduce the number
+        # of available builds
+        if: ${{ matrix.rdkit == false && matrix.openeye && matrix.python-version == 3.10 }}
         run: mypy -p "openff.toolkit"
 
       - name: Run unit tests
