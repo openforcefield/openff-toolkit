@@ -193,8 +193,6 @@ rdkit_inchi_stereochemistry_lost = [
     "DrugBank_1962",
     "DrugBank_5043",
     "DrugBank_2519",
-    # "DrugBank_7124",  # same as below
-    # "DrugBank_6865",  # only after RDKit 2024.3 (possibly only 2024.3.3?)
 ]
 
 openeye_iupac_bad_stereo = [

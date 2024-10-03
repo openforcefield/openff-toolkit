@@ -40,3 +40,13 @@ dependencies:
   - mdtraj
   - nglview
   - parmed =3
+  - mypy
+  - typing_extensions
+  - pip:
+    - types-setuptools
+    - types-toml
+    - types-PyYAML
+    - types-networkx
+    - types-xmltodict
+    - types-cachetools
+    - mongo-types

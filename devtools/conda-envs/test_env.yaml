@@ -5,7 +5,7 @@ channels:
 dependencies:
     # Base depends
   - python
-  - pip
+  - pydantic =1
   - packaging
   - numpy
   - networkx
@@ -50,7 +50,6 @@ dependencies:
   - nomkl
   - mypy
   - typing_extensions
-  - pydantic =1
   - pip:
     - types-setuptools
     - types-toml
