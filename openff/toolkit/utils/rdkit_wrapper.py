@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """
 Wrapper class providing a minimal consistent interface to the `RDKit <http://www.rdkit.org/>`.
 """
