@@ -32,7 +32,7 @@ jobs:
           fetch-depth: 2
 
       - name: Install environment with ${{ env.JOBNAME }}
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: devtools/conda-envs/test_env.yaml
           condarc: |
