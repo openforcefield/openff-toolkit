@@ -251,7 +251,7 @@ openeye_drugbank_undefined_stereo_mols = {
     "DrugBank_6531",
 }
 
-# All the molecules that raise UndefinedStereochemistryError when read by OETK().
+# All the molecules that raise UndefinedStereochemistryError when read by RDKTKW().
 # Note that this list is different from that for OEMol,
 # since the toolkits have different definitions of "stereogenic"
 rdkit_drugbank_undefined_stereo_mols = {
@@ -261,8 +261,6 @@ rdkit_drugbank_undefined_stereo_mols = {
     "DrugBank_3930",
     "DrugBank_5043",
     "DrugBank_5418",
-    "DrugBank_7124",
-    "DrugBank_6865",
 }
 
 
