@@ -18,6 +18,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Improved documentation and warnings
 
+### Tests updated
+- [PR #1942](https://github.com/openforcefield/openff-toolkit/pull/1942): Update tests for newer versions of RDKit, while stepping around recent RDKit conda-forge packages that fail when run natively on osx-arm64.
+
+
 ## 0.16.5
 
 ### Improved documentation and warnings
