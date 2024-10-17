@@ -41,5 +41,13 @@ dependencies:
   - mdtraj
   - nglview
   - parmed =3
+  - mypy
+  - typing_extensions
   - pip:
-    - git+https://github.com/openforcefield/openff-interchange.git@fix-1052
+    - types-setuptools
+    - types-toml
+    - types-PyYAML
+    - types-networkx
+    - types-xmltodict
+    - types-cachetools
+    - mongo-types

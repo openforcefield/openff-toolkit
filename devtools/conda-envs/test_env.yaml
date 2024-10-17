@@ -6,7 +6,7 @@ channels:
 dependencies:
     # Base depends
   - python
-  - pip
+  - pydantic =1
   - packaging
   - numpy
   - networkx
@@ -25,8 +25,12 @@ dependencies:
   - openff-nagl-models ==0.3.0
     # Toolkit-specific
   - ambertools >=22
+    # rdkit 2024.03.6 and 2024.09.1 packages fail when run natively on osx-arm64 macs
+    # https://github.com/rdkit/rdkit/issues/7583
+    # and a bad stub (causing mypy failure only)
     # https://github.com/rdkit/rdkit/issues/7221
-  - rdkit <2023.09.6
+  - rdkit !=2024.03.6,!=2024.09.1
+
   - openeye-toolkits
     # Test-only/optional/dev/typing
   - pytest
@@ -48,7 +52,6 @@ dependencies:
   - nomkl
   - mypy
   - typing_extensions
-  - pydantic
   - pip:
     - types-setuptools
     - types-toml
@@ -57,4 +60,3 @@ dependencies:
     - types-xmltodict
     - types-cachetools
     - mongo-types
-    - git+https://github.com/openforcefield/openff-interchange.git@fix-1052

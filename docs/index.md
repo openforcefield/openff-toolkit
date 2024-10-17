@@ -12,7 +12,7 @@ maxdepth: 1
 installation
 examples
 releasehistory
-faq
+Frequently Asked Questions (FAQ) <https://docs.openforcefield.org/faq>
 :::
 
 :::{toctree}

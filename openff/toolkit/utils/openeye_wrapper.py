@@ -6,6 +6,11 @@ the `OpenEye Toolkit <https://docs.eyesopen.com/toolkits/python/quickstart-pytho
 __all__ = ("OpenEyeToolkitWrapper",)
 
 
+# See https://github.com/conda-forge/openff-toolkit-feedstock/issues/86
+try:
+    import zstandard  # noqa
+except ImportError:
+    pass
 import importlib
 import logging
 import pathlib
