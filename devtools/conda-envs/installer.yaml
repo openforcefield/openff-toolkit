@@ -1,6 +1,7 @@
 name: constructor
 
 channels:
+  - conda-forge/label/openff-interchange_rc
   - defaults
   - conda-forge
 

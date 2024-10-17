@@ -1,5 +1,6 @@
 name: latest-deployment
 channels:
+  - conda-forge/label/openff-interchange_rc
   - conda-forge
   - openeye
 dependencies:
