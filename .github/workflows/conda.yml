@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-12]
+        os: [macos-13, macos-latest, ubuntu-latest]
         python-version: ["3.10"]
         openeye: ["true", "false"]
 
@@ -35,44 +35,26 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Vanilla install from conda
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         if: ${{ matrix.openeye == 'false' }}
         with:
           environment-file: devtools/conda-envs/conda.yaml
           create-args: >-
             python=${{ matrix.python-version }}
-          # default - will pull down 2.0 which we don't want!
-          # micromamba-version: latest
-          # pin to latest 1.x release
-          micromamba-version: "1.5.10-0"
+
       - name: Install from conda with OpenEye
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         if: ${{ matrix.openeye == 'true' }}
         with:
           environment-file: devtools/conda-envs/conda_oe.yaml
           create-args: >-
             python=${{ matrix.python-version }}
-          # default - will pull down 2.0 which we don't want!
-          # micromamba-version: latest
-          # pin to latest 1.x release
-          micromamba-version: "1.5.10-0"
-
-      - name: Additional info about the build
-        run: |
-          uname -a
-          df -h
-          ulimit -a
 
       - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
         env:
           OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
         run: |
           echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
-
-      - name: Environment Information
-        run: |
-          conda info
-          conda list
 
       - name: Check installed toolkits
         run: |
