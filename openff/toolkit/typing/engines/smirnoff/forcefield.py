@@ -1385,6 +1385,7 @@ class ForceField:
         """
         from openff.toolkit import Molecule, unit
 
+
         if not isinstance(molecule, Molecule):
             raise ValueError(
                 "`molecule` argument must be a `Molecule` or subclass object. Found type "

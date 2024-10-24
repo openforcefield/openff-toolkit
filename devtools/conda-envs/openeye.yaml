@@ -20,7 +20,7 @@ dependencies:
   - openff-units =0.2.0
   - openff-amber-ff-ports
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.4.0beta1
+  - openff-interchange-base >=0.4.0rc1
   - openff-nagl-base ~=0.4.0
   - openff-nagl-models ==0.3.0
   - typing_extensions

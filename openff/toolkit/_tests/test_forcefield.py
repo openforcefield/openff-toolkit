@@ -15,6 +15,7 @@ from numpy.testing import assert_almost_equal
 from openff.units.openmm import from_openmm, to_openmm
 from openmm import NonbondedForce, Platform, XmlSerializer, app
 from openmm import unit as openmm_unit
+from pydantic import ValidationError
 
 from openff.toolkit import unit
 from openff.toolkit._tests.create_molecules import (
@@ -4015,7 +4016,6 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         Ensure that requesting an invalid interpolation method leads to a
         FractionalBondOrderInterpolationMethodUnsupportedError
         """
-        from pydantic import ValidationError
 
         mol = create_ethanol()
 
