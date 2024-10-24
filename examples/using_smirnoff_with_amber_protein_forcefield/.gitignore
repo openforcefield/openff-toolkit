@@ -1,4 +1,5 @@
 complex.*
+complex_pointenergy.mdp
 receptor.*
 ligand.*
 protein.pdb
