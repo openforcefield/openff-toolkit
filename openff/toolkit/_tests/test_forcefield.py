@@ -1258,29 +1258,6 @@ class TestForceField(_ForceFieldFixtures):
             toolkit_registry=toolkit_registry,
         )
 
-    @pytest.fixture()
-    def create_circular_handler_dependencies(self):
-        from openff.toolkit.typing.engines.smirnoff.parameters import (
-            AngleHandler,
-            BondHandler,
-            ConstraintHandler,
-        )
-
-        # Modify the BondHandler and AngleHandler classes to depend on the other one running first during
-        # system parameterization. Unfortunately, I can't figure out how to do this just to these _instances_
-        # of the Handlers, so I modify them at the class level, and then un-modify them at the end of the test.
-        orig_bh_depends = copy.deepcopy(BondHandler._DEPENDENCIES)
-        orig_ah_depends = copy.deepcopy(AngleHandler._DEPENDENCIES)
-        BondHandler._DEPENDENCIES = [ConstraintHandler, AngleHandler]
-        AngleHandler._DEPENDENCIES = [ConstraintHandler, BondHandler]
-
-        # The tests run here. Regardless of outcome, the code after `yield` runs after the test completes
-        yield
-
-        # Return handler dependencies to their original states
-        BondHandler._DEPENDENCIES = orig_bh_depends
-        AngleHandler._DEPENDENCIES = orig_ah_depends
-
     def test_parameterize_ethanol_missing_torsion(self):
         from openff.interchange.exceptions import UnassignedTorsionError
 
