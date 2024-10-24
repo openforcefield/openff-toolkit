@@ -194,7 +194,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         ANTECHAMBER_PATH = which("antechamber")
         if ANTECHAMBER_PATH is None:
             raise AntechamberNotFoundError(
-                "Antechamber not found, cannot run charge_mol()"
+                "Antechamber not found, cannot run assign_partial_charges()"
             )
 
         # Compute charges
