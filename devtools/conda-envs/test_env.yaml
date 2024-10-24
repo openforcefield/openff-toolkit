@@ -61,3 +61,4 @@ dependencies:
     - types-xmltodict
     - types-cachetools
     - mongo-types
+    - git+https://github.com/openforcefield/openff-interchange.git@fix-1052

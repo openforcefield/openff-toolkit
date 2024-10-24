@@ -1383,9 +1383,7 @@ class ForceField:
         charge calculation to be cached.
 
         """
-        from openff.interchange import Interchange
-
-        from openff.toolkit import Molecule
+        from openff.toolkit import Molecule, unit
 
         if not isinstance(molecule, Molecule):
             raise ValueError(
@@ -1396,13 +1394,11 @@ class ForceField:
         return Quantity(
             [
                 c.m
-                for c in Interchange.from_smirnoff(
-                    force_field=self, topology=[molecule], **kwargs
-                )["Electrostatics"]
-                ._get_charges()
-                .values()
+                for c in self.create_interchange(
+                    topology=molecule.to_topology(), **kwargs,
+                )["Electrostatics"].charges.values()
             ],
-            "elementary_charge",
+            unit.elementary_charge,
         )
 
     def __getitem__(self, val: Union[str, ParameterHandler]) -> ParameterHandler:

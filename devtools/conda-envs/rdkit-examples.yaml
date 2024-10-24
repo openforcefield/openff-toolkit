@@ -46,3 +46,5 @@ dependencies:
   - pdbfixer
   - openmmforcefields >=0.11.2
   - gromacs >=2023.3
+  - pip:
+    - git+https://github.com/openforcefield/openff-interchange.git@fix-1052

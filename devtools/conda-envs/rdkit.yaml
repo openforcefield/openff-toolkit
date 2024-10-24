@@ -40,3 +40,5 @@ dependencies:
   - qcportal >=0.50
   - qcengine
   - nglview
+  - pip:
+    - git+https://github.com/openforcefield/openff-interchange.git@fix-1052
