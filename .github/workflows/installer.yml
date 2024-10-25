@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macOS-12, ubuntu-latest]
+        os: [macos-latest, ubuntu-latest]
         python-version: ["3.10", "3.11"]
 
     env:
