@@ -6,7 +6,6 @@ channels:
 dependencies:
     # Base depends
   - python
-  - pydantic =1
   - packaging
   - numpy
   - networkx
@@ -61,4 +60,3 @@ dependencies:
     - types-xmltodict
     - types-cachetools
     - mongo-types
-    - git+https://github.com/openforcefield/openff-interchange.git@fix-1052
