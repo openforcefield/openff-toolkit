@@ -1521,9 +1521,7 @@ class Topology(Serializable):
                 off_atom.metadata["residue_name"] = omm_mol_G.nodes[omm_atom_idx][
                     "residue_name"
                 ]
-                off_atom.metadata["residue_number"] = int(
-                    omm_mol_G.nodes[omm_atom_idx]["residue_id"]
-                )
+                off_atom.metadata["residue_number"] = omm_mol_G.nodes[omm_atom_idx]["residue_id"]
                 off_atom.metadata["insertion_code"] = omm_mol_G.nodes[omm_atom_idx][
                     "insertion_code"
                 ]
