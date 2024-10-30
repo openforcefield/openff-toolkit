@@ -770,6 +770,20 @@ class TestTopology:
             else:
                 assert roundtrip_atom.metadata["chain_id"] == "X"
 
+    def test_from_to_openmm_hierarchy_metadata(self):
+        """Reproduce issue #1953"""
+        import openmm.app
+
+        openmm_topology = openmm.app.PDBFile(get_data_file_path("proteins/MainChain_ALA_ALA.pdb")).topology
+        openff_molecule = Topology.from_pdb(get_data_file_path("proteins/MainChain_ALA_ALA.pdb")).molecule(0)
+
+        roundtripped = Topology.from_openmm(
+            openmm_topology,
+            unique_molecules=[openff_molecule],
+        ).to_openmm()
+
+        assert {type(residue.id) for residue in roundtripped.residues()} == {str}, "type mistmatch in residue id in OpenMM residues"
+
     @requires_rdkit
     def test_from_pdb(self):
         with pytest.raises(UnassignedChemistryInPDBError) as exc_info:
