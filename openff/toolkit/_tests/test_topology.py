@@ -772,6 +772,7 @@ class TestTopology:
             else:
                 assert roundtrip_atom.metadata["chain_id"] == "X"
 
+    @requires_rdkit
     def test_from_to_openmm_hierarchy_metadata(self):
         """Reproduce issue #1953"""
         import openmm.app
