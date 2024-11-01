@@ -754,8 +754,6 @@ class TestTopology:
                 roundtrip = roundtrip_atom.metadata["residue_number"]
                 assert original == roundtrip
             else:
-                # OpenFF lets residue numbers be str or int, but this is str in OpenMM's
-                # representation, so faithful round-trip is not practical
                 assert roundtrip_atom.metadata["residue_number"] == "0"
 
             if "insertion_code" in orig_atom.metadata:
