@@ -1,6 +1,5 @@
 name: openff-toolkit-test-openeye
 channels:
-  - conda-forge/label/openff-interchange_rc
   - openeye
   - conda-forge
 dependencies:
@@ -20,7 +19,7 @@ dependencies:
   - openff-units =0.2.0
   - openff-amber-ff-ports
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.4.0rc1
+  - openff-interchange-base =0.4
   - openff-nagl-base ~=0.4.0
   - openff-nagl-models ==0.3.0
   - typing_extensions
