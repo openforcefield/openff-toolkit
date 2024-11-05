@@ -606,7 +606,7 @@ class TestTopology:
 
         with pytest.raises(
             VirtualSitesUnsupportedError,
-            match=r"Atom <Atom 3 \(EP\) of chain 0 residue 0 \(UNK\)>.* a virtual site",
+            match=r"Atom <Atom 3 .*EP.*a virtual site",
         ):
             Topology.from_openmm(
                 openmm_topology,

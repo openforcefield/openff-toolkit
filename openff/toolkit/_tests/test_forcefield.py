@@ -15,6 +15,7 @@ from numpy.testing import assert_almost_equal
 from openff.units.openmm import from_openmm, to_openmm
 from openmm import NonbondedForce, Platform, XmlSerializer, app
 from openmm import unit as openmm_unit
+from pydantic import ValidationError
 
 from openff.toolkit import unit
 from openff.toolkit._tests.create_molecules import (
@@ -4015,6 +4016,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         Ensure that requesting an invalid interpolation method leads to a
         FractionalBondOrderInterpolationMethodUnsupportedError
         """
+
         mol = create_ethanol()
 
         forcefield = ForceField(
@@ -4025,18 +4027,10 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         )._fractional_bondorder_interpolation = "invalid method name"
         topology = Topology.from_molecules([mol])
 
-        # This error will be either from v1 of the package (if v1 is installed)
-        # or the faked v1 API (if v2 is installed). Ensure the v1 error or a
-        # mimick of it is imported
-        try:
-            from pydantic.v1 import ValidationError
-        except ImportError:
-            from pydantic import ValidationError
-
         # If important, this can be a custom exception instead of a verbose ValidationError
         with pytest.raises(
             ValidationError,
-            match="given=invalid method name",
+            match="Input should be 'linear'.*input_value='invalid method name'",
         ):
             forcefield.create_openmm_system(
                 topology,
