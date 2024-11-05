@@ -2045,6 +2045,17 @@ class TestTopologySerialization:
         assert next(iter(roundtrip.molecules)).n_conformers == n_conformers
 
 
+    @pytest.mark.parametrize("format", ["dict", "json"])
+    def test_roundtrip_simple_molecules(self, mixed_topology, format):
+        if format == "dict":
+            roundtrip = Topology.from_dict(mixed_topology.to_dict())
+        elif format == "json":
+            roundtrip = Topology.from_json(mixed_topology.to_json())
+
+        assert roundtrip.n_molecules == mixed_topology.n_molecules
+        assert roundtrip.n_atoms == mixed_topology.n_atoms
+
+
 @pytest.mark.parametrize(
     ("n_degrees", "num_pairs"),
     [
