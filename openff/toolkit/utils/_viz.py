@@ -1,14 +1,15 @@
 import uuid
 from io import StringIO
+from typing import TYPE_CHECKING
 
 from nglview.base_adaptor import Structure, Trajectory
 
-from openff.toolkit import Molecule, Topology, unit
+if TYPE_CHECKING:
+    from openff.toolkit import Molecule, Topology
 
 MOLECULE_DEFAULT_REPS = [
     dict(type="licorice", params=dict(radius=0.25, multipleBond=True))
 ]
-
 
 class MoleculeNGLViewTrajectory(Structure, Trajectory):
     """
@@ -40,7 +41,7 @@ class MoleculeNGLViewTrajectory(Structure, Trajectory):
 
     def __init__(
         self,
-        molecule: Molecule,
+        molecule: "Molecule",
         ext: str = "MOL2",
     ):
         if not molecule.conformers:
@@ -53,7 +54,7 @@ class MoleculeNGLViewTrajectory(Structure, Trajectory):
         self.id = str(uuid.uuid4())
 
     def get_coordinates(self, index: int = 0):
-        return self.molecule.conformers[index].m_as(unit.angstrom)
+        return self.molecule.conformers[index].m_as("angstrom")
 
     @property
     def n_frames(self):
@@ -91,7 +92,7 @@ class TopologyNGLViewStructure(Structure):
 
     def __init__(
         self,
-        topology: Topology,
+        topology: "Topology",
         ext: str = "PDB",
     ):
         self.topology = topology

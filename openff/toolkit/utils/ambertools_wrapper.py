@@ -11,7 +11,6 @@ from shutil import which
 from typing import TYPE_CHECKING, Optional
 
 import numpy as np
-from openff.utilities.provenance import get_ambertools_version
 
 from openff.toolkit import Quantity, unit
 from openff.toolkit.utils import base_wrapper, rdkit_wrapper
@@ -62,6 +61,8 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
     SUPPORTED_CHARGE_METHODS = _supported_charge_methods
 
     def __init__(self):
+        from openff.utilities.provenance import get_ambertools_version
+
         super().__init__()
 
         if not self.is_available():

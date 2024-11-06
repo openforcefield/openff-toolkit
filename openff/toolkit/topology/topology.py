@@ -31,7 +31,6 @@ from typing import (
 
 import numpy as np
 from numpy.typing import NDArray
-from openff.units import ensure_quantity
 from typing_extensions import TypeAlias
 
 from openff.toolkit import Quantity, unit
@@ -618,6 +617,8 @@ class Topology(Serializable):
             return
         if not hasattr(box_vectors, "units"):
             if hasattr(box_vectors, "unit"):
+                from openff.units import ensure_quantity
+
                 # this is probably an openmm.unit.Quantity; we should gracefully import OpenMM but
                 # the chances of this being an object with the two previous conditions met is low
                 box_vectors = ensure_quantity(box_vectors, "openff")
@@ -1538,6 +1539,8 @@ class Topology(Serializable):
             topology.box_vectors = from_openmm(openmm_topology.getPeriodicBoxVectors())
 
         if positions is not None:
+            from openff.units import ensure_quantity
+
             topology.set_positions(ensure_quantity(positions, "openff"))
 
         # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?

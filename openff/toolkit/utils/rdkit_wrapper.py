@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 import numpy as np
 from cachetools import LRUCache, cached
+from numpy.typing import NDArray
 from openff.units.elements import SYMBOLS
 
 from openff.toolkit import Quantity, unit
@@ -1985,7 +1986,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return 0.5 * interaction_energies.sum()
 
     @classmethod
-    def _elf_compute_rms_matrix(cls, molecule: "Molecule") -> np.ndarray:
+    def _elf_compute_rms_matrix(cls, molecule: "Molecule") -> NDArray:
         """Computes the symmetric RMS matrix of all conformers in a molecule taking
         only heavy atoms into account.
 
