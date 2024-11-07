@@ -18,6 +18,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### New features
 
+- [PR #1958](https://github.com/openforcefield/openff-toolkit/pull/1958): Allows serialization of `_SimpleMolecule`s (relevant to serialization of `Topology` objects created by `Interchange.from_openmm`)
+
 ### Improved documentation and warnings
 
 ### Tests updated
