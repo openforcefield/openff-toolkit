@@ -1302,8 +1302,18 @@ class Topology(Serializable):
             self.box_vectors = Quantity(box_vectors_unitless, box_vectors_unit)
 
         for molecule_dict in topology_dict["molecules"]:
-            new_mol = Molecule.from_dict(molecule_dict)
+            # the serialized representation doesn't store which molecule model
+            # each of these dicts is meant to be deserialized to. Usually it'll
+            # be Molecule, so try that first. If it's supposed to be a
+            # _SimpleMolecule, it'll KeyError because Molecule has more fields.
+            try:
+                new_mol = Molecule.from_dict(molecule_dict)
+            except KeyError:
+                # masks possible other ways KeyErrors could pop up
+                new_mol = _SimpleMolecule.from_dict(molecule_dict)
+
             self._add_molecule_keep_cache(new_mol)
+
         self._invalidate_cached_properties()
 
     @staticmethod
