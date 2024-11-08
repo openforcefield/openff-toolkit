@@ -6,15 +6,15 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-## Current development
-
-### API-breaking changes
+## 0.16.6
 
 ### Behavior changes
 
 - [PR #1954](https://github.com/openforcefield/openff-toolkit/pull/1954): `Topology.from_openmm` no longer casts residue numbers to int.
 
 ### Bugfixes
+
+- [PR #1961](https://github.com/openforcefield/openff-toolkit/pull/1961): Fix [Issue #1960](https://github.com/openforcefield/openff-toolkit/issues/1960), where lazy-loading machinery in openff-toolkit would clash with newly added lazy-loading code in openff-units 0.2.3.
 
 ### New features
 
