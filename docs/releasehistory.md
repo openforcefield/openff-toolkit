@@ -13,6 +13,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Behavior changes
 
 - [PR #1954](https://github.com/openforcefield/openff-toolkit/pull/1954): `Topology.from_openmm` no longer casts residue numbers to int.
+- [PR #1959](https://github.com/openforcefield/openff-toolkit/pull/1959): Speeds up import times.
 
 ### Bugfixes
 
