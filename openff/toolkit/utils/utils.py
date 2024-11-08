@@ -28,9 +28,9 @@ import functools
 import logging
 from typing import TYPE_CHECKING, Any, Iterable, TypeVar, Union, overload
 
-import numpy
 import numpy as np
 import pint
+from numpy.typing import NDArray
 from openff.units import Quantity, Unit, unit
 from openff.utilities import requires_package
 
@@ -397,8 +397,6 @@ def serialize_numpy(np_array) -> tuple[bytes, tuple[int]]:
     shape
         The shape of the serialized array
     """
-    import numpy as np
-
     bigendian_float = np.dtype(float).newbyteorder(">")
     bigendian_array = np_array.astype(bigendian_float)
     serialized = bigendian_array.tobytes()
@@ -409,7 +407,7 @@ def serialize_numpy(np_array) -> tuple[bytes, tuple[int]]:
 def deserialize_numpy(
     serialized_np: Union[bytes, list],
     shape: tuple[int, ...],
-) -> numpy.ndarray:
+) -> NDArray:
     """
     Deserializes a numpy array from a bytestring or list. The input, if a bytestring, is
     assumed to be in big-endian byte order.
@@ -426,9 +424,6 @@ def deserialize_numpy(
     np_array
         The deserialized numpy array
     """
-
-    import numpy as np
-
     if isinstance(serialized_np, list):
         np_array = np.array(serialized_np)
     if isinstance(serialized_np, bytes):
