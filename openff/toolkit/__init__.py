@@ -79,10 +79,7 @@ def __getattr__(name):
     obj_mod = _lazy_imports_obj.get(name)
     if obj_mod is not None:
         mod = importlib.import_module(obj_mod)
-        try:
-            return mod.__dict__[name]
-        except KeyError:  # account for lazy loaders
-            return getattr(mod, name)
+        return getattr(mod, name)
 
     lazy_mod = _lazy_imports_mod.get(name)
     if lazy_mod is not None:
