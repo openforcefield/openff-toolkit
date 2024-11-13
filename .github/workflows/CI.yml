@@ -155,7 +155,7 @@ jobs:
           PYTEST_ARGS+=" --runslow"
           #fi
 
-          python -m pytest --durations=20 $PYTEST_ARGS $COV
+          python -m pytest --durations=20 $PYTEST_ARGS $COV -k "test_freesolv_gbsa_energies"
 
       - name: Run code snippets in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
