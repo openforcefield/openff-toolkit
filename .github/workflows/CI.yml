@@ -27,8 +27,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-15]
-        python-version: ["3.10"]
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.10", "3.11", "3.12"]
         rdkit: [true, false]
         openeye: [true, false]
         exclude:
@@ -155,7 +155,7 @@ jobs:
           PYTEST_ARGS+=" --runslow"
           #fi
 
-          python -m pytest --durations=20 $PYTEST_ARGS $COV -k "test_freesolv_gbsa_energies"
+          python -m pytest --durations=20 $PYTEST_ARGS $COV
 
       - name: Run code snippets in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
