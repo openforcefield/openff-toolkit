@@ -139,6 +139,7 @@ class TestNAGLToolkitWrapper:
                 toolkit_registry=NAGLToolkitWrapper(),
             )
 
+    @pytest.mark.xfail(reason="We need to find a new mol that fails this check in nagl 0.5")
     def test_unsupported_molecule_bond(self):
         mol = Molecule.from_smiles("C=[Cl+1]")
         err = re.escape("Molecule contains forbidden SMARTS pattern [#17:1]#,:,=[*:2]")
