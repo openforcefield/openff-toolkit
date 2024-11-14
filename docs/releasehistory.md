@@ -19,6 +19,12 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Improved documentation and warnings
 
+### Tests updated
+
+- [PR #1965](https://github.com/openforcefield/openff-toolkit/pull/1965): Fixes slight difference in GBSA energy reported in [Issue #1964](https://github.com/openforcefield/openff-toolkit/issues/1964) by forcing the use of the Reference platform in OpenMM for both calculations.   
+- [PR #1965](https://github.com/openforcefield/openff-toolkit/pull/1965): Disables testing of parmed-dependent notebook in `external` examples, since ParmEd 3 is no longer compatible with our upstreams and ParmEd 4 raises an error for our use cases.     
+- [PR #1965](https://github.com/openforcefield/openff-toolkit/pull/1965): Uses a different molecule in test_nagl's test_unsupported_molecule_bond to avoid having molecule handled successfully by nagl's new lookup table. 
+
 ## 0.16.6
 
 ### Behavior changes
