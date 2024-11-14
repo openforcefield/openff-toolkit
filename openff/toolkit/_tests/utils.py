@@ -658,8 +658,9 @@ def compare_system_energies(
 
     # Create Contexts and compare the energies.
     integrator = openmm.VerletIntegrator(1.0 * openmm_unit.femtoseconds)
-    context1 = openmm.Context(system1, integrator)
-    context2 = openmm.Context(system2, copy.deepcopy(integrator))
+    from openmm import Platform
+    context1 = openmm.Context(system1, integrator, Platform.getPlatformByName("Reference"))
+    context2 = openmm.Context(system2, copy.deepcopy(integrator), Platform.getPlatformByName("Reference"))
 
     def map_energies_by_force_type(potential_energy1, potential_energy2):
         """Convert dictionary force_group -> energy to force_type -> energy."""
