@@ -11,7 +11,8 @@ TypedMolecule TODOs
 """
 
 import functools
-from typing import TYPE_CHECKING, Generator, Iterable, NoReturn, Optional, Union
+from collections.abc import Generator, Iterable
+from typing import TYPE_CHECKING, NoReturn, Optional, Union
 
 from openff.units.elements import MASSES, SYMBOLS
 

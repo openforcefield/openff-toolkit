@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING, DefaultDict, Mapping, Optional
+from collections import defaultdict
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from openmm.app import Atom as OpenMMAtom
@@ -424,7 +426,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
         omm_top: Optional["OpenMMTopology"] = None,
         unassigned_bonds: Optional[list[tuple[int, int]]] = None,
         unassigned_atoms: Optional[list[int]] = None,
-        matches: Optional[DefaultDict[int, list[str]]] = None,
+        matches: Optional[defaultdict[int, list[str]]] = None,
     ):
         if omm_top is not None:
             self.omm_top = omm_top
@@ -593,8 +595,6 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
         return []
 
     def assigned_residue_name_mismatch_hint(self) -> list[str]:
-        from collections import defaultdict
-
         if not self.matches:
             return []
 
