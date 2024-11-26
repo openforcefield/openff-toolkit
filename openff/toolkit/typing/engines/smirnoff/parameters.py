@@ -1124,7 +1124,7 @@ class _ParameterAttributeHandler:
 
         # Otherwise, forward the search to the next class in the MRO.
         try:
-            return super().__getattr__(item)  # type: ignore[misc]
+            return super().__getattr__(item)
         except AttributeError as e:
             # If this fails because the next classes in the MRO do not
             # implement __getattr__(), then raise the standard Attribute error.
@@ -1582,7 +1582,7 @@ class ParameterList(list):
     # TODO: Is there a cleaner way (getstate/setstate perhaps?) to allow FFs to be
     #       pickled?
     def __reduce__(self):
-        return (__class__, (list(self),), self.__dict__)  # type: ignore[name-defined]
+        return (__class__, (list(self),), self.__dict__)
 
     def __contains__(self, item):
         """Check to see if either Parameter or SMIRKS is contained in parameter list.

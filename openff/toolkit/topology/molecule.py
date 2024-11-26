@@ -3706,7 +3706,7 @@ class FrozenMolecule(Serializable):
         if isinstance(toolkit_registry, ToolkitRegistry):
             to_iupac_method = toolkit_registry.resolve("to_iupac")
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            to_iupac_method = toolkit_registry.to_iupac  # type: ignore[attr-defined]
+            to_iupac_method = toolkit_registry.to_iupac
         else:
             raise InvalidToolkitRegistryError(
                 "Invalid toolkit_registry passed to to_iupac. Expected ToolkitRegistry or ToolkitWrapper. "
@@ -4156,7 +4156,7 @@ class FrozenMolecule(Serializable):
         if isinstance(toolkit_registry, ToolkitRegistry):
             pass
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry  # type: ignore[assignment]
+            toolkit = toolkit_registry
             toolkit_registry = ToolkitRegistry(toolkit_precedence=[])
             toolkit_registry.add_toolkit(toolkit)
         else:
@@ -4189,9 +4189,9 @@ class FrozenMolecule(Serializable):
             )
 
         if isinstance(file_path, (str, pathlib.Path)):
-            toolkit.to_file(self, file_path, file_format)  # type: ignore[attr-defined]
+            toolkit.to_file(self, file_path, file_format)
         else:
-            toolkit.to_file_obj(self, file_path, file_format)  # type: ignore[attr-defined]
+            toolkit.to_file_obj(self, file_path, file_format)
 
     def enumerate_tautomers(
         self, max_states=20, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
@@ -4219,7 +4219,7 @@ class FrozenMolecule(Serializable):
             )
 
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            molecules = toolkit_registry.enumerate_tautomers(  # type: ignore[attr-defined]
+            molecules = toolkit_registry.enumerate_tautomers(
                 self, max_states=max_states
             )
 
@@ -4886,7 +4886,7 @@ class FrozenMolecule(Serializable):
             return toolkit_registry.call("canonical_order_atoms", self)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.canonical_order_atoms(self)  # type: ignore[attr-defined]
+            return toolkit.canonical_order_atoms(self)
         else:
             raise InvalidToolkitRegistryError(
                 "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. "

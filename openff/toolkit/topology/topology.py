@@ -376,7 +376,7 @@ class ImproperDict(_TransformedDict):
             return permutations[key]
 
     def __keytransform__(self, key):
-        return __class__.key_transform(key)  # type: ignore[name-defined]
+        return __class__.key_transform(key)
 
 
 class Topology(Serializable):
