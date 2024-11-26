@@ -1,3 +1,5 @@
+[tool.versioningit]
+
 [tool.ruff]
 line-length = 119
 exclude = ["examples/deprecated/", "utilities/deprecated"]
@@ -8,7 +10,6 @@ select = ["I", "E", "F", "W", "NPY", "UP", "RUF"]
 
 [tool.ruff.lint.per-file-ignores]
 "openff/toolkit/**/__init__.py" = ["F401"]
-"openff/toolkit/_version.py" = ["UP", "RUF"]
 "openff/toolkit/_tests/**/*.py" = ["E501"]
 "openff/toolkit/typing/engines/smirnoff.parameters.py" = ["RUF012"]
 "openff/toolkit/_tests/_stale_tests.py" = ["F821"]

@@ -4,8 +4,6 @@ A modern, extensible library for molecular mechanics force field science from th
 """
 from setuptools import find_namespace_packages, setup
 
-import versioneer
-
 short_description = __doc__.split("\n")
 
 try:
@@ -27,9 +25,6 @@ setup(
 
     keywords="molecular mechanics, force field, parameterization",
     url="http://github.com/openforcefield/openff-toolkit",
-
-    version=versioneer.get_version(),
-    cmdclass=versioneer.get_cmdclass(),
 
     license="MIT",
 

@@ -4,7 +4,7 @@ channels:
 dependencies:
     # Base depends
   - python
-  - pydantic
+  - versioningit
   - packaging
   - numpy
   - networkx
