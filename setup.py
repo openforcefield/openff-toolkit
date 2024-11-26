@@ -3,7 +3,6 @@ openff-toolkit
 A modern, extensible library for molecular mechanics force field science from the Open Force Field Consortium.
 """
 from setuptools import find_namespace_packages, setup
-from versioningit import get_cmdclasses
 
 short_description = __doc__.split("\n")
 
@@ -28,8 +27,6 @@ setup(
     url="http://github.com/openforcefield/openff-toolkit",
 
     license="MIT",
-
-    cmdclass=get_cmdclasses(),
 
     packages=find_namespace_packages(include=['openff.*']),
     include_package_data=True,
