@@ -316,7 +316,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Callable, NoReturn, Optional, Union, cast, dict, list, tuple
+from typing import Any, Callable, NoReturn, Optional, Union, cast
 
 have_tomllib = True
 if sys.version_info >= (3, 11):
