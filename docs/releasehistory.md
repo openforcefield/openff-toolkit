@@ -15,6 +15,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+
 ### New features
 
 ### Improved documentation and warnings
