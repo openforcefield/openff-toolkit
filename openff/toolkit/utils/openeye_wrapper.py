@@ -1664,12 +1664,22 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 res.SetResidueNumber(1)
 
             if "insertion_code" in off_atom.metadata:
-                res.SetInsertCode(off_atom.metadata["insertion_code"])
+                # Replace blank string with single character space to avoid OE PDB writing issue
+                # https://github.com/openforcefield/openff-toolkit/issues/1967
+                if off_atom.metadata["insertion_code"] == "":
+                    res.SetInsertCode(" ")
+                else:
+                    res.SetInsertCode(off_atom.metadata["insertion_code"])
             else:
                 res.SetInsertCode(" ")
 
             if "chain_id" in off_atom.metadata:
-                res.SetChainID(off_atom.metadata["chain_id"])
+                # Replace blank string with single character space to avoid OE PDB writing issue
+                # https://github.com/openforcefield/openff-toolkit/issues/1967
+                if off_atom.metadata["chain_id"] == "":
+                    res.SetChainID(" ")
+                else:
+                    res.SetChainID(off_atom.metadata["chain_id"])
             else:
                 res.SetChainID(" ")
 
