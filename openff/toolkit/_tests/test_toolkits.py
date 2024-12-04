@@ -1046,8 +1046,6 @@ class TestOpenEyeToolkitWrapper:
         Ensure PDB files are written with coords by OE when chain ID or insertion code is blank string.
         (reference: https://github.com/openforcefield/openff-toolkit/issues/1967).
         """
-        from io import StringIO
-
         toolkit = OpenEyeToolkitWrapper()
         water = Molecule()
         water.add_atom(1, 0, False)
