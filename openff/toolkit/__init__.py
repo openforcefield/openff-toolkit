@@ -30,18 +30,18 @@ if TYPE_CHECKING:
 __version__ = get_versions()["version"]
 
 __all__ = [
-    "__version__",
-    "Molecule",
-    "Topology",
-    "ForceField",
-    "get_available_force_fields",
     "GLOBAL_TOOLKIT_REGISTRY",
     "AmberToolsToolkitWrapper",
     "BuiltInToolkitWrapper",
+    "ForceField",
+    "Molecule",
     "OpenEyeToolkitWrapper",
+    "Quantity",
     "RDKitToolkitWrapper",
     "ToolkitRegistry",
-    "Quantity",
+    "Topology",
+    "__version__",
+    "get_available_force_fields",
     "unit",
 ]
 
