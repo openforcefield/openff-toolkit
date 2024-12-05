@@ -4,8 +4,8 @@ Custom collections classes.
 """
 
 __all__ = [
-    "ValidatedList",
     "ValidatedDict",
+    "ValidatedList",
 ]
 
 

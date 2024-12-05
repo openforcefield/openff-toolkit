@@ -1041,6 +1041,34 @@ class TestOpenEyeToolkitWrapper:
         assert water_from_pdb_split[1].split()[2].rstrip() == "O"
         assert water_from_pdb_split[2].split()[2].rstrip() == "H"
 
+    def test_write_pdb_blank_chain_id_insertion_code(self):
+        """
+        Ensure PDB files are written with coords by OE when chain ID or insertion code is blank string.
+        (reference: https://github.com/openforcefield/openff-toolkit/issues/1967).
+        """
+        toolkit = OpenEyeToolkitWrapper()
+        water = Molecule()
+        water.add_atom(1, 0, False)
+        water.add_atom(8, 0, False)
+        water.add_atom(1, 0, False)
+        water.add_bond(0, 1, 1, False)
+        water.add_bond(1, 2, 1, False)
+        water.add_conformer(
+            Quantity(
+                np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+                unit.angstrom,
+            )
+        )
+        water.atoms[0].metadata["insertion_code"] = ""
+        water.atoms[1].metadata["chain_id"] = ""
+        with NamedTemporaryFile(suffix='.pdb') as of:
+            water.to_file(of.name, "pdb", toolkit_registry=toolkit)
+            roundtripped = toolkit.from_file(of.name, file_format='pdb')
+            np.testing.assert_allclose(
+                water.conformers[0].m_as(unit.angstrom),
+                roundtripped[0].conformers[0].m_as(unit.angstrom)
+            )
+
     def test_get_sdf_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing a single set of coordinates from a sdf file"""
 
