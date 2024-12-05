@@ -14,15 +14,12 @@ Class definitions to represent a molecular system and its chemical components
 
 import re
 from collections import defaultdict
-from collections.abc import MutableMapping
+from collections.abc import Generator, Iterable, Iterator, MutableMapping
 from contextlib import nullcontext
 from copy import deepcopy
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
-    Generator,
-    Iterable,
-    Iterator,
     Literal,
     Optional,
     TextIO,
@@ -31,7 +28,6 @@ from typing import (
 
 import numpy as np
 from numpy.typing import NDArray
-from openff.units import ensure_quantity
 from typing_extensions import TypeAlias
 
 from openff.toolkit import Quantity, unit
@@ -618,6 +614,8 @@ class Topology(Serializable):
             return
         if not hasattr(box_vectors, "units"):
             if hasattr(box_vectors, "unit"):
+                from openff.units import ensure_quantity
+
                 # this is probably an openmm.unit.Quantity; we should gracefully import OpenMM but
                 # the chances of this being an object with the two previous conditions met is low
                 box_vectors = ensure_quantity(box_vectors, "openff")
@@ -1302,8 +1300,18 @@ class Topology(Serializable):
             self.box_vectors = Quantity(box_vectors_unitless, box_vectors_unit)
 
         for molecule_dict in topology_dict["molecules"]:
-            new_mol = Molecule.from_dict(molecule_dict)
+            # the serialized representation doesn't store which molecule model
+            # each of these dicts is meant to be deserialized to. Usually it'll
+            # be Molecule, so try that first. If it's supposed to be a
+            # _SimpleMolecule, it'll KeyError because Molecule has more fields.
+            try:
+                new_mol = Molecule.from_dict(molecule_dict)
+            except KeyError:
+                # masks possible other ways KeyErrors could pop up
+                new_mol = _SimpleMolecule.from_dict(molecule_dict)
+
             self._add_molecule_keep_cache(new_mol)
+
         self._invalidate_cached_properties()
 
     @staticmethod
@@ -1521,9 +1529,7 @@ class Topology(Serializable):
                 off_atom.metadata["residue_name"] = omm_mol_G.nodes[omm_atom_idx][
                     "residue_name"
                 ]
-                off_atom.metadata["residue_number"] = int(
-                    omm_mol_G.nodes[omm_atom_idx]["residue_id"]
-                )
+                off_atom.metadata["residue_number"] = omm_mol_G.nodes[omm_atom_idx]["residue_id"]
                 off_atom.metadata["insertion_code"] = omm_mol_G.nodes[omm_atom_idx][
                     "insertion_code"
                 ]
@@ -1540,6 +1546,8 @@ class Topology(Serializable):
             topology.box_vectors = from_openmm(openmm_topology.getPeriodicBoxVectors())
 
         if positions is not None:
+            from openff.units import ensure_quantity
+
             topology.set_positions(ensure_quantity(positions, "openff"))
 
         # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?

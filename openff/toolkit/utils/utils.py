@@ -4,33 +4,34 @@ Utility subroutines
 """
 
 __all__ = [
-    "requires_package",
-    "inherit_docstrings",
     "all_subclasses",
-    "temporary_cd",
-    "get_data_file_path",
-    "unit_to_string",
-    "quantity_to_string",
-    "string_to_unit",
-    "string_to_quantity",
-    "object_to_quantity",
-    "serialize_numpy",
-    "deserialize_numpy",
-    "convert_all_quantities_to_string",
-    "convert_all_strings_to_quantity",
     "convert_0_1_smirnoff_to_0_2",
     "convert_0_2_smirnoff_to_0_3",
+    "convert_all_quantities_to_string",
+    "convert_all_strings_to_quantity",
+    "deserialize_numpy",
+    "get_data_file_path",
     "get_molecule_parameterIDs",
+    "inherit_docstrings",
+    "object_to_quantity",
+    "quantity_to_string",
+    "requires_package",
+    "serialize_numpy",
+    "string_to_quantity",
+    "string_to_unit",
+    "temporary_cd",
+    "unit_to_string",
 ]
 
 import contextlib
 import functools
 import logging
-from typing import TYPE_CHECKING, Any, Iterable, TypeVar, Union, overload
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any, TypeVar, Union, overload
 
-import numpy
 import numpy as np
 import pint
+from numpy.typing import NDArray
 from openff.units import Quantity, Unit, unit
 from openff.utilities import requires_package
 
@@ -397,8 +398,6 @@ def serialize_numpy(np_array) -> tuple[bytes, tuple[int]]:
     shape
         The shape of the serialized array
     """
-    import numpy as np
-
     bigendian_float = np.dtype(float).newbyteorder(">")
     bigendian_array = np_array.astype(bigendian_float)
     serialized = bigendian_array.tobytes()
@@ -409,7 +408,7 @@ def serialize_numpy(np_array) -> tuple[bytes, tuple[int]]:
 def deserialize_numpy(
     serialized_np: Union[bytes, list],
     shape: tuple[int, ...],
-) -> numpy.ndarray:
+) -> NDArray:
     """
     Deserializes a numpy array from a bytestring or list. The input, if a bytestring, is
     assumed to be in big-endian byte order.
@@ -426,9 +425,6 @@ def deserialize_numpy(
     np_array
         The deserialized numpy array
     """
-
-    import numpy as np
-
     if isinstance(serialized_np, list):
         np_array = np.array(serialized_np)
     if isinstance(serialized_np, bytes):

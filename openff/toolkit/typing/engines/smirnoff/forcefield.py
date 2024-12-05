@@ -12,14 +12,14 @@ Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) for
 """
 
 __all__ = [
-    "get_available_force_fields",
     "MAX_SUPPORTED_VERSION",
+    "ForceField",
     "ParameterHandlerRegistrationError",
-    "SMIRNOFFVersionError",
+    "PartialChargeVirtualSitesError",
     "SMIRNOFFAromaticityError",
     "SMIRNOFFParseError",
-    "PartialChargeVirtualSitesError",
-    "ForceField",
+    "SMIRNOFFVersionError",
+    "get_available_force_fields",
 ]
 
 import copy
@@ -1383,9 +1383,8 @@ class ForceField:
         charge calculation to be cached.
 
         """
-        from openff.interchange import Interchange
-
         from openff.toolkit import Molecule, unit
+
 
         if not isinstance(molecule, Molecule):
             raise ValueError(
@@ -1396,8 +1395,8 @@ class ForceField:
         return Quantity(
             [
                 c.m
-                for c in Interchange.from_smirnoff(
-                    force_field=self, topology=[molecule], **kwargs
+                for c in self.create_interchange(
+                    topology=molecule.to_topology(), **kwargs,
                 )["Electrostatics"].charges.values()
             ],
             unit.elementary_charge,
