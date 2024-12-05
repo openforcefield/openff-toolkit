@@ -378,7 +378,7 @@ Note that tests (too slow) and type-checking (weird reasons) are not run by `pre
 Run something like
 
 ```shell
-$ python -m pytest --cov=openff --cov-config=setup.cfg --cov-report html openff
+$ python -m pytest --cov=openff --cov-report html openff
 $ open htmlcov/index.html
 ```
 
