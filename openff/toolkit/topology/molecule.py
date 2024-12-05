@@ -29,19 +29,16 @@ import json
 import operator
 import pathlib
 import warnings
-from collections import UserDict
+from collections import UserDict, defaultdict
+from collections.abc import Generator, Iterable, Sequence
 from copy import deepcopy
 from functools import cmp_to_key
 from typing import (
     IO,
     TYPE_CHECKING,
     Any,
-    DefaultDict,
-    Generator,
-    Iterable,
     Literal,
     Optional,
-    Sequence,
     TextIO,
     TypeVar,
     Union,
@@ -1051,8 +1048,8 @@ class FrozenMolecule(Serializable):
             # from a fileIO object)
             if (
                 isinstance(other, (str, pathlib.Path))
-                or hasattr(other, "read")
-                and not loaded
+                or (hasattr(other, "read")
+                and not loaded)
             ):
                 try:
                     mol = Molecule.from_file(
@@ -5937,7 +5934,6 @@ class HierarchyScheme:
         `perceive_hierarchy()` is called, and `not` on-the-fly when atom
         metadata is modified.
         """
-        from collections import defaultdict
 
         self.hierarchy_elements = list()
         # Determine which atoms should get added to which HierarchyElements
@@ -6174,9 +6170,8 @@ def _generate_unique_atom_names(
     suffix
         Optional suffix added to atom names. Assists in denoting molecule types
     """
-    from collections import defaultdict
 
-    element_counts: DefaultDict[str, int] = defaultdict(int)
+    element_counts: defaultdict[str, int] = defaultdict(int)
     for atom in obj.atoms:
         symbol = atom.symbol
         element_counts[symbol] += 1

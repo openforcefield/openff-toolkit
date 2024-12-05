@@ -4,8 +4,8 @@ Utility classes and functions to create objects supporting callback registration
 """
 
 __all__ = [
-    "callback_method",
     "Callbackable",
+    "callback_method",
 ]
 
 

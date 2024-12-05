@@ -4,29 +4,30 @@ Utility subroutines
 """
 
 __all__ = [
-    "requires_package",
-    "inherit_docstrings",
     "all_subclasses",
-    "temporary_cd",
-    "get_data_file_path",
-    "unit_to_string",
-    "quantity_to_string",
-    "string_to_unit",
-    "string_to_quantity",
-    "object_to_quantity",
-    "serialize_numpy",
-    "deserialize_numpy",
-    "convert_all_quantities_to_string",
-    "convert_all_strings_to_quantity",
     "convert_0_1_smirnoff_to_0_2",
     "convert_0_2_smirnoff_to_0_3",
+    "convert_all_quantities_to_string",
+    "convert_all_strings_to_quantity",
+    "deserialize_numpy",
+    "get_data_file_path",
     "get_molecule_parameterIDs",
+    "inherit_docstrings",
+    "object_to_quantity",
+    "quantity_to_string",
+    "requires_package",
+    "serialize_numpy",
+    "string_to_quantity",
+    "string_to_unit",
+    "temporary_cd",
+    "unit_to_string",
 ]
 
 import contextlib
 import functools
 import logging
-from typing import TYPE_CHECKING, Any, Iterable, TypeVar, Union, overload
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any, TypeVar, Union, overload
 
 import numpy as np
 import pint
