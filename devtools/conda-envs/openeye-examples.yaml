@@ -38,7 +38,6 @@ dependencies:
   - qcportal >=0.50
   - qcengine
   - mdtraj
-  - parmed =3
   - nbval
   - pdbfixer
   - openmmforcefields >=0.11.2
