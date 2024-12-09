@@ -47,11 +47,11 @@ jobs:
           environment-file: devtools/conda-envs/test_env.yaml
           condarc: |
             channels:
+              - openeye/label/rc
               - conda-forge/label/openmm_rc
               - conda-forge/label/mdtraj_rc
               - conda-forge/label/openff-toolkit_rc
               - conda-forge/label/openff-interchange_rc
-              - openeye/label/rc
               - openeye
               - conda-forge
           create-args: >-
@@ -86,7 +86,6 @@ jobs:
 
       - name: Run code snippets and notebooks in docs
         run: pytest $PYTEST_ARGS \
-          --nbval-lax --dist loadscope \
           --doctest-glob="docs/*.rst" \
           --doctest-glob="docs/*.md" \
           --ignore docs/_build/ \
@@ -99,3 +98,11 @@ jobs:
             --ignore-glob='openff/toolkit/_tests*' \
             --ignore=openff/toolkit/data/ \
             --ignore=openff/toolkit/utils/utils.py
+
+      - name: Run notebooks in docs
+        run: |
+          pytest $PYTEST_ARGS \
+            --nbval --dist loadscope \
+            --ignore docs/_build/ \
+            docs/
+
