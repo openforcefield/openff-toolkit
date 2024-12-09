@@ -41,8 +41,7 @@ jobs:
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
-      PACKAGE: openff
-      PYTEST_ARGS: -r fE --tb=short -nauto
+      PYTEST_ARGS: -r fE --tb=short -nauto --durations=20
       COV: --cov=openff/toolkit --cov-config=setup.cfg --cov-append --cov-report=xml
 
     steps:
@@ -155,7 +154,7 @@ jobs:
             PYTEST_ARGS+=" --runslow"
           fi
 
-          python -m pytest --durations=20 $PYTEST_ARGS $COV
+          python -m pytest $PYTEST_ARGS $COV
 
       - name: Run code snippets in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}

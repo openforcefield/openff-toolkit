@@ -1,6 +1,12 @@
 name: Tests against beta/RC builds
 
 on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+    branches:
+      - "main"
   schedule:
     - cron: "0 3 * * 0"
   workflow_dispatch:
@@ -11,28 +17,32 @@ defaults:
 
 jobs:
   test:
-    name: Test beta/RC builds on ${{ matrix.python-version }}
+    if: (github.event_name == 'schedule' && github.repository == 'openforcefield/openff-toolkit') || (github.event_name != 'schedule')
+    name: Test beta/RC builds on ${{ matrix.os }}, ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os:
           - ubuntu-latest
-          - macos-12
+          - macos-latest
         python-version:
+          - "3.10"
           - "3.11"
+          - "3.12"
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
-      PYTEST_ARGS: -r fE --tb=short -nauto
+      PYTEST_ARGS: -x -r fE --tb=short -nauto --durations=20
+      COV: --cov=openff/toolkit --cov-config=setup.cfg --cov-append --cov-report=xml
 
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
-      - name: Install environment with ${{ env.JOBNAME }}
-        uses: mamba-org/setup-micromamba@v1
+      - name: Setup conda environment
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: devtools/conda-envs/test_env.yaml
           condarc: |
@@ -46,10 +56,6 @@ jobs:
               - conda-forge
           create-args: >-
             python=${{ matrix.python-version }}
-          # default - will pull down 2.0 which we don't want!
-          # micromamba-version: latest
-          # pin to latest 1.x release
-          micromamba-version: "1.5.10-0"
 
       - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
         env:
@@ -57,16 +63,13 @@ jobs:
         run: |
           echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
 
-      - name: Install package
+      - name: Install package and test plugins
         run: |
           micromamba remove --force openff-toolkit openff-toolkit-base
-          python -m pip install .
-
-      - name: Install test plugins
-        run: python -m pip install utilities/test_plugins
+          python -m pip install . utilities/test_plugins/
 
       - name: Environment Information
-        run: micromamba info && micromamba list
+        run: micromamba info && micromamba list && pip list
 
       - name: Check links
         run: pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
@@ -81,6 +84,18 @@ jobs:
           PYTEST_ARGS+=" --runslow"
           pytest $PYTEST_ARGS
 
-      - name: Run code snippets in docs
+      - name: Run code snippets and notebooks in docs
+        run: pytest $PYTEST_ARGS \
+          --nbval-lax --dist loadscope \
+          --doctest-glob="docs/*.rst" \
+          --doctest-glob="docs/*.md" \
+          --ignore docs/_build/ \
+          docs/
+
+      - name: Run examples in docstrings
         run: |
-          pytest -v --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
+          pytest $PYTEST_ARGS openff/toolkit \
+            --doctest-modules \
+            --ignore-glob='openff/toolkit/_tests*' \
+            --ignore=openff/toolkit/data/ \
+            --ignore=openff/toolkit/utils/utils.py
