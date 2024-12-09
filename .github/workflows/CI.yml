@@ -1,14 +1,6 @@
 name: CI
 
 on:
-  push:
-    branches:
-      - "main"
-      - "maintenance/.*"
-  pull_request:
-    branches:
-      - "main"
-      - "maintenance/.*"
   schedule:
     # Nightly tests run on main by default:
     #   Scheduled workflows run on the latest commit on the default or base branch.
