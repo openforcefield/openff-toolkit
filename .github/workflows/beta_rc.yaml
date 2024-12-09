@@ -75,6 +75,7 @@ jobs:
         run: pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
 
       - name: Run mypy
+        if: ${{ matrix.python-version == 3.10 }}
         run: mypy -p "openff.toolkit"
 
       - name: Run unit tests
