@@ -41,6 +41,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+_DIMENSIONLESS = Unit("dimensionless")
+
 def inherit_docstrings(cls):
     """Inherit docstrings from parent class"""
     from inspect import getmembers, isfunction
@@ -215,7 +217,7 @@ def string_to_quantity(quantity_string: str) -> Union[int, float, Quantity]:
 
     # TODO: Should intentionally unitless array-likes be Quantity objects
     #       or their raw representation?
-    if str(quantity.units) == "dimensionless" and isinstance(quantity.m, (int, float)):
+    if quantity.units == _DIMENSIONLESS and isinstance(quantity.m, (int, float)):
         return quantity.m
     else:
         return quantity
