@@ -133,6 +133,7 @@ jobs:
         run: |
           micromamba info
           micromamba list
+          pip list
 
       - name: Check links
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
