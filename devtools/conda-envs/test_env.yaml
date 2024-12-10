@@ -41,6 +41,7 @@ dependencies:
   - toml
   - bson
   - msgpack-python
+  - pydantic
   - qcelemental
   - qcportal >=0.50
   - qcengine

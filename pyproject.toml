@@ -58,7 +58,6 @@ testpaths = [
 [tool.coverage.run]
 omit = [
     "*/*/_tests/*",
-    "openff/toolkit/_version.py",
 ]
 
 [tool.coverage.report]
