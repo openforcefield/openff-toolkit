@@ -12,14 +12,14 @@ Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) for
 """
 
 __all__ = [
-    "get_available_force_fields",
     "MAX_SUPPORTED_VERSION",
+    "ForceField",
     "ParameterHandlerRegistrationError",
-    "SMIRNOFFVersionError",
+    "PartialChargeVirtualSitesError",
     "SMIRNOFFAromaticityError",
     "SMIRNOFFParseError",
-    "PartialChargeVirtualSitesError",
-    "ForceField",
+    "SMIRNOFFVersionError",
+    "get_available_force_fields",
 ]
 
 import copy

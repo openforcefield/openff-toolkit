@@ -20,8 +20,8 @@ dependencies:
   - openff-units =0.2.0
   - openff-utilities >=0.1.5
   - openff-interchange-base =0.4
-  - openff-nagl-base ~=0.4.0
-  - openff-nagl-models ==0.3.0
+  - openff-nagl-base >=0.4.0
+  - openff-nagl-models >=0.3.0
   - typing_extensions
   - nglview
     # Toolkit-specific
@@ -38,7 +38,6 @@ dependencies:
   - qcportal >=0.50
   - qcengine
   - mdtraj
-  - parmed =3
   - nbval
   - pdbfixer
   - openmmforcefields >=0.11.2

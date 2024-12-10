@@ -20,8 +20,8 @@ dependencies:
   - openff-amber-ff-ports
   - openff-utilities >=0.1.5
   - openff-interchange-base =0.4
-  - openff-nagl-base ~=0.4.0
-  - openff-nagl-models ==0.3.0
+  - openff-nagl-base >=0.4.0
+  - openff-nagl-models >=0.3.0
     # Toolkit-specific
   - ambertools >=22
     # rdkit 2024.03.6 and 2024.09.1 packages fail when run natively on osx-arm64 macs
