@@ -48,7 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Set environment variables
         run: |
@@ -133,6 +133,7 @@ jobs:
         run: |
           micromamba info
           micromamba list
+          pip list
 
       - name: Check links
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
