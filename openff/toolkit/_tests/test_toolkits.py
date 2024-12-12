@@ -2224,7 +2224,7 @@ class TestRDKitToolkitWrapper:
         smiles_impl = "C#C"
         with pytest.raises(
             ValueError,
-            match="but RDKit toolkit interpreted SMILES 'C#C' as having implicit hydrogen",
+            match="but RDKit toolkit interpreted the following SMILES as having implicit hydrogens: 'C#C'",
         ):
             offmol = Molecule.from_smiles(
                 smiles_impl,
@@ -2249,6 +2249,24 @@ class TestRDKitToolkitWrapper:
             smiles_expl, toolkit_registry=toolkit_wrapper, hydrogens_are_explicit=False
         )
         assert offmol.n_atoms == 4
+        
+    def test_rdkit_from_smiles_hydrogens_are_explicit_and_in_graph(self):
+        """
+        Test to ensure that RDKitToolkitWrapper.from_smiles has the proper behavior with
+        respect to its hydrogens_are_explicit kwarg and that a CMILES entry has all hydrogens
+        in the graph.
+        """
+        toolkit_wrapper = RDKitToolkitWrapper()
+        smiles_impl = "HC(H)(H)[NH+](H)(H)C(H)(H)H"
+        with pytest.raises(
+            ValueError,
+            match="following SMILES as having some nonexplicit hydrogens (e.g., [NH+]): 'HC(H)(H)[NH+](H)(H)C(H)(H)H'",
+        ):
+            offmol = Molecule.from_smiles(
+                smiles_impl,
+                toolkit_registry=toolkit_wrapper,
+                hydrogens_are_explicit=True,
+            )
 
     @pytest.mark.parametrize("molecule", get_mini_drug_bank(RDKitToolkitWrapper))
     def test_to_inchi(self, molecule):
