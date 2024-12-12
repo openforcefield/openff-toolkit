@@ -2257,7 +2257,7 @@ class TestRDKitToolkitWrapper:
         in the graph.
         """
         toolkit_wrapper = RDKitToolkitWrapper()
-        smiles_impl = "HC(H)(H)[NH+](H)(H)C(H)(H)H"
+        smiles_impl = "HC(H)(H)[NH+](H)C(H)(H)H"
         with pytest.raises(
             ValueError,
             match="following SMILES as having some nonexplicit hydrogens (e.g., [NH+]): 'HC(H)(H)[NH+](H)(H)C(H)(H)H'",
