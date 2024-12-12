@@ -174,7 +174,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 obj,
                 allow_undefined_stereo=allow_undefined_stereo,
             )
-        raise NotImplementedError(f"Cannot create Molecule from {type(obj)} object")
+        raise NotImplementedError(
+            f"Cannot create Molecule from {type(obj)} object"
+        )
 
     def from_pdb_and_smiles(
         self,
@@ -1585,8 +1587,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 if atom.GetNumImplicitHs() != 0:
                     raise ValueError(
                         f"'hydrogens_are_explicit' was specified as True, but RDKit toolkit interpreted "
-                        f"the following SMILES as having implicit hydrogens'{smiles}'\nIf this SMILES is intended to "
-                        f"express all explicit hydrogens in the molecule, then you should construct the "
+                        f"SMILES '{smiles}' as having implicit hydrogen. If this SMILES is intended to "
+                        f" express all explicit hydrogens in the molecule, then you should construct the "
                         f"desired molecule as an RDMol with no implicit hydrogens, and then use "
                         f"Molecule.from_rdkit() to create the desired OFFMol."
                     )
