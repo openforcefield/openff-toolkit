@@ -2224,7 +2224,7 @@ class TestRDKitToolkitWrapper:
         smiles_impl = "C#C"
         with pytest.raises(
             ValueError,
-            match="but RDKit toolkit interpreted the following SMILES as having implicit hydrogens: 'C#C'",
+            match="but RDKit toolkit interpreted SMILES 'C#C' as having implicit hydrogen",
         ):
             offmol = Molecule.from_smiles(
                 smiles_impl,
@@ -2260,7 +2260,7 @@ class TestRDKitToolkitWrapper:
         smiles_impl = "[H][C]([H])([H])[NH+]([H])[C]([H])([H])[H]"
         with pytest.raises(
             ValueError,
-            match="following SMILES as having some nonexplicit hydrogens (e.g., [NH+]): '[H][C]([H])([H])[NH+]([H])[C]([H])([H])[H]'",
+            match="the following SMILES as having some nonexplicit hydrogens",
         ):
             _ = Molecule.from_smiles(
                 smiles_impl,
