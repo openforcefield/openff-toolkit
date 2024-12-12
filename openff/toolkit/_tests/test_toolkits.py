@@ -2260,7 +2260,7 @@ class TestRDKitToolkitWrapper:
         smiles_impl = "[H][C]([H])([H])[NH+]([H])[C]([H])([H])[H]"
         with pytest.raises(
             ValueError,
-            match="following SMILES as having some nonexplicit hydrogens (e.g., [NH+]): 'HC(H)(H)[NH+](H)(H)C(H)(H)H'",
+            match="following SMILES as having some nonexplicit hydrogens (e.g., [NH+]): '[H][C]([H])([H])[NH+]([H])[C]([H])([H])[H]'",
         ):
             _ = Molecule.from_smiles(
                 smiles_impl,
