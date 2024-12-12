@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "versioneer[toml]"]
+requires = ["setuptools", "versioningit"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -21,14 +21,7 @@ dynamic = ["version"]
 [tool.setuptools.packages]
 find = {}
 
-[tool.versioneer]
-VCS = "git"
-style = "pep440"
-versionfile_source = "openff/toolkit/_version.py"
-versionfile_build = "openff/toolkit/_version.py"
-tag_prefix = ""
-# TODO: parentdir_prefix is left empty in the cookiecutter setup.cfg.
-parentdir_prefix = "openff-toolkit-"
+[tool.versioningit]
 
 [tool.ruff]
 line-length = 119
@@ -40,7 +33,6 @@ select = ["I", "E", "F", "W", "NPY", "UP", "RUF"]
 
 [tool.ruff.lint.per-file-ignores]
 "openff/toolkit/**/__init__.py" = ["F401"]
-"openff/toolkit/_version.py" = ["UP", "RUF"]
 "openff/toolkit/_tests/**/*.py" = ["E501"]
 "openff/toolkit/typing/engines/smirnoff.parameters.py" = ["RUF012"]
 "openff/toolkit/_tests/_stale_tests.py" = ["F821"]
@@ -66,7 +58,6 @@ testpaths = [
 [tool.coverage.run]
 omit = [
     "*/*/_tests/*",
-    "openff/toolkit/_version.py",
 ]
 
 [tool.coverage.report]
