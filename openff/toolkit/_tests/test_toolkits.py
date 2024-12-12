@@ -2262,7 +2262,7 @@ class TestRDKitToolkitWrapper:
             ValueError,
             match="following SMILES as having some nonexplicit hydrogens (e.g., [NH+]): 'HC(H)(H)[NH+](H)(H)C(H)(H)H'",
         ):
-            offmol = Molecule.from_smiles(
+            _ = Molecule.from_smiles(
                 smiles_impl,
                 toolkit_registry=toolkit_wrapper,
                 hydrogens_are_explicit=True,
