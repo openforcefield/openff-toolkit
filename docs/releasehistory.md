@@ -7,18 +7,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `micro` increments represent bugfix releases or improvements in documentation
 
 
-## Current development
-
-### API-breaking changes
-
-### Behavior changes
+## 0.16.7
 
 ### Bugfixes
 - [PR #1971](https://github.com/openforcefield/openff-toolkit/pull/1971): Fixes bug where OpenEyeToolkitWrapper would write coordinate-less PDB atoms if insertion_code or chain_id was an empty string ([Issue #1967](https://github.com/openforcefield/openff-toolkit/issues/1967))
-
-### New features
-
-### Improved documentation and warnings
 
 ### Tests updated
 
