@@ -2249,7 +2249,7 @@ class TestRDKitToolkitWrapper:
             smiles_expl, toolkit_registry=toolkit_wrapper, hydrogens_are_explicit=False
         )
         assert offmol.n_atoms == 4
-        
+
     def test_rdkit_from_smiles_hydrogens_are_explicit_and_in_graph(self):
         """
         Test to ensure that RDKitToolkitWrapper.from_smiles has the proper behavior with
