@@ -4,9 +4,8 @@ A modern, extensible library for molecular mechanics force field science from th
 """
 
 import importlib
+from importlib.metadata import version
 from typing import TYPE_CHECKING
-
-from openff.toolkit._version import get_versions
 
 if TYPE_CHECKING:
     # These types are imported lazily at runtime, but we need to tell type
@@ -27,7 +26,7 @@ if TYPE_CHECKING:
         ToolkitRegistry,
     )
 
-__version__ = get_versions()["version"]
+__version__ = version("openff.toolkit")
 
 __all__ = [
     "GLOBAL_TOOLKIT_REGISTRY",
