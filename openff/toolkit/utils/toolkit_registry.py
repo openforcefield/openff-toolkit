@@ -323,7 +323,7 @@ class ToolkitRegistry:
             except ToolkitUnavailableException:
                 if exception_if_unavailable:
                     raise ToolkitUnavailableException(
-                        f"Unable to load toolkit '{_toolkit_wrapper._toolkit_name}'. "
+                        f"Unable to load toolkit '{toolkit_wrapper}'. "
                     )
                 return
 
