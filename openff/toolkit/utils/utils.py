@@ -41,6 +41,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+# Pre-create an instance of the dimensionless unit to speed up comparisons later
 _DIMENSIONLESS = Unit("dimensionless")
 
 def inherit_docstrings(cls):
