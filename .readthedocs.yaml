@@ -1,17 +1,21 @@
-# https://docs.readthedocs.io/en/stable/config-file/v2.html
 version: 2
-sphinx:
-  configuration: docs/conf.py
-  fail_on_warning: true
+
 build:
   os: ubuntu-20.04
   tools:
     python: "mambaforge-4.10"
+
 python:
   install:
-  - method: setuptools
-    path: .
+    - method: pip
+      path: .
+
 conda:
   environment: docs/environment.yml
+
+sphinx:
+  configuration: docs/conf.py
+  fail_on_warning: true
+
 formats:
 - pdf

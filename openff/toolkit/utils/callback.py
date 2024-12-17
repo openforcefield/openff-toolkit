@@ -49,7 +49,7 @@ def callback_method(func=None, events=()):
 
     # Assign an attribute so that we can distinguish between
     # callbackable and not callbackable methods.
-    callbacked_func._callback_events = set(events)  # type: ignore[attr-defined]
+    callbacked_func._callback_events = set(events)
 
     return callbacked_func
 

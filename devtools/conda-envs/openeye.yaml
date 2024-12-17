@@ -5,7 +5,7 @@ channels:
 dependencies:
     # Base depends
   - python
-  - pydantic
+  - versioningit
   - packaging
   - numpy
   - networkx
@@ -20,8 +20,8 @@ dependencies:
   - openff-amber-ff-ports
   - openff-utilities >=0.1.5
   - openff-interchange-base =0.4
-  - openff-nagl-base ~=0.4.0
-  - openff-nagl-models ==0.3.0
+  - openff-nagl-base =0.4.0
+  - openff-nagl-models >=0.3.0
   - typing_extensions
     # Toolkit-specific
   - openeye-toolkits
@@ -34,6 +34,7 @@ dependencies:
   - toml
   - bson
   - msgpack-python
+  - pydantic
   - qcelemental
   - qcportal >=0.50
   - qcengine
