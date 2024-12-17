@@ -14,6 +14,12 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+- [PR #1971](https://github.com/openforcefield/openff-toolkit/pull/1971): Fixes bug where OpenEyeToolkitWrapper would write coordinate-less PDB atoms if insertion_code or chain_id was an empty string ([Issue #1967](https://github.com/openforcefield/openff-toolkit/issues/1967))
+
+### Performance improvements
+
+- [PR #1979](https://github.com/openforcefield/openff-toolkit/pull/1979): Cache some string-to-`Quantity` conversions, which speeds up loading of many SMIRNOFF force fields from `.offxml` files.
+
 ### New features
 
 ### Improved documentation and warnings
