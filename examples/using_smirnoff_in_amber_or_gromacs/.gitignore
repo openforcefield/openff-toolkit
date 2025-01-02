@@ -1,4 +1,5 @@
 system.*
+system_pointenergy.*
 log.lammps
 out.lmp
 tmp.in
