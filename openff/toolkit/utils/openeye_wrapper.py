@@ -23,15 +23,10 @@ from typing import TYPE_CHECKING, Any, Optional, Union
 
 import numpy as np
 from cachetools import LRUCache, cached
+from openff.units.elements import SYMBOLS
 from typing_extensions import TypeAlias
 
 from openff.toolkit import Quantity, unit
-
-if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Atom, Bond, FrozenMolecule, Molecule
-
-from openff.units.elements import SYMBOLS
-
 from openff.toolkit.utils.base_wrapper import (
     ToolkitWrapper,
     _ChargeSettings,
@@ -63,6 +58,13 @@ from openff.toolkit.utils.exceptions import (
     UndefinedStereochemistryError,
 )
 from openff.toolkit.utils.utils import inherit_docstrings
+
+if TYPE_CHECKING:
+    import networkx
+    import openmm.app
+
+    from openff.toolkit.topology.molecule import Atom, Bond, FrozenMolecule, Molecule
+
 
 logger = logging.getLogger(__name__)
 
@@ -332,8 +334,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     def _polymer_openmm_topology_to_oemol(
         self,
-        omm_top,
-        substructure_library,
+        omm_top: "openmm.app.Topology",
+        substructure_library: dict[str, dict],
     ):
         """
         Parameters
@@ -840,7 +842,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return mols
 
-    def _smarts_to_networkx(self, substructure_smarts):
+    def _smarts_to_networkx(self, substructure_smarts: str) -> "networkx.Graph":
         import networkx as nx
         from openeye import oechem
 
