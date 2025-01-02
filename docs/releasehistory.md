@@ -6,6 +6,23 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+## Current development
+
+### API-breaking changes
+
+### Behavior changes
+
+### Bugfixes
+
+- [PR #1971](https://github.com/openforcefield/openff-toolkit/pull/1971): Fixes bug where OpenEyeToolkitWrapper would write coordinate-less PDB atoms if insertion_code or chain_id was an empty string ([Issue #1967](https://github.com/openforcefield/openff-toolkit/issues/1967))
+
+### Performance improvements
+
+- [PR #1979](https://github.com/openforcefield/openff-toolkit/pull/1979): Cache some string-to-`Quantity` conversions, which speeds up loading of many SMIRNOFF force fields from `.offxml` files.
+
+### New features
+
+### Improved documentation and warnings
 
 ## 0.16.7
 
@@ -23,6 +40,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 - [PR #1970](https://github.com/openforcefield/openff-toolkit/pull/1970): Consolidates config files into `pyproject.toml`.
 - [PR #1968](https://github.com/openforcefield/openff-toolkit/pull/1968): Switches version handling to `versioningit`.
+- [PR ##1986](https://github.com/openforcefield/openff-toolkit/pull/1986): Fix links in PR template and formatted string in error
 
 ## 0.16.6
 

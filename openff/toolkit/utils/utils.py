@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING, Any, TypeVar, Union, overload
 import numpy as np
 import pint
 from numpy.typing import NDArray
-from openff.units import Quantity, Unit, unit
+from openff.units import Quantity, Unit
 from openff.utilities import requires_package
 
 if TYPE_CHECKING:
@@ -40,6 +40,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
+# Pre-create an instance of the dimensionless unit to speed up comparisons later
+_DIMENSIONLESS = Unit("dimensionless")
 
 def inherit_docstrings(cls):
     """Inherit docstrings from parent class"""
@@ -171,7 +174,8 @@ def quantity_to_string(input_quantity: Quantity) -> str:
     return f"{unitless_value} * {unit_string}"
 
 
-def string_to_unit(unit_string):
+@functools.lru_cache
+def string_to_unit(unit_string) -> Unit:
     """
     Deserializes a ``openff.units.Quantity`` from a string representation, for
     example: "kilocalories_per_mole / angstrom ** 2"
@@ -190,10 +194,17 @@ def string_to_unit(unit_string):
     return Unit(unit_string)
 
 
-def string_to_quantity(quantity_string) -> Union[str, int, float, Quantity]:
+@functools.lru_cache
+def string_to_quantity(quantity_string: str) -> Union[int, float, Quantity]:
     """Attempt to parse a string into a ``Quantity``.
 
-    Note that dimensionless floats and ints are returns as floats or ints, not ``Quantity`` objects.
+    Note that strings representing dimensionless floats or ints are returned as floats or ints, not
+    `Quantity` objects. For example, "1.0" is returned as `1.0` (a float) not
+    `Quantity(1.0, "dimensionless")`. (This quirk can't be captured by type annotations because the
+    input type remains str.)
+
+    This function is cached, keyed by the stringified quantity, to avoid re-parsing the same strings,
+    and re-creating `Quantity` objects, for identical inputs.
     """
 
     from tokenize import TokenError
@@ -207,11 +218,10 @@ def string_to_quantity(quantity_string) -> Union[str, int, float, Quantity]:
 
     # TODO: Should intentionally unitless array-likes be Quantity objects
     #       or their raw representation?
-    if (quantity.units == unit.dimensionless) and isinstance(quantity.m, (int, float)):
+    if quantity.units == _DIMENSIONLESS and isinstance(quantity.m, (int, float)):
         return quantity.m
     else:
         return quantity
-
 
 def convert_all_strings_to_quantity(
     smirnoff_data: dict,
