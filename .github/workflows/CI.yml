@@ -85,6 +85,10 @@ jobs:
           OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
         run: echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
 
+      - name: Install Pint 0.24.4 and `openff-units` branch
+        run: |
+          pip install "pint==0.24.4" git+https://github.com/openforcefield/openff-units.git@pint-0.24
+
       - name: Install package
         run: |
           # While Interchange is being installed with pip, there is no need to
