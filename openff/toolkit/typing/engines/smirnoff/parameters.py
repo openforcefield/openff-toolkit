@@ -8,48 +8,48 @@ New pluggable handlers can be created by creating subclasses of :class:`Paramete
 """
 
 __all__ = [
+    "AngleHandler",
+    "AngleType",
+    "BondHandler",
+    "BondType",
+    "ChargeIncrementType",
+    "ConstraintHandler",
+    "ConstraintType",
     "DuplicateParameterError",
     "DuplicateVirtualSiteTypeException",
+    "ElectrostaticsHandler",
     "FractionalBondOrderInterpolationMethodUnsupportedError",
+    "GBSAHandler",
+    "GBSAType",
+    "ImproperTorsionHandler",
+    "ImproperTorsionType",
     "IncompatibleParameterError",
+    "IndexedMappedParameterAttribute",
+    "IndexedParameterAttribute",
+    "LibraryChargeHandler",
+    "LibraryChargeType",
+    "MappedParameterAttribute",
     "NotEnoughPointsForInterpolationError",
+    "ParameterAttribute",
+    "ParameterHandler",
+    "ParameterList",
     "ParameterLookupError",
+    "ParameterType",
+    "ParameterType",
+    "ProperTorsionHandler",
+    "ProperTorsionType",
     "SMIRNOFFSpecError",
     "SMIRNOFFSpecUnimplementedError",
+    "ToolkitAM1BCCHandler",
     "UnassignedAngleParameterException",
     "UnassignedBondParameterException",
     "UnassignedMoleculeChargeException",
     "UnassignedProperTorsionParameterException",
     "UnassignedValenceParameterException",
-    "ParameterList",
-    "ParameterType",
-    "ParameterHandler",
-    "ParameterAttribute",
-    "MappedParameterAttribute",
-    "IndexedParameterAttribute",
-    "IndexedMappedParameterAttribute",
-    "ConstraintHandler",
-    "BondHandler",
-    "AngleHandler",
-    "ProperTorsionHandler",
-    "ImproperTorsionHandler",
-    "ElectrostaticsHandler",
-    "LibraryChargeHandler",
-    "vdWHandler",
-    "GBSAHandler",
-    "ToolkitAM1BCCHandler",
     "VirtualSiteHandler",
-    "ParameterType",
-    "ConstraintType",
-    "BondType",
-    "AngleType",
-    "ProperTorsionType",
-    "ImproperTorsionType",
-    "vdWType",
-    "LibraryChargeType",
-    "GBSAType",
-    "ChargeIncrementType",
     "VirtualSiteType",
+    "vdWHandler",
+    "vdWType",
 ]
 
 import copy
@@ -1124,7 +1124,7 @@ class _ParameterAttributeHandler:
 
         # Otherwise, forward the search to the next class in the MRO.
         try:
-            return super().__getattr__(item)  # type: ignore[misc]
+            return super().__getattr__(item)
         except AttributeError as e:
             # If this fails because the next classes in the MRO do not
             # implement __getattr__(), then raise the standard Attribute error.
@@ -1582,7 +1582,7 @@ class ParameterList(list):
     # TODO: Is there a cleaner way (getstate/setstate perhaps?) to allow FFs to be
     #       pickled?
     def __reduce__(self):
-        return (__class__, (list(self),), self.__dict__)  # type: ignore[name-defined]
+        return (__class__, (list(self),), self.__dict__)
 
     def __contains__(self, item):
         """Check to see if either Parameter or SMIRKS is contained in parameter list.

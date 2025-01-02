@@ -2,7 +2,7 @@ name: Tests against beta/RC builds
 
 on:
   schedule:
-    - cron: "0 3 * * 0"
+    - cron: "0 22 * * *"
   workflow_dispatch:
 
 defaults:
@@ -18,7 +18,7 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-          - macos-12
+          - macos-latest
         python-version:
           - "3.11"
 
@@ -29,10 +29,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
-      - name: Install environment with ${{ env.JOBNAME }}
-        uses: mamba-org/setup-micromamba@v1
+      - name: Install environment
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: devtools/conda-envs/test_env.yaml
           condarc: |
@@ -66,13 +66,13 @@ jobs:
         run: python -m pip install utilities/test_plugins
 
       - name: Environment Information
-        run: micromamba info && micromamba list
+        run: |
+            micromamba info
+            micromamba list
+            pip list
 
       - name: Check links
         run: pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
-
-      - name: Run mypy
-        run: mypy -p "openff.toolkit"
 
       - name: Run unit tests
         run: |

@@ -6,7 +6,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-
 ## Current development
 
 ### API-breaking changes
@@ -15,9 +14,32 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+- [PR #1971](https://github.com/openforcefield/openff-toolkit/pull/1971): Fixes bug where OpenEyeToolkitWrapper would write coordinate-less PDB atoms if insertion_code or chain_id was an empty string ([Issue #1967](https://github.com/openforcefield/openff-toolkit/issues/1967))
+
+### Performance improvements
+
+- [PR #1979](https://github.com/openforcefield/openff-toolkit/pull/1979): Cache some string-to-`Quantity` conversions, which speeds up loading of many SMIRNOFF force fields from `.offxml` files.
+
 ### New features
 
 ### Improved documentation and warnings
+
+## 0.16.7
+
+### Bugfixes
+- [PR #1971](https://github.com/openforcefield/openff-toolkit/pull/1971): Fixes bug where OpenEyeToolkitWrapper would write coordinate-less PDB atoms if insertion_code or chain_id was an empty string ([Issue #1967](https://github.com/openforcefield/openff-toolkit/issues/1967))
+
+### Tests updated
+
+- [PR #1965](https://github.com/openforcefield/openff-toolkit/pull/1965): Fixes slight difference in GBSA energy reported in [Issue #1964](https://github.com/openforcefield/openff-toolkit/issues/1964) by forcing the use of the Reference platform in OpenMM for both calculations.
+- [PR #1965](https://github.com/openforcefield/openff-toolkit/pull/1965): Disables testing of parmed-dependent notebook in `external` examples, since ParmEd 3 is no longer compatible with our upstreams and ParmEd 4 raises an error for our use cases.
+- [PR #1965](https://github.com/openforcefield/openff-toolkit/pull/1965): Uses a different molecule in test_nagl's test_unsupported_molecule_bond to avoid having molecule handled successfully by nagl's new lookup table.
+
+### Miscellaneous
+
+- [PR #1970](https://github.com/openforcefield/openff-toolkit/pull/1970): Consolidates config files into `pyproject.toml`.
+- [PR #1968](https://github.com/openforcefield/openff-toolkit/pull/1968): Switches version handling to `versioningit`.
+- [PR ##1986](https://github.com/openforcefield/openff-toolkit/pull/1986): Fix links in PR template and formatted string in error
 
 ## 0.16.6
 
@@ -40,7 +62,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Tests updated
 - [PR #1942](https://github.com/openforcefield/openff-toolkit/pull/1942): Update tests for newer versions of RDKit, while stepping around recent RDKit conda-forge packages that fail when run natively on osx-arm64.
-
 
 ## 0.16.5
 

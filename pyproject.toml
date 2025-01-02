@@ -1,3 +1,28 @@
+[build-system]
+requires = ["setuptools", "versioningit"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name="openff-toolkit"
+description = "openff-toolkit"
+license = {text = "MIT"}
+urls = {Homepage = "https://github.com/openforcefield/openff-toolkit"}
+authors = [{name = "Open Force Field Consortium", email = "info@openforcefield.org"}]
+keywords=["molecular mechanics", "force field", "parameterization",]
+classifiers=[
+    "Development Status :: 3 - Alpha",
+    "Topic :: Utilities",
+    "License :: OSI Approved :: MIT",
+    'Programming Language :: Python :: 3',
+]
+readme = "README.md"
+dynamic = ["version"]
+
+[tool.setuptools.packages]
+find = {}
+
+[tool.versioningit]
+
 [tool.ruff]
 line-length = 119
 exclude = ["examples/deprecated/", "utilities/deprecated"]
@@ -8,7 +33,6 @@ select = ["I", "E", "F", "W", "NPY", "UP", "RUF"]
 
 [tool.ruff.lint.per-file-ignores]
 "openff/toolkit/**/__init__.py" = ["F401"]
-"openff/toolkit/_version.py" = ["UP", "RUF"]
 "openff/toolkit/_tests/**/*.py" = ["E501"]
 "openff/toolkit/typing/engines/smirnoff.parameters.py" = ["RUF012"]
 "openff/toolkit/_tests/_stale_tests.py" = ["F821"]
@@ -21,3 +45,59 @@ select = ["I", "E", "F", "W", "NPY", "UP", "RUF"]
 known-third-party = ["openff.interchange", "openff.utilities", "openff.units"]
 known-first-party = ["openff.toolkit"]
 
+[tool.pytest.ini_options]
+doctest_optionflags = [
+    "ELLIPSIS",
+    "DONT_ACCEPT_TRUE_FOR_1",
+    "NORMALIZE_WHITESPACE",
+]
+testpaths = [
+    "openff/toolkit/_tests/",
+]
+
+[tool.coverage.run]
+omit = [
+    "*/*/_tests/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@overload",
+]
+
+[tool.mypy]
+plugins = "numpy.typing.mypy_plugin"
+warn_unused_configs = true
+warn_unused_ignores = true
+warn_incomplete_stub = true
+show_error_codes = true
+exclude = "openff/toolkit/_tests/|openff/toolkit/data/"
+
+[[tool.mypy.overrides]]
+module = [
+    "openff.units",
+    "openff.units.*",
+    "openff.nagl.*",
+    "openff.nagl_models.*",
+    "mdtraj",
+    "openmm",
+    "openmm.app",
+    "openmm.unit",
+    "rdkit",
+    "rdkit.Chem",
+    "rdkit.Chem.Draw",
+    "rdkit.DataStructs.cDataStructs",
+    "openeye",
+    "openeye.oechem",
+    "parmed",
+    "msgpack",
+    "qcelemental",
+    "nglview",
+    "nglview.base_adaptor",
+    "cached_property",
+    "constraint",
+]
+ignore_missing_imports = true

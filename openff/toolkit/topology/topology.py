@@ -14,15 +14,12 @@ Class definitions to represent a molecular system and its chemical components
 
 import re
 from collections import defaultdict
-from collections.abc import MutableMapping
+from collections.abc import Generator, Iterable, Iterator, MutableMapping
 from contextlib import nullcontext
 from copy import deepcopy
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
-    Generator,
-    Iterable,
-    Iterator,
     Literal,
     Optional,
     TextIO,
@@ -376,7 +373,7 @@ class ImproperDict(_TransformedDict):
             return permutations[key]
 
     def __keytransform__(self, key):
-        return __class__.key_transform(key)  # type: ignore[name-defined]
+        return __class__.key_transform(key)
 
 
 class Topology(Serializable):

@@ -29,19 +29,16 @@ import json
 import operator
 import pathlib
 import warnings
-from collections import UserDict
+from collections import UserDict, defaultdict
+from collections.abc import Generator, Iterable, Sequence
 from copy import deepcopy
 from functools import cmp_to_key
 from typing import (
     IO,
     TYPE_CHECKING,
     Any,
-    DefaultDict,
-    Generator,
-    Iterable,
     Literal,
     Optional,
-    Sequence,
     TextIO,
     TypeVar,
     Union,
@@ -1051,8 +1048,8 @@ class FrozenMolecule(Serializable):
             # from a fileIO object)
             if (
                 isinstance(other, (str, pathlib.Path))
-                or hasattr(other, "read")
-                and not loaded
+                or (hasattr(other, "read")
+                and not loaded)
             ):
                 try:
                     mol = Molecule.from_file(
@@ -3706,7 +3703,7 @@ class FrozenMolecule(Serializable):
         if isinstance(toolkit_registry, ToolkitRegistry):
             to_iupac_method = toolkit_registry.resolve("to_iupac")
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            to_iupac_method = toolkit_registry.to_iupac  # type: ignore[attr-defined]
+            to_iupac_method = toolkit_registry.to_iupac
         else:
             raise InvalidToolkitRegistryError(
                 "Invalid toolkit_registry passed to to_iupac. Expected ToolkitRegistry or ToolkitWrapper. "
@@ -4156,7 +4153,7 @@ class FrozenMolecule(Serializable):
         if isinstance(toolkit_registry, ToolkitRegistry):
             pass
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry  # type: ignore[assignment]
+            toolkit = toolkit_registry
             toolkit_registry = ToolkitRegistry(toolkit_precedence=[])
             toolkit_registry.add_toolkit(toolkit)
         else:
@@ -4189,9 +4186,9 @@ class FrozenMolecule(Serializable):
             )
 
         if isinstance(file_path, (str, pathlib.Path)):
-            toolkit.to_file(self, file_path, file_format)  # type: ignore[attr-defined]
+            toolkit.to_file(self, file_path, file_format)
         else:
-            toolkit.to_file_obj(self, file_path, file_format)  # type: ignore[attr-defined]
+            toolkit.to_file_obj(self, file_path, file_format)
 
     def enumerate_tautomers(
         self, max_states=20, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY
@@ -4219,7 +4216,7 @@ class FrozenMolecule(Serializable):
             )
 
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            molecules = toolkit_registry.enumerate_tautomers(  # type: ignore[attr-defined]
+            molecules = toolkit_registry.enumerate_tautomers(
                 self, max_states=max_states
             )
 
@@ -4886,7 +4883,7 @@ class FrozenMolecule(Serializable):
             return toolkit_registry.call("canonical_order_atoms", self)
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
-            return toolkit.canonical_order_atoms(self)  # type: ignore[attr-defined]
+            return toolkit.canonical_order_atoms(self)
         else:
             raise InvalidToolkitRegistryError(
                 "Invalid toolkit_registry passed to from_smiles. Expected ToolkitRegistry or ToolkitWrapper. "
@@ -5937,7 +5934,6 @@ class HierarchyScheme:
         `perceive_hierarchy()` is called, and `not` on-the-fly when atom
         metadata is modified.
         """
-        from collections import defaultdict
 
         self.hierarchy_elements = list()
         # Determine which atoms should get added to which HierarchyElements
@@ -6174,9 +6170,8 @@ def _generate_unique_atom_names(
     suffix
         Optional suffix added to atom names. Assists in denoting molecule types
     """
-    from collections import defaultdict
 
-    element_counts: DefaultDict[str, int] = defaultdict(int)
+    element_counts: defaultdict[str, int] = defaultdict(int)
     for atom in obj.atoms:
         symbol = atom.symbol
         element_counts[symbol] += 1
