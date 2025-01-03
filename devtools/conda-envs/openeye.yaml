@@ -51,3 +51,5 @@ dependencies:
     - types-xmltodict
     - types-cachetools
     - mongo-types
+  # shim
+  - libabseil=20240722.0=*_1
