@@ -33,11 +33,13 @@ from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ChemicalEnvironmentParsingError,
     ConformerGenerationError,
+    EmptyInChiError,
     InChIParseError,
     IncorrectNumConformersError,
     IncorrectNumConformersWarning,
     InvalidIUPACNameError,
     InvalidToolkitError,
+    MultipleComponentsInMoleculeWarning,
     NotAttachedToMoleculeError,
     RadicalsNotSupportedError,
     ToolkitUnavailableException,
@@ -191,8 +193,6 @@ rdkit_inchi_stereochemistry_lost = [
     "DrugBank_1962",
     "DrugBank_5043",
     "DrugBank_2519",
-    "DrugBank_7124",
-    "DrugBank_6865",
 ]
 
 openeye_iupac_bad_stereo = [
@@ -724,6 +724,14 @@ class TestOpenEyeToolkitWrapper:
 
         OpenEyeToolkitWrapper().from_openeye(oemol)
 
+    def test_from_openeye_multiple_molecule(self):
+        """Test that parsing a OEMol that is actually multiple disconnected molecules raises a warning"""
+        from openeye import oechem
+        oemol = oechem.OEMol()
+        oechem.OESmilesToMol(oemol, "C.N")
+        with pytest.warns(MultipleComponentsInMoleculeWarning, match="more than one molecule", ):
+            OpenEyeToolkitWrapper().from_openeye(oemol)
+
     def test_from_openeye_implicit_hydrogen(self):
         """
         Test OpenEyeToolkitWrapper for loading a molecule with implicit
@@ -841,6 +849,19 @@ class TestOpenEyeToolkitWrapper:
 
         with pytest.raises(InChIParseError, match="ksbfksfksfksbfks"):
             Molecule.from_inchi(inchi, toolkit_registry=toolkit)
+
+    @pytest.mark.parametrize("method", ["to_inchi", "to_inchikey"])
+    def test_empty_inchi(self, method):
+        """Reproduce Issue #1897"""
+        with pytest.raises(
+            EmptyInChiError,
+            match="failed to generate" + (".*key" if method == "to_inchikey" else ""),
+        ):
+            # call either .to_inchi or .to_inchikey
+            getattr(
+                Molecule.from_mapped_smiles("[H:5][S:3]#[N+:2][S:1][H:4]"),
+                method,
+            )(toolkit_registry=OpenEyeToolkitWrapper())
 
     @pytest.mark.parametrize(
         "molecule",
@@ -1019,6 +1040,34 @@ class TestOpenEyeToolkitWrapper:
         assert water_from_pdb_split[0].split()[2].rstrip() == "H"
         assert water_from_pdb_split[1].split()[2].rstrip() == "O"
         assert water_from_pdb_split[2].split()[2].rstrip() == "H"
+
+    def test_write_pdb_blank_chain_id_insertion_code(self):
+        """
+        Ensure PDB files are written with coords by OE when chain ID or insertion code is blank string.
+        (reference: https://github.com/openforcefield/openff-toolkit/issues/1967).
+        """
+        toolkit = OpenEyeToolkitWrapper()
+        water = Molecule()
+        water.add_atom(1, 0, False)
+        water.add_atom(8, 0, False)
+        water.add_atom(1, 0, False)
+        water.add_bond(0, 1, 1, False)
+        water.add_bond(1, 2, 1, False)
+        water.add_conformer(
+            Quantity(
+                np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+                unit.angstrom,
+            )
+        )
+        water.atoms[0].metadata["insertion_code"] = ""
+        water.atoms[1].metadata["chain_id"] = ""
+        with NamedTemporaryFile(suffix='.pdb') as of:
+            water.to_file(of.name, "pdb", toolkit_registry=toolkit)
+            roundtripped = toolkit.from_file(of.name, file_format='pdb')
+            np.testing.assert_allclose(
+                water.conformers[0].m_as(unit.angstrom),
+                roundtripped[0].conformers[0].m_as(unit.angstrom)
+            )
 
     def test_get_sdf_coordinates(self):
         """Test OpenEyeToolkitWrapper for importing a single set of coordinates from a sdf file"""
@@ -1214,7 +1263,7 @@ class TestOpenEyeToolkitWrapper:
         )
 
         # Test loading from file-like object
-        with open(filename, "r") as infile:
+        with open(filename) as infile:
             molecule2 = Molecule(
                 infile, file_format="MOL2", toolkit_registry=toolkit_wrapper
             )
@@ -2321,6 +2370,19 @@ class TestRDKitToolkitWrapper:
                 mol2, bond_order_matching=False, toolkit_registry=toolkit
             )
 
+    @pytest.mark.parametrize("method", ["to_inchi", "to_inchikey"])
+    def test_empty_inchi(self, method):
+        """Reproduce Issue #1897"""
+        with pytest.raises(
+            EmptyInChiError,
+            match="failed to generate" + (".*key" if method == "to_inchikey" else ""),
+        ):
+            # call either .to_inchi or .to_inchikey
+            getattr(
+                Molecule.from_mapped_smiles("[H:5][S:3]#[N+:2][S:1][H:4]"),
+                method,
+            )(toolkit_registry=RDKitToolkitWrapper())
+
     def test_smiles_charged(self):
         """Test RDKitWrapper functions for reading/writing charged SMILES"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -2626,6 +2688,13 @@ class TestRDKitToolkitWrapper:
         rdmol = Chem.MolFromSmiles("[Zn+2]")
 
         RDKitToolkitWrapper().from_rdkit(rdmol)
+
+    def test_from_rdkit_multiple_molecule(self):
+        """Test that parsing a rdmol that is actually multiple disconnected molecules raises a warning"""
+        from rdkit import Chem
+        rdmol = Chem.MolFromSmiles("C.N")
+        with pytest.warns(MultipleComponentsInMoleculeWarning, match="more than one molecule"):
+            RDKitToolkitWrapper().from_rdkit(rdmol)
 
     @pytest.mark.parametrize(
         "smiles, expected_map", [("[Cl:1][Cl]", {0: 1}), ("[Cl:1][Cl:2]", {0: 1, 1: 2})]
@@ -4558,7 +4627,7 @@ class TestToolkitRegistry:
         # Keep a copy of the original registry since this is a "global" variable accessible to other modules
         from copy import deepcopy
 
-        global_registry_copy = deepcopy(GLOBAL_TOOLKIT_REGISTRY)
+        global_registry_copy = deepcopy(GLOBAL_TOOLKIT_REGISTRY)  # noqa: F823
         first_toolkit = type(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits[0])
         num_toolkits = len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits)
 
@@ -4568,7 +4637,7 @@ class TestToolkitRegistry:
             type(tk) for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits
         ]
         assert (
-            len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits) == num_toolkits - 1  # noqa
+            len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits) == num_toolkits - 1
         )
 
         GLOBAL_TOOLKIT_REGISTRY = deepcopy(global_registry_copy)  # noqa

@@ -856,6 +856,11 @@ class TestParameterList:
         with pytest.raises(ValueError, match="is not in list"):
             parameters.index(p4)
 
+        with pytest.raises(TypeError, match="non-None values for start"):
+            parameters.index("[*:1]", start=1)
+        with pytest.raises(TypeError, match="non-None values for stop"):
+            parameters.index("[*:1]", stop=-1)
+
     def test_index_duplicates(self):
         """Test ParameterList.index when multiple parameters have identical SMIRKS"""
         p1 = ParameterType(smirks="[*:1]")
@@ -1961,8 +1966,28 @@ class TestVirtualSiteHandler:
     Test the creation of a VirtualSiteHandler and the implemented VirtualSiteTypes
     """
 
-    def test_getitem_forbidden(self, opc):
-        smirks = list(opc["VirtualSites"]._parameters)[0].smirks
+    def test_int_getitem_okay(self, opc):
+        """Test that ints can be used to lookup virtual site types."""
+        parameter = opc["VirtualSites"].parameters[0]
+
+        assert isinstance(parameter, VirtualSiteHandler.VirtualSiteType)
+        assert parameter.epsilon.m == 0.0
+        assert parameter.type == "DivalentLonePair"
+
+        assert opc["VirtualSites"][0] == parameter
+
+    def test_slice(self, opc):
+        assert len(opc["VirtualSites"].parameters[0:1:2]) == 1
+
+        with pytest.raises(
+            AssertionError,
+            match="must be based on int",
+        ):
+            opc["VirtualSites"].parameters["first":"second"]
+
+    def test_smirks_getitem_forbidden(self, opc):
+        """Test that SMIRKS/ParameterType can NOT be used to lookup virtual site types."""
+        smirks = next(iter(opc["VirtualSites"]._parameters)).smirks
 
         with pytest.raises(
             NotImplementedError,
@@ -2215,25 +2240,44 @@ class TestVirtualSiteHandler:
         assert offxml_string == roundtripped_force_field.to_string()
 
     @pytest.mark.parametrize(
-        "smiles, matched_indices, parameter, expected_raises",
+        "smiles, matched_indices, parameter, expected_raises, unsafe_vsites",
         [
             (
                 "[Cl:1][H:2]",
                 (1, 2),
                 VirtualSiteMocking.bond_charge_parameter("[Cl:1][H:2]"),
                 does_not_raise(),
+                False,
             ),
             (
                 "[N:1]([H:2])([H:3])[H:4]",
                 (1, 2, 3),
                 VirtualSiteMocking.monovalent_parameter("[*:2][N:1][*:3]"),
-                pytest.raises(NotImplementedError, match="please describe what it is"),
+                pytest.raises(
+                    NotImplementedError, match="currently unsupported by virtual sites"
+                ),
+                False,
+            ),
+            (
+                "[N:1]([H:2])([H:3])[H:4]",
+                (1, 2, 3),
+                VirtualSiteMocking.monovalent_parameter("[*:2][N:1][*:3]"),
+                does_not_raise(),
+                True,
             ),
         ],
     )
     def test_validate_found_match(
-        self, smiles, matched_indices, parameter, expected_raises
+        self,
+        monkeypatch,
+        smiles,
+        matched_indices,
+        parameter,
+        expected_raises,
+        unsafe_vsites,
     ):
+        if unsafe_vsites:
+            monkeypatch.setenv("OPENFF_UNSAFE_VSITES", "1")
         molecule = Molecule.from_smiles(smiles, allow_undefined_stereo=True)
         topology: Topology = molecule.to_topology()
 

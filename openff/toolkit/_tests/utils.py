@@ -369,7 +369,7 @@ def quantities_allclose(quantity1, quantity2, **kwargs):
         if not quantity1.unit.is_compatible(quantity2.unit):
             raise ValueError(
                 "The two quantities don't have compatible units: "
-                "{} and {}".format(quantity1.unit, quantity2.unit)
+                f"{quantity1.unit} and {quantity2.unit}"
             )
         # Compare the values stripped of the units.
         quantity1 = quantity1.value_in_unit_system(openmm_unit.md_unit_system)
@@ -658,8 +658,9 @@ def compare_system_energies(
 
     # Create Contexts and compare the energies.
     integrator = openmm.VerletIntegrator(1.0 * openmm_unit.femtoseconds)
-    context1 = openmm.Context(system1, integrator)
-    context2 = openmm.Context(system2, copy.deepcopy(integrator))
+    from openmm import Platform
+    context1 = openmm.Context(system1, integrator, Platform.getPlatformByName("Reference"))
+    context2 = openmm.Context(system2, copy.deepcopy(integrator), Platform.getPlatformByName("Reference"))
 
     def map_energies_by_force_type(potential_energy1, potential_energy2):
         """Convert dictionary force_group -> energy to force_type -> energy."""
@@ -762,9 +763,7 @@ class _ParametersComparer:
         for par_name in sorted(diff.keys()):
             par1, par2 = diff[par_name]
             diff_list.append(
-                "{par_name}: {par1} != {par2}".format(
-                    par_name=par_name, par1=par1, par2=par2
-                )
+                f"{par_name}: {par1} != {par2}"
             )
         separator = "\n" if new_line else ""
         diff_str = separator.join(diff_list)
@@ -792,7 +791,7 @@ class _ParametersComparer:
         # Quantities in a dictionary are normally printed in the
         # format "Quantity(value, unit=unit)" so we make it prettier.
         par_str = ", ".join(
-            "{}: {}".format(p, self.parameters[p]) for p in parameter_order
+            f"{p}: {self.parameters[p]}" for p in parameter_order
         )
         return "(" + par_str + ")"
 
@@ -975,22 +974,16 @@ def _compare_parameters(
     # Print error.
     if len(different_parameters) > 0:
         diff_msg += (
-            "\n\nThe following {interaction}s have different parameters "
-            "in the two {force_name}forces{systems_labels}:".format(
-                interaction=interaction_type,
-                force_name=force_name,
-                systems_labels=systems_labels,
-            )
+            f"\n\nThe following {interaction_type}s have different parameters "
+            f"in the two {force_name}forces{systems_labels}:"
         )
         for key in sorted(different_parameters.keys()):
             param1, param2 = different_parameters[key]
             parameters_diff = param1.pretty_format_diff(param2)
-            diff_msg += "\n{} {}:\n{}".format(interaction_type, key, parameters_diff)
+            diff_msg += f"\n{interaction_type} {key}:\n{parameters_diff}"
 
     if diff_msg != "":
-        diff_msg = ("A difference between {} was detected. " "Details follow.").format(
-            interaction_type
-        ) + diff_msg
+        diff_msg = (f"A difference between {interaction_type} was detected. " "Details follow.") + diff_msg
         raise FailedParameterComparisonError(diff_msg + "\n", different_parameters)
 
 
@@ -1029,7 +1022,7 @@ def _get_force_parameters(force, system, ignored_parameters):
 
     """
     raise NotImplementedError(
-        "Comparison between {}s is not currently " "supported.".format(type(force))
+        f"Comparison between {type(force)}s is not currently " "supported."
     )
 
 
@@ -1785,9 +1778,9 @@ def evaluate_molecules_off(molecules, forcefield, minimize=False):
 
 def get_14_scaling_factors(omm_sys: openmm.System) -> tuple[list, list]:
     """Find the 1-4 scaling factors as they are applied to an OpenMM System"""
-    nonbond_force = [
+    nonbond_force = next(
         f for f in omm_sys.getForces() if type(f) is openmm.NonbondedForce
-    ][0]
+    )
 
     vdw_14 = list()
     coul_14 = list()

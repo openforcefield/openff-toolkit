@@ -4,34 +4,35 @@ Utility subroutines
 """
 
 __all__ = [
-    "requires_package",
-    "inherit_docstrings",
     "all_subclasses",
-    "temporary_cd",
-    "get_data_file_path",
-    "unit_to_string",
-    "quantity_to_string",
-    "string_to_unit",
-    "string_to_quantity",
-    "object_to_quantity",
-    "serialize_numpy",
-    "deserialize_numpy",
-    "convert_all_quantities_to_string",
-    "convert_all_strings_to_quantity",
     "convert_0_1_smirnoff_to_0_2",
     "convert_0_2_smirnoff_to_0_3",
+    "convert_all_quantities_to_string",
+    "convert_all_strings_to_quantity",
+    "deserialize_numpy",
+    "get_data_file_path",
     "get_molecule_parameterIDs",
+    "inherit_docstrings",
+    "object_to_quantity",
+    "quantity_to_string",
+    "requires_package",
+    "serialize_numpy",
+    "string_to_quantity",
+    "string_to_unit",
+    "temporary_cd",
+    "unit_to_string",
 ]
 
 import contextlib
 import functools
 import logging
-from typing import TYPE_CHECKING, Any, Iterable, TypeVar, Union, overload
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any, TypeVar, Union, overload
 
-import numpy
 import numpy as np
 import pint
-from openff.units import Quantity, Unit, unit
+from numpy.typing import NDArray
+from openff.units import Quantity, Unit
 from openff.utilities import requires_package
 
 if TYPE_CHECKING:
@@ -39,6 +40,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
+# Pre-create an instance of the dimensionless unit to speed up comparisons later
+_DIMENSIONLESS = Unit("dimensionless")
 
 def inherit_docstrings(cls):
     """Inherit docstrings from parent class"""
@@ -170,7 +174,8 @@ def quantity_to_string(input_quantity: Quantity) -> str:
     return f"{unitless_value} * {unit_string}"
 
 
-def string_to_unit(unit_string):
+@functools.lru_cache
+def string_to_unit(unit_string) -> Unit:
     """
     Deserializes a ``openff.units.Quantity`` from a string representation, for
     example: "kilocalories_per_mole / angstrom ** 2"
@@ -189,10 +194,17 @@ def string_to_unit(unit_string):
     return Unit(unit_string)
 
 
-def string_to_quantity(quantity_string) -> Union[str, int, float, Quantity]:
+@functools.lru_cache
+def string_to_quantity(quantity_string: str) -> Union[int, float, Quantity]:
     """Attempt to parse a string into a ``Quantity``.
 
-    Note that dimensionless floats and ints are returns as floats or ints, not ``Quantity`` objects.
+    Note that strings representing dimensionless floats or ints are returned as floats or ints, not
+    `Quantity` objects. For example, "1.0" is returned as `1.0` (a float) not
+    `Quantity(1.0, "dimensionless")`. (This quirk can't be captured by type annotations because the
+    input type remains str.)
+
+    This function is cached, keyed by the stringified quantity, to avoid re-parsing the same strings,
+    and re-creating `Quantity` objects, for identical inputs.
     """
 
     from tokenize import TokenError
@@ -206,11 +218,10 @@ def string_to_quantity(quantity_string) -> Union[str, int, float, Quantity]:
 
     # TODO: Should intentionally unitless array-likes be Quantity objects
     #       or their raw representation?
-    if (quantity.units == unit.dimensionless) and isinstance(quantity.m, (int, float)):
+    if quantity.units == _DIMENSIONLESS and isinstance(quantity.m, (int, float)):
         return quantity.m
     else:
         return quantity
-
 
 def convert_all_strings_to_quantity(
     smirnoff_data: dict,
@@ -276,19 +287,19 @@ def convert_all_strings_to_quantity(
 
 
 @overload
-def convert_all_quantities_to_string(  # noqa: E704
+def convert_all_quantities_to_string(
     smirnoff_data: list[Quantity],
 ) -> list[str]: ...
 
 
 @overload
-def convert_all_quantities_to_string(  # noqa: E704
+def convert_all_quantities_to_string(
     smirnoff_data: dict,
 ) -> Union[list[str], dict[str, Any]]: ...
 
 
 @overload
-def convert_all_quantities_to_string(  # noqa: E704
+def convert_all_quantities_to_string(
     smirnoff_data: "Quantity",
 ) -> Union[str, list[str], dict[str, Any]]: ...
 
@@ -397,8 +408,6 @@ def serialize_numpy(np_array) -> tuple[bytes, tuple[int]]:
     shape
         The shape of the serialized array
     """
-    import numpy as np
-
     bigendian_float = np.dtype(float).newbyteorder(">")
     bigendian_array = np_array.astype(bigendian_float)
     serialized = bigendian_array.tobytes()
@@ -409,7 +418,7 @@ def serialize_numpy(np_array) -> tuple[bytes, tuple[int]]:
 def deserialize_numpy(
     serialized_np: Union[bytes, list],
     shape: tuple[int, ...],
-) -> numpy.ndarray:
+) -> NDArray:
     """
     Deserializes a numpy array from a bytestring or list. The input, if a bytestring, is
     assumed to be in big-endian byte order.
@@ -426,9 +435,6 @@ def deserialize_numpy(
     np_array
         The deserialized numpy array
     """
-
-    import numpy as np
-
     if isinstance(serialized_np, list):
         np_array = np.array(serialized_np)
     if isinstance(serialized_np, bytes):

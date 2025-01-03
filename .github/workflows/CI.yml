@@ -5,7 +5,7 @@ on:
     # Nightly tests run on main by default:
     #   Scheduled workflows run on the latest commit on the default or base branch.
     #   (from https://help.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events-schedule)
-    - cron: "0 0 * * *"
+    - cron: "21 0 * * *"
 
 defaults:
   run:
@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-12]
+        os: [ubuntu-latest, macos-latest]
         python-version: ["3.10", "3.11", "3.12"]
         rdkit: [true, false]
         openeye: [true, false]
@@ -34,12 +34,12 @@ jobs:
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PYTEST_ARGS: -r fE --tb=short -nauto
-      COV: --cov=openff/toolkit --cov-config=setup.cfg --cov-append --cov-report=xml
+      COV: --cov=openff/toolkit --cov-append --cov-report=xml
 
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Set environment variables
         run: |
@@ -65,7 +65,7 @@ jobs:
           fi
 
       - name: Install environment with ${{ env.JOBNAME }}
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: devtools/conda-envs/${{ env.ENVFILE }}.yaml
           create-args: >-
@@ -120,14 +120,19 @@ jobs:
         run: |
           micromamba info
           micromamba list
+          pip list
 
       - name: Check links
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
 
       - name: Run mypy
-        # subtle differences in Python/mypy versions, just keep it passing on one
-        if: ${{ matrix.rdkit == true && matrix.openeye && matrix.python-version == 3.10 }}
+        # Subtle differences in Python/mypy versions, just keep it passing on one.
+        # When possible re-enable this with OE+RDK=True, but for now rdkit builds often have bugs
+        # in stubs and there are other subtleties (in the source code and builds) that reduce the number
+        # of available builds.
+        # See ex https://github.com/rdkit/rdkit/issues/7221
+        if: ${{ matrix.rdkit == false && matrix.openeye && matrix.python-version == 3.10 }}
         run: mypy -p "openff.toolkit"
 
       - name: Run unit tests
@@ -158,8 +163,9 @@ jobs:
             --ignore=openff/toolkit/utils/utils.py
 
       - name: Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage.xml
+          files: ./coverage.xml
+          disable_search: true
           fail_ci_if_error: true

@@ -13,7 +13,7 @@ dependencies:
     - sphinx-notfound-page
     - sphinx=6
     # conda build dependencies
-    - python=3.9
+    - python <3.13
     - setuptools
     - numpy
     - openmm

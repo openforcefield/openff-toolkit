@@ -4,7 +4,7 @@ channels:
 dependencies:
     # Base depends
   - python
-  - pydantic =1
+  - versioningit
   - packaging
   - numpy
   - networkx
@@ -18,17 +18,17 @@ dependencies:
   - openff-amber-ff-ports >=0.0.3
   - openff-units =0.2.0
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.3.19
-  - openff-nagl-base ~=0.3.7
-  - openff-nagl-models ==0.1.0
+  - openff-interchange-base =0.4
+  - openff-nagl-base >=0.4.0
+  - openff-nagl-models >=0.3.0
   - typing_extensions
   - nglview
     # Toolkit-specific
   # AmberTools 23 brings in ParmEd 4, which doesn't yet work with examples
   # https://github.com/openforcefield/openff-toolkit/issues/1532
-  - ambertools =22.4
-    # https://github.com/rdkit/rdkit/issues/7221
-  - rdkit <2023.09.6
+  - ambertools
+    # https://github.com/rdkit/rdkit/issues/7221 and https://github.com/rdkit/rdkit/issues/7583
+  - rdkit =2024
     # Test-only/optional/dev/typing/examples
   - pytest
   - pytest-xdist

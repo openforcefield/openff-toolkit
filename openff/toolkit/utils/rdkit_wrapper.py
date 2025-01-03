@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """
 Wrapper class providing a minimal consistent interface to the `RDKit <http://www.rdkit.org/>`.
 """
@@ -17,6 +18,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 import numpy as np
 from cachetools import LRUCache, cached
+from numpy.typing import NDArray
 from openff.units.elements import SYMBOLS
 
 from openff.toolkit import Quantity, unit
@@ -30,9 +32,11 @@ from openff.toolkit.utils.exceptions import (
     AmbiguousBondChemicalAssignment,
     ChargeMethodUnavailableError,
     ConformerGenerationError,
+    EmptyInChiError,
     InChIParseError,
     InvalidAromaticityModelError,
     MoleculeParseError,
+    MultipleComponentsInMoleculeWarning,
     NonUniqueSubstructureName,
     NotAttachedToMoleculeError,
     RadicalsNotSupportedError,
@@ -85,13 +89,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     # TODO: Add TDT support
     _toolkit_file_read_formats = ["SDF", "MOL", "SMI"]
-    _toolkit_file_write_formats = [
-        "SDF",
-        "MOL",
-        "SMI",
-        "PDB",
-        "TDT",
-    ]
+    _toolkit_file_write_formats = ["SDF", "MOL", "SMI", "PDB", "TDT"]
 
     def __init__(self):
         super().__init__()
@@ -177,7 +175,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 allow_undefined_stereo=allow_undefined_stereo,
             )
         raise NotImplementedError(
-            "Cannot create Molecule from {} object".format(type(obj))
+            f"Cannot create Molecule from {type(obj)} object"
         )
 
     def from_pdb_and_smiles(
@@ -1667,7 +1665,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         _cls=None,
         make_carboxylic_acids_cis: bool = False,
     ):
-        """
+        r"""
         Generate molecule conformers using RDKit.
 
         .. warning :: This API is experimental and subject to change.
@@ -1988,7 +1986,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return 0.5 * interaction_energies.sum()
 
     @classmethod
-    def _elf_compute_rms_matrix(cls, molecule: "Molecule") -> np.ndarray:
+    def _elf_compute_rms_matrix(cls, molecule: "Molecule") -> NDArray:
         """Computes the symmetric RMS matrix of all conformers in a molecule taking
         only heavy atoms into account.
 
@@ -2237,6 +2235,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         """
         from rdkit import Chem
+        from rdkit.Chem import AllChem
 
         if _cls is None:
             from openff.toolkit.topology.molecule import Molecule
@@ -2245,6 +2244,19 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # Make a copy of the RDKit Mol as we'll need to change it (e.g. assign stereo).
         rdmol = Chem.Mol(rdmol)
+
+        frags = AllChem.GetMolFrags(rdmol)
+        if len(frags) > 1:
+            warnings.warn("RDKit Molecule passed to from_rdkit consists of more than one molecule, consider running "
+                          "rdkit.Chem.AllChem.GetMolFrags(rdmol, asMols=True) or splitting input SMILES at '.' to get "
+                          "separate molecules and pass them to from_rdkit one at a time. While this is supported for "
+                          "legacy reasons, OpenFF Molecule objects are not supposed to contain disconnected chemical "
+                          "graphs and this may result in undefined behavior later on. The OpenFF ecosystem is built "
+                          "to handle multiple molecules, but they should be in a Topology object, ex: "
+                          "top = Topology.from_molecules([mol1, mol2])",
+                          MultipleComponentsInMoleculeWarning,
+                          stacklevel=2
+                          )
 
         if not hydrogens_are_explicit:
             rdmol = Chem.AddHs(rdmol, addCoords=True)
@@ -2352,7 +2364,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 else:
                     raise UndefinedStereochemistryError(
                         "In from_rdkit: Expected atom stereochemistry of R or S. "
-                        "Got {} instead.".format(stereo_code)
+                        f"Got {stereo_code} instead."
                     )
 
             res = rda.GetPDBResidueInfo()
@@ -2426,9 +2438,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 stereochemistry = "E"
             elif tag == Chem.BondStereo.STEREOTRANS or tag == Chem.BondStereo.STEREOCIS:
                 raise ValueError(
-                    "Expected RDKit bond stereochemistry of E or Z, got {} instead".format(
-                        tag
-                    )
+                    f"Expected RDKit bond stereochemistry of E or Z, got {tag} instead"
                 )
             offb._stereochemistry = stereochemistry
             fractional_bond_order = None
@@ -2588,9 +2598,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # Something is wrong.
             err_msg = (
                 "Unknown atom stereochemistry encountered in to_rdkit. "
-                "Desired stereochemistry: {}. Set stereochemistry {}".format(
-                    atom.stereochemistry, rdatom.GetProp("_CIPCode")
-                )
+                f"Desired stereochemistry: {atom.stereochemistry}. "
+                f"Set stereochemistry {rdatom.GetProp('_CIPCode')}"
             )
             raise RuntimeError(err_msg)
 
@@ -2709,7 +2718,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 bond.atom2.molecule_atom_index,
             )
             rdbond = rdmol.GetBondBetweenAtoms(*atom_indices)
-            if not (bond.fractional_bond_order is None):
+            if bond.fractional_bond_order is not None:
                 rdbond.SetDoubleProp(
                     "fractional_bond_order", bond.fractional_bond_order
                 )
@@ -2724,7 +2733,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 rdmol.AddConformer(rdmol_conformer, assignId=True)
 
         # Retain charges, if present
-        if not (molecule._partial_charges is None):
+        if molecule._partial_charges is not None:
             rdk_indexed_charges = np.zeros(shape=molecule.n_atoms, dtype=float)
             for atom_idx, charge in enumerate(molecule._partial_charges):
                 charge_unitless = charge.m_as(unit.elementary_charge)
@@ -2760,6 +2769,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         --------
         inchi
             The InChI string of the molecule.
+
+        Raises
+        ------
+        EmptyInChiError
+            If RDKit failed to generate an InChI for the molecule
         """
 
         from rdkit import Chem
@@ -2769,6 +2783,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             inchi = Chem.MolToInchi(rdmol, options="-FixedH")
         else:
             inchi = Chem.MolToInchi(rdmol)
+
+        if len(inchi) == 0:
+            raise EmptyInChiError("RDKit failed to generate an InChI for the molecule.")
+
         return inchi
 
     def to_inchikey(self, molecule: "Molecule", fixed_hydrogens: bool = False) -> str:
@@ -2792,6 +2810,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         --------
         inchi_key
             The InChIKey representation of the molecule.
+
+        Raises
+        ------
+        EmptyInChiError
+            If RDKit failed to generate an InChI for the molecule
         """
 
         from rdkit import Chem
@@ -2801,6 +2824,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             inchi_key = Chem.MolToInchiKey(rdmol, options="-FixedH")
         else:
             inchi_key = Chem.MolToInchiKey(rdmol)
+
+        if len(inchi_key) == 0:
+            raise EmptyInChiError(
+                "RDKit failed to generate an InChI key for the molecule."
+            )
+
         return inchi_key
 
     def get_tagged_smarts_connectivity(self, smarts: str):
@@ -3202,10 +3231,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         if len(undefined_atom_indices) > 0:
             msg += "Undefined chiral centers are:\n"
             for undefined_atom_idx in undefined_atom_indices:
-                msg += " - Atom {symbol} (index {index})\n".format(
-                    symbol=rdmol.GetAtomWithIdx(undefined_atom_idx).GetSymbol(),
-                    index=undefined_atom_idx,
-                )
+                msg += f" - Atom {rdmol.GetAtomWithIdx(undefined_atom_idx).GetSymbol()} (index {undefined_atom_idx})\n"
 
         # Details about undefined bond.
         if len(undefined_bond_indices) > 0:
@@ -3213,12 +3239,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             for undefined_bond_idx in undefined_bond_indices:
                 bond = rdmol.GetBondWithIdx(undefined_bond_idx)
                 atom1, atom2 = bond.GetBeginAtom(), bond.GetEndAtom()
-                msg += " - Bond {bindex} (atoms {aindex1}-{aindex2} of element ({symbol1}-{symbol2})\n".format(
-                    bindex=undefined_bond_idx,
-                    aindex1=atom1.GetIdx(),
-                    aindex2=atom2.GetIdx(),
-                    symbol1=atom1.GetSymbol(),
-                    symbol2=atom2.GetSymbol(),
+                msg += (
+                    f" - Bond {undefined_bond_idx} (atoms {atom1.GetIdx()}-{atom2.GetIdx()} of element "
+                    "({atom1.GetSymbol()}-{atom2.GetSymbol()})\n"
                 )
 
         raise UndefinedStereochemistryError(err_msg_prefix + msg)

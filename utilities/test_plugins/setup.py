@@ -2,6 +2,7 @@
 openff-test-parameter-plugins
 A test package used to ensure that parameterhandler plugins are handled correctly
 """
+
 from setuptools import setup
 
 setup(
@@ -12,6 +13,7 @@ setup(
         "openff.toolkit.plugins.handlers": [
             "CustomHandler = custom_plugins.handler_plugins:CustomHandler",
             "WrongSubclass = custom_plugins.handler_plugins:WrongSubclass",
+            "FOOBuckinghamHandler = custom_plugins.handler_plugins:FOOBuckinghamHandler",
         ]
     },
 )

@@ -10,7 +10,9 @@ TypedMolecule TODOs
 
 """
 
-from typing import TYPE_CHECKING, Generator, Iterable, NoReturn, Optional, Union
+import functools
+from collections.abc import Generator, Iterable
+from typing import TYPE_CHECKING, NoReturn, Optional, Union
 
 from openff.units.elements import MASSES, SYMBOLS
 
@@ -54,9 +56,7 @@ class _SimpleMolecule:
         else:
             raise ValueError(
                 "Invalid inputs to molecule._add_bond. Expected ints or Atoms. "
-                "Received {} (type {}) and {} (type {}) ".format(
-                    atom1, type(atom1), atom2, type(atom2)
-                )
+                f"Received {atom1} (type {type(atom1)}) and {atom2} (type {type(atom2)}) "
             )
         bond = _SimpleBond(atom1_atom, atom2_atom, **kwargs)
         self.bonds.append(bond)
@@ -345,7 +345,7 @@ class _SimpleMolecule:
             )
             for conf in self._conformers:
                 conf_unitless = conf.m_as(unit.angstrom)
-                conf_serialized, conf_shape = serialize_numpy((conf_unitless))
+                conf_serialized, conf_shape = serialize_numpy(conf_unitless)
                 molecule_dict["conformers"].append(conf_serialized)
 
         molecule_dict["hierarchy_schemes"] = dict()
@@ -618,7 +618,7 @@ class _SimpleAtom:
                 if atom is not self:
                     yield atom
 
-    @property
+    @functools.cached_property
     def molecule_atom_index(self) -> int:
         return self.molecule.atoms.index(self)
 
@@ -626,6 +626,7 @@ class _SimpleAtom:
         atom_dict: dict[str, Union[dict, str, int]] = dict()
         atom_dict["metadata"] = dict(self.metadata)
         atom_dict["atomic_number"] = self._atomic_number
+        atom_dict["name"] = self._name
 
         keys_to_skip = ["metadata", "molecule", "bonds"]
 
@@ -635,6 +636,7 @@ class _SimpleAtom:
             if attr_name in keys_to_skip:
                 continue
             atom_dict[attr_name] = attr_val
+
         return atom_dict
 
     @classmethod

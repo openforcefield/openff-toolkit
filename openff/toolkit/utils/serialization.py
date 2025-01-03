@@ -168,7 +168,7 @@ class Serializable(abc.ABC):
         import bson
 
         d = self.to_dict()
-        return bson.dumps(d)  # type: ignore[attr-defined]
+        return bson.dumps(d)
 
     @classmethod
     @requires_package("bson")
@@ -191,7 +191,7 @@ class Serializable(abc.ABC):
         """
         import bson
 
-        d = bson.loads(serialized)  # type: ignore[attr-defined]
+        d = bson.loads(serialized)
         return cls.from_dict(d)
 
     @requires_package("toml")

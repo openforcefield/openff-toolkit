@@ -91,7 +91,7 @@ def find_readme_examples() -> list[str]:
     if readme_file_path is None:
         return list()
 
-    with open(readme_file_path, "r") as f:
+    with open(readme_file_path) as f:
         readme_content = f.read()
 
     return re.findall("```python(.*?)```", readme_content, flags=re.DOTALL)

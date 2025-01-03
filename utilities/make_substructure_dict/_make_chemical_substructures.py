@@ -1,7 +1,8 @@
 import os
 
-from openff.toolkit.utils.utils import get_data_file_path
 from _cif_to_substructure_dict import CifSubstructures
+
+from openff.toolkit.utils.utils import get_data_file_path
 
 if not os.path.exists("aa-variants-v1.cif"):
     import requests
@@ -39,6 +40,7 @@ cif_object.to_json_file(output_file)
 cif_object._reformat_substructs()
 
 output_file = get_data_file_path("proteins/T4-protein.sdf").replace(
-    "T4-protein.sdf", "aa_residues_substructures_explicit_bond_orders_with_caps_explicit_connectivity.json"
+    "T4-protein.sdf",
+    "aa_residues_substructures_explicit_bond_orders_with_caps_explicit_connectivity.json",
 )
 cif_object.to_json_file(output_file)

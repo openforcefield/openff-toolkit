@@ -7,7 +7,7 @@ on:
       - released
       - prereleased
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "0 20 * * *"
   workflow_dispatch:
 
 defaults:
@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-12]
+        os: [ubuntu-latest, macos-latest]
         python-version: ["3.10"]
         openeye: ["true", "false"]
 
@@ -34,9 +34,18 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Vanilla install from conda
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
+        if: ${{ matrix.openeye == 'false' }}
         with:
-          environment-name: latest-deployment
+          environment-file: devtools/conda-envs/conda.yaml
+          create-args: >-
+            python=${{ matrix.python-version }}
+
+      - name: Install from conda with OpenEye
+        uses: mamba-org/setup-micromamba@v2
+        if: ${{ matrix.openeye == 'true' }}
+        with:
+          environment-file: devtools/conda-envs/conda_oe.yaml
           create-args: >-
             python=${{ matrix.python-version }}
             openff-toolkit-examples
@@ -56,7 +65,10 @@ jobs:
           echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
 
       - name: Environment Information
-        run: micromamba info && micromamba list
+        run: |
+          micromamba info
+          micromamba list
+          pip list
 
       - name: Check installed toolkits
         run: |
@@ -107,3 +119,8 @@ jobs:
           python -m pytest $PYTEST_ARGS \
             --pyargs "openff.toolkit" \
             -m "slow or not slow" -x
+
+      - name: Run example notebooks
+        run: |
+          # External examples are temporarily skipped due to parmed incompatibility https://github.com/openforcefield/openff-toolkit/issues/1532
+          python -m pytest -r fE -v -x --tb=short --nbval-lax --ignore=examples/deprecated --ignore=examples/external examples

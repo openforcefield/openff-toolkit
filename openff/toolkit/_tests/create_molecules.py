@@ -419,8 +419,8 @@ def propane_from_smiles_w_vsites():
 def tip5_water():
     # Make a TIP5 water
     molecule = Molecule.from_smiles("[H][O][H]")
-    O1 = [atom for atom in molecule.atoms if atom.atomic_number == 8][0]
-    H1, H2 = [atom for atom in O1.bonded_atoms if atom.atomic_number == 1]
+    O1 = next(atom for atom in molecule.atoms if atom.atomic_number == 8)
+    H1, H2 = (atom for atom in O1.bonded_atoms if atom.atomic_number == 1)
     molecule.add_divalent_lone_pair_virtual_site(
         (H1, O1, H2),
         0.7 * unit.angstrom,

@@ -4,8 +4,8 @@ Custom collections classes.
 """
 
 __all__ = [
-    "ValidatedList",
     "ValidatedDict",
+    "ValidatedList",
 ]
 
 
@@ -203,8 +203,16 @@ class ValidatedDict(dict):
         mapping = self._convert_and_validate(mapping)
         super().__init__(mapping)
 
-    def update(self, other):
-        other = self._convert_and_validate(dict(other))
+    def update(self, *args, **kwargs):
+        if len(args) != 1:
+            raise TypeError(
+                f"ValidatedDict.update expected exactly one positional argument, got {len(args)} instead."
+            )
+        if len(kwargs) != 0:
+            raise TypeError(
+                f"ValidatedDict.update does not accept named arguments, got {kwargs} instead."
+            )
+        other = self._convert_and_validate(dict(args[0]))
         super().update(other)
 
     def copy(self):

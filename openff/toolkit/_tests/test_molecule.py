@@ -102,7 +102,7 @@ def assert_molecule_is_equal(molecule1, molecule2, msg):
 def is_four_membered_ring_torsion(torsion):
     """Check that three atoms in the given torsion form a four-membered ring."""
     # Push a copy of the first and second atom in the end to make the code simpler.
-    torsion = list(torsion) + [torsion[0], torsion[1]]
+    torsion = [*list(torsion), torsion[0], torsion[1]]
 
     is_four_membered_ring = True
     for i in range(4):
@@ -154,9 +154,9 @@ def is_three_membered_ring_torsion(torsion):
     outside_atom_idx = atom_indices[0]
 
     # Check that the remaining two atoms are non-central atoms in the membered ring.
-    atom1, atom2 = [
+    atom1, atom2 = (
         i for i in torsion_atom_indices if i not in [central_atom_idx, outside_atom_idx]
-    ]
+    )
     # The two atoms are bonded to each other.
     if atom2 not in bonds_by_atom_idx[atom1] or atom1 not in bonds_by_atom_idx[atom2]:
         return False
@@ -177,10 +177,10 @@ def mini_drug_bank(xfail_mols=None, wip_mols=None):
 
     Parameters
     ----------
-    xfail_mols : Dict[str, str or None]
+    xfail_mols : dict[str, str or None]
         Dictionary mapping the molecule names that are allowed to
         failed to the failure reason.
-    wip_mols : Dict[str, str or None]
+    wip_mols : dict[str, str or None]
         Dictionary mapping the molecule names that are work in progress
         to the failure reason.
 
@@ -251,7 +251,7 @@ openeye_drugbank_undefined_stereo_mols = {
     "DrugBank_6531",
 }
 
-# All the molecules that raise UndefinedStereochemistryError when read by OETK().
+# All the molecules that raise UndefinedStereochemistryError when read by RDKTKW().
 # Note that this list is different from that for OEMol,
 # since the toolkits have different definitions of "stereogenic"
 rdkit_drugbank_undefined_stereo_mols = {
@@ -261,8 +261,6 @@ rdkit_drugbank_undefined_stereo_mols = {
     "DrugBank_3930",
     "DrugBank_5043",
     "DrugBank_5418",
-    "DrugBank_7124",
-    "DrugBank_6865",
 }
 
 
@@ -1028,7 +1026,7 @@ class TestMolecule:
         filename = get_data_file_path("molecules/toluene.mol2")
 
         molecule1 = Molecule(filename, allow_undefined_stereo=True)
-        with open(filename, "r") as infile:
+        with open(filename) as infile:
             molecule2 = Molecule(
                 infile, file_format="MOL2", allow_undefined_stereo=True
             )
@@ -1617,7 +1615,7 @@ class TestMolecule:
         assert (
             Molecule.are_isomorphic(
                 ethanol,
-                [*topology.molecules][0],
+                next(iter(topology.molecules)),
                 aromatic_matching=False,
                 formal_charge_matching=False,
                 bond_order_matching=False,
@@ -1746,9 +1744,9 @@ class TestMolecule:
         """Test the basic behavior of strip_atom_stereochemistry"""
         mol = Molecule.from_smiles("CCC[N@@](C)CC")
 
-        nitrogen_idx = [
+        nitrogen_idx = next(
             atom.molecule_atom_index for atom in mol.atoms if atom.symbol == "N"
-        ][0]
+        )
 
         # TODO: This fails with RDKitToolkitWrapper because it perceives
         # the stereochemistry of this nitrogen as None
@@ -3359,7 +3357,7 @@ class TestQCArchiveInterface:
             molecule_hash=entry.initial_molecule.identifiers.molecule_hash
         )
 
-        qca_mol = [*iterator][0]
+        qca_mol = next(iter(iterator))
 
         # mow make sure the majority of the qcschema attributes are the same
         # note we can not compare the full dict due to qcelemental differences
@@ -4420,13 +4418,13 @@ class TestHierarchies:
             "insertion_code" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
         )
         assert "chain_id" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
-        assert [*offmol.residues][0].residue_name == "ACE"
-        assert [*offmol.residues][0].residue_number == "1"
-        assert [*offmol.residues][0].insertion_code == " "
-        assert [*offmol.residues][0].chain_id == " "
+        assert next(iter(offmol.residues)).residue_name == "ACE"
+        assert next(iter(offmol.residues)).residue_number == "1"
+        assert next(iter(offmol.residues)).insertion_code == " "
+        assert next(iter(offmol.residues)).chain_id == " "
 
         assert "chain_id" in offmol.hierarchy_schemes["chains"].uniqueness_criteria
-        assert [*offmol.chains][0].chain_id == " "
+        assert next(iter(offmol.chains)).chain_id == " "
 
     def test_hierarchy_perceived_dipeptide(self):
         """Test populating and accessing HierarchyElements"""

@@ -21,39 +21,39 @@ Currently supported toolkits:
 """
 
 __all__ = (
-    "DEFAULT_AROMATICITY_MODEL",
     "ALLOWED_AROMATICITY_MODELS",
-    "DEFAULT_FRACTIONAL_BOND_ORDER_MODEL",
-    "ALLOWED_FRACTIONAL_BOND_ORDER_MODELS",
-    "DEFAULT_CHARGE_MODEL",
     "ALLOWED_CHARGE_MODELS",
-    "IncompatibleUnitError",
-    "MissingPackageError",
-    "ToolkitUnavailableException",
-    "LicenseError",
-    "InvalidToolkitError",
-    "InvalidToolkitRegistryError",
-    "UndefinedStereochemistryError",
-    "GAFFAtomTypeWarning",
-    "ToolkitWrapper",
-    "OpenEyeToolkitWrapper",
-    "RDKitToolkitWrapper",
-    "AmberToolsToolkitWrapper",
-    "NAGLToolkitWrapper",
-    "BuiltInToolkitWrapper",
-    "ChargeMethodUnavailableError",
-    "IncorrectNumConformersError",
-    "IncorrectNumConformersWarning",
-    "ChargeCalculationError",
-    "InvalidIUPACNameError",
-    "AntechamberNotFoundError",
-    "SMILESParseError",
-    "ToolkitRegistry",
+    "ALLOWED_FRACTIONAL_BOND_ORDER_MODELS",
+    "AMBERTOOLS_AVAILABLE",
+    "BASIC_CHEMINFORMATICS_TOOLKITS",
+    "DEFAULT_AROMATICITY_MODEL",
+    "DEFAULT_CHARGE_MODEL",
+    "DEFAULT_FRACTIONAL_BOND_ORDER_MODEL",
     "GLOBAL_TOOLKIT_REGISTRY",
     "OPENEYE_AVAILABLE",
     "RDKIT_AVAILABLE",
-    "AMBERTOOLS_AVAILABLE",
-    "BASIC_CHEMINFORMATICS_TOOLKITS",
+    "AmberToolsToolkitWrapper",
+    "AntechamberNotFoundError",
+    "BuiltInToolkitWrapper",
+    "ChargeCalculationError",
+    "ChargeMethodUnavailableError",
+    "GAFFAtomTypeWarning",
+    "IncompatibleUnitError",
+    "IncorrectNumConformersError",
+    "IncorrectNumConformersWarning",
+    "InvalidIUPACNameError",
+    "InvalidToolkitError",
+    "InvalidToolkitRegistryError",
+    "LicenseError",
+    "MissingPackageError",
+    "NAGLToolkitWrapper",
+    "OpenEyeToolkitWrapper",
+    "RDKitToolkitWrapper",
+    "SMILESParseError",
+    "ToolkitRegistry",
+    "ToolkitUnavailableException",
+    "ToolkitWrapper",
+    "UndefinedStereochemistryError",
 )
 
 
@@ -209,8 +209,6 @@ if not any_toolkits:  # pragma: no cover
     msg += "Please install at least one of the following basic toolkits:\n"
     for wrapper in all_subclasses(ToolkitWrapper):
         if wrapper.toolkit_name is not None:
-            msg += "{} : {}\n".format(
-                wrapper._toolkit_name, wrapper._toolkit_installation_instructions
-            )
+            msg += f"{wrapper._toolkit_name} : {wrapper._toolkit_installation_instructions}\n"
     # TODO: Make this a warning!?
     print(msg)

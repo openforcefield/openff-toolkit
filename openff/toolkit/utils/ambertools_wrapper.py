@@ -11,7 +11,6 @@ from shutil import which
 from typing import TYPE_CHECKING, Optional
 
 import numpy as np
-from openff.utilities.provenance import get_ambertools_version
 
 from openff.toolkit import Quantity, unit
 from openff.toolkit.utils import base_wrapper, rdkit_wrapper
@@ -62,6 +61,8 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
     SUPPORTED_CHARGE_METHODS = _supported_charge_methods
 
     def __init__(self):
+        from openff.utilities.provenance import get_ambertools_version
+
         super().__init__()
 
         if not self.is_available():
@@ -194,7 +195,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         ANTECHAMBER_PATH = which("antechamber")
         if ANTECHAMBER_PATH is None:
             raise AntechamberNotFoundError(
-                "Antechamber not found, cannot run charge_mol()"
+                "Antechamber not found, cannot run assign_partial_charges()"
             )
 
         # Compute charges
@@ -258,12 +259,10 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
                 # TODO: copy files into local directory to aid debugging?
                 raise ChargeCalculationError(
                     "Antechamber/sqm partial charge calculation failed on "
-                    "molecule {} (SMILES {})".format(
-                        molecule.name, molecule.to_smiles()
-                    )
+                    f"molecule {molecule.name} (SMILES {molecule.to_smiles()})"
                 )
             # Read the charges
-            with open(f"{tmpdir}/charges.txt", "r") as infile:
+            with open(f"{tmpdir}/charges.txt") as infile:
                 contents = infile.read()
             text_charges = contents.split()
             charges = np.zeros([molecule.n_atoms], np.float64)
@@ -350,7 +349,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         begin_sep = """ Bond Orders
  
   QMMM:    NUM1 ELEM1 NUM2 ELEM2      BOND_ORDER
-"""
+"""  # noqa
         end_sep = """
 
            --------- Calculation Completed ----------

@@ -8,48 +8,48 @@ New pluggable handlers can be created by creating subclasses of :class:`Paramete
 """
 
 __all__ = [
+    "AngleHandler",
+    "AngleType",
+    "BondHandler",
+    "BondType",
+    "ChargeIncrementType",
+    "ConstraintHandler",
+    "ConstraintType",
     "DuplicateParameterError",
     "DuplicateVirtualSiteTypeException",
+    "ElectrostaticsHandler",
     "FractionalBondOrderInterpolationMethodUnsupportedError",
+    "GBSAHandler",
+    "GBSAType",
+    "ImproperTorsionHandler",
+    "ImproperTorsionType",
     "IncompatibleParameterError",
+    "IndexedMappedParameterAttribute",
+    "IndexedParameterAttribute",
+    "LibraryChargeHandler",
+    "LibraryChargeType",
+    "MappedParameterAttribute",
     "NotEnoughPointsForInterpolationError",
+    "ParameterAttribute",
+    "ParameterHandler",
+    "ParameterList",
     "ParameterLookupError",
+    "ParameterType",
+    "ParameterType",
+    "ProperTorsionHandler",
+    "ProperTorsionType",
     "SMIRNOFFSpecError",
     "SMIRNOFFSpecUnimplementedError",
+    "ToolkitAM1BCCHandler",
     "UnassignedAngleParameterException",
     "UnassignedBondParameterException",
     "UnassignedMoleculeChargeException",
     "UnassignedProperTorsionParameterException",
     "UnassignedValenceParameterException",
-    "ParameterList",
-    "ParameterType",
-    "ParameterHandler",
-    "ParameterAttribute",
-    "MappedParameterAttribute",
-    "IndexedParameterAttribute",
-    "IndexedMappedParameterAttribute",
-    "ConstraintHandler",
-    "BondHandler",
-    "AngleHandler",
-    "ProperTorsionHandler",
-    "ImproperTorsionHandler",
-    "ElectrostaticsHandler",
-    "LibraryChargeHandler",
-    "vdWHandler",
-    "GBSAHandler",
-    "ToolkitAM1BCCHandler",
     "VirtualSiteHandler",
-    "ParameterType",
-    "ConstraintType",
-    "BondType",
-    "AngleType",
-    "ProperTorsionType",
-    "ImproperTorsionType",
-    "vdWType",
-    "LibraryChargeType",
-    "GBSAType",
-    "ChargeIncrementType",
     "VirtualSiteType",
+    "vdWHandler",
+    "vdWType",
 ]
 
 import copy
@@ -342,10 +342,14 @@ class ParameterAttribute:
     def __init__(
         self,
         default: Any = UNDEFINED,
-        unit: Optional[Unit] = None,
+        unit: Union[Unit, str, None] = None,
         converter: Optional[Callable] = None,
         docstring: str = "",
     ):
+        if isinstance(unit, str):
+            # be careful with module & variable names
+            unit = Unit(unit)
+
         self.default = default
         self._unit = unit
         self._converter = converter
@@ -582,7 +586,7 @@ class MappedParameterAttribute(ParameterAttribute):
 
 
 class IndexedMappedParameterAttribute(ParameterAttribute):
-    """The attribute of a parameter with an unspecified number of terms, where
+    r"""The attribute of a parameter with an unspecified number of terms, where
     each term is a mapping.
 
     Some parameters can be associated to multiple terms,
@@ -1063,14 +1067,14 @@ class _ParameterAttributeHandler:
                     for key, val in mapping.items():
                         attrib_name_indexed, attrib_name_mapped = attrib_name.split("_")
                         smirnoff_dict[
-                            f"{attrib_name_indexed}{str(idx + 1)}_{attrib_name_mapped}{key}"
+                            f"{attrib_name_indexed}{idx + 1!s}_{attrib_name_mapped}{key}"
                         ] = val
             elif attrib_name in indexed_attribs:
                 for idx, val in enumerate(attrib_value):
                     smirnoff_dict[attrib_name + str(idx + 1)] = val
             elif attrib_name in mapped_attribs:
                 for key, val in attrib_value.items():
-                    smirnoff_dict[f"{attrib_name}{str(key)}"] = val
+                    smirnoff_dict[f"{attrib_name}{key!s}"] = val
             elif attrib_name == "version":
                 smirnoff_dict[attrib_name] = str(attrib_value)
             else:
@@ -1101,7 +1105,7 @@ class _ParameterAttributeHandler:
                 return indexed_mapped_attr_value[index][key]
             except (IndexError, KeyError) as err:
                 raise MissingIndexedAttributeError(
-                    f"{str(err)} '{item}' is out of bounds for indexed attribute '{attr_name}'"
+                    f"{err!s} '{item}' is out of bounds for indexed attribute '{attr_name}'"
                 )
 
         # Otherwise, try indexed attribute
@@ -1120,7 +1124,7 @@ class _ParameterAttributeHandler:
 
         # Otherwise, forward the search to the next class in the MRO.
         try:
-            return super().__getattr__(item)  # type: ignore[misc]
+            return super().__getattr__(item)
         except AttributeError as e:
             # If this fails because the next classes in the MRO do not
             # implement __getattr__(), then raise the standard Attribute error.
@@ -1151,7 +1155,7 @@ class _ParameterAttributeHandler:
                 return
             except (IndexError, KeyError) as err:
                 raise MissingIndexedAttributeError(
-                    f"{str(err)} '{key}' is out of bounds for indexed attribute '{attr_name}'"
+                    f"{err!s} '{key}' is out of bounds for indexed attribute '{attr_name}'"
                 )
 
         # Otherwise, try indexed attribute
@@ -1484,7 +1488,7 @@ class ParameterList(list):
         # TODO: Check if other ParameterList contains the same ParameterTypes?
         super().extend(other)
 
-    def index(self, item):
+    def index(self, item, start=None, stop=None):
         """
         Get the numerical index of a ParameterType object or SMIRKS in this ParameterList.
         Raises ParameterLookupError if the item is not found.
@@ -1493,6 +1497,10 @@ class ParameterList(list):
         ----------
         item
             The parameter or SMIRKS to look up in this ParameterList
+        start
+            Unsupported, added to align method signature with list.index
+        stop
+            Unsupported, added to align method signature with list.index
 
         Returns
         -------
@@ -1504,6 +1512,14 @@ class ParameterList(list):
         ParameterLookupError if SMIRKS pattern is passed in but not found
 
         """
+        if start is not None:
+            raise TypeError(
+                "ParameterList.index does not support non-None values for start."
+            )
+        if stop is not None:
+            raise TypeError(
+                "ParameterList.index does not support non-None values for stop."
+            )
         if isinstance(item, ParameterType):
             return super().index(item)
         else:
@@ -1566,7 +1582,7 @@ class ParameterList(list):
     # TODO: Is there a cleaner way (getstate/setstate perhaps?) to allow FFs to be
     #       pickled?
     def __reduce__(self):
-        return (__class__, (list(self),), self.__dict__)  # type: ignore[name-defined]
+        return (__class__, (list(self),), self.__dict__)
 
     def __contains__(self, item):
         """Check to see if either Parameter or SMIRKS is contained in parameter list.
@@ -1610,16 +1626,29 @@ class ParameterList(list):
 
 
 class VirtualSiteParameterList(ParameterList):
-    def __getitem__(self, val):
-        raise NotImplementedError(
-            "VirtualSiteHandler does not support __getitem__ lookups due to the "
-            "number of values required to uniquely identify a specific parameter."
-        )
+    def __getitem__(self, val: Union[int, slice, str, "ParameterType"]):  # type: ignore[override]
+        indexable_item: Union[int, slice]
+
+        if isinstance(val, int):
+            indexable_item = val
+        elif isinstance(val, slice):
+            assert (
+                type(val.start) is int and type(val.stop) is int
+            ), "slices must be based on ints"
+            indexable_item = val
+        else:
+            raise NotImplementedError(
+                "VirtualSiteHandler does not support __getitem__ lookups "
+                f"of this type ({type(val)=}) due to the "
+                "number of values required to uniquely identify a specific parameter."
+            )
+
+        return super().__getitem__(indexable_item)
 
 
 # TODO: Rename to better reflect role as parameter base class?
 class ParameterType(_ParameterAttributeHandler):
-    """
+    r"""
     Base class for SMIRNOFF parameter types.
 
     This base class provides utilities to create new parameter types. See
@@ -2247,9 +2276,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             matches.update(matches_for_this_type)
 
             logger.debug(
-                "{:64} : {:8} matches".format(
-                    parameter_type.smirks, len(matches_for_this_type)
-                )
+                f"{parameter_type.smirks:64} : {len(matches_for_this_type):8} matches"
             )
 
         logger.debug(f"{len(matches)} matches identified")
@@ -2396,10 +2423,8 @@ class ParameterHandler(_ParameterAttributeHandler):
                 )
             if abs(this_val - other_val) > tolerance:
                 raise IncompatibleParameterError(
-                    "Difference between '{}' values is beyond allowed tolerance {}. "
-                    "(handler value: {}, incompatible value: {}".format(
-                        attr, tolerance, this_val, other_val
-                    )
+                    f"Difference between '{attr}' values is beyond allowed tolerance {tolerance}. "
+                    f"(handler value: {this_val}, incompatible value: {other_val}"
                 )
 
     def __getitem__(self, val):
@@ -3653,8 +3678,14 @@ class VirtualSiteHandler(_NonbondedHandler):
         supported exception, they should open an issue on GitHub explaining their exact
         use case so that we can ensure that exactly what they need is both supported
         and works as expected through expansion of the unit tests.
-        """
 
+        This validation can be disabled by assigning the environment variable
+         `OPENFF_UNSAFE_VSITES=1`.
+        """
+        import os
+
+        if os.environ.get("OPENFF_UNSAFE_VSITES", "0") != "0":
+            return
         supported_connectivity = {
             # We currently expect monovalent lone pairs to be applied to something
             # like a carboxyl group, where the parent of the lone pair has a
@@ -3687,10 +3718,11 @@ class VirtualSiteHandler(_NonbondedHandler):
                 f"unsupported by virtual sites of type {parameter.type}. Atom with "
                 f"smirks index={smirks_index} matched topology atom {atom_index} with "
                 f"connectivity={connectivity}, but it was expected to have connectivity "
-                f"{expected_connectivity}. If this is "
-                f"a use case you would like supported, please describe what it is "
-                f"you are trying to do in an issue on the OpenFF Toolkit GitHub: "
-                f"https://github.com/openforcefield/openff-toolkit/issues"
+                f"{expected_connectivity}. If you are getting this error and aren't "
+                f"developing your own force field, it indicates that the FF you're "
+                f"using never expected to see a molecule like this. If you ARE developing "
+                f"a force field and know that you want to squelch this error, set the "
+                f"environment variable `OPENFF_UNSAFE_VSITES=1`."
             )
 
     def check_handler_compatibility(self, other_handler: "VirtualSiteHandler"):
@@ -3839,10 +3871,7 @@ class VirtualSiteHandler(_NonbondedHandler):
         self._parameters = VirtualSiteParameterList()
 
     def __getitem__(self, val):
-        raise NotImplementedError(
-            "VirtualSiteHandler does not support __getitem__ lookups due to the "
-            "number of values required to uniquely identify a specific parameter."
-        )
+        return self.parameters.__getitem__(val)
 
 
 ConstraintType = ConstraintHandler.ConstraintType

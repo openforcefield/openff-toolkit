@@ -14,15 +14,12 @@ Class definitions to represent a molecular system and its chemical components
 
 import re
 from collections import defaultdict
-from collections.abc import MutableMapping
+from collections.abc import Generator, Iterable, Iterator, MutableMapping
 from contextlib import nullcontext
 from copy import deepcopy
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
-    Generator,
-    Iterable,
-    Iterator,
     Literal,
     Optional,
     TextIO,
@@ -31,7 +28,6 @@ from typing import (
 
 import numpy as np
 from numpy.typing import NDArray
-from openff.units import ensure_quantity
 from typing_extensions import TypeAlias
 
 from openff.toolkit import Quantity, unit
@@ -377,7 +373,7 @@ class ImproperDict(_TransformedDict):
             return permutations[key]
 
     def __keytransform__(self, key):
-        return __class__.key_transform(key)  # type: ignore[name-defined]
+        return __class__.key_transform(key)
 
 
 class Topology(Serializable):
@@ -618,6 +614,8 @@ class Topology(Serializable):
             return
         if not hasattr(box_vectors, "units"):
             if hasattr(box_vectors, "unit"):
+                from openff.units import ensure_quantity
+
                 # this is probably an openmm.unit.Quantity; we should gracefully import OpenMM but
                 # the chances of this being an object with the two previous conditions met is low
                 box_vectors = ensure_quantity(box_vectors, "openff")
@@ -703,8 +701,7 @@ class Topology(Serializable):
         # Yields instead of returning the list itself. This prevents user from modifying the list
         # outside the Topology's knowledge. This is essential to make sure that atom index caches
         # invalidate themselves during appropriate events.
-        for molecule in self._molecules:
-            yield molecule
+        yield from self._molecules
 
     def molecule(self, index: int) -> Union[Molecule, _SimpleMolecule]:
         """
@@ -739,8 +736,7 @@ class Topology(Serializable):
         atoms
         """
         for molecule in self._molecules:
-            for atom in molecule.atoms:
-                yield atom
+            yield from molecule.atoms
 
     def atom_index(self, atom: "Atom") -> int:
         """
@@ -831,8 +827,7 @@ class Topology(Serializable):
         bonds
         """
         for molecule in self.molecules:
-            for bond in molecule.bonds:
-                yield bond
+            yield from molecule.bonds
 
     @property
     def n_angles(self) -> int:
@@ -843,8 +838,7 @@ class Topology(Serializable):
     def angles(self) -> Generator[tuple["Atom", ...], None, None]:
         """Iterator over the angles in this Topology. Returns a Generator of tuple[Atom]."""
         for molecule in self._molecules:
-            for angle in molecule.angles:
-                yield angle
+            yield from molecule.angles
 
     @property
     def n_propers(self) -> int:
@@ -855,8 +849,7 @@ class Topology(Serializable):
     def propers(self) -> Generator[tuple[Union["Atom", _SimpleAtom], ...], None, None]:
         """Iterable of tuple[Atom]: iterator over the proper torsions in this Topology."""
         for molecule in self.molecules:
-            for proper in molecule.propers:
-                yield proper
+            yield from molecule.propers
 
     @property
     def n_impropers(self) -> int:
@@ -867,8 +860,7 @@ class Topology(Serializable):
     def impropers(self) -> Generator[tuple["Atom", ...], None, None]:
         """Generator of tuple[Atom]: iterator over the possible improper torsions in this Topology."""
         for molecule in self._molecules:
-            for improper in molecule.impropers:
-                yield improper
+            yield from molecule.impropers
 
     @property
     def smirnoff_impropers(
@@ -908,8 +900,7 @@ class Topology(Serializable):
 
         """
         for molecule in self.molecules:
-            for smirnoff_improper in molecule.smirnoff_impropers:
-                yield smirnoff_improper
+            yield from molecule.smirnoff_impropers
 
     @property
     def amber_impropers(
@@ -940,8 +931,7 @@ class Topology(Serializable):
         impropers, smirnoff_impropers
         """
         for molecule in self.molecules:
-            for amber_improper in molecule.amber_impropers:
-                yield amber_improper
+            yield from molecule.amber_impropers
 
     def nth_degree_neighbors(self, n_degrees: int):
         """
@@ -968,8 +958,7 @@ class Topology(Serializable):
         passed.
         """
         for molecule in self.molecules:
-            for pair in molecule.nth_degree_neighbors(n_degrees=n_degrees):
-                yield pair
+            yield from molecule.nth_degree_neighbors(n_degrees=n_degrees)
 
     class _ChemicalEnvironmentMatch:
         """Represents the match of a given chemical environment query, storing
@@ -1311,8 +1300,18 @@ class Topology(Serializable):
             self.box_vectors = Quantity(box_vectors_unitless, box_vectors_unit)
 
         for molecule_dict in topology_dict["molecules"]:
-            new_mol = Molecule.from_dict(molecule_dict)
+            # the serialized representation doesn't store which molecule model
+            # each of these dicts is meant to be deserialized to. Usually it'll
+            # be Molecule, so try that first. If it's supposed to be a
+            # _SimpleMolecule, it'll KeyError because Molecule has more fields.
+            try:
+                new_mol = Molecule.from_dict(molecule_dict)
+            except KeyError:
+                # masks possible other ways KeyErrors could pop up
+                new_mol = _SimpleMolecule.from_dict(molecule_dict)
+
             self._add_molecule_keep_cache(new_mol)
+
         self._invalidate_cached_properties()
 
     @staticmethod
@@ -1419,7 +1418,7 @@ class Topology(Serializable):
 
         # Convert all unique mols to graphs
         topology = cls()
-        graph_to_unq_mol: dict["Graph", FrozenMolecule] = {}
+        graph_to_unq_mol: dict[Graph, FrozenMolecule] = {}
         for unq_mol in unique_molecules:
             unq_mol_graph = unq_mol.to_networkx()
             for existing_graph in graph_to_unq_mol.keys():
@@ -1435,9 +1434,7 @@ class Topology(Serializable):
                 )[0]:
                     msg = (
                         "Error: Two unique molecules have indistinguishable "
-                        "graphs: {} and {}".format(
-                            unq_mol, graph_to_unq_mol[existing_graph]
-                        )
+                        f"graphs: {unq_mol} and {graph_to_unq_mol[existing_graph]}"
                     )
                     raise DuplicateUniqueMoleculeError(msg)
             graph_to_unq_mol[unq_mol_graph] = unq_mol
@@ -1532,9 +1529,7 @@ class Topology(Serializable):
                 off_atom.metadata["residue_name"] = omm_mol_G.nodes[omm_atom_idx][
                     "residue_name"
                 ]
-                off_atom.metadata["residue_number"] = int(
-                    omm_mol_G.nodes[omm_atom_idx]["residue_id"]
-                )
+                off_atom.metadata["residue_number"] = omm_mol_G.nodes[omm_atom_idx]["residue_id"]
                 off_atom.metadata["insertion_code"] = omm_mol_G.nodes[omm_atom_idx][
                     "insertion_code"
                 ]
@@ -1551,6 +1546,8 @@ class Topology(Serializable):
             topology.box_vectors = from_openmm(openmm_topology.getPeriodicBoxVectors())
 
         if positions is not None:
+            from openff.units import ensure_quantity
+
             topology.set_positions(ensure_quantity(positions, "openff"))
 
         # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?
@@ -1742,7 +1739,7 @@ class Topology(Serializable):
             "proteins/aa_residues_substructures_explicit_bond_orders_with_caps_explicit_connectivity.json"
         )
 
-        with open(substructure_file_path, "r") as subfile:
+        with open(substructure_file_path) as subfile:
             substructure_dictionary = json.load(
                 subfile
             )  # preserving order is useful later when saving metadata
@@ -1782,7 +1779,7 @@ class Topology(Serializable):
                 smi = label_mol.to_smiles(mapped=True)
                 # remove unmapped atoms from mapped smiles. This will catch things like
                 # `[H]` and `[Cl]` but not anything with 3 characters like `[H:1]`
-                smi = re.sub("\[[A-Za-z]{1,2}\]", "[*]", smi)
+                smi = re.sub(r"\[[A-Za-z]{1,2}\]", "[*]", smi)
                 # Remove any orphaned () that remain
                 smi = smi.replace("()", "")
 
@@ -2131,7 +2128,7 @@ class Topology(Serializable):
 
     def set_positions(self, array: Quantity):
         """
-        Set the positions in a topology by copying from a single n×3 array.
+        Set the positions in a topology by copying from a single (n, 3) array.
 
         Note that modifying the original array will not update the positions
         in the topology; it must be passed again to ``set_positions()``.
@@ -2273,7 +2270,7 @@ class Topology(Serializable):
         else:
             raise ValueError(
                 "Invalid input passed to is_bonded(). Expected ints or `Atom`s, "
-                "got {} and {}".format(type(i), type(j))
+                f"got {type(i)} and {type(j)}"
             )
 
         for bond in atomi.bonds:
@@ -2283,7 +2280,7 @@ class Topology(Serializable):
                 if atom == atomj:
                     return bond
 
-        raise NotBondedError("No bond between atom {} and {}".format(i, j))
+        raise NotBondedError(f"No bond between atom {i} and {j}")
 
     def is_bonded(self, i: Union[int, "Atom"], j: Union[int, "Atom"]) -> bool:
         """Returns True if the two atoms are bonded
@@ -2390,15 +2387,56 @@ class Topology(Serializable):
                 return molecule.bond(bond_molecule_index)
             this_molecule_start_index += molecule.n_bonds
 
-    def add_molecule(self, molecule: MoleculeLike) -> int:
-        """Add a copy of the molecule to the topology"""
-        idx = self._add_molecule_keep_cache(molecule)
-        self._invalidate_cached_properties()
-        return idx
+    def add_molecule(
+        self,
+        molecule: MoleculeLike,
+    ) -> int:
+        """
+        Add a molecule to the topology.
+
+        To add multiple molecules, particularly many times, use `add_molecules` for better performance.
+        """
+        if isinstance(molecule, (Molecule, _SimpleMolecule)):
+
+            # Route everything through add_molecules for simplicity; the overhead of
+            # making a list and grabbing the first element should be negligible
+            return self.add_molecules([molecule])[0]
+
+        else:
+
+            raise ValueError(f"Invalid type {type(molecule)} for Topology.add_molecule")
+
+    def add_molecules(
+        self,
+        molecules: list[MoleculeLike],
+    ) -> list[int]:
+        """
+        Add molecules to the topology.
+
+        To add a single molecule to the topology, use `add_molecule`.
+        """
+
+        if isinstance(molecules, list):
+
+            indices = [
+                self._add_molecule_keep_cache(molecule) for molecule in molecules
+            ]
+
+            self._invalidate_cached_properties()
+
+            return indices
+
+        else:
+
+            raise ValueError(
+                f"Invalid type {type(molecules)} for Topology.add_molecules"
+            )
 
     def _add_molecule_keep_cache(self, molecule: MoleculeLike) -> int:
         self._molecules.append(deepcopy(molecule))
-        return len(self._molecules)
+
+        # Ensure this is 0-indexed
+        return len(self._molecules) - 1
 
     def add_constraint(self, iatom, jatom, distance=True):
         """
@@ -2558,8 +2596,7 @@ class Topology(Serializable):
         """
         for molecule in self._molecules:
             if hasattr(molecule, iter_name):
-                for item in getattr(molecule, iter_name):
-                    yield item
+                yield from getattr(molecule, iter_name)
 
     def __getattr__(self, name: str) -> list["HierarchyElement"]:
         """If a requested attribute is not found, check the hierarchy schemes"""
