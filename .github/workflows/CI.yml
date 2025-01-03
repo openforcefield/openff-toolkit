@@ -1,10 +1,11 @@
 name: CI
 
 on:
+  push:
+    branches: [ $default-branch ]
+  pull_request:
+    branches: [ $default-branch ]
   schedule:
-    # Nightly tests run on main by default:
-    #   Scheduled workflows run on the latest commit on the default or base branch.
-    #   (from https://help.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events-schedule)
     - cron: "21 0 * * *"
 
 defaults:
