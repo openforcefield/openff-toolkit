@@ -160,7 +160,7 @@ jobs:
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: |
           pytest openff \
-            -v -x -n logical --no-cov --doctest-modules \
+            -v -n logical --no-cov --doctest-modules \
             --ignore-glob='openff/toolkit/_tests*' \
             --ignore=openff/toolkit/data/ \
             --ignore=openff/toolkit/utils/utils.py
