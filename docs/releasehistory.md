@@ -11,6 +11,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### API-breaking changes
 
 ### Behavior changes
+- [PR #1963](https://github.com/openforcefield/openff-toolkit/pull/1963): Always use `getattr` in lazy loading machinery.
 
 ### Bugfixes
 
@@ -23,6 +24,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### New features
 
 ### Improved documentation and warnings
+
+- [PR #1981](https://github.com/openforcefield/openff-toolkit/pull/1981): Updates documentation to run quicker and use new features, including some in Interchange 0.4.
 
 ## 0.16.7
 
