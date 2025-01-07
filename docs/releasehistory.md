@@ -16,6 +16,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Bugfixes
 
 - [PR #1971](https://github.com/openforcefield/openff-toolkit/pull/1971): Fixes bug where OpenEyeToolkitWrapper would write coordinate-less PDB atoms if insertion_code or chain_id was an empty string ([Issue #1967](https://github.com/openforcefield/openff-toolkit/issues/1967))
+- [PR #1983](https://github.com/openforcefield/openff-toolkit/pull/1983): Fixes issue with implicit hydrogens slipping though checks to result in radicals later. [Issue #936](https://github.com/openforcefield/openff-toolkit/issues/936) and [Issue #1696](https://github.com/openforcefield/openff-toolkit/issues/1696)
 
 ### Performance improvements
 
@@ -30,6 +31,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ## 0.16.7
 
 ### Bugfixes
+
 - [PR #1971](https://github.com/openforcefield/openff-toolkit/pull/1971): Fixes bug where OpenEyeToolkitWrapper would write coordinate-less PDB atoms if insertion_code or chain_id was an empty string ([Issue #1967](https://github.com/openforcefield/openff-toolkit/issues/1967))
 
 ### Tests updated
