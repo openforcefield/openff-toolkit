@@ -1588,7 +1588,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         f"desired molecule as an RDMol with no implicit hydrogens, and then use "
                         f"Molecule.from_rdkit() to create the desired OFFMol."
                     )
-                # Issue #936, #1696, #1697: GetNumExplicitHs() counts the number of hydrogens that are
+                # Issue #936 and #1696: GetNumExplicitHs() counts the number of hydrogens that are
                 # explicitly in the string but not present in the graph. This criteria would apply to
                 # hydrogens inside the brackets descibing a heavy atom, e.g. [NH+].
                 # https://www.rdkit.org/docs/Cookbook.html

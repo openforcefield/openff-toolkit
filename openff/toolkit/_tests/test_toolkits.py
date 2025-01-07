@@ -2257,8 +2257,7 @@ class TestRDKitToolkitWrapper:
         in the graph.
         
         `Issue #936 <https://github.com/openforcefield/openff-toolkit/issues/936>`, 
-        `Issue #1696 <https://github.com/openforcefield/openff-toolkit/issues/1696>`, 
-        `Issue #1697 <https://github.com/openforcefield/openff-toolkit/issues/1697>`
+        `Issue #1696 <https://github.com/openforcefield/openff-toolkit/issues/1696>`,
         """
         toolkit_wrapper = RDKitToolkitWrapper()
         smiles_impl = "[H][C]([H])([H])[NH+]([H])[C]([H])([H])[H]"
