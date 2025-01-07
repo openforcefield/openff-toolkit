@@ -1592,8 +1592,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 # explicitly in the string but not present in the graph. This criteria would apply to
                 # hydrogens inside the brackets descibing a heavy atom, e.g. [NH+].
                 # https://www.rdkit.org/docs/Cookbook.html#explicit-valence-and-number-of-hydrogens
-                # This method is also used in GetTotalNumHs, which returns 
-                # GetNumImplicitHs() + GetNumExplicitHs() + Optionally the number of 
+                # This method is also used in GetTotalNumHs, which returns
+                # GetNumImplicitHs() + GetNumExplicitHs() + Optionally the number of
                 # neighboring hydrogens in the molecular graph.
                 # (see the cookbook link above for more details)
                 elif atom.GetNumExplicitHs() != 0:
