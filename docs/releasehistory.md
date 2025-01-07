@@ -11,6 +11,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### API-breaking changes
 
 ### Behavior changes
+- [PR #1963](https://github.com/openforcefield/openff-toolkit/pull/1963): Always use `getattr` in lazy loading machinery.
 
 ### Bugfixes
 
