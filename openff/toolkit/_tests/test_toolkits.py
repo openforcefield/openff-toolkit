@@ -2255,6 +2255,10 @@ class TestRDKitToolkitWrapper:
         Test to ensure that RDKitToolkitWrapper.from_smiles has the proper behavior with
         respect to its hydrogens_are_explicit kwarg and that a CMILES entry has all hydrogens
         in the graph.
+        
+        `Issue #936 <https://github.com/openforcefield/openff-toolkit/issues/936>`, 
+        `Issue #1696 <https://github.com/openforcefield/openff-toolkit/issues/1696>`, 
+        `Issue #1697 <https://github.com/openforcefield/openff-toolkit/issues/1697>`
         """
         toolkit_wrapper = RDKitToolkitWrapper()
         smiles_impl = "[H][C]([H])([H])[NH+]([H])[C]([H])([H])[H]"

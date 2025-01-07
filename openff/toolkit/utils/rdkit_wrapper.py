@@ -1580,10 +1580,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         elif hydrogens_are_explicit:
             for atom_idx in range(rdmol.GetNumAtoms()):
                 atom = rdmol.GetAtomWithIdx(atom_idx)
-                # Issue #1697: GetTotalNumHs() counts the number of hydrogens that are
-                # not present in the graph, so explicit hydrogens are not counted.
-                # For some reason this isn't the same as the number of Implicit Hydrogens
-                # Likely for cases where only same hydrogens are defined.
                 if atom.GetNumImplicitHs() != 0:
                     raise ValueError(
                         f"'hydrogens_are_explicit' was specified as True, but RDKit toolkit interpreted "
@@ -1592,7 +1588,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         f"desired molecule as an RDMol with no implicit hydrogens, and then use "
                         f"Molecule.from_rdkit() to create the desired OFFMol."
                     )
-                elif atom.GetTotalNumHs() != 0:
+                # Issue #936, #1696, #1697: GetNumExplicitHs() counts the number of hydrogens that are
+                # explicitly in the string but not present in the graph. This criteria would apply to
+                # hydrogens inside the brackets descibing a heavy atom, e.g. [NH+].
+                # https://www.rdkit.org/docs/Cookbook.html
+                # This method is also used in GetTotalNumHs() = GetNumImplicitHs() + GetNumExplicitHs() 
+                # + Optional number of neighboring hydrogens in the molecular graph.
+                elif atom.GetNumExplicitHs() != 0:
                     raise ValueError(
                         "'hydrogens_are_explicit' was specified as True, but RDKit toolkit interpreted "
                         f"the following SMILES as having some nonexplicit hydrogens (e.g., [NH+]): '{smiles}'\n"
