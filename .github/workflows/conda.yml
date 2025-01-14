@@ -1,7 +1,6 @@
 name: Conda latest
 
 on:
-  push:
   release:
     types:
       - released
@@ -98,7 +97,7 @@ jobs:
 
           if [[ $LATEST_TAG != $FOUND_VER ]];
             then echo "Version mismatch"
-            # exit 1
+            exit 1
           fi
 
       - name: Test the package
@@ -115,8 +114,6 @@ jobs:
           PYTEST_ARGS+=" --ignore-glob='*_links.py'"
           PYTEST_ARGS+=" --ignore-glob='*_examples.py'"
           PYTEST_ARGS+=" --ignore-glob='*_nagl.py'"
-
-          env
 
           python -m pytest $PYTEST_ARGS \
             --pyargs "openff.toolkit" \
