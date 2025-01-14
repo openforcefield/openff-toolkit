@@ -1,12 +1,11 @@
 import math
 import uuid
 from io import StringIO
-
 from typing import TYPE_CHECKING, TextIO
 
 from nglview.base_adaptor import Structure, Trajectory
-
 from openff.units import unit
+
 if TYPE_CHECKING:
     from openff.toolkit import Molecule, Topology
 

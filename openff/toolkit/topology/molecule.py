@@ -5564,7 +5564,6 @@ class Molecule(FrozenMolecule):
                     rdDepictor,
                     rdMolDraw2D,
                 )
-                from rdkit.Chem.rdmolops import RemoveHs  # type: ignore[import-untyped]
 
                 rdmol = self.to_rdkit()
 
