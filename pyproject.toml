@@ -50,11 +50,9 @@ testpaths = [
     "openff/toolkit/_tests/",
 ]
 markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')"
+    "slow: marks tests as slow"
 ]
-addopts = [
-    "-m 'not slow'"
-]
+addopts = '-m "not slow"'
 filterwarnings = [
     "ignore:Molecule.from_pdb_and_smiles.*deprecated in favor of .*from_pdb"
 ]
