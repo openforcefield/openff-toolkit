@@ -10,18 +10,6 @@ Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) for
    * Speed up overall import time by putting non-global imports only where they are needed
 
 """
-
-__all__ = [
-    "MAX_SUPPORTED_VERSION",
-    "ForceField",
-    "ParameterHandlerRegistrationError",
-    "PartialChargeVirtualSitesError",
-    "SMIRNOFFAromaticityError",
-    "SMIRNOFFParseError",
-    "SMIRNOFFVersionError",
-    "get_available_force_fields",
-]
-
 import copy
 import logging
 import os
@@ -62,6 +50,18 @@ if TYPE_CHECKING:
     from openff.toolkit.topology.topology import Topology, ValenceDict
     from openff.toolkit.utils.base_wrapper import ToolkitWrapper
     from openff.toolkit.utils.toolkit_registry import ToolkitRegistry
+
+
+__all__ = [
+    "MAX_SUPPORTED_VERSION",
+    "ForceField",
+    "ParameterHandlerRegistrationError",
+    "PartialChargeVirtualSitesError",
+    "SMIRNOFFAromaticityError",
+    "SMIRNOFFParseError",
+    "SMIRNOFFVersionError",
+    "get_available_force_fields",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -1136,6 +1136,17 @@ class ForceField:
             discard_cosmetic_attributes=discard_cosmetic_attributes
         )
         io_handler.to_file(filename, smirnoff_data)
+
+    def combine(self, other: "ForceField") -> "ForceField":
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(suffix=".offxml") as file1, tempfile.NamedTemporaryFile(
+            suffix=".offxml"
+        ) as file2:
+            self.to_file(file1.name)
+            other.to_file(file2.name)
+
+            return ForceField(file1.name, file2.name)
 
     # TODO: Should we also accept a Molecule as an alternative to a Topology?
     @requires_package("openmm")
