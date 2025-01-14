@@ -1054,6 +1054,15 @@ class TestForceField(_ForceFieldFixtures):
         assert 'cosmetic_element="why not?"' not in string_3
         assert 'parameterize_eval="blah=blah2"' not in string_3
 
+    def test_combine_same_force_field(self, force_field):
+        combined = force_field.combine(force_field)
+
+        for handler_name in force_field.registered_parameter_handlers:
+            assert len(combined[handler_name].parameters) == len(force_field[handler_name].parameters)
+
+        assert hash(force_field) == hash(combined)
+
+
     def test_read_0_1_smirnoff(self):
         """Test reading an 0.1 spec OFFXML file"""
         ForceField(
