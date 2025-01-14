@@ -19,39 +19,41 @@ Currently supported toolkits:
    * Change global variables from _INSTALLED to _AVAILABLE
 
 """
+
 __all__ = (
-    "DEFAULT_AROMATICITY_MODEL",
     "ALLOWED_AROMATICITY_MODELS",
-    "DEFAULT_FRACTIONAL_BOND_ORDER_MODEL",
-    "ALLOWED_FRACTIONAL_BOND_ORDER_MODELS",
-    "DEFAULT_CHARGE_MODEL",
     "ALLOWED_CHARGE_MODELS",
-    "IncompatibleUnitError",
-    "MissingPackageError",
-    "ToolkitUnavailableException",
-    "LicenseError",
-    "InvalidToolkitError",
-    "InvalidToolkitRegistryError",
-    "UndefinedStereochemistryError",
-    "GAFFAtomTypeWarning",
-    "ToolkitWrapper",
-    "OpenEyeToolkitWrapper",
-    "RDKitToolkitWrapper",
-    "AmberToolsToolkitWrapper",
-    "BuiltInToolkitWrapper",
-    "ChargeMethodUnavailableError",
-    "IncorrectNumConformersError",
-    "IncorrectNumConformersWarning",
-    "ChargeCalculationError",
-    "InvalidIUPACNameError",
-    "AntechamberNotFoundError",
-    "SMILESParseError",
-    "ToolkitRegistry",
+    "ALLOWED_FRACTIONAL_BOND_ORDER_MODELS",
+    "AMBERTOOLS_AVAILABLE",
+    "BASIC_CHEMINFORMATICS_TOOLKITS",
+    "DEFAULT_AROMATICITY_MODEL",
+    "DEFAULT_CHARGE_MODEL",
+    "DEFAULT_FRACTIONAL_BOND_ORDER_MODEL",
     "GLOBAL_TOOLKIT_REGISTRY",
     "OPENEYE_AVAILABLE",
     "RDKIT_AVAILABLE",
-    "AMBERTOOLS_AVAILABLE",
-    "BASIC_CHEMINFORMATICS_TOOLKITS",
+    "AmberToolsToolkitWrapper",
+    "AntechamberNotFoundError",
+    "BuiltInToolkitWrapper",
+    "ChargeCalculationError",
+    "ChargeMethodUnavailableError",
+    "GAFFAtomTypeWarning",
+    "IncompatibleUnitError",
+    "IncorrectNumConformersError",
+    "IncorrectNumConformersWarning",
+    "InvalidIUPACNameError",
+    "InvalidToolkitError",
+    "InvalidToolkitRegistryError",
+    "LicenseError",
+    "MissingPackageError",
+    "NAGLToolkitWrapper",
+    "OpenEyeToolkitWrapper",
+    "RDKitToolkitWrapper",
+    "SMILESParseError",
+    "ToolkitRegistry",
+    "ToolkitUnavailableException",
+    "ToolkitWrapper",
+    "UndefinedStereochemistryError",
 )
 
 
@@ -85,6 +87,7 @@ from openff.toolkit.utils.exceptions import (
     ToolkitUnavailableException,
     UndefinedStereochemistryError,
 )
+from openff.toolkit.utils.nagl_wrapper import NAGLToolkitWrapper
 from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 from openff.toolkit.utils.rdkit_wrapper import RDKitToolkitWrapper
 from openff.toolkit.utils.toolkit_registry import (
@@ -105,6 +108,62 @@ GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
     ],
     exception_if_unavailable=False,
 )
+"""
+The toolkit registry used by default when no registry or wrapper is specified.
+
+A toolkit registry is a list of toolkit wrappers used to provide functionality
+not implemented by the OpenFF Toolkit itself. Any given functionality is
+requested from each toolkit in order until one is found that provides it. For
+more information, see :py:class:`ToolkitRegistry`.
+
+To temporarily modify the ``GLOBAL_TOOLKIT_REGISTRY``,
+see :py:func:`toolkit_registry_manager`.
+
+Examples
+========
+
+Check the default toolkit precedence order:
+
+>>> from openff.toolkit import GLOBAL_TOOLKIT_REGISTRY
+>>> GLOBAL_TOOLKIT_REGISTRY.registered_toolkits() # doctest: +ELLIPSIS
+[...]
+
+Temporarily change the global toolkit registry:
+
+>>> from openff.toolkit import ToolkitRegistry, RDKitToolkitWrapper
+>>> from openff.toolkit.utils import toolkit_registry_manager
+>>> with toolkit_registry_manager(ToolkitRegistry([RDKitToolkitWrapper]))):
+>>>     GLOBAL_TOOLKIT_REGISTRY
+<ToolkitRegistry containing The RDKit>
+>>>     mol = Molecule.from_smiles("CCO")
+>>> # when the context manager ends, the default registry is back to normal
+>>> GLOBAL_TOOLKIT_REGISTRY
+<ToolkitRegistry containing The RDKit, AmberTools, Built-in Toolkit>
+
+To change the value of ``GLOBAL_TOOLKIT_REGISTRY`` for the remainder of the
+Python process, individual toolkits can be added or removed with
+the :py:meth:`ToolkitRegistry.deregister_toolkit`
+and :py:meth:`ToolkitRegistry.register_toolkit` methods. This can be useful for
+debugging and exploring subtly different behavior between toolkit wrappers:
+
+>>> print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
+4
+>>> GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(RDKitToolkitWrapper)
+>>> print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
+3
+>>> GLOBAL_TOOLKIT_REGISTRY.register_toolkit(RDKitToolkitWrapper)
+>>> print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
+4
+
+Note that as with other global attributes in Python, assigning a new toolkit
+registry to ``GLOBAL_TOOLKIT_REGISTRY`` is quite difficult to get right and very
+likely to fail silently - we recommend modifying the existing value instead in
+most cases.
+
+See Also
+========
+toolkit_registry_manager, ToolkitRegistry, ToolkitWrapper
+"""
 
 
 OPENEYE_AVAILABLE = False
@@ -150,7 +209,6 @@ if not any_toolkits:  # pragma: no cover
     msg += "Please install at least one of the following basic toolkits:\n"
     for wrapper in all_subclasses(ToolkitWrapper):
         if wrapper.toolkit_name is not None:
-            msg += "{} : {}\n".format(
-                wrapper._toolkit_name, wrapper._toolkit_installation_instructions
-            )
+            msg += f"{wrapper._toolkit_name} : {wrapper._toolkit_installation_instructions}\n"
+    # TODO: Make this a warning!?
     print(msg)

@@ -29,7 +29,7 @@ class CallHistory:
         if len(history_entry) == 0:
             cls.history.append(name)
         else:
-            cls.history.append([name] + history_entry)
+            cls.history.append([name, *history_entry])
 
     def instance_callback(self, callbackable, event_name, *args, **kwargs):
         assert isinstance(self, object)

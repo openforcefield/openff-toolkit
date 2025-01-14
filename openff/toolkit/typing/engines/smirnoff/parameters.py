@@ -8,49 +8,50 @@ New pluggable handlers can be created by creating subclasses of :class:`Paramete
 """
 
 __all__ = [
+    "AngleHandler",
+    "AngleType",
+    "BondHandler",
+    "BondType",
+    "ChargeIncrementType",
+    "ConstraintHandler",
+    "ConstraintType",
     "DuplicateParameterError",
     "DuplicateVirtualSiteTypeException",
+    "ElectrostaticsHandler",
     "FractionalBondOrderInterpolationMethodUnsupportedError",
+    "GBSAHandler",
+    "GBSAType",
+    "ImproperTorsionHandler",
+    "ImproperTorsionType",
     "IncompatibleParameterError",
+    "IndexedMappedParameterAttribute",
+    "IndexedParameterAttribute",
+    "LibraryChargeHandler",
+    "LibraryChargeType",
+    "MappedParameterAttribute",
     "NotEnoughPointsForInterpolationError",
+    "ParameterAttribute",
+    "ParameterHandler",
+    "ParameterList",
     "ParameterLookupError",
+    "ParameterType",
+    "ParameterType",
+    "ProperTorsionHandler",
+    "ProperTorsionType",
     "SMIRNOFFSpecError",
     "SMIRNOFFSpecUnimplementedError",
+    "ToolkitAM1BCCHandler",
     "UnassignedAngleParameterException",
     "UnassignedBondParameterException",
     "UnassignedMoleculeChargeException",
     "UnassignedProperTorsionParameterException",
     "UnassignedValenceParameterException",
-    "ParameterList",
-    "ParameterType",
-    "ParameterHandler",
-    "ParameterAttribute",
-    "MappedParameterAttribute",
-    "IndexedParameterAttribute",
-    "IndexedMappedParameterAttribute",
-    "ConstraintHandler",
-    "BondHandler",
-    "AngleHandler",
-    "ProperTorsionHandler",
-    "ImproperTorsionHandler",
-    "ElectrostaticsHandler",
-    "LibraryChargeHandler",
-    "vdWHandler",
-    "GBSAHandler",
-    "ToolkitAM1BCCHandler",
     "VirtualSiteHandler",
-    "ParameterType",
-    "ConstraintType",
-    "BondType",
-    "AngleType",
-    "ProperTorsionType",
-    "ImproperTorsionType",
-    "vdWType",
-    "LibraryChargeType",
-    "GBSAType",
-    "ChargeIncrementType",
     "VirtualSiteType",
+    "vdWHandler",
+    "vdWType",
 ]
+
 import copy
 import functools
 import inspect
@@ -59,7 +60,7 @@ import re
 from collections import defaultdict
 from typing import Any, Callable, Literal, Optional, Union, cast, get_args
 
-import numpy as np
+import numpy
 from openff.units.units import Unit
 from packaging.version import Version
 
@@ -94,6 +95,21 @@ logger = logging.getLogger(__name__)
 _cal_mol_a2 = unit.calorie / unit.mole / unit.angstrom**2
 
 
+# Hack to make Sphinx happy without breaking changes
+class _UNDEFINED:
+    """
+    Marker type for an undeclared default parameter.
+
+    Custom type used by ``ParameterAttribute`` to differentiate between ``None``
+    and undeclared default.
+    """
+
+    pass
+
+
+UNDEFINED = _UNDEFINED
+
+
 def _linear_inter_or_extrapolate(points_dict, x_query):
     """
     Linearly interpolate or extrapolate based on a piecewise linear function
@@ -102,14 +118,14 @@ def _linear_inter_or_extrapolate(points_dict, x_query):
 
     Parameters
     ----------
-    points_dict : dict{float: float or float-valued openff.units.Quantity}
+    points_dict
         A dictionary with each item representing a point, where the key is the X value and the value is the Y value.
-    x_query : float
+    x_query
         The X value of the point to interpolate or extrapolate.
 
     Returns
     -------
-    y_value : float or float-valued openff.units.Quantity
+    y_value
         The result of interpolation/extrapolation.
     """
 
@@ -225,14 +241,14 @@ class ParameterAttribute:
 
     Parameters
     ----------
-    default : object, optional
+    default
         When specified, the descriptor makes this attribute optional by
         attaching a default value to it.
-    unit : openff.units.Quantity, optional
+    unit
         When specified, only quantities with compatible units are allowed
         to be set, and string expressions are automatically parsed into a
         ``Quantity``.
-    converter : callable, optional
+    converter
         An optional function that can be used to convert values before
         setting the attribute.
 
@@ -263,7 +279,7 @@ class ParameterAttribute:
     >>> my_par.attr_required
     Traceback (most recent call last):
     ...
-    AttributeError: 'MyParameter' object has no attribute '_attr_required'
+    AttributeError: 'MyParameter' object has no attribute '_attr_required'. Did you mean: 'attr_required'?
 
     The attribute allow automatic conversion and validation of units.
 
@@ -320,18 +336,20 @@ class ParameterAttribute:
 
     """
 
-    class UNDEFINED:
-        """Custom type used by ``ParameterAttribute`` to differentiate between ``None`` and undeclared default."""
-
-        pass
+    UNDEFINED = UNDEFINED
+    """Marker type for an undeclared default parameter."""
 
     def __init__(
         self,
         default: Any = UNDEFINED,
-        unit: Optional[Unit] = None,
+        unit: Union[Unit, str, None] = None,
         converter: Optional[Callable] = None,
         docstring: str = "",
     ):
+        if isinstance(unit, str):
+            # be careful with module & variable names
+            unit = Unit(unit)
+
         self.default = default
         self._unit = unit
         self._converter = converter
@@ -436,13 +454,13 @@ class IndexedParameterAttribute(ParameterAttribute):
 
     Parameters
     ----------
-    default : object, optional
+    default
         When specified, the descriptor makes this attribute optional by
         attaching a default value to it.
-    unit : openff.units.Quantity, optional
+    unit
         When specified, only sequences of quantities with compatible units
         are allowed to be set.
-    converter : callable, optional
+    converter
         An optional function that can be used to validate and cast each
         element of the sequence before setting the attribute.
 
@@ -513,13 +531,13 @@ class MappedParameterAttribute(ParameterAttribute):
 
     Parameters
     ----------
-    default : object, optional
+    default
         When specified, the descriptor makes this attribute optional by
         attaching a default value to it.
-    unit : openff.units.Quantity, optional
+    unit
         When specified, only sequences of mappings where values are quantities with
         compatible units are allowed to be set.
-    converter : callable, optional
+    converter
         An optional function that can be used to validate and cast each
         component of each element of the sequence before setting the attribute.
 
@@ -568,7 +586,7 @@ class MappedParameterAttribute(ParameterAttribute):
 
 
 class IndexedMappedParameterAttribute(ParameterAttribute):
-    """The attribute of a parameter with an unspecified number of terms, where
+    r"""The attribute of a parameter with an unspecified number of terms, where
     each term is a mapping.
 
     Some parameters can be associated to multiple terms,
@@ -589,13 +607,13 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
 
     Parameters
     ----------
-    default : object, optional
+    default
         When specified, the descriptor makes this attribute optional by
         attaching a default value to it.
-    unit : openff.units.Quantity, optional
+    unit
         When specified, only sequences of mappings where values are quantities with
         compatible units are allowed to be set.
-    converter : callable, optional
+    converter
         An optional function that can be used to validate and cast each
         component of each element of the sequence before setting the attribute.
 
@@ -802,7 +820,7 @@ class _ParameterAttributeHandler:
 
         Parameters
         ----------
-        allow_cosmetic_attributes : bool optional. Default = False
+        allow_cosmetic_attributes
             Whether to permit non-spec kwargs ("cosmetic attributes").
             If True, non-spec kwargs will be stored as an attribute of
             this parameter which can be accessed and written out. Otherwise,
@@ -873,7 +891,7 @@ class _ParameterAttributeHandler:
         # will get fed into setattr
         indexed_mapped_attr_lengths = {}
         reindex = set()
-        reverse = defaultdict(dict)
+        reverse: defaultdict = defaultdict(dict)
 
         kwargs = list(smirnoff_data.keys())
         for kwarg in kwargs:
@@ -993,7 +1011,11 @@ class _ParameterAttributeHandler:
 
         return smirnoff_data
 
-    def to_dict(self, discard_cosmetic_attributes=False, duplicate_attributes=None):
+    def to_dict(
+        self,
+        discard_cosmetic_attributes: bool = False,
+        duplicate_attributes: Optional[list[str]] = None,
+    ) -> dict:
         """
         Convert this object to dict format.
 
@@ -1003,15 +1025,15 @@ class _ParameterAttributeHandler:
 
         Parameters
         ----------
-        discard_cosmetic_attributes : bool, optional. Default = False
+        discard_cosmetic_attributes
             Whether to discard non-spec attributes of this object
-        duplicate_attributes : list of string, optional. Default = None
+        duplicate_attributes
             A list of names of attributes that redundantly decsribe
             data and should be discarded during serializaiton
 
         Returns
         -------
-        smirnoff_dict : dict
+        smirnoff_dict
             The SMIRNOFF-compliant dict representation of this object.
 
         """
@@ -1045,14 +1067,14 @@ class _ParameterAttributeHandler:
                     for key, val in mapping.items():
                         attrib_name_indexed, attrib_name_mapped = attrib_name.split("_")
                         smirnoff_dict[
-                            f"{attrib_name_indexed}{str(idx+1)}_{attrib_name_mapped}{key}"
+                            f"{attrib_name_indexed}{idx + 1!s}_{attrib_name_mapped}{key}"
                         ] = val
             elif attrib_name in indexed_attribs:
                 for idx, val in enumerate(attrib_value):
                     smirnoff_dict[attrib_name + str(idx + 1)] = val
             elif attrib_name in mapped_attribs:
                 for key, val in attrib_value.items():
-                    smirnoff_dict[f"{attrib_name}{str(key)}"] = val
+                    smirnoff_dict[f"{attrib_name}{key!s}"] = val
             elif attrib_name == "version":
                 smirnoff_dict[attrib_name] = str(attrib_value)
             else:
@@ -1083,7 +1105,7 @@ class _ParameterAttributeHandler:
                 return indexed_mapped_attr_value[index][key]
             except (IndexError, KeyError) as err:
                 raise MissingIndexedAttributeError(
-                    f"{str(err)} '{item}' is out of bounds for indexed attribute '{attr_name}'"
+                    f"{err!s} '{item}' is out of bounds for indexed attribute '{attr_name}'"
                 )
 
         # Otherwise, try indexed attribute
@@ -1133,7 +1155,7 @@ class _ParameterAttributeHandler:
                 return
             except (IndexError, KeyError) as err:
                 raise MissingIndexedAttributeError(
-                    f"{str(err)} '{key}' is out of bounds for indexed attribute '{attr_name}'"
+                    f"{err!s} '{key}' is out of bounds for indexed attribute '{attr_name}'"
                 )
 
         # Otherwise, try indexed attribute
@@ -1170,9 +1192,9 @@ class _ParameterAttributeHandler:
 
         Parameters
         ----------
-        attr_name : str
+        attr_name
             Name of the attribute to define for this object.
-        attr_value : str
+        attr_value
             The value of the attribute to define for this object.
 
         """
@@ -1188,7 +1210,7 @@ class _ParameterAttributeHandler:
 
         Parameters
         ----------
-        attr_name : str
+        attr_name
             Name of the cosmetic attribute to delete.
         """
         # TODO: Can we handle this by overriding __delattr__ instead?
@@ -1205,18 +1227,18 @@ class _ParameterAttributeHandler:
 
         Parameters
         ----------
-        attr_name : str
+        attr_name
             The attribute name to check
 
         Returns
         -------
-        is_cosmetic : bool
+        is_cosmetic
             Returns True if the attribute is defined and is cosmetic. Returns False otherwise.
         """
         return attr_name in self._cosmetic_attribs
 
     @staticmethod
-    def _split_attribute_index(item):
+    def _split_attribute_index(item: str) -> tuple[str, Optional[int]]:
         """Split the attribute name from the final index.
 
         For example, the method takes 'k2' and returns the tuple ('k', 1).
@@ -1228,13 +1250,15 @@ class _ParameterAttributeHandler:
         if match is None:
             return item, None
 
-        index = match.group()  # This is a str.
-        attr_name = item[: -len(index)]
+        _index: str = match.group()  # This is a str.
+        attr_name = item[: -len(_index)]
         index = int(match.group()) - 1
         return attr_name, index
 
     @staticmethod
-    def _split_attribute_index_mapping(item):
+    def _split_attribute_index_mapping(
+        item: str,
+    ) -> tuple[str, Optional[int], Optional[int]]:
         """Split the attribute name from the final index.
 
         For example, the method takes 'k1_bondorder2' and returns the tuple ('k_bondorder', 0, 2).
@@ -1253,20 +1277,23 @@ class _ParameterAttributeHandler:
 
         # process indexed component
         match_indexed = re.search(i_match, indexed)
-        index = match_indexed.group()  # This is a str.
-        attr_name = indexed[: -len(index)]
-        index = int(index) - 1
+        assert match_indexed is not None
+        _index: str = match_indexed.group()
+        attr_name = indexed[: -len(_index)]
+        index = int(_index) - 1
 
         # process mapped component
         match_mapping = re.search(i_match, mapped)
-        key = match_mapping.group()  # This is a str.
-        attr_name = f"{attr_name}_{mapped[:-len(key)]}"
-        key = int(key)  # we don't subtract 1 here, because these are keys, not indices
+        assert match_mapping is not None
+        _key: str = match_mapping.group()
+        attr_name = f"{attr_name}_{mapped[:-len(_key)]}"
+        # we don't subtract 1 here, because these are keys, not indices
+        key = int(_key)
 
         return attr_name, index, key
 
     @staticmethod
-    def _split_attribute_mapping(item):
+    def _split_attribute_mapping(item: str) -> tuple[str, Optional[int]]:
         """Split the attribute name from the and its mapping.
 
         For example, the method takes 'k_foo2' and returns the tuple ('k_foo', 2).
@@ -1281,9 +1308,9 @@ class _ParameterAttributeHandler:
         if match_mapping is None:
             return item, None
 
-        key = match_mapping.group()
-        attr_name = item[: -len(key)]
-        key = int(key)
+        _key = match_mapping.group()
+        attr_name = item[: -len(_key)]
+        key = int(_key)
 
         return attr_name, key
 
@@ -1301,14 +1328,14 @@ class _ParameterAttributeHandler:
 
         Parameters
         ----------
-        filter : Callable, optional
+        filter
             An optional function with signature filter(ParameterAttribute) -> bool.
             If specified, only attributes for which this functions returns
             True are returned.
 
         Returns
         -------
-        parameter_attributes : dict[str, ParameterAttribute]
+        parameter_attributes[str, ParameterAttribute]
             A map from the name of the controlled parameter to the
             ParameterAttribute descriptor handling it.
 
@@ -1410,14 +1437,17 @@ class ParameterList(list):
 
     # TODO: Allow retrieval by `id` as well
 
-    def __init__(self, input_parameter_list=None):
+    def __init__(
+        self,
+        input_parameter_list: Optional[list["ParameterType"]] = None,
+    ):
         """
         Initialize a new ParameterList, optionally providing a list of ParameterType objects
         to initially populate it.
 
         Parameters
         ----------
-        input_parameter_list: list[ParameterType], default=None
+        input_parameter_list
             A pre-existing list of ParameterType-based objects. If None, this ParameterList
             will be initialized empty.
         """
@@ -1434,7 +1464,7 @@ class ParameterList(list):
 
         Parameters
         ----------
-        parameter : a ParameterType object
+        parameter
 
         """
         # TODO: Ensure that newly added parameter is the same type as existing?
@@ -1446,7 +1476,7 @@ class ParameterList(list):
 
         Parameters
         ----------
-        other : a ParameterList
+        other
 
         """
         if not isinstance(other, ParameterList):
@@ -1458,19 +1488,23 @@ class ParameterList(list):
         # TODO: Check if other ParameterList contains the same ParameterTypes?
         super().extend(other)
 
-    def index(self, item):
+    def index(self, item, start=None, stop=None):
         """
         Get the numerical index of a ParameterType object or SMIRKS in this ParameterList.
         Raises ParameterLookupError if the item is not found.
 
         Parameters
         ----------
-        item : ParameterType object or str
+        item
             The parameter or SMIRKS to look up in this ParameterList
+        start
+            Unsupported, added to align method signature with list.index
+        stop
+            Unsupported, added to align method signature with list.index
 
         Returns
         -------
-        index : int
+        index
             The index of the found item
 
         Raises
@@ -1478,10 +1512,18 @@ class ParameterList(list):
         ParameterLookupError if SMIRKS pattern is passed in but not found
 
         """
+        if start is not None:
+            raise TypeError(
+                "ParameterList.index does not support non-None values for start."
+            )
+        if stop is not None:
+            raise TypeError(
+                "ParameterList.index does not support non-None values for stop."
+            )
         if isinstance(item, ParameterType):
             return super().index(item)
         else:
-            for parameter in self:
+            for parameter in self[::-1]:
                 if parameter.smirks == item:
                     return self.index(parameter)
             raise ParameterLookupError(f"SMIRKS {item} not found in ParameterList")
@@ -1492,9 +1534,9 @@ class ParameterList(list):
 
         Parameters
         ----------
-        index : int
+        index
             The numerical position to insert the parameter at
-        parameter : a ParameterType object
+        parameter
             The parameter to insert
         """
         # TODO: Ensure that newly added parameter is the same type as existing?
@@ -1506,7 +1548,7 @@ class ParameterList(list):
 
         Parameters
         ----------
-        item : str or int
+        item
             SMIRKS or numerical index of item in this ParameterList
         """
         if type(item) is int:
@@ -1516,24 +1558,23 @@ class ParameterList(list):
             index = self.index(item)
         super().__delitem__(index)
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: Union[int, slice, str, "ParameterType"]):  # type: ignore[override]
         """
-        Retrieve item by index or SMIRKS
+        Retrieve item by index or SMIRKS. If multiple parameters have the same
+        SMIRKS, this returns the last one.
 
         Parameters
         ----------
-        item : str or int
+        item
             SMIRKS or numerical index of item in this ParameterList
         """
-        if type(item) is int:
-            index = item
-        elif type(item) is slice:
-            index = item
+        if type(item) in (int, slice):
+            indexable_item: Union[int, slice] = item  # type: ignore[assignment]
         elif isinstance(item, str):
-            index = self.index(item)
-        elif isinstance(item, ParameterType) or issubclass(item, ParameterType):
+            indexable_item = self.index(item)
+        elif isinstance(item, ParameterType) or issubclass(type(item), ParameterType):
             raise ParameterLookupError("Lookup by instance is not supported")
-        return super().__getitem__(index)
+        return super().__getitem__(indexable_item)
 
     # TODO: Override __setitem__ and __del__ to ensure we can slice by SMIRKS as well
     # This is needed for pickling. See https://github.com/openforcefield/openff-toolkit/issues/411
@@ -1548,7 +1589,7 @@ class ParameterList(list):
 
         Parameters
         ----------
-        item : str
+        item
             SMIRKS of item in this ParameterList
         """
         if isinstance(item, str):
@@ -1565,7 +1606,7 @@ class ParameterList(list):
         Parameters
         ----------
 
-        discard_cosmetic_attributes : bool, optional. Default = True
+        discard_cosmetic_attributes
             Whether to discard non-spec attributes of each ParameterType object.
 
         Returns
@@ -1584,9 +1625,30 @@ class ParameterList(list):
         return parameter_list
 
 
+class VirtualSiteParameterList(ParameterList):
+    def __getitem__(self, val: Union[int, slice, str, "ParameterType"]):  # type: ignore[override]
+        indexable_item: Union[int, slice]
+
+        if isinstance(val, int):
+            indexable_item = val
+        elif isinstance(val, slice):
+            assert (
+                type(val.start) is int and type(val.stop) is int
+            ), "slices must be based on ints"
+            indexable_item = val
+        else:
+            raise NotImplementedError(
+                "VirtualSiteHandler does not support __getitem__ lookups "
+                f"of this type ({type(val)=}) due to the "
+                "number of values required to uniquely identify a specific parameter."
+            )
+
+        return super().__getitem__(indexable_item)
+
+
 # TODO: Rename to better reflect role as parameter base class?
 class ParameterType(_ParameterAttributeHandler):
-    """
+    r"""
     Base class for SMIRNOFF parameter types.
 
     This base class provides utilities to create new parameter types. See
@@ -1596,11 +1658,11 @@ class ParameterType(_ParameterAttributeHandler):
 
     Attributes
     ----------
-    smirks : str
+    smirks
         The SMIRKS pattern that this parameter matches.
-    id : str or None
+    id
         An optional identifier for the parameter.
-    parent_id : str or None
+    parent_id
         Optionally, the identifier of the parameter of which this parameter
         is a specialization.
 
@@ -1723,9 +1785,9 @@ class ParameterType(_ParameterAttributeHandler):
 
         Parameters
         ----------
-        smirks : str
+        smirks
             The SMIRKS match for the provided parameter type.
-        allow_cosmetic_attributes : bool optional. Default = False
+        allow_cosmetic_attributes
             Whether to permit non-spec kwargs ("cosmetic attributes"). If True, non-spec kwargs will be stored as
             an attribute of this parameter which can be accessed and written out. Otherwise an exception will
             be raised.
@@ -1822,13 +1884,13 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Parameters
         ----------
-        allow_cosmetic_attributes : bool, optional. Default = False
+        allow_cosmetic_attributes
             Whether to permit non-spec kwargs. If True, non-spec kwargs will be stored as attributes of this object
             and can be accessed and modified. Otherwise an exception will be raised if a non-spec kwarg is encountered.
         skip_version_check: bool, optional. Default = False
             If False, the SMIRNOFF section version will not be checked, and the ParameterHandler will be initialized
             with version set to _MAX_SUPPORTED_SECTION_VERSION.
-        **kwargs : dict
+        **kwargs
             The dict representation of the SMIRNOFF data source
 
         """
@@ -1854,9 +1916,9 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Parameters
         ----------
-        section_dict : dict
+        section_dict
             The dict representation of a SMIRNOFF data source containing parameters to att to this ParameterHandler
-        allow_cosmetic_attributes : bool, optional. Default = False
+        allow_cosmetic_attributes
             Whether to allow non-spec fields in section_dict. If True, non-spec kwargs will be stored as an
             attribute of the parameter. If False, non-spec kwargs will raise an exception.
 
@@ -1891,7 +1953,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Returns
         -------
-        handler_name : str
+        handler_name
             The name of this parameter handler
 
         """
@@ -1911,7 +1973,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Parameters
         ----------
-        handler_kwargs : dict
+        handler_kwargs
             The kwargs that would be used to construct
 
         Raises
@@ -1959,22 +2021,30 @@ class ParameterHandler(_ParameterAttributeHandler):
 
     # TODO: Can we ensure SMIRKS and other parameters remain valid after manipulation?
     def add_parameter(
-        self, parameter_kwargs=None, parameter=None, after=None, before=None
+        self,
+        parameter_kwargs: Optional[dict] = None,
+        parameter: Optional[ParameterType] = None,
+        after: Optional[str] = None,
+        before: Optional[str] = None,
+        allow_duplicate_smirks: bool = False,
     ):
         """Add a parameter to the force field, ensuring all parameters are valid.
 
         Parameters
         ----------
-        parameter_kwargs: dict, optional
+        parameter_kwargs
             The kwargs to pass to the ParameterHandler.INFOTYPE (a ParameterType) constructor
-        parameter: ParameterType, optional
+        parameter
             A ParameterType to add to the ParameterHandler
-        after : str or int, optional
+        after
             The SMIRKS pattern (if str) or index (if int) of the parameter directly before where
             the new parameter will be added
-        before : str, optional
+        before
             The SMIRKS pattern (if str) or index (if int) of the parameter directly after where
             the new parameter will be added
+        allow_duplicate_smirks
+            If False, a DuplicateParameterError will be raised if the parameter being added has
+            a SMIRKS that already appears in another parameter owned by this ParameterHandler.
 
         Note the following behavior:
           * Either `parameter_kwargs` or `parameter` must be specified.
@@ -2017,15 +2087,20 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         # If a dict was passed, construct it; if a ParameterType was passed, do nothing
         if parameter_kwargs:
-            new_parameter = self._INFOTYPE(**parameter_kwargs)
+            # here we are using the INFOTYPE to construct a new parameter
+            # and at this poitn we expect parameter_kwargs to be a dict
+            new_parameter = self._INFOTYPE(**parameter_kwargs)  # type: ignore[misc]
         elif parameter:
             new_parameter = parameter
         else:
             raise ValueError("One of (parameter, parameter_kwargs) must be specified")
 
-        if self._index_of_parameter(new_parameter) is not None:
-            msg = f"A parameter SMIRKS pattern {new_parameter.smirks} already exists."
-            raise DuplicateParameterError(msg)
+        if not allow_duplicate_smirks:
+            if self._index_of_parameter(new_parameter) is not None:
+                msg = (
+                    f"A parameter SMIRKS pattern {new_parameter.smirks} already exists."
+                )
+                raise DuplicateParameterError(msg)
 
         before_index, after_index = None, None
 
@@ -2042,11 +2117,11 @@ class ParameterHandler(_ParameterAttributeHandler):
                 after_index = self._index_of_parameter(key=after)
 
         if None not in (before, after):
-            if after_index > before_index:
+            if after_index > before_index:  # type: ignore[operator]
                 raise ValueError("before arg must be before after arg")
 
         if after is not None:
-            self._parameters.insert(after_index + 1, new_parameter)
+            self._parameters.insert(after_index + 1, new_parameter)  # type: ignore[operator]
         elif before is not None:
             self._parameters.insert(before_index, new_parameter)
         else:
@@ -2060,12 +2135,12 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         Parameters
         ----------
-        parameter_attrs : dict of {attr: value}
+        parameter_attrs
             The attrs mapped to desired values (for example {"smirks": "[*:1]~[#16:2]=,:[#6:3]~[*:4]", "id": "t105"} )
 
         Returns
         -------
-        params : list of ParameterType objects
+        params
             A list of matching ParameterType objects
 
         Examples
@@ -2118,7 +2193,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             """Topology._ChemicalEnvironmentMatch: The environment which matched the type."""
             return self._environment_match
 
-        def __init__(self, parameter_type, environment_match):
+        def __init__(self, parameter_type: ParameterType, environment_match):
             """Constructs a new ParameterHandlerMatch object.
 
             Parameters
@@ -2131,20 +2206,20 @@ class ParameterHandler(_ParameterAttributeHandler):
             self._parameter_type = parameter_type
             self._environment_match = environment_match
 
-    def find_matches(self, entity, unique=False):
+    def find_matches(self, entity: Topology, unique: bool = False) -> ValenceDict:
         """Find the elements of the topology/molecule matched by a parameter type.
 
         Parameters
         ----------
-        entity : openff.toolkit.topology.Topology
+        entity
             Topology to search.
-        unique : bool, default=False
+        unique
             If False, SMARTS matching will enumerate every valid permutation of matching atoms.
             If True, only one order of each unique match will be returned.
 
         Returns
         ---------
-        matches : ValenceDict[tuple[int], ParameterHandler._Match]
+        matches
             ``matches[atom_indices]`` is the ``ParameterType`` object
             matching the tuple of atom indices in ``entity``.
         """
@@ -2153,27 +2228,27 @@ class ParameterHandler(_ParameterAttributeHandler):
 
     def _find_matches(
         self,
-        entity,
-        transformed_dict_cls=ValenceDict,
+        entity: Topology,
+        transformed_dict_cls: type = ValenceDict,
         unique=False,
     ):
         """Implement find_matches() and allow using a difference valence dictionary.
         Parameters
         ----------
-        entity : openff.toolkit.topology.Topology
+        entity
             Topology to search.
         transformed_dict_cls: class
             The type of dictionary to store the matches in. This
             will determine how groups of atom indices are stored
             and accessed (e.g for angles indices should be 0-1-2
             and not 2-1-0).
-        unique : bool, default=False
+        unique
             If False, SMARTS matching will enumerate every valid permutation of matching atoms.
             If True, only one order of each unique match will be returned.
 
         Returns
         ---------
-        matches : `transformed_dict_cls` of ParameterHandlerMatch
+        matches
             ``matches[atom_indices]`` is the ``ParameterType`` object
             matching the tuple of atom indices in ``entity``.
         """
@@ -2193,17 +2268,15 @@ class ParameterHandler(_ParameterAttributeHandler):
             ):
                 # Update the matches for this parameter type.
                 handler_match = self._Match(parameter_type, environment_match)
-                matches_for_this_type[
-                    environment_match.topology_atom_indices
-                ] = handler_match
+                matches_for_this_type[environment_match.topology_atom_indices] = (
+                    handler_match
+                )
 
             # Update matches of all parameter types.
             matches.update(matches_for_this_type)
 
             logger.debug(
-                "{:64} : {:8} matches".format(
-                    parameter_type.smirks, len(matches_for_this_type)
-                )
+                f"{parameter_type.smirks:64} : {len(matches_for_this_type):8} matches"
             )
 
         logger.debug(f"{len(matches)} matches identified")
@@ -2254,18 +2327,18 @@ class ParameterHandler(_ParameterAttributeHandler):
             "`ParameterHandler`s no longer create OpenMM forces. Use `openff-interchange` instead."
         )
 
-    def to_dict(self, discard_cosmetic_attributes=False):
+    def to_dict(self, discard_cosmetic_attributes: bool = False) -> dict:  # type: ignore[override]
         """
         Convert this ParameterHandler to a dict, compliant with the SMIRNOFF data spec.
 
         Parameters
         ----------
-        discard_cosmetic_attributes : bool, optional. Default = False.
+        discard_cosmetic_attributes
             Whether to discard non-spec parameter and header attributes in this ParameterHandler.
 
         Returns
         -------
-        smirnoff_data : dict
+        smirnoff_data
             SMIRNOFF-spec compliant representation of this ParameterHandler and its internal ParameterList.
 
         """
@@ -2290,17 +2363,23 @@ class ParameterHandler(_ParameterAttributeHandler):
         return smirnoff_data
 
     def _check_attributes_are_equal(
-        self, other, identical_attrs=(), tolerance_attrs=(), tolerance=1e-6
+        self,
+        other: "ParameterHandler",
+        identical_attrs: tuple[str, ...] = tuple(),
+        tolerance_attrs: tuple[str, ...] = tuple(),
+        tolerance: float = 1e-6,
     ):
         """Utility function to check that the given attributes of the two handlers are equal.
 
         Parameters
         ----------
-        identical_attrs :list[str]
+        other
+            The other handler
+        identical_attrs
             Names of the parameters that must be checked with the equality operator.
-        tolerance_attrs :list[str]
+        tolerance_attrs
             Names of the parameters that must be equal up to a tolerance.
-        tolerance : float
+        tolerance
             The absolute tolerance used to compare the parameters.
         """
 
@@ -2344,15 +2423,13 @@ class ParameterHandler(_ParameterAttributeHandler):
                 )
             if abs(this_val - other_val) > tolerance:
                 raise IncompatibleParameterError(
-                    "Difference between '{}' values is beyond allowed tolerance {}. "
-                    "(handler value: {}, incompatible value: {}".format(
-                        attr, tolerance, this_val, other_val
-                    )
+                    f"Difference between '{attr}' values is beyond allowed tolerance {tolerance}. "
+                    f"(handler value: {this_val}, incompatible value: {other_val}"
                 )
 
     def __getitem__(self, val):
         """
-        Syntax sugar for lookikng up a ParameterType in a ParameterHandler
+        Syntax sugar for looking up a ParameterType in a ParameterHandler
         based on its SMIRKS.
         """
         return self.parameters[val]
@@ -2480,24 +2557,24 @@ class BondHandler(ParameterHandler):
         elif self.version == Version("0.4") and "potential" not in kwargs:
             self.potential = "(k/2)*(r-length)^2"
 
-    def check_handler_compatibility(self, other_handler):
+    def check_handler_compatibility(self, other_handler: "BondHandler"):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
         ----------
-        other_handler : a ParameterHandler object
+        other_handler
             The handler to compare to.
 
         Raises
         ------
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
-        string_attrs_to_compare = [
+        string_attrs_to_compare = (
             "fractional_bondorder_method",
             "fractional_bondorder_interpolation",
-        ]
+        )
         self._check_attributes_are_equal(
             other_handler, identical_attrs=string_attrs_to_compare
         )
@@ -2541,21 +2618,21 @@ class AngleHandler(ParameterHandler):
 
     potential = ParameterAttribute(default="harmonic")
 
-    def check_handler_compatibility(self, other_handler):
+    def check_handler_compatibility(self, other_handler: "AngleHandler"):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
         ----------
-        other_handler : a ParameterHandler object
+        other_handler
             The handler to compare to.
 
         Raises
         ------
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
-        string_attrs_to_compare = ["potential"]
+        string_attrs_to_compare = ("potential",)
         self._check_attributes_are_equal(
             other_handler, identical_attrs=string_attrs_to_compare
         )
@@ -2601,21 +2678,21 @@ class ProperTorsionHandler(ParameterHandler):
         default="linear", converter=_allow_only(["linear"])
     )
 
-    def check_handler_compatibility(self, other_handler):
+    def check_handler_compatibility(self, other_handler: "ProperTorsionHandler"):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
         ----------
-        other_handler : a ParameterHandler object
+        other_handler
             The handler to compare to.
 
         Raises
         ------
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
-        float_attrs_to_compare = []
+        float_attrs_to_compare = list()
         string_attrs_to_compare = [
             "potential",
             "fractional_bondorder_method",
@@ -2629,8 +2706,8 @@ class ProperTorsionHandler(ParameterHandler):
 
         self._check_attributes_are_equal(
             other_handler,
-            identical_attrs=string_attrs_to_compare,
-            tolerance_attrs=float_attrs_to_compare,
+            identical_attrs=tuple(string_attrs_to_compare),
+            tolerance_attrs=tuple(float_attrs_to_compare),
         )
 
 
@@ -2663,21 +2740,21 @@ class ImproperTorsionHandler(ParameterHandler):
     )
     default_idivf = ParameterAttribute(default="auto")
 
-    def check_handler_compatibility(self, other_handler):
+    def check_handler_compatibility(self, other_handler: "ImproperTorsionHandler"):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
         ----------
-        other_handler : a ParameterHandler object
+        other_handler
             The handler to compare to.
 
         Raises
         ------
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
-        float_attrs_to_compare = []
+        float_attrs_to_compare = list()
         string_attrs_to_compare = ["potential"]
 
         if self.default_idivf == "auto":
@@ -2687,8 +2764,8 @@ class ImproperTorsionHandler(ParameterHandler):
 
         self._check_attributes_are_equal(
             other_handler,
-            identical_attrs=string_attrs_to_compare,
-            tolerance_attrs=float_attrs_to_compare,
+            identical_attrs=tuple(string_attrs_to_compare),
+            tolerance_attrs=tuple(float_attrs_to_compare),
         )
 
     def find_matches(self, entity, unique=False):
@@ -2696,12 +2773,12 @@ class ImproperTorsionHandler(ParameterHandler):
 
         Parameters
         ----------
-        entity : openff.toolkit.topology.Topology
+        entity
             Topology to search.
 
         Returns
         ---------
-        matches : ImproperDict[tuple[int], ParameterHandler._Match]
+        matches
             ``matches[atom_indices]`` is the ``ParameterType`` object
             matching the 4-tuple of atom indices in ``entity``.
 
@@ -2868,28 +2945,28 @@ class vdWHandler(_NonbondedHandler):
     # Tolerance when comparing float attributes for handler compatibility.
     _SCALETOL = 1e-5
 
-    def check_handler_compatibility(self, other_handler):
+    def check_handler_compatibility(self, other_handler: "vdWHandler"):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
         ----------
-        other_handler : a ParameterHandler object
+        other_handler
             The handler to compare to.
 
         Raises
         ------
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
-        float_attrs_to_compare = ["scale12", "scale13", "scale14", "scale15"]
-        string_attrs_to_compare = [
+        float_attrs_to_compare = ("scale12", "scale13", "scale14", "scale15")
+        string_attrs_to_compare = (
             "potential",
             "combining_rules",
             "periodic_method",
             "nonperiodic_method",
-        ]
-        unit_attrs_to_compare = ["cutoff", "switch_width"]
+        )
+        unit_attrs_to_compare = ("cutoff", "switch_width")
 
         self._check_attributes_are_equal(
             other_handler,
@@ -3058,27 +3135,32 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 )
         super().__init__(**kwargs)
 
-    def check_handler_compatibility(self, other_handler):
+    def check_handler_compatibility(self, other_handler: "ElectrostaticsHandler"):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
         ----------
-        other_handler : a ParameterHandler object
+        other_handler
             The handler to compare to.
 
         Raises
         ------
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
-        float_attrs_to_compare = ["scale12", "scale13", "scale14", "scale15"]
-        string_attrs_to_compare = [
+        float_attrs_to_compare = (
+            "scale12",
+            "scale13",
+            "scale14",
+            "scale15",
+        )
+        string_attrs_to_compare = (
             "periodic_potential",
             "nonperiodic_potential",
             "exception_potential",
-        ]
-        unit_attrs_to_compare = ["cutoff", "switch_width"]
+        )
+        unit_attrs_to_compare = ("cutoff", "switch_width")
 
         self._check_attributes_are_equal(
             other_handler,
@@ -3123,18 +3205,18 @@ class LibraryChargeHandler(_NonbondedHandler):
 
             Parameters
             ----------
-            molecule : openff.toolkit.topology.molecule.Molecule
+            molecule
                 The molecule to create the LibraryChargeType from. The molecule must have partial charges.
 
             Returns
             -------
-            library_charge_type : LibraryChargeType
+            library_charge_type
                 A LibraryChargeType that is expected to match this molecule and its partial charges.
 
             Raises
             ------
 
-            MissingPartialChargesError : If the input molecule does not have partial charges.
+            MissingPartialChargesError
             """
             if molecule.partial_charges is None:
                 raise MissingPartialChargesError(
@@ -3157,12 +3239,12 @@ class LibraryChargeHandler(_NonbondedHandler):
 
         Parameters
         ----------
-        entity : openff.toolkit.topology.Topology
+        entity
             Topology to search.
 
         Returns
         ---------
-        matches : ValenceDict[tuple[int], ParameterHandler._Match]
+        matches
             ``matches[atom_indices]`` is the ``ParameterType`` object
             matching the tuple of atom indices in ``entity``.
         """
@@ -3185,7 +3267,9 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
     _KWARGS = ["toolkit_registry"]  # Kwargs to catch when create_force is called
 
     def check_handler_compatibility(
-        self, other_handler, assume_missing_is_default=True
+        self,
+        other_handler: "ToolkitAM1BCCHandler",
+        assume_missing_is_default: bool = True,
     ):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
@@ -3193,8 +3277,9 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
 
         Parameters
         ----------
-        other_handler : a ParameterHandler object
+        other_handler
             The handler to compare to.
+        assume_missing_is_default
 
         Raises
         ------
@@ -3252,7 +3337,9 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
     partial_charge_method = ParameterAttribute(default="AM1-Mulliken", converter=str)
 
     def check_handler_compatibility(
-        self, other_handler, assume_missing_is_default=True
+        self,
+        other_handler: "ChargeIncrementModelHandler",
+        assume_missing_is_default: bool = True,
     ):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
@@ -3260,16 +3347,17 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
         Parameters
         ----------
-        other_handler : a ParameterHandler object
+        other_handler
             The handler to compare to.
+        assume_missing_is_default
 
         Raises
         ------
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
 
-        int_attrs_to_compare = ["number_of_conformers"]
-        string_attrs_to_compare = ["partial_charge_method"]
+        int_attrs_to_compare = ("number_of_conformers",)
+        string_attrs_to_compare = ("partial_charge_method",)
 
         self._check_attributes_are_equal(
             other_handler,
@@ -3281,12 +3369,12 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
         Parameters
         ----------
-        entity : openff.toolkit.topology.Topology
+        entity
             Topology to search.
 
         Returns
         ---------
-        matches : ValenceDict[tuple[int], ParameterHandler._Match]
+        matches
             ``matches[atom_indices]`` is the ``ParameterType`` object
             matching the tuple of atom indices in ``entity``.
         """
@@ -3340,23 +3428,23 @@ class GBSAHandler(ParameterHandler):
     # Tolerance when comparing float attributes for handler compatibility.
     _SCALETOL = 1e-5
 
-    def check_handler_compatibility(self, other_handler):
+    def check_handler_compatibility(self, other_handler: "GBSAHandler"):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
 
         Parameters
         ----------
-        other_handler : a ParameterHandler object
+        other_handler
             The handler to compare to.
 
         Raises
         ------
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
-        float_attrs_to_compare = ["solvent_dielectric", "solute_dielectric"]
-        string_attrs_to_compare = ["gb_model", "sa_model"]
-        unit_attrs_to_compare = ["surface_area_penalty", "solvent_radius"]
+        float_attrs_to_compare = ("solvent_dielectric", "solute_dielectric")
+        string_attrs_to_compare = ("gb_model", "sa_model")
+        unit_attrs_to_compare = ("surface_area_penalty", "solvent_radius")
 
         self._check_attributes_are_equal(
             other_handler,
@@ -3374,23 +3462,176 @@ _VirtualSiteType = Literal[
 ]
 
 
+class _BaseVirtualSiteType(ParameterType):
+    """
+    Handle virtual site parameters, including geometry and electrostatics, but not vdW interactions.
+
+    .. warning :: This API is experimental and subject to change.
+    """
+
+    _ELEMENT_NAME = "VirtualSite"
+
+    name = ParameterAttribute(default="EP", converter=str)
+    type = ParameterAttribute(converter=str)
+
+    match = ParameterAttribute(converter=str)
+
+    distance = ParameterAttribute(unit=unit.angstrom)
+    outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
+    inPlaneAngle = ParameterAttribute(unit=unit.degree)
+
+    charge_increment = IndexedParameterAttribute(unit=unit.elementary_charge)
+
+    @property
+    def parent_index(self) -> int:
+        """Returns the index of the atom matched by the SMIRKS pattern that should
+        be considered the 'parent' to the virtual site.
+        A value of ``0`` corresponds to the atom matched by the ``:1`` selector in
+        the SMIRKS pattern, a value ``2`` the atom matched by ``:2`` and so on.
+        """
+        return self.type_to_parent_index(self.type)
+
+    @classmethod
+    def type_to_parent_index(cls, type_: _VirtualSiteType) -> int:
+        """Returns the index of the atom matched by the SMIRKS pattern that should
+        be considered the 'parent' to a given type of virtual site.
+        A value of ``0`` corresponds to the atom matched by the ``:1`` selector in
+        the SMIRKS pattern, a value ``2`` the atom matched by ``:2`` and so on.
+        """
+
+        if type_.replace("VirtualSite", "") in get_args(_VirtualSiteType):
+            return 0
+
+        raise NotImplementedError()
+
+    @outOfPlaneAngle.converter  # type: ignore[no-redef]
+    def outOfPlaneAngle(self, attr, value):
+        if value == "None":
+            return
+
+        supports_out_of_plane_angle = self._supports_out_of_plane_angle(self.type)
+
+        if not supports_out_of_plane_angle and value is not None:
+            raise SMIRNOFFSpecError(
+                f"'{self.type}' sites do not support `outOfPlaneAngle`"
+            )
+        elif supports_out_of_plane_angle:
+            return _validate_units(attr, value, unit.degrees)
+
+        return value
+
+    @inPlaneAngle.converter  # type: ignore[no-redef]
+    def inPlaneAngle(self, attr, value):
+        if value == "None":
+            return
+
+        supports_in_plane_angle = self._supports_in_plane_angle(self.type)
+
+        if not supports_in_plane_angle and value is not None:
+            raise SMIRNOFFSpecError(
+                f"'{self.type}' sites do not support `inPlaneAngle`"
+            )
+        elif supports_in_plane_angle:
+            return _validate_units(attr, value, unit.degrees)
+
+        return value
+
+    def __init__(self, **kwargs):
+        self._add_default_init_kwargs(kwargs)
+        super().__init__(**kwargs)
+
+    @classmethod
+    def _add_default_init_kwargs(cls, kwargs):
+        """Adds any missing default values to the ``kwargs`` dictionary, and
+        partially validates any provided values that aren't easily validated with
+        converters.
+        """
+
+        type_ = kwargs.get("type", None)
+
+        if type_ is None:
+            raise SMIRNOFFSpecError("the `type` keyword is missing")
+        if type_ not in get_args(_VirtualSiteType):
+            raise SMIRNOFFSpecError(f"'{type_}' is not a supported virtual site type")
+
+        if "charge_increment" in kwargs:
+            expected_num_charge_increments = cls._expected_num_charge_increments(type_)
+            num_charge_increments = len(kwargs["charge_increment"])
+            if num_charge_increments != expected_num_charge_increments:
+                raise SMIRNOFFSpecError(
+                    f"'{type_}' virtual sites expect exactly {expected_num_charge_increments} "
+                    f"charge increments, but got {kwargs['charge_increment']} "
+                    f"(length {num_charge_increments}) instead."
+                )
+
+        supports_in_plane_angle = cls._supports_in_plane_angle(type_)
+        supports_out_of_plane_angle = cls._supports_out_of_plane_angle(type_)
+
+        if not supports_out_of_plane_angle:
+            kwargs["outOfPlaneAngle"] = kwargs.get("outOfPlaneAngle", None)
+        if not supports_in_plane_angle:
+            kwargs["inPlaneAngle"] = kwargs.get("inPlaneAngle", None)
+
+        match = kwargs.get("match", None)
+
+        if match is None:
+            raise SMIRNOFFSpecError("the `match` keyword is missing")
+
+        out_of_plane_angle = kwargs.get("outOfPlaneAngle", 0.0 * unit.degree)
+        is_in_plane = (
+            None
+            if not supports_out_of_plane_angle
+            else numpy.isclose(out_of_plane_angle.m_as(unit.degree), 0.0)
+        )
+
+        if not cls._supports_match(type_, match, is_in_plane):
+            raise SMIRNOFFSpecError(
+                f"match='{match}' not supported with type='{type_}'"
+                + ("" if is_in_plane is None else f" and is_in_plane={is_in_plane}")
+            )
+
+    @classmethod
+    def _supports_in_plane_angle(cls, type_: _VirtualSiteType) -> bool:
+        return type_ in {"MonovalentLonePair"}
+
+    @classmethod
+    def _supports_out_of_plane_angle(cls, type_: _VirtualSiteType) -> bool:
+        return type_ in {"MonovalentLonePair", "DivalentLonePair"}
+
+    @classmethod
+    def _expected_num_charge_increments(cls, type_: _VirtualSiteType) -> int:
+        if type_ == "BondCharge":
+            return 2
+        elif (type_ == "MonovalentLonePair") or (type_ == "DivalentLonePair"):
+            return 3
+        elif type_ == "TrivalentLonePair":
+            return 4
+        raise NotImplementedError()
+
+    @classmethod
+    def _supports_match(
+        cls, type_: _VirtualSiteType, match: str, is_in_plane: Optional[bool] = None
+    ) -> bool:
+        is_in_plane = True if is_in_plane is None else is_in_plane
+
+        if match == "once":
+            return type_ == "TrivalentLonePair" or (
+                type_ == "DivalentLonePair" and is_in_plane
+            )
+        elif match == "all_permutations":
+            return type_ in {"BondCharge", "MonovalentLonePair", "DivalentLonePair"}
+
+        raise NotImplementedError()
+
+
 class VirtualSiteHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<VirtualSites>`` tags
     TODO: Add example usage/documentation
     .. warning :: This API is experimental and subject to change.
     """
 
-    class VirtualSiteType(vdWHandler.vdWType):
-        _ELEMENT_NAME = "VirtualSite"
-
-        name = ParameterAttribute(default="EP", converter=str)
-        type = ParameterAttribute(converter=str)
-
-        match = ParameterAttribute(converter=str)
-
-        distance = ParameterAttribute(unit=unit.angstrom)
-        outOfPlaneAngle = ParameterAttribute(unit=unit.degree)
-        inPlaneAngle = ParameterAttribute(unit=unit.degree)
+    class VirtualSiteType(_BaseVirtualSiteType, vdWHandler.vdWType):
+        """Store virtual site parameters (geometry and electrostatics) and vdW interactions."""
 
         epsilon = ParameterAttribute(
             default=0.0 * unit.kilocalorie_per_mole, unit=unit.kilocalorie_per_mole
@@ -3398,157 +3639,15 @@ class VirtualSiteHandler(_NonbondedHandler):
         sigma = ParameterAttribute(default=1.0 * unit.angstrom, unit=unit.angstrom)
         rmin_half = ParameterAttribute(default=None, unit=unit.angstrom)
 
-        charge_increment = IndexedParameterAttribute(unit=unit.elementary_charge)
-
-        @property
-        def parent_index(self) -> int:
-            """Returns the index of the atom matched by the SMIRKS pattern that should
-            be considered the 'parent' to the virtual site.
-            A value of ``0`` corresponds to the atom matched by the ``:1`` selector in
-            the SMIRKS pattern, a value ``2`` the atom matched by ``:2`` and so on.
-            """
-            return self.type_to_parent_index(self.type)
-
-        @classmethod
-        def type_to_parent_index(cls, type_: _VirtualSiteType) -> int:
-            """Returns the index of the atom matched by the SMIRKS pattern that should
-            be considered the 'parent' to a given type of virtual site.
-            A value of ``0`` corresponds to the atom matched by the ``:1`` selector in
-            the SMIRKS pattern, a value ``2`` the atom matched by ``:2`` and so on.
-            """
-
-            if type_.replace("VirtualSite", "") in get_args(_VirtualSiteType):
-                return 0
-
-            raise NotImplementedError()
-
-        @outOfPlaneAngle.converter  # type: ignore[no-redef]
-        def outOfPlaneAngle(self, attr, value):
-            if value == "None":
-                return
-
-            supports_out_of_plane_angle = self._supports_out_of_plane_angle(self.type)
-
-            if not supports_out_of_plane_angle and value is not None:
-                raise SMIRNOFFSpecError(
-                    f"'{self.type}' sites do not support `outOfPlaneAngle`"
-                )
-            elif supports_out_of_plane_angle:
-                return _validate_units(attr, value, unit.degrees)
-
-            return value
-
-        @inPlaneAngle.converter  # type: ignore[no-redef]
-        def inPlaneAngle(self, attr, value):
-            if value == "None":
-                return
-
-            supports_in_plane_angle = self._supports_in_plane_angle(self.type)
-
-            if not supports_in_plane_angle and value is not None:
-                raise SMIRNOFFSpecError(
-                    f"'{self.type}' sites do not support `inPlaneAngle`"
-                )
-            elif supports_in_plane_angle:
-                return _validate_units(attr, value, unit.degrees)
-
-            return value
-
         def __init__(self, **kwargs):
-            self._add_default_init_kwargs(kwargs)
-            super().__init__(**kwargs)
-
-        @classmethod
-        def _add_default_init_kwargs(cls, kwargs):
-            """Adds any missing default values to the ``kwargs`` dictionary, and
-            partially validates any provided values that aren't easily validated with
-            converters.
-            """
-
-            type_ = kwargs.get("type", None)
-
-            if type_ is None:
-                raise SMIRNOFFSpecError("the `type` keyword is missing")
-            if type_ not in get_args(_VirtualSiteType):
-                raise SMIRNOFFSpecError(
-                    f"'{type_}' is not a supported virtual site type"
-                )
-
-            if "charge_increment" in kwargs:
-                expected_num_charge_increments = cls._expected_num_charge_increments(
-                    type_
-                )
-                num_charge_increments = len(kwargs["charge_increment"])
-                if num_charge_increments != expected_num_charge_increments:
-                    raise SMIRNOFFSpecError(
-                        f"'{type_}' virtual sites expect exactly {expected_num_charge_increments} "
-                        f"charge increments, but got {kwargs['charge_increment']} "
-                        f"(length {num_charge_increments}) instead."
-                    )
-
-            supports_in_plane_angle = cls._supports_in_plane_angle(type_)
-            supports_out_of_plane_angle = cls._supports_out_of_plane_angle(type_)
-
-            if not supports_out_of_plane_angle:
-                kwargs["outOfPlaneAngle"] = kwargs.get("outOfPlaneAngle", None)
-            if not supports_in_plane_angle:
-                kwargs["inPlaneAngle"] = kwargs.get("inPlaneAngle", None)
-
-            match = kwargs.get("match", None)
-
-            if match is None:
-                raise SMIRNOFFSpecError("the `match` keyword is missing")
-
-            out_of_plane_angle = kwargs.get("outOfPlaneAngle", 0.0 * unit.degree)
-            is_in_plane = (
-                None
-                if not supports_out_of_plane_angle
-                else np.isclose(out_of_plane_angle.m_as(unit.degree), 0.0)
-            )
-
-            if not cls._supports_match(type_, match, is_in_plane):
-                raise SMIRNOFFSpecError(
-                    f"match='{match}' not supported with type='{type_}'"
-                    + ("" if is_in_plane is None else f" and is_in_plane={is_in_plane}")
-                )
-
             if "rmin_half" not in kwargs:
                 kwargs["sigma"] = kwargs.get("sigma", 0.0 * unit.angstrom)
 
             kwargs["epsilon"] = kwargs.get("epsilon", 0.0 * unit.kilocalorie_per_mole)
 
-        @classmethod
-        def _supports_in_plane_angle(cls, type_: _VirtualSiteType) -> bool:
-            return type_ in {"MonovalentLonePair"}
+            self._add_default_init_kwargs(kwargs)
 
-        @classmethod
-        def _supports_out_of_plane_angle(cls, type_: _VirtualSiteType) -> bool:
-            return type_ in {"MonovalentLonePair", "DivalentLonePair"}
-
-        @classmethod
-        def _expected_num_charge_increments(cls, type_: _VirtualSiteType) -> int:
-            if type_ == "BondCharge":
-                return 2
-            elif (type_ == "MonovalentLonePair") or (type_ == "DivalentLonePair"):
-                return 3
-            elif type_ == "TrivalentLonePair":
-                return 4
-            raise NotImplementedError()
-
-        @classmethod
-        def _supports_match(
-            cls, type_: _VirtualSiteType, match: str, is_in_plane: Optional[bool] = None
-        ) -> bool:
-            is_in_plane = True if is_in_plane is None else is_in_plane
-
-            if match == "once":
-                return type_ == "TrivalentLonePair" or (
-                    type_ == "DivalentLonePair" and is_in_plane
-                )
-            elif match == "all_permutations":
-                return type_ in {"BondCharge", "MonovalentLonePair", "DivalentLonePair"}
-
-            raise NotImplementedError()
+            super().__init__(**kwargs)
 
     _TAGNAME = "VirtualSites"
     _INFOTYPE = VirtualSiteType
@@ -3579,8 +3678,14 @@ class VirtualSiteHandler(_NonbondedHandler):
         supported exception, they should open an issue on GitHub explaining their exact
         use case so that we can ensure that exactly what they need is both supported
         and works as expected through expansion of the unit tests.
-        """
 
+        This validation can be disabled by assigning the environment variable
+         `OPENFF_UNSAFE_VSITES=1`.
+        """
+        import os
+
+        if os.environ.get("OPENFF_UNSAFE_VSITES", "0") != "0":
+            return
         supported_connectivity = {
             # We currently expect monovalent lone pairs to be applied to something
             # like a carboxyl group, where the parent of the lone pair has a
@@ -3613,15 +3718,17 @@ class VirtualSiteHandler(_NonbondedHandler):
                 f"unsupported by virtual sites of type {parameter.type}. Atom with "
                 f"smirks index={smirks_index} matched topology atom {atom_index} with "
                 f"connectivity={connectivity}, but it was expected to have connectivity "
-                f"{expected_connectivity}. If this is "
-                f"a use case you would like supported, please describe what it is "
-                f"you are trying to do in an issue on the OpenFF Toolkit GitHub: "
-                f"https://github.com/openforcefield/openff-toolkit/issues"
+                f"{expected_connectivity}. If you are getting this error and aren't "
+                f"developing your own force field, it indicates that the FF you're "
+                f"using never expected to see a molecule like this. If you ARE developing "
+                f"a force field and know that you want to squelch this error, set the "
+                f"environment variable `OPENFF_UNSAFE_VSITES=1`."
             )
 
-    def check_handler_compatibility(self, other_handler):
+    def check_handler_compatibility(self, other_handler: "VirtualSiteHandler"):
         self._check_attributes_are_equal(
-            other_handler, identical_attrs=["exclusion_policy"]
+            other_handler,
+            identical_attrs=("exclusion_policy",),
         )
 
     def _index_of_parameter(
@@ -3652,9 +3759,11 @@ class VirtualSiteHandler(_NonbondedHandler):
 
         key = cast(
             tuple[str, str, str],
-            key
-            if parameter is None
-            else (parameter.type, parameter.smirks, parameter.name),
+            (
+                key
+                if parameter is None
+                else (parameter.type, parameter.smirks, parameter.name)
+            ),
         )
         expected_type, expected_smirks, expected_name = key
 
@@ -3756,6 +3865,13 @@ class VirtualSiteHandler(_NonbondedHandler):
             return_dict[(parent_index,)] = assigned_matches
 
         return return_dict
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._parameters = VirtualSiteParameterList()
+
+    def __getitem__(self, val):
+        return self.parameters.__getitem__(val)
 
 
 ConstraintType = ConstraintHandler.ConstraintType

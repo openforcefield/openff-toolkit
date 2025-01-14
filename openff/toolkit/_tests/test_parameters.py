@@ -2,6 +2,7 @@
 Test classes and function in module openff.toolkit.typing.engines.smirnoff.parameters.
 
 """
+
 from collections import defaultdict
 from inspect import isabstract, isclass
 
@@ -10,15 +11,14 @@ import pytest
 from numpy.testing import assert_almost_equal
 from packaging.version import Version
 
-import openff.toolkit.typing.engines.smirnoff.parameters
-from openff.toolkit import unit
+from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.toolkit._tests.mocking import VirtualSiteMocking
 from openff.toolkit._tests.utils import does_not_raise
-from openff.toolkit.topology import Molecule, Topology
-from openff.toolkit.typing.engines.smirnoff import ForceField
 from openff.toolkit.typing.engines.smirnoff.parameters import (
+    AngleHandler,
     BondHandler,
     ChargeIncrementModelHandler,
+    ConstraintHandler,
     ElectrostaticsHandler,
     GBSAHandler,
     ImproperTorsionHandler,
@@ -492,11 +492,14 @@ class TestParameterHandler:
             "smirks": param2["smirks"],
             "length": 2 * self.length,
             "k": 2 * self.k,
+            "id": "b4",
         }
 
-        # Ensure a duplicate parameter cannot be added
+        # Ensure a duplicate parameter cannot be added under default conditions
         with pytest.raises(DuplicateParameterError):
             bh.add_parameter(param_duplicate_smirks)
+        # Ensure a duplicate parameter CAN be added if `allow_duplicate_smirks=True`
+        bh.add_parameter(param_duplicate_smirks, allow_duplicate_smirks=True)
 
         dict_to_add_by_smirks = {
             "smirks": "[#1:1]-[#6:2]",
@@ -551,17 +554,25 @@ class TestParameterHandler:
         # Add d1 before param b2
         bh.add_parameter(dict_to_add_by_smirks, before="[*:1]=[*:2]")
 
-        assert [p.id for p in bh._parameters] == ["b1", "d1", "b2", "b3"]
+        assert [p.id for p in bh._parameters] == ["b1", "d1", "b2", "b3", "b4"]
 
         # Add d2 after index 2 (which is also param b2)
         bh.add_parameter(dict_to_add_by_index, after=2)
 
-        assert [p.id for p in bh._parameters] == ["b1", "d1", "b2", "d2", "b3"]
+        assert [p.id for p in bh._parameters] == ["b1", "d1", "b2", "d2", "b3", "b4"]
 
         # Add p1 before param b3
         bh.add_parameter(parameter=param_to_add_by_smirks, before="[*:1]=[*:2]")
 
-        assert [p.id for p in bh._parameters] == ["b1", "d1", "p1", "b2", "d2", "b3"]
+        assert [p.id for p in bh._parameters] == [
+            "b1",
+            "d1",
+            "p1",
+            "b2",
+            "d2",
+            "b3",
+            "b4",
+        ]
 
         # Add p2 after index 2 (which is param p1)
         bh.add_parameter(parameter=param_to_add_by_index, after=2)
@@ -574,6 +585,7 @@ class TestParameterHandler:
             "b2",
             "d2",
             "b3",
+            "b4",
         ]
 
         # Add s0 between params that are several positions apart
@@ -588,6 +600,7 @@ class TestParameterHandler:
             "b2",
             "d2",
             "b3",
+            "b4",
         ]
 
     def test_different_units_to_dict(self):
@@ -842,6 +855,18 @@ class TestParameterList:
         p4 = ParameterType(smirks="[#2:1]")
         with pytest.raises(ValueError, match="is not in list"):
             parameters.index(p4)
+
+        with pytest.raises(TypeError, match="non-None values for start"):
+            parameters.index("[*:1]", start=1)
+        with pytest.raises(TypeError, match="non-None values for stop"):
+            parameters.index("[*:1]", stop=-1)
+
+    def test_index_duplicates(self):
+        """Test ParameterList.index when multiple parameters have identical SMIRKS"""
+        p1 = ParameterType(smirks="[*:1]")
+        p2 = ParameterType(smirks="[*:1]")
+        parameters = ParameterList([p1, p2])
+        assert parameters.index("[*:1]") == 1
 
     def test_contains(self):
         """Test ParameterList __contains__ overloading."""
@@ -1153,6 +1178,26 @@ class TestParameterType:
             pass
 
         assert NamedType(smirks="[*:1]").__repr__().startswith("<NamedType")
+
+
+class TestElementName:
+    @pytest.mark.parametrize(
+        ("_class", "expected_name"),
+        [
+            (ConstraintHandler, "Constraint"),
+            (BondHandler, "Bond"),
+            (AngleHandler, "Angle"),
+            (ProperTorsionHandler, "Proper"),
+            (ImproperTorsionHandler, "Improper"),
+            (vdWHandler, "Atom"),
+            (LibraryChargeHandler, "LibraryCharge"),
+            (ChargeIncrementModelHandler, "ChargeIncrement"),
+            (VirtualSiteHandler, "VirtualSite"),
+            (GBSAHandler, "Atom"),
+        ],
+    )
+    def test_element_names(self, _class, expected_name):
+        assert _class._INFOTYPE._ELEMENT_NAME == expected_name
 
 
 class TestBondType:
@@ -1805,7 +1850,6 @@ class TestvdWType:
 
     def test_sigma_rmin_half(self):
         """Test the setter/getter behavior or sigma and rmin_half"""
-        from openff.toolkit.typing.engines.smirnoff.parameters import vdWHandler
 
         data = {
             "smirks": "[*:1]",
@@ -1921,6 +1965,41 @@ class TestVirtualSiteHandler:
     """
     Test the creation of a VirtualSiteHandler and the implemented VirtualSiteTypes
     """
+
+    def test_int_getitem_okay(self, opc):
+        """Test that ints can be used to lookup virtual site types."""
+        parameter = opc["VirtualSites"].parameters[0]
+
+        assert isinstance(parameter, VirtualSiteHandler.VirtualSiteType)
+        assert parameter.epsilon.m == 0.0
+        assert parameter.type == "DivalentLonePair"
+
+        assert opc["VirtualSites"][0] == parameter
+
+    def test_slice(self, opc):
+        assert len(opc["VirtualSites"].parameters[0:1:2]) == 1
+
+        with pytest.raises(
+            AssertionError,
+            match="must be based on int",
+        ):
+            opc["VirtualSites"].parameters["first":"second"]
+
+    def test_smirks_getitem_forbidden(self, opc):
+        """Test that SMIRKS/ParameterType can NOT be used to lookup virtual site types."""
+        smirks = next(iter(opc["VirtualSites"]._parameters)).smirks
+
+        with pytest.raises(
+            NotImplementedError,
+            match="uniquely identify",
+        ):
+            opc["VirtualSites"][smirks]
+
+        with pytest.raises(
+            NotImplementedError,
+            match="uniquely identify",
+        ):
+            opc["VirtualSites"].parameters[smirks]
 
     @pytest.mark.parametrize(
         "parameter, expected_index",
@@ -2039,38 +2118,15 @@ class TestVirtualSiteHandler:
         "kwargs, expected_kwargs",
         [
             (
-                {"type": "BondCharge", "match": "all_permutations"},
                 {
                     "type": "BondCharge",
                     "match": "all_permutations",
-                    "outOfPlaneAngle": None,
-                    "inPlaneAngle": None,
-                    "sigma": 0.0 * unit.angstrom,
-                    "epsilon": 0.0 * unit.kilocalorie_per_mole,
-                },
-            ),
-            (
-                {
-                    "type": "BondCharge",
-                    "match": "all_permutations",
-                    "rmin_half": 1.0 * unit.angstrom,
                 },
                 {
                     "type": "BondCharge",
                     "match": "all_permutations",
                     "outOfPlaneAngle": None,
                     "inPlaneAngle": None,
-                    "rmin_half": 1.0 * unit.angstrom,
-                    "epsilon": 0.0 * unit.kilocalorie_per_mole,
-                },
-            ),
-            (
-                {"type": "MonovalentLonePair", "match": "all_permutations"},
-                {
-                    "type": "MonovalentLonePair",
-                    "match": "all_permutations",
-                    "sigma": 0.0 * unit.angstrom,
-                    "epsilon": 0.0 * unit.kilocalorie_per_mole,
                 },
             ),
         ],
@@ -2079,6 +2135,20 @@ class TestVirtualSiteHandler:
         assert kwargs != expected_kwargs
         VirtualSiteHandler.VirtualSiteType._add_default_init_kwargs(kwargs)
         assert kwargs == expected_kwargs
+
+    def test_vdw_defaults(self):
+        """Test initializing without vdW parameters specified."""
+        defaults = VirtualSiteHandler.VirtualSiteType(
+            type="BondCharge",
+            smirks="",
+            match="all_permutations",
+            distance=0.0 * unit.angstrom,
+            charge_increment=2 * [0.0 * unit.elementary_charge],
+        )
+
+        assert defaults.rmin_half == 0.0 * unit.angstrom
+        assert defaults.sigma == 0.0 * unit.angstrom
+        assert defaults.epsilon == 0.0 * unit.kilojoule_per_mole
 
     @pytest.mark.parametrize(
         "parameter, in_plane_angle, expected_raises",
@@ -2170,25 +2240,44 @@ class TestVirtualSiteHandler:
         assert offxml_string == roundtripped_force_field.to_string()
 
     @pytest.mark.parametrize(
-        "smiles, matched_indices, parameter, expected_raises",
+        "smiles, matched_indices, parameter, expected_raises, unsafe_vsites",
         [
             (
                 "[Cl:1][H:2]",
                 (1, 2),
                 VirtualSiteMocking.bond_charge_parameter("[Cl:1][H:2]"),
                 does_not_raise(),
+                False,
             ),
             (
                 "[N:1]([H:2])([H:3])[H:4]",
                 (1, 2, 3),
                 VirtualSiteMocking.monovalent_parameter("[*:2][N:1][*:3]"),
-                pytest.raises(NotImplementedError, match="please describe what it is"),
+                pytest.raises(
+                    NotImplementedError, match="currently unsupported by virtual sites"
+                ),
+                False,
+            ),
+            (
+                "[N:1]([H:2])([H:3])[H:4]",
+                (1, 2, 3),
+                VirtualSiteMocking.monovalent_parameter("[*:2][N:1][*:3]"),
+                does_not_raise(),
+                True,
             ),
         ],
     )
     def test_validate_found_match(
-        self, smiles, matched_indices, parameter, expected_raises
+        self,
+        monkeypatch,
+        smiles,
+        matched_indices,
+        parameter,
+        expected_raises,
+        unsafe_vsites,
     ):
+        if unsafe_vsites:
+            monkeypatch.setenv("OPENFF_UNSAFE_VSITES", "1")
         molecule = Molecule.from_smiles(smiles, allow_undefined_stereo=True)
         topology: Topology = molecule.to_topology()
 
@@ -2435,15 +2524,15 @@ class TestVirtualSiteHandler:
                 "smirks": "[H][#6:2]([H])=[#8:1]",
                 "name": "EP",
                 "type": "BondCharge",
-                "distance": 7.0 * openff.units.unit.angstrom,
+                "distance": Quantity(7.0, "angstrom"),
                 "match": "all_permutations",
-                "charge_increment1": 0.2 * openff.units.unit.elementary_charge,
-                "charge_increment2": 0.1 * openff.units.unit.elementary_charge,
-                "sigma": 1.0 * openff.units.unit.angstrom,
-                "epsilon": 2.0 * openff.units.unit.kilocalorie_per_mole,
+                "charge_increment1": Quantity(0.2, "elementary_charge"),
+                "charge_increment2": Quantity(0.1, "elementary_charge"),
+                "sigma": Quantity(1.0, "angstrom"),
+                "epsilon": Quantity(2.0, "kilocalorie_per_mole"),
             }
         )
-        molecule = openff.toolkit.Molecule.from_mapped_smiles("[H:3][C:2]([H:4])=[O:1]")
+        molecule = Molecule.from_mapped_smiles("[H:3][C:2]([H:4])=[O:1]")
         matches = vsite_handler.find_matches(molecule.to_topology())
         assert len(matches) == 1
 
@@ -2708,6 +2797,8 @@ class TestGBSAHandler:
 
 class TestParameterTypeReExports:
     def test_parametertype_reexports(self):
+        import openff.toolkit.typing.engines.smirnoff.parameters
+
         params_module = openff.toolkit.typing.engines.smirnoff.parameters
 
         def subclass_attrs(obj, classinfo):

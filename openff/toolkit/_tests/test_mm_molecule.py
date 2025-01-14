@@ -1,9 +1,15 @@
+import copy
+
 import numpy as np
 import pytest
 
+from openff.toolkit import Molecule, Topology
 from openff.toolkit._tests.create_molecules import create_ethanol
-from openff.toolkit.topology._mm_molecule import _SimpleMolecule
-from openff.toolkit.topology.molecule import Molecule
+from openff.toolkit._tests.create_molecules import (
+    dipeptide_residues_perceived as create_dipeptide,
+)
+from openff.toolkit._tests.utils import get_data_file_path, requires_rdkit
+from openff.toolkit.topology._mm_molecule import _SimpleAtom, _SimpleMolecule
 
 
 @pytest.fixture()
@@ -70,6 +76,13 @@ def molecule_with_bogus_atom():
     return molecule
 
 
+@pytest.fixture()
+def t4():
+    return _SimpleMolecule.from_molecule(
+        Topology.from_pdb(get_data_file_path("proteins/T4-protein.pdb")).molecule(0)
+    )
+
+
 class TestMMMolecule:
     def test_create_water(self):
         water = _SimpleMolecule()
@@ -124,7 +137,7 @@ class TestMMMolecule:
         for atom_index in range(roundtrip.n_atoms):
             assert (
                 roundtrip.atom(atom_index).atomic_number
-                == water.atom(atom_index).atomic_number  # noqa
+                == water.atom(atom_index).atomic_number
             )
 
     def test_dict_roundtrip_conformers(self, water):
@@ -148,6 +161,110 @@ class TestMMMolecule:
         for atom_index in range(converted.n_atoms):
             found = converted.atom(atom_index).atomic_number
             assert found == expected_atomic_numbers[atom_index]
+
+    def test_deepcopy(self, water, methane, methanol):
+        for molecule in [water, methane, methanol]:
+            molecule_copy = copy.deepcopy(molecule)
+
+            assert molecule_copy.n_atoms == molecule.n_atoms
+            assert molecule_copy.n_bonds == molecule.n_bonds
+
+            for atom, atom_copy in zip(
+                molecule.atoms,
+                molecule_copy.atoms,
+            ):
+                assert atom.atomic_number == atom_copy.atomic_number
+
+                assert atom.molecule is molecule
+                assert atom_copy.molecule is molecule_copy
+
+    @pytest.mark.slow
+    @requires_rdkit
+    def test_deepcopy_t4(self, t4):
+        t4_copy = copy.deepcopy(t4)
+
+        assert t4_copy.n_atoms == t4.n_atoms
+        assert t4_copy.n_bonds == t4.n_bonds
+
+        for atom, atom_copy in zip(
+            t4.atoms,
+            t4_copy.atoms,
+        ):
+            assert atom.atomic_number == atom_copy.atomic_number
+
+            assert atom.molecule is t4
+            assert atom_copy.molecule is t4_copy
+
+    def test_to_single_molecule_topology(self, methanol):
+        topology = methanol.to_topology()
+
+        assert topology.n_molecules == 1
+        assert topology.molecule(0).is_isomorphic_with(methanol)
+
+        assert topology.n_atoms == methanol.n_atoms
+        assert topology.n_bonds == methanol.n_bonds
+
+    @pytest.mark.slow
+    @requires_rdkit
+    def test_to_t4_topology(self, t4):
+        topology = t4.to_topology()
+
+        assert topology.n_molecules == 1
+        assert topology.molecule(0).is_isomorphic_with(t4)
+
+        assert topology.n_atoms == t4.n_atoms
+        assert topology.n_bonds == t4.n_bonds
+
+    def test_to_openmm_topology(self, methanol):
+        topology = methanol.to_topology().to_openmm()
+
+        assert topology.getNumAtoms() == methanol.n_atoms
+        assert topology.getNumBonds() == methanol.n_bonds
+
+    @pytest.mark.slow
+    @pytest.mark.skip(
+        reason="Fails because of https://github.com/openforcefield/openff-toolkit/issues/1783"
+    )
+    def test_to_openmm_topology_t4(self, t4):
+        topology = t4.to_topology().to_openmm()
+
+        assert topology.getNumAtoms() == t4.n_atoms
+        assert topology.getNumBonds() == t4.n_bonds
+
+    def test_generate_unique_atom_names(self, water):
+
+        # Initially atom names default to empty string
+        assert hasattr(water.atom(0), "name")
+        assert water.atom(0).name == ""
+
+        assert water.has_unique_atom_names is False
+        # Assign unique atom names and ensure that they're unique
+        water.generate_unique_atom_names()
+        assert water.has_unique_atom_names is True
+        # Now manually make them not-unique and ensure that has_unique_atom_names reflects that
+        water.atom(0).name = "foo"
+        water.atom(1).name = "foo"
+        assert water.has_unique_atom_names is False
+
+    def test_atom_names_roundtrip(self, water):
+        water.atom(0).name = "FOO"
+        water.atom(1).name = "BAR"
+        water.atom(2).name = "BAZ"
+
+        roundtrip = copy.deepcopy(water)
+
+        assert roundtrip.atom(0).name == "FOO"
+        assert roundtrip.atom(1).name == "BAR"
+        assert roundtrip.atom(2).name == "BAZ"
+
+
+class TestSimpleAtom:
+    def test_atom_name_in_dict(self):
+        atom = _SimpleAtom(atomic_number=7, name="FLAG")
+
+        assert atom.to_dict()["name"] == "FLAG"
+
+        assert copy.deepcopy(atom).name == "FLAG"
 
 
 class TestImpropers:
@@ -259,3 +376,43 @@ class TestIsomorphism:
         self, o_dichlorobezene, m_dichlorobezene
     ):
         assert not _SimpleMolecule.are_isomorphic(o_dichlorobezene, m_dichlorobezene)[0]
+
+
+class TestHierarchyData:
+    @pytest.fixture()
+    def simple_dipeptide(self):
+        return _SimpleMolecule.from_molecule(create_dipeptide())
+
+    def test_mm_hierarchy(self):
+        molecule = create_dipeptide()
+
+        assert molecule.hierarchy_schemes is not None
+
+        mm_molecule = _SimpleMolecule.from_molecule(molecule)
+
+        assert mm_molecule.hierarchy_schemes.keys() == molecule.hierarchy_schemes.keys()
+
+        for scheme_name in molecule.hierarchy_schemes:
+            assert len(
+                mm_molecule.hierarchy_schemes[scheme_name].hierarchy_elements
+            ) == len(molecule.hierarchy_schemes[scheme_name].hierarchy_elements)
+
+    def test_hierarchy_preserved_dict_roundtrip(self, simple_dipeptide):
+        roundtripped = _SimpleMolecule.from_dict(simple_dipeptide.to_dict())
+
+        assert [residue.residue_name for residue in roundtripped.residues] == [
+            "ACE",
+            "ALA",
+        ]
+
+        assert [residue.residue_number for residue in roundtripped.residues] == [
+            "1",
+            "2",
+        ]
+
+    def test_lookup_attribute_not_found(self, simple_dipeptide):
+        with pytest.raises(
+            AttributeError,
+            match="object has no attribute .*foobars",
+        ):
+            simple_dipeptide.foobars

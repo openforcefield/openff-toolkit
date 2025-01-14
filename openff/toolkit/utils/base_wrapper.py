@@ -5,7 +5,7 @@ Base class for toolkit wrappers. Defines the public API and some shared methods
 __all__ = ("ToolkitWrapper",)
 
 from functools import wraps
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, TypedDict
 
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
@@ -18,6 +18,15 @@ if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import Molecule
 
 
+class _ChargeSettings(TypedDict, total=False):
+    n_conformers: int
+    rec_confs: int
+    min_confs: int
+    max_confs: int  # OpenEyeToolkitWrapper sometimes defines this as None
+    antechamber_keyword: str
+    oe_charge_method: str
+
+
 def _mol_to_ctab_and_aro_key(
     self, molecule: "Molecule", aromaticity_model=DEFAULT_AROMATICITY_MODEL
 ) -> str:
@@ -26,17 +35,26 @@ def _mol_to_ctab_and_aro_key(
 
 class ToolkitWrapper:
     """
-    Toolkit wrapper base class.
+    Base class for wrappers around external software toolkits.
 
     .. warning :: This API is experimental and subject to change.
+
+    See also
+    ========
+    ToolkitRegistry, OpenEyeToolkitWrapper, RDKitToolkitWrapper,
+    AmberToolsToolkitWrapper, NAGLToolkitWrapper, BuiltInToolkitWrapper
+
     """
 
     _is_available: Optional[bool] = None  # True if toolkit is available
     _toolkit_version: Optional[str] = None
     _toolkit_name: Optional[str] = None  # Name of the toolkit
-    _toolkit_installation_instructions: Optional[
-        str
-    ] = None  # Installation instructions for the toolkit
+    _toolkit_installation_instructions: Optional[str] = (
+        None  # Installation instructions for the toolkit
+    )
+    _supported_charge_methods: dict[str, _ChargeSettings] = dict()
+    _toolkit_file_read_formats: list[str] = list()
+    _toolkit_file_write_formats: list[str] = list()
 
     # @staticmethod
     # TODO: Right now, to access the class definition, I have to make this a classmethod
@@ -48,9 +66,7 @@ class ToolkitWrapper:
             @wraps(func)
             def wrapped_function(*args, **kwargs):
                 if not cls.is_available():
-                    msg = "This function requires the {} toolkit".format(
-                        cls._toolkit_name
-                    )
+                    msg = f"This function requires the {cls._toolkit_name} toolkit"
                     raise ToolkitUnavailableException(msg)
                 value = func(*args, **kwargs)
                 return value
@@ -60,7 +76,6 @@ class ToolkitWrapper:
         return decorator
 
     @property
-    # @classmethod
     def toolkit_name(self):
         """
         Return the name of the toolkit wrapped by this class as a str
@@ -69,7 +84,7 @@ class ToolkitWrapper:
 
         Returns
         -------
-        toolkit_name : str
+        toolkit_name
             The name of the wrapped toolkit
 
         """
@@ -90,11 +105,15 @@ class ToolkitWrapper:
         return self._toolkit_file_read_formats
 
     @property
-    def toolkit_file_write_formats(self):
+    def toolkit_file_write_formats(self) -> list[str]:
         """
         List of file formats that this toolkit can write.
         """
         return self._toolkit_file_write_formats
+
+    @property
+    def supported_charge_methods(self) -> list[str]:
+        return [*self._supported_charge_methods.keys()]
 
     @classmethod
     def is_available(cls):
@@ -103,7 +122,7 @@ class ToolkitWrapper:
 
         Returns
         -------
-        is_installed : bool
+        is_installed
             True if corresponding toolkit is installed, False otherwise.
 
         """
@@ -118,7 +137,7 @@ class ToolkitWrapper:
 
         Returns
         -------
-        toolkit_version : str
+        toolkit_version
             The version of the wrapped toolkit
 
         """
@@ -130,19 +149,19 @@ class ToolkitWrapper:
 
         Parameters
         ----------
-        file_path : str
+        file_path
             The file to read the molecule from
-        file_format : str
+        file_format
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check
             ToolkitWrapper.toolkit_file_read_formats for details.
-        allow_undefined_stereo : bool, default=False
+        allow_undefined_stereo
             If false, raises an exception if any molecules contain undefined stereochemistry.
-        _cls : class
+        _cls
             Molecule constructor
         Returns
         -------
-        molecules : Molecule or list of Molecules
+        molecules
             a list of Molecule objects is returned.
 
         """
@@ -158,21 +177,21 @@ class ToolkitWrapper:
 
         Parameters
         ----------
-        file_obj : file-like object
+        file_obj
             The file-like object to read the molecule from
-        file_format : str
+        file_format
             Format specifier, usually file suffix (eg. 'MOL2', 'SMI')
             Note that not all toolkits support all formats. Check
             ToolkitWrapper.toolkit_file_read_formats for details.
-        allow_undefined_stereo : bool, default=False
+        allow_undefined_stereo
             If false, raises an exception if any molecules contain undefined stereochemistry.
             If false, the function skips loading the molecule.
-        _cls : class
+        _cls
             Molecule constructor
 
         Returns
         -------
-        molecules : Molecule or list of Molecules
+        molecules
             a list of Molecule objects is returned.
         """
         return NotImplementedError
@@ -191,15 +210,15 @@ class ToolkitWrapper:
 
         Parameters
         ----------
-        molecule : Molecule
+        molecule
             Molecule for which partial charges are to be computed
-        partial_charge_method : str, optional, default=None
+        partial_charge_method
             The name of the charge method being used
-        min_confs : int, optional, default=None
+        min_confs
             The minimum number of conformers required to use this charge method
-        max_confs : int, optional, default=None
+        max_confs
             The maximum number of conformers required to use this charge method
-        strict_n_conformers : bool, default=False
+        strict_n_conformers
             Whether to raise an exception if an invalid number of conformers is provided.
             If this is False and an invalid number of conformers is found, a warning will be raised.
 

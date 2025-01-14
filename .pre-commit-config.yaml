@@ -1,33 +1,14 @@
 ci:
   autoupdate_schedule: "quarterly"
-files: ^openff|(^examples/((?!deprecated).)*$)
+files: ^openff|(^examples/((?!deprecated).)*$)|^docs|(^utilities/((?!deprecated).)*$)
 repos:
-- repo: https://github.com/psf/black
-  rev: 23.9.1
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.8.6
   hooks:
-  - id: black
-  - id: black-jupyter
-- repo: https://github.com/PyCQA/isort
-  rev: 5.12.0
+    - id: ruff
+      args: [--fix]
+- repo: https://github.com/adamchainz/blacken-docs
+  rev: 1.19.1
   hooks:
-  - id: isort
-- repo: https://github.com/PyCQA/flake8
-  rev: 6.1.0
-  hooks:
-  - id: flake8
-    files: ^openff
-    additional_dependencies: [
-        'flake8-absolute-import',
-        'flake8-no-pep420',
-        'flake8-bugbear',
-    ]
-- repo: https://github.com/nbQA-dev/nbQA
-  rev: 1.7.0
-  hooks:
-    - id: nbqa-pyupgrade
-      args:
-        - --py39-plus
-    - id: nbqa-isort
-    - id: nbqa-flake8
-      args:
-        - '--select=F'
+    - id: blacken-docs
+      files: ^docs/.*\.(rst|md)$

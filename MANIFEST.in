@@ -1,6 +1,5 @@
 include LICENSE
 include MANIFEST.in
-include versioneer.py
 
 graft openff
 global-exclude *.py[cod] __pycache__ *.so

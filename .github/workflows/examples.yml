@@ -25,7 +25,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["3.9"]
+        python-version: ["3.10"]
         rdkit: [true, false]
         openeye: [true, false]
         exclude:
@@ -37,13 +37,13 @@ jobs:
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openff
-      PYTEST_ARGS: -r fE -v -x --tb=short -nauto
-      NB_ARGS: --nbval-lax --dist loadscope --ignore=examples/deprecated
+      PYTEST_ARGS: -r fE -v -x --tb=short -nauto --durations=10
+      NB_ARGS: --nbval-lax --dist loadscope --ignore=examples/deprecated --ignore=examples/external
 
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Set environment variables
         run: |
@@ -60,7 +60,7 @@ jobs:
           fi
 
       - name: Install conda environment with ${{ env.ENVFILE }}
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: devtools/conda-envs/${{env.ENVFILE}}-examples.yaml
           create-args: >-
@@ -92,18 +92,9 @@ jobs:
           # so don't remove it.
           if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
             for cpkg in ${{ env.PACKAGES_TO_REMOVE }}; do
-              if [[ $(conda list | grep $cpkg) ]]; then micromamba remove --force $cpkg --yes ; fi
+              if [[ $(micromamba list | grep $cpkg) ]]; then micromamba remove --force $cpkg --yes ; fi
             done
           fi
-
-      - name: Reinstall ParmEd
-        if: ${{ matrix.rdkit == false }}
-        run: |
-          micromamba remove --force parmed --yes
-          # See #1531, #1532, eventually this should work with 4 or 3 and 4
-          micromamba install "parmed =3" -c conda-forge -yq
-          # Needed for other examples to run, but were removed incidentally alongside AmberTools
-          micromamba install h5py -c conda-forge -yq
 
       - name: Check installed toolkits
         run: |
@@ -121,8 +112,9 @@ jobs:
           fi
       - name: Environment Information
         run: |
-          conda info
-          conda list
+          micromamba info
+          micromamba list
+          pip list
 
       - name: Run example scripts
         run: |

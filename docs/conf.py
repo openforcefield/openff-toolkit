@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 #
 # openff-toolkit documentation build configuration file, created by
 # sphinx-quickstart on Sun Dec  3 23:12:54 2017.
@@ -19,11 +18,12 @@
 #
 import os
 import sys
+from importlib.util import find_spec as find_import_spec
+
+import openff.toolkit
 
 sys.path.insert(0, os.path.abspath("."))
 
-import openff.toolkit
-import sphinx
 
 # -- General configuration ------------------------------------------------
 
@@ -73,7 +73,7 @@ _python_doc_base = "https://docs.python.org/3.7"
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3.7", None),
     "numpy": ("https://numpy.org/doc/stable", None),
-    "scipy": ("https://docs.scipy.org/doc/scipy/reference", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "scikit.learn": ("https://scikit-learn.org/stable", None),
     "openmm": ("http://docs.openmm.org/latest/api-python/", None),
     "rdkit": ("https://www.rdkit.org/docs", None),
@@ -89,6 +89,10 @@ intersphinx_mapping = {
     ),
     "openff.units": (
         "https://docs.openforcefield.org/projects/units/en/stable/",
+        None,
+    ),
+    "openff.nagl": (
+        "https://docs.openforcefield.org/projects/nagl/en/stable/",
         None,
     ),
     "openff.docs": (
@@ -112,7 +116,7 @@ myst_enable_extensions = [
     "replacements",
     "deflist",
 ]
-myst_heading_anchors = 3
+myst_heading_anchors = 4
 
 # Myst NB settings
 # Never execute notebooks - this should be done by CI
@@ -123,8 +127,6 @@ nb_execution_mode = "off"
 # sphinx-notfound-page
 # https://github.com/readthedocs/sphinx-notfound-page
 # Renders a 404 page with absolute links
-from importlib.util import find_spec as find_import_spec
-
 if find_import_spec("notfound"):
     extensions.append("notfound.extension")
 
@@ -287,7 +289,10 @@ texinfo_documents = [
         "OpenFF Toolkit Documentation",
         author,
         "openff-toolkit",
-        "A modern, extensible library for molecular mechanics force field science from the Open Force Field Consortium.",
+        (
+            "A modern, extensible library for molecular mechanics force field science from the Open Force "
+            "Field Consortium.",
+        ),
         "Miscellaneous",
     ),
 ]

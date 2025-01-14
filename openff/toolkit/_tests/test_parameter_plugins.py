@@ -1,9 +1,10 @@
 """
 Test classes and function in module openff.toolkit.typing.engines.smirnoff.plugins
 """
+
 import pytest
 
-from openff.toolkit.typing.engines.smirnoff import ForceField
+from openff.toolkit import ForceField, Quantity
 from openff.toolkit.typing.engines.smirnoff.plugins import (
     _load_handler_plugins,
     load_handler_plugins,
@@ -49,8 +50,12 @@ def test_load_handler_plugins():
 
     registered_plugins = load_handler_plugins()
 
-    assert len(registered_plugins) == 1
-    assert registered_plugins[0].__name__ == "CustomHandler"
+    assert len(registered_plugins) == 2
+
+    registered_plugin_names = [plugin.__name__ for plugin in registered_plugins]
+
+    assert "CustomHandler" in registered_plugin_names
+    assert "FOOBuckinghamHandler" in registered_plugin_names
 
 
 def test_do_not_load_other_type():
@@ -66,3 +71,22 @@ def test_skip_wrong_subclass(caplog):
     load_handler_plugins()
 
     assert "does not inherit from ParameterHandler" in caplog.text, caplog.text
+
+
+def test_buckingham_type():
+    """Reproduce, in part, issue #1888."""
+    from custom_plugins.handler_plugins import FOOBuckinghamHandler
+
+    parameter = FOOBuckinghamHandler.FOOBuckinghamType(
+        smirks="[*:1]",
+        a="2 kilojoule_per_mole",
+        b="1/nanometer",
+        c="-0.5 kilojoule_per_mole * nanometer**6",
+    )
+
+    for param in ["a", "b", "c"]:
+        assert isinstance(getattr(parameter, param), Quantity)
+
+    assert str(parameter.a.units) == "kilojoule_per_mole"
+    assert str(parameter.b.units) == "1 / nanometer"
+    assert str(parameter.c.units) == "kilojoule_per_mole * nanometer ** 6"

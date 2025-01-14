@@ -12,7 +12,7 @@ maxdepth: 1
 installation
 examples
 releasehistory
-faq
+Frequently Asked Questions (FAQ) <https://docs.openforcefield.org/faq>
 :::
 
 :::{toctree}
@@ -38,6 +38,7 @@ maxdepth: 1
 
 topology
 typing
+api/toolkits
 utils
 Exceptions <api/generated/openff.toolkit.utils.exceptions.rst>
 :::

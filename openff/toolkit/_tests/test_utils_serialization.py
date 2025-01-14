@@ -37,7 +37,7 @@ def write(filename, contents):
     elif type(contents) is bytes:
         mode = "wb"
     else:
-        raise Exception("Cannot handle contents of type {}".format(type(contents)))
+        raise Exception(f"Cannot handle contents of type {type(contents)}")
     with open(filename, mode) as outfile:
         outfile.write(contents)
 
@@ -164,7 +164,7 @@ class TestUtilsSMIRNOFFSerialization(TestUtilsSerialization):
         from openff.toolkit.utils import get_data_file_path
 
         filename = get_data_file_path("test_forcefields/test_forcefield.offxml")
-        with open(filename, "r") as f:
+        with open(filename) as f:
             xml = f.read()
             dictionary = xmltodict.parse(xml)
             cls.thing = DictionaryContainer(dictionary)

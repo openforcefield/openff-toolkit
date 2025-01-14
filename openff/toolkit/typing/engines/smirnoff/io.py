@@ -11,8 +11,8 @@ __all__ = [
     "ParameterIOHandler",
     "XMLParameterIOHandler",
 ]
-
 import logging
+from collections.abc import Iterable
 from typing import Optional
 
 import xmltodict
@@ -25,7 +25,7 @@ class ParameterIOHandler:
     Base class for handling serialization/deserialization of SMIRNOFF ForceField objects
     """
 
-    _FORMAT: Optional[str] = None
+    _FORMAT: str
 
     def __init__(self):
         """
@@ -67,9 +67,9 @@ class ParameterIOHandler:
 
         Parameters
         ----------
-        file_path : str
+        file_path
             The path to the file to write to.
-        smirnoff_data : dict
+        smirnoff_data
             A dictionary structured in compliance with the SMIRNOFF spec
 
         Returns
@@ -84,7 +84,7 @@ class ParameterIOHandler:
 
         Parameters
         ----------
-        smirnoff_data : dict
+        smirnoff_data
             A dictionary structured in compliance with the SMIRNOFF spec
 
         Returns
@@ -107,7 +107,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
         Parameters
         ----------
-        source : str or io.RawIOBase
+        source
             File path of file-like object implementing a ``read()`` method
             specifying a SMIRNOFF force field definition in `the SMIRNOFF XML format
             <https://openforcefield.github.io/standards/standards/smirnoff/#xml-representation>`_.
@@ -131,14 +131,14 @@ class XMLParameterIOHandler(ParameterIOHandler):
         # Parse the data in string format.
         return self.parse_string(raw_data)
 
-    def parse_string(self, data):
+    def parse_string(self, data: str) -> dict:
         """Parse a SMIRNOFF force field definition in XML format.
 
         A ``SMIRNOFFParseError`` is raised if the XML cannot be processed.
 
         Parameters
         ----------
-        data : str
+        data
             A SMIRNOFF force field definition in `the SMIRNOFF XML format
             <https://openforcefield.github.io/standards/standards/smirnoff/#xml-representation>`_.
 
@@ -159,10 +159,10 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
         Parameters
         ----------
-        file_path : str
+        file_path
             The path to the file to be written.
             The `.offxml` or `.xml` file extension must be present.
-        smirnoff_data : dict
+        smirnoff_data
             A dict structured in compliance with the SMIRNOFF data spec.
 
         """
@@ -170,34 +170,38 @@ class XMLParameterIOHandler(ParameterIOHandler):
         with open(file_path, "w") as of:
             of.write(xml_string)
 
-    def to_string(self, smirnoff_data):
+    def to_string(self, smirnoff_data: dict) -> str:
         """
         Write the current force field parameter set to an XML string.
 
         Parameters
         ----------
-        smirnoff_data : dict
+        smirnoff_data
             A dictionary structured in compliance with the SMIRNOFF spec
 
         Returns
         -------
-        serialized_forcefield : str
+        serialized_forcefield
             XML String representation of this force field.
 
         """
 
-        def prepend_all_keys(d, char="@", ignore_keys=frozenset()):
+        def prepend_all_keys(
+            d: dict,
+            char: Optional[str] = "@",
+            ignore_keys: Iterable[str] = frozenset(),
+        ):
             """
             Modify a dictionary in-place, prepending a specified string to each key
             that doesn't refer to a value that is list or dict.
 
             Parameters
             ----------
-            d : dict
+            d
                 Hierarchical dictionary to traverse and modify keys
-            char : string, optional. Default='@'
+            char
                 String to prepend onto each applicable dictionary key
-            ignore_keys : iterable of str
+            ignore_keys
                 A set or list of strings, indicating keys not to prepend in the data structure
 
             """

@@ -2,6 +2,7 @@
 Tests for forcefield class
 
 """
+
 import copy
 import itertools
 import os
@@ -1258,29 +1259,6 @@ class TestForceField(_ForceFieldFixtures):
             toolkit_registry=toolkit_registry,
         )
 
-    @pytest.fixture()
-    def create_circular_handler_dependencies(self):
-        from openff.toolkit.typing.engines.smirnoff.parameters import (
-            AngleHandler,
-            BondHandler,
-            ConstraintHandler,
-        )
-
-        # Modify the BondHandler and AngleHandler classes to depend on the other one running first during
-        # system parameterization. Unfortunately, I can't figure out how to do this just to these _instances_
-        # of the Handlers, so I modify them at the class level, and then un-modify them at the end of the test.
-        orig_bh_depends = copy.deepcopy(BondHandler._DEPENDENCIES)
-        orig_ah_depends = copy.deepcopy(AngleHandler._DEPENDENCIES)
-        BondHandler._DEPENDENCIES = [ConstraintHandler, AngleHandler]
-        AngleHandler._DEPENDENCIES = [ConstraintHandler, BondHandler]
-
-        # The tests run here. Regardless of outcome, the code after `yield` runs after the test completes
-        yield
-
-        # Return handler dependencies to their original states
-        BondHandler._DEPENDENCIES = orig_bh_depends
-        AngleHandler._DEPENDENCIES = orig_ah_depends
-
     def test_parameterize_ethanol_missing_torsion(self):
         from openff.interchange.exceptions import UnassignedTorsionError
 
@@ -1711,6 +1689,24 @@ class TestForceField(_ForceFieldFixtures):
         ):
             force_field["vdW"][smirks]
 
+    def test_lookup_duplicate_parameter_type(self, force_field):
+        """Test that if a parameter SMIRKS appears twice, lookups will yield the second copy"""
+        first_bond = force_field["Bonds"][0]
+        force_field["Bonds"].add_parameter(
+            {
+                "smirks": first_bond.smirks,
+                "k": first_bond.k / 2,
+                "length": first_bond.length / 2,
+                "id": first_bond.id + "2",
+            },
+            allow_duplicate_smirks=True,
+        )
+        result = force_field["Bonds"][first_bond.smirks]
+        assert result == force_field["Bonds"].parameters[first_bond.smirks]
+        assert result.id == force_field["Bonds"][0].id + "2"
+        assert result.k == first_bond.k / 2
+        assert result.length == first_bond.length / 2
+
     @pytest.mark.parametrize(
         "to_deregister",
         [
@@ -1916,9 +1912,9 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         omm_system = force_field.create_openmm_system(
             topology, charge_from_molecules=molecules, toolkit_registry=toolkit_registry
         )
-        nonbondedForce = [
+        nonbondedForce = next(
             f for f in omm_system.getForces() if type(f) is NonbondedForce
-        ][0]
+        )
         expected_charges = (
             (0, -0.4 * openmm_unit.elementary_charge),
             (1, -0.3 * openmm_unit.elementary_charge),
@@ -1945,9 +1941,9 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             charge_from_molecules=molecules,
             toolkit_registry=toolkit_registry,
         )
-        nonbondedForce = [
+        nonbondedForce = next(
             f for f in omm_system.getForces() if type(f) is NonbondedForce
-        ][0]
+        )
         expected_charges = (
             (0, -0.2 * openmm_unit.elementary_charge),
             (1, -0.4 * openmm_unit.elementary_charge),
@@ -2014,9 +2010,9 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         omm_system = force_field.create_openmm_system(
             topology, charge_from_molecules=[ethanol], toolkit_registry=toolkit_registry
         )
-        nonbondedForce = [
+        nonbondedForce = next(
             f for f in omm_system.getForces() if type(f) is NonbondedForce
-        ][0]
+        )
         expected_charges = (
             (18, -0.4 * openmm_unit.elementary_charge),
             (19, -0.3 * openmm_unit.elementary_charge),
@@ -2046,9 +2042,9 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             get_data_file_path(os.path.join("systems", "monomers", "water.sdf"))
         )
         omm_system = ff.create_openmm_system(mol.to_topology())
-        nonbondedForce = [
+        nonbondedForce = next(
             f for f in omm_system.getForces() if type(f) is NonbondedForce
-        ][0]
+        )
         expected_charges = [-0.834, 0.417, 0.417] * openmm_unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
             q, _, _ = nonbondedForce.getParticleParameters(particle_index)
@@ -2074,11 +2070,11 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         del ff._parameter_handlers["ToolkitAM1BCC"]
         top = Topology.from_molecules([create_ethanol(), create_reversed_ethanol()])
         sys = ff.create_openmm_system(top)
-        nonbonded_force = [
+        nonbonded_force = next(
             force
             for force in sys.getForces()
             if isinstance(force, openmm.NonbondedForce)
-        ][0]
+        )
         expected_charges = [
             0.2,
             -0.15,
@@ -2122,16 +2118,16 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         sys1 = ff2.create_openmm_system(top)
         sys2 = ff2.create_openmm_system(top)
         # Extract the nonbonded force from each system
-        nonbonded_force1 = [
+        nonbonded_force1 = next(
             force
             for force in sys1.getForces()
             if isinstance(force, openmm.NonbondedForce)
-        ][0]
-        nonbonded_force2 = [
+        )
+        nonbonded_force2 = next(
             force
             for force in sys2.getForces()
             if isinstance(force, openmm.NonbondedForce)
-        ][0]
+        )
 
         # Ensure that the systems both have the correct charges assigned
         expected_charges = [
@@ -2208,11 +2204,11 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         top = acetate.to_topology()
 
         sys = ff.create_openmm_system(top)
-        nonbonded_force = [
+        nonbonded_force = next(
             force
             for force in sys.getForces()
             if isinstance(force, openmm.NonbondedForce)
-        ][0]
+        )
         expected_charges = [
             0,
             0.15,
@@ -2240,11 +2236,11 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
         sys = ff.create_openmm_system(top)
-        nonbonded_force = [
+        nonbonded_force = next(
             force
             for force in sys.getForces()
             if isinstance(force, openmm.NonbondedForce)
-        ][0]
+        )
         expected_charges = [
             0.3,
             0,
@@ -2268,11 +2264,11 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
         sys = ff.create_openmm_system(top)
-        nonbonded_force = [
+        nonbonded_force = next(
             force
             for force in sys.getForces()
             if isinstance(force, openmm.NonbondedForce)
-        ][0]
+        )
         expected_charges = [
             0.3,
             0,
@@ -2296,11 +2292,11 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         del ff._parameter_handlers["ToolkitAM1BCC"]
 
         sys = ff.create_openmm_system(top)
-        nonbonded_force = [
+        nonbonded_force = next(
             force
             for force in sys.getForces()
             if isinstance(force, openmm.NonbondedForce)
-        ][0]
+        )
         expected_charges = [
             0.3,
             0,
@@ -2328,11 +2324,11 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         ethanol = create_ethanol()
         top = ethanol.to_topology()
         sys = ff.create_openmm_system(top)
-        nonbonded_force = [
+        nonbonded_force = next(
             force
             for force in sys.getForces()
             if isinstance(force, openmm.NonbondedForce)
-        ][0]
+        )
         expected_charges = [
             0.3,
             0,
@@ -2360,11 +2356,11 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         ethanol = create_ethanol()
         top = ethanol.to_topology()
         sys = ff.create_openmm_system(top)
-        nonbonded_force = [
+        nonbonded_force = next(
             force
             for force in sys.getForces()
             if isinstance(force, openmm.NonbondedForce)
-        ][0]
+        )
         expected_charges = [
             0.35,
             -0.05,
@@ -2428,9 +2424,9 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             get_data_file_path(os.path.join("systems", "monomers", "water.sdf"))
         )
         omm_system = ff.create_openmm_system(mol.to_topology())
-        nonbondedForce = [
+        nonbondedForce = next(
             f for f in omm_system.getForces() if type(f) is NonbondedForce
-        ][0]
+        )
         expected_charges = [-2.0, 1.0, 1.0] * openmm_unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
             q, _, _ = nonbondedForce.getParticleParameters(particle_index)
@@ -2443,9 +2439,9 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             get_data_file_path("test_forcefields/tip3p.offxml"),
         )
         omm_system = ff.create_openmm_system(mol.to_topology())
-        nonbondedForce = [
+        nonbondedForce = next(
             f for f in omm_system.getForces() if type(f) is NonbondedForce
-        ][0]
+        )
         expected_charges = [-0.834, 0.417, 0.417] * openmm_unit.elementary_charge
         for particle_index, expected_charge in enumerate(expected_charges):
             q, _, _ = nonbondedForce.getParticleParameters(particle_index)
@@ -2462,9 +2458,9 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         )
         top = Topology.from_molecules([mol, mol])
         omm_system = ff.create_openmm_system(top)
-        nonbondedForce = [
+        nonbondedForce = next(
             f for f in omm_system.getForces() if type(f) is NonbondedForce
-        ][0]
+        )
         expected_charges = [
             -0.834,
             0.417,
@@ -2515,9 +2511,9 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         ]
         top = Topology.from_molecules(molecules)
         omm_system = ff.create_openmm_system(top)
-        nonbondedForce = [
+        nonbondedForce = next(
             f for f in omm_system.getForces() if type(f) is NonbondedForce
-        ][0]
+        )
         expected_charges = [
             -0.2,
             -0.1,
@@ -2558,12 +2554,12 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             get_data_file_path("test_forcefields/test_forcefield.offxml"),
             get_data_file_path("test_forcefields/ion_charges.offxml"),
         )
-        mol = Molecule.from_smiles("[{}]".format(monatomic_ion))
+        mol = Molecule.from_smiles(f"[{monatomic_ion}]")
         omm_system = ff.create_openmm_system(mol.to_topology())
 
-        nonbondedForce = [
+        nonbondedForce = next(
             f for f in omm_system.getForces() if type(f) is NonbondedForce
-        ][0]
+        )
         q, _, _ = nonbondedForce.getParticleParameters(0)
         assert q == formal_charge
 
@@ -2741,9 +2737,9 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         ]
         top = Topology.from_molecules(molecules)
         omm_system = ff.create_openmm_system(top)
-        nonbondedForce = [
+        nonbondedForce = next(
             f for f in omm_system.getForces() if type(f) is NonbondedForce
-        ][0]
+        )
         expected_charges = [
             -0.2,
             -0.1,
@@ -2783,9 +2779,9 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         ]
         top = Topology.from_molecules(molecules)
         omm_system = ff.create_openmm_system(top)
-        nonbondedForce = [
+        nonbondedForce = next(
             f for f in omm_system.getForces() if type(f) is NonbondedForce
-        ][0]
+        )
         expected_charges = [
             -0.2,
             -0.1,
@@ -2836,9 +2832,9 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             xml_ethanol_library_charges_by_atom_ff,
         )
         omm_system = ff.create_openmm_system(top)
-        nonbondedForce = [
+        nonbondedForce = next(
             f for f in omm_system.getForces() if type(f) is NonbondedForce
-        ][0]
+        )
         for particle_index in range(top.n_atoms):
             q, _, _ = nonbondedForce.getParticleParameters(particle_index)
             assert q != 0 * unit.elementary_charge
@@ -2985,7 +2981,7 @@ def generate_alkethoh_parameters_assignment_cases():
     # Remove fast test cases from slow ones to avoid duplicate tests.
     # Remove also water (c1302), which was reparameterized in AlkEthOH
     # to be TIP3P (not covered by Frosst_AlkEthOH_parmAtFrosst.
-    for fast_test_case in fast_test_cases + ["c1302"]:
+    for fast_test_case in [*fast_test_cases, 'c1302']:
         slow_test_cases.remove(fast_test_case)
 
     # Mark all slow cases as slow.
@@ -3219,7 +3215,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         ff_system = ff.create_openmm_system(molecule.to_topology())
 
         # Load OpenMM System created with the 0.1 version of the toolkit.
-        with open(xml_file_path, "r") as f:
+        with open(xml_file_path) as f:
             xml_system = openmm.XmlSerializer.deserialize(f.read())
 
         # Compare parameters. We ignore the improper folds as in 0.0.3 we
@@ -3304,11 +3300,11 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
             off_top, charge_from_molecules=[molecule]
         )
 
-        off_nonbonded_force = [
+        off_nonbonded_force = next(
             force
             for force in off_omm_system.getForces()
             if isinstance(force, openmm.NonbondedForce)
-        ][0]
+        )
 
         omm_top = off_top.to_openmm()
         pmd_struct = pmd.openmm.load_topology(omm_top, off_omm_system, positions)
@@ -3888,11 +3884,11 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         )
 
         # Verify that the assigned bond parameters were correctly interpolated
-        off_bond_force = [
+        off_bond_force = next(
             force
             for force in omm_system.getForces()
             if isinstance(force, openmm.HarmonicBondForce)
-        ][0]
+        )
 
         for idx in range(off_bond_force.getNumBonds()):
             params = off_bond_force.getBondParameters(idx)
@@ -3909,11 +3905,11 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
                 assert_almost_equal(length / length.unit, length_bond_interpolated)
 
         # Verify that the assigned torsion parameters were correctly interpolated
-        off_torsion_force = [
+        off_torsion_force = next(
             force
             for force in omm_system.getForces()
             if isinstance(force, openmm.PeriodicTorsionForce)
-        ][0]
+        )
 
         for idx in range(off_torsion_force.getNumTorsions()):
             params = off_torsion_force.getTorsionParameters(idx)
@@ -3974,11 +3970,11 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
             partial_bond_orders_from_molecules=[mol],
         )
 
-        off_torsion_force = [
+        off_torsion_force = next(
             force
             for force in omm_system.getForces()
             if isinstance(force, openmm.PeriodicTorsionForce)
-        ][0]
+        )
 
         for idx in range(off_torsion_force.getNumTorsions()):
             params = off_torsion_force.getTorsionParameters(idx)
@@ -3997,6 +3993,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         Ensure that requesting an invalid interpolation method leads to a
         FractionalBondOrderInterpolationMethodUnsupportedError
         """
+
         mol = create_ethanol()
 
         forcefield = ForceField(
@@ -4010,7 +4007,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         # If important, this can be a custom exception instead of a verbose ValidationError
         with pytest.raises(
             ValidationError,
-            match="given=invalid method name",
+            match="Input should be 'linear'.*input_value='invalid method name'",
         ):
             forcefield.create_openmm_system(
                 topology,
@@ -4067,6 +4064,7 @@ class TestForceFieldWithToolkits(_ForceFieldFixtures):
 
 class TestSmirnoffVersionConverter:
     @requires_openeye_mol2
+    @pytest.mark.slow
     @pytest.mark.parametrize(
         ("freesolv_id", "forcefield_version", "allow_undefined_stereo"),
         generate_freesolv_parameters_assignment_cases(),
@@ -4114,7 +4112,7 @@ class TestSmirnoffVersionConverter:
         ff_system = ff.create_openmm_system(molecule.to_topology())
 
         # Load OpenMM System created with the 0.1 version of the toolkit.
-        with open(xml_file_path, "r") as f:
+        with open(xml_file_path) as f:
             xml_system = openmm.XmlSerializer.deserialize(f.read())
 
         # Compare parameters. We ignore the improper folds as in 0.0.3 we
@@ -4136,9 +4134,9 @@ class TestForceFieldGetPartialCharges(_ForceFieldFixtures):
     def get_partial_charges_from_create_openmm_system(mol, force_field):
         """Helper method to compute partial charges from a generated openmm System."""
         system = force_field.create_openmm_system(mol.to_topology())
-        nbforce = [
+        nbforce = next(
             f for f in system.getForces() if isinstance(f, openmm.openmm.NonbondedForce)
-        ][0]
+        )
 
         n_particles = nbforce.getNumParticles()
         charges = [nbforce.getParticleParameters(i)[0] for i in range(n_particles)]

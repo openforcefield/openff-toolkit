@@ -13,7 +13,7 @@ on:
     # Nightly tests run on main by default:
     #   Scheduled workflows run on the latest commit on the default or base branch.
     #   (from https://help.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events-schedule)
-    - cron: "0 0 * * *"
+    - cron: "21 0 * * *"
 
 defaults:
   run:
@@ -28,27 +28,27 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.10", "3.11", "3.12"]
         rdkit: [true, false]
         openeye: [true, false]
         exclude:
           - rdkit: false
             openeye: false
           - openeye: true
-            python-version: "3.10"
-          - openeye: true
             python-version: "3.11"
+          - openeye: true
+            python-version: "3.12"
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openff
       PYTEST_ARGS: -r fE --tb=short -nauto
-      COV: --cov=openff/toolkit --cov-config=setup.cfg --cov-append --cov-report=xml
+      COV: --cov=openff/toolkit --cov-append --cov-report=xml
 
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Set environment variables
         run: |
@@ -74,23 +74,16 @@ jobs:
           fi
 
       - name: Install environment with ${{ env.JOBNAME }}
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: devtools/conda-envs/${{ env.ENVFILE }}.yaml
           create-args: >-
             python=${{ matrix.python-version }}
 
-      - name: Additional info about the build
-        run: |
-          uname -a
-          df -h
-          ulimit -a
-
       - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
         env:
           OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
-        run: |
-          echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
+        run: echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
 
       - name: Install package
         run: |
@@ -103,14 +96,13 @@ jobs:
           python -m pip install .
 
       - name: Install test plugins
-        run: |
-          python -m pip install utilities/test_plugins
+        run: python -m pip install utilities/test_plugins
 
       - name: Remove undesired toolkits
         run: |
           if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
             for cpkg in ${{ env.PACKAGES_TO_REMOVE }}; do
-              if [[ $(conda list | grep $cpkg) ]]; then micromamba remove --force $cpkg --yes ; fi
+              if [[ $(micromamba list | grep $cpkg) ]]; then micromamba remove --force $cpkg --yes ; fi
             done
           fi
 
@@ -135,16 +127,22 @@ jobs:
 
       - name: Environment Information
         run: |
-          conda info
-          conda list
+          micromamba info
+          micromamba list
+          pip list
 
       - name: Check links
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
 
       - name: Run mypy
-        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: mypy -p "openff.toolkit" --exclude "openff/toolkit/data"
+        # Subtle differences in Python/mypy versions, just keep it passing on one.
+        # When possible re-enable this with OE+RDK=True, but for now rdkit builds often have bugs
+        # in stubs and there are other subtleties (in the source code and builds) that reduce the number
+        # of available builds.
+        # See ex https://github.com/rdkit/rdkit/issues/7221
+        if: ${{ matrix.rdkit == false && matrix.openeye && matrix.python-version == 3.10 }}
+        run: mypy -p "openff.toolkit"
 
       - name: Run unit tests
         run: |
@@ -154,26 +152,29 @@ jobs:
             PYTEST_ARGS+=" --runslow"
           fi
 
-          python -m pytest $PYTEST_ARGS $COV
+          python -m pytest --durations=20 $PYTEST_ARGS $COV
 
       - name: Run code snippets in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: |
-          pytest -v --no-cov --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
+        run: pytest -v --no-cov --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
 
       - name: Run notebooks in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: |
-          pytest -v --no-cov --durations=5 --nbval --ignore docs/_build/ docs/
+        run: pytest -v --no-cov --nbval --ignore docs/_build/ docs/
 
       - name: Run examples in docstrings
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: |
-          pytest -v --no-cov --doctest-modules --ignore=openff/toolkit/_tests/ --ignore=openff/toolkit/data/ --ignore=openff/toolkit/utils/utils.py openff/
+          pytest openff \
+            -v -x -n logical --no-cov --doctest-modules \
+            --ignore-glob='openff/toolkit/_tests*' \
+            --ignore=openff/toolkit/data/ \
+            --ignore=openff/toolkit/utils/utils.py
 
       - name: Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage.xml
+          files: ./coverage.xml
+          disable_search: true
           fail_ci_if_error: true

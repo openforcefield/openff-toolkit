@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING, DefaultDict, Mapping, Optional
+from collections import defaultdict
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from openmm.app import Atom as OpenMMAtom
@@ -9,11 +11,11 @@ if TYPE_CHECKING:
 class OpenFFToolkitException(Exception):
     """Base exception for custom exceptions raised by the OpenFF Toolkit"""
 
-    def __init__(self, msg):
+    def __init__(self, msg: str):
         super().__init__(msg)
         self.msg = msg
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.msg
 
 
@@ -122,10 +124,24 @@ class InvalidConformerError(OpenFFToolkitException):
     """
 
 
+class InvalidQCInputError(OpenFFToolkitException, AttributeError):
+    """
+    This error is raised when an input to Molecule.from_qcschema is invalid.
+    """
+
+
 # TODO: Remove in favor of SMILESParseError? They are used in different modules
 class SmilesParsingError(OpenFFToolkitException):
     """
     This error is raised when parsing a SMILES string results in an error.
+    """
+
+
+class EmptyInChiError(OpenFFToolkitException):
+    """
+    This error is raised when a toolkit returns an empty InChi string, possibly due to bugs
+    in the underlying InChi code. For more context, see
+    https://github.com/openforcefield/openff-toolkit/issues/1897
     """
 
 
@@ -361,6 +377,11 @@ class MissingConformersError(OpenFFToolkitException, ValueError):
     """Error raised when a molecule is missing conformer(s) in a context in which it is expected to have them."""
 
 
+class MissingCMILESError(OpenFFToolkitException, KeyError):
+    """Error raised when attempting to convert an QC input to an OFF Molecule, but the CMILES can't be found
+    or isn't present."""
+
+
 class UnsupportedMoleculeConversionError(OpenFFToolkitException):
     """Error raised when attempting to instantiate a Molecule with insufficient inputs."""
 
@@ -386,6 +407,8 @@ class OpenEyeImportError(OpenFFToolkitException):
 class MultipleMoleculesInPDBError(OpenFFToolkitException):
     """Error raised when a multiple molecules are found when one was expected"""
 
+class MultipleComponentsInMoleculeWarning(UserWarning):
+    """Warning emitted when user attempts to make an OpenFF Molecule with multiple disconnected components"""
 
 class WrongShapeError(OpenFFToolkitException):
     """Error raised when an array of the wrong shape is found"""
@@ -399,16 +422,16 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
     def __init__(
         self,
         msg: Optional[str] = None,
-        substructure_library: Optional[dict[str, tuple[str, list[str]]]] = None,
+        substructure_library: Optional[dict[str, list[tuple]]] = None,
         omm_top: Optional["OpenMMTopology"] = None,
         unassigned_bonds: Optional[list[tuple[int, int]]] = None,
         unassigned_atoms: Optional[list[int]] = None,
-        matches: Optional[DefaultDict[int, list[str]]] = None,
+        matches: Optional[defaultdict[int, list[str]]] = None,
     ):
         if omm_top is not None:
             self.omm_top = omm_top
-            self._atoms: list["OpenMMAtom"] = list(omm_top.atoms())
-            self._bonds: list[tuple["OpenMMAtom", "OpenMMAtom"]] = list(omm_top.bonds())
+            self._atoms: list[OpenMMAtom] = list(omm_top.atoms())
+            self._bonds: list[tuple[OpenMMAtom, OpenMMAtom]] = list(omm_top.bonds())
 
         if not (substructure_library):
             substructure_library = {}
@@ -572,8 +595,6 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
         return []
 
     def assigned_residue_name_mismatch_hint(self) -> list[str]:
-        from collections import defaultdict
-
         if not self.matches:
             return []
 
@@ -585,7 +606,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
             input_chain: str = atom.residue.chain.id
             matched_resnames = self.matches[atom.index]
             # Only the first match is assigned, so throw out the others
-            assigned_resname = next(iter(matched_resnames), "No match")
+            assigned_resname = next(iter(matched_resnames), "No match").upper()
 
             residues[(input_resname, input_resnum, input_chain)].add(assigned_resname)
 

@@ -4,9 +4,8 @@ A modern, extensible library for molecular mechanics force field science from th
 """
 
 import importlib
+from importlib.metadata import version
 from typing import TYPE_CHECKING
-
-from openff.toolkit._version import get_versions
 
 if TYPE_CHECKING:
     # These types are imported lazily at runtime, but we need to tell type
@@ -27,21 +26,21 @@ if TYPE_CHECKING:
         ToolkitRegistry,
     )
 
-__version__ = get_versions()["version"]
+__version__ = version("openff.toolkit")
 
 __all__ = [
-    "__version__",
-    "Molecule",
-    "Topology",
-    "ForceField",
-    "get_available_force_fields",
     "GLOBAL_TOOLKIT_REGISTRY",
     "AmberToolsToolkitWrapper",
     "BuiltInToolkitWrapper",
+    "ForceField",
+    "Molecule",
     "OpenEyeToolkitWrapper",
+    "Quantity",
     "RDKitToolkitWrapper",
     "ToolkitRegistry",
-    "Quantity",
+    "Topology",
+    "__version__",
+    "get_available_force_fields",
     "unit",
 ]
 
@@ -79,7 +78,13 @@ def __getattr__(name):
     obj_mod = _lazy_imports_obj.get(name)
     if obj_mod is not None:
         mod = importlib.import_module(obj_mod)
-        return mod.__dict__[name]
+        # This only causes an infinite recursive loop if an object that does not
+        # exist is declared in `_lazy_imports_obj` to be lazy loaded from the
+        # current module. Since there is no reason to include either an object
+        # from the current module or an object that does not exist in
+        # `_lazy_imports_obj`, and since the function would fail in this case
+        # anyway, this is safe.
+        return getattr(mod, name)
 
     lazy_mod = _lazy_imports_mod.get(name)
     if lazy_mod is not None:

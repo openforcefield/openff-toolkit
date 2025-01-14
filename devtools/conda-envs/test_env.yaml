@@ -5,7 +5,7 @@ channels:
 dependencies:
     # Base depends
   - python
-  - pip
+  - versioningit
   - packaging
   - numpy
   - networkx
@@ -19,33 +19,44 @@ dependencies:
   - openff-units =0.2.0
   - openff-amber-ff-ports
   - openff-utilities >=0.1.5
-  - openff-interchange-base >=0.3.17
-  - openff-nagl-base ==0.3.0
-  - openff-nagl-models ==0.1.0
+  - openff-interchange-base =0.4
+  - openff-nagl-base >=0.4.0
+  - openff-nagl-models >=0.3.0
     # Toolkit-specific
   - ambertools >=22
-  - rdkit
+    # rdkit 2024.03.6 and 2024.09.1 packages fail when run natively on osx-arm64 macs
+    # https://github.com/rdkit/rdkit/issues/7583
+    # and a bad stub (causing mypy failure only)
+    # https://github.com/rdkit/rdkit/issues/7221
+  - rdkit !=2024.03.6,!=2024.09.1
+
   - openeye-toolkits
     # Test-only/optional/dev/typing
   - pytest
   - pytest-cov
   - pytest-xdist
   - pytest-rerunfailures
+  - pytest-timeout
   - pyyaml
   - toml
   - bson
   - msgpack-python
+  - pydantic
   - qcelemental
-  - qcportal >=0.15, <0.50.0a0
+  - qcportal >=0.50
   - qcengine
   - nglview
   - mdtraj
   - nbval
+  # No idea why this is necessary, see https://github.com/openforcefield/openff-toolkit/pull/1821
+  - nomkl
   - mypy
   - typing_extensions
-  - pydantic =1
   - pip:
     - types-setuptools
     - types-toml
     - types-PyYAML
+    - types-networkx
+    - types-xmltodict
+    - types-cachetools
     - mongo-types

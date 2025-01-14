@@ -26,7 +26,7 @@ If you do not have Mamba or Conda installed, see the [ecosystem installation doc
 Installation via the Mamba package manager is the recommended method since all dependencies are automatically fetched and installed for you.
 :::
 
-[ecosystem installation documentation]: openff.docs:install
+[ecosystem installation documentation]: inv:openff.docs#install
 
 (installation/platforms)=
 
@@ -92,6 +92,7 @@ All available toolkits are automatically registered in the `GLOBAL_TOOLKIT_REGIS
 
 ```python
 from openff.toolkit import GLOBAL_TOOLKIT_REGISTRY
+
 print(GLOBAL_TOOLKIT_REGISTRY.registered_toolkit_versions)
 # {'The RDKit': '2022.03.5', 'AmberTools': '22.0', 'Built-in Toolkit': None}
 ```

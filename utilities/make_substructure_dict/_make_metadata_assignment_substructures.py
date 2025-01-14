@@ -1,7 +1,8 @@
 import os
 
-from openff.toolkit.utils import get_data_file_path
 from _cif_to_substructure_dict import CifSubstructures
+
+from openff.toolkit.utils import get_data_file_path
 
 if not os.path.exists("aa-variants-v1.cif"):
     import requests

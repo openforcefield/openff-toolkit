@@ -3,7 +3,6 @@ import re
 
 import numpy
 import pytest
-from openff.nagl_models import list_available_nagl_models
 from openff.utilities import has_package, skip_if_missing
 
 from openff.toolkit import Molecule, unit
@@ -22,7 +21,14 @@ from openff.toolkit.utils.exceptions import (
 from openff.toolkit.utils.nagl_wrapper import NAGLToolkitWrapper
 from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 
-_DEFAULT_MODEL = "openff-gnn-am1bcc-0.1.0-rc.1.pt"
+_DEFAULT_MODEL = "openff-gnn-am1bcc-0.1.0-rc.3.pt"
+
+try:
+    from openff.nagl_models import list_available_nagl_models
+except ModuleNotFoundError:
+
+    def list_available_nagl_models():
+        return list()
 
 
 @skip_if_missing("openff.nagl")
@@ -134,7 +140,7 @@ class TestNAGLToolkitWrapper:
             )
 
     def test_unsupported_molecule_bond(self):
-        mol = Molecule.from_smiles("C=[Cl+1]")
+        mol = Molecule.from_smiles("CCC=[Cl+]")
         err = re.escape("Molecule contains forbidden SMARTS pattern [#17:1]#,:,=[*:2]")
         with pytest.raises(ValueError, match=err):
             mol.assign_partial_charges(

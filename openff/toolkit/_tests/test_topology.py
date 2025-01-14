@@ -2,6 +2,7 @@
 Tests for Topology
 
 """
+
 import itertools
 import re
 from copy import deepcopy
@@ -142,6 +143,76 @@ class TestTopology:
         assert topology.box_vectors is None
         assert not topology.is_periodic
         assert len(topology.constrained_atom_pairs.items()) == 0
+
+    def test_add_molecule_index(self):
+        """Ensure the index of added molecules is 0-indexed."""
+        topology = Topology()
+
+        index = topology.add_molecule(create_ammonia())
+
+        assert index == 0 == topology.n_molecules - 1
+
+        # Ensure that same index can immediately be used as a lookup
+        topology.molecule(index)
+
+        next_index = topology.add_molecule(create_ethanol())
+
+        assert next_index == 1 == topology.n_molecules - 1
+
+    def test_from_molecule_bad_argument(self):
+        with pytest.raises(
+            ValueError,
+            match="Invalid type.*Topology",
+        ):
+
+            topology = Topology()
+
+            topology.add_molecule(create_water().to_topology())
+
+    @pytest.mark.timeout(10)
+    def test_add_molecules(self):
+        water = create_water()
+
+        topology = Topology()
+
+        indices = topology.add_molecules(10_000 * [water])
+
+        assert topology.n_molecules == 10_000
+
+        assert indices == [*range(10_000)]
+
+    def test_from_molecule_nonlist(self):
+        topology = Topology()
+
+        with pytest.raises(
+            ValueError,
+            match="Invalid type.*set.*molecules",
+        ):
+
+            topology.add_molecules({create_water(), create_ammonia()})
+
+        with pytest.raises(
+            ValueError,
+            match="Invalid type.*str.*molecules",
+        ):
+
+            topology.add_molecules("CC.CCO")
+
+    def test_add_simple_molecule_atom_names(self):
+        """Reproduce issue #1927"""
+        simple = _SimpleMolecule.from_molecule(Molecule.from_smiles("C"))
+
+        for index, letter in enumerate("BLAHB"):
+            simple.atom(index).name = letter
+
+        topology = Topology()
+        topology.add_molecule(simple)
+
+        assert topology.atom(0).name == "B"
+        assert topology.atom(1).name == "L"
+        assert topology.atom(2).name == "A"
+        assert topology.atom(3).name == "H"
+        assert topology.atom(4).name == "B"
 
     def test_reinitialization_box_vectors(self):
         topology = Topology()
@@ -528,17 +599,14 @@ class TestTopology:
         for omm_atom, off_atom in zip(pdbfile.topology.atoms(), topology.atoms):
             assert omm_atom.name == off_atom.name
 
-    def test_from_openmm_virtual_sites(self):
-        from openff.toolkit import ForceField
-
+    def test_from_openmm_virtual_sites(self, opc):
         water = Molecule.from_mapped_smiles("[O:1]([H:2])[H:3]")
-        opc = ForceField("opc-1.0.1.offxml")
 
         openmm_topology = opc.create_interchange([water]).to_openmm_topology()
 
         with pytest.raises(
             VirtualSitesUnsupportedError,
-            match="Atom <Atom 3 \(EP\) of chain 0 residue 0 \(UNK\)>.* a virtual site",
+            match=r"Atom <Atom 3 .*EP.*a virtual site",
         ):
             Topology.from_openmm(
                 openmm_topology,
@@ -686,7 +754,7 @@ class TestTopology:
                 roundtrip = roundtrip_atom.metadata["residue_number"]
                 assert original == roundtrip
             else:
-                assert roundtrip_atom.metadata["residue_number"] == 0
+                assert roundtrip_atom.metadata["residue_number"] == "0"
 
             if "insertion_code" in orig_atom.metadata:
                 original = orig_atom.metadata["insertion_code"]
@@ -703,6 +771,21 @@ class TestTopology:
                 assert roundtrip_atom.metadata["chain_id"] == "X"
 
     @requires_rdkit
+    def test_from_to_openmm_hierarchy_metadata(self):
+        """Reproduce issue #1953"""
+        import openmm.app
+
+        openmm_topology = openmm.app.PDBFile(get_data_file_path("proteins/MainChain_ALA_ALA.pdb")).topology
+        openff_molecule = Topology.from_pdb(get_data_file_path("proteins/MainChain_ALA_ALA.pdb")).molecule(0)
+
+        roundtripped = Topology.from_openmm(
+            openmm_topology,
+            unique_molecules=[openff_molecule],
+        ).to_openmm()
+
+        assert {type(residue.id) for residue in roundtripped.residues()} == {str}, "type mistmatch in residue id in OpenMM residues"
+
+    @requires_rdkit
     def test_from_pdb(self):
         with pytest.raises(UnassignedChemistryInPDBError) as exc_info:
             Topology.from_pdb(get_data_file_path("proteins/5tbm_complex_solv.pdb"))
@@ -713,7 +796,7 @@ class TestTopology:
 
         ligand = Molecule.from_file(get_data_file_path("molecules/PT2385.sdf"))
         stereoisomer1 = Molecule.from_smiles("[C@H](Cl)(F)/C=C/F")
-        stereoisomer2 = Molecule.from_smiles("[C@@H](Cl)(F)/C=C\F")
+        stereoisomer2 = Molecule.from_smiles(r"[C@@H](Cl)(F)/C=C\F")
 
         top = Topology.from_pdb(
             get_data_file_path("proteins/5tbm_complex_solv.pdb"),
@@ -768,6 +851,7 @@ class TestTopology:
     @requires_rdkit
     def test_from_pdb_input_types(self):
         import pathlib
+        from io import StringIO
 
         import openmm.app
 
@@ -778,6 +862,10 @@ class TestTopology:
         Topology.from_pdb(pathlib.Path(protein_path))
 
         with open(protein_path) as f:
+            Topology.from_pdb(f)
+
+        pdb_string = pathlib.Path(protein_path).read_text()
+        with StringIO(pdb_string) as f:
             Topology.from_pdb(f)
 
         with pytest.raises(ValueError, match="Unexpected type.*PDBFile"):
@@ -1709,6 +1797,7 @@ class TestTopology:
 
 @skip_if_missing("nglview")
 class TestTopologyVisaulization:
+    @pytest.mark.slow
     @requires_rdkit
     def test_visualize_basic(self):
         import nglview
@@ -1953,7 +2042,18 @@ class TestTopologySerialization:
 
         assert roundtrip.n_molecules == n_molecules
         assert roundtrip.n_atoms == oleic_acid.n_atoms * n_molecules
-        assert [*roundtrip.molecules][0].n_conformers == n_conformers
+        assert next(iter(roundtrip.molecules)).n_conformers == n_conformers
+
+
+    @pytest.mark.parametrize("format", ["dict", "json"])
+    def test_roundtrip_simple_molecules(self, mixed_topology, format):
+        if format == "dict":
+            roundtrip = Topology.from_dict(mixed_topology.to_dict())
+        elif format == "json":
+            roundtrip = Topology.from_json(mixed_topology.to_json())
+
+        assert roundtrip.n_molecules == mixed_topology.n_molecules
+        assert roundtrip.n_atoms == mixed_topology.n_atoms
 
 
 @pytest.mark.parametrize(
@@ -2233,11 +2333,46 @@ class TestTopologyPositions:
             stop = i * 3 + 8
             assert np.all(mol.conformers[0] == positions[start:stop, :])
 
+    def test_set_positions_simple_molecule(self):
+        """Reproduce issue #1867"""
+        simple = _SimpleMolecule.from_molecule(Molecule.from_smiles("C=O"))
+
+        topology = Topology.from_molecules([simple, simple])
+
+        topology.set_positions(Quantity(np.zeros((topology.n_atoms, 3)), "nanometer"))
+
+        positions = topology.get_positions()
+
+        assert positions.shape == (topology.n_atoms, 3)
+        assert positions.units == "nanometer"
+
+    def test_set_positions_mixed_topology(self):
+        """Reproduce issue #1867"""
+        molecule = Molecule.from_smiles("C=O")
+        simple = _SimpleMolecule.from_molecule(molecule)
+
+        topology = Topology.from_molecules([molecule, simple])
+
+        topology.set_positions(Quantity(np.zeros((topology.n_atoms, 3)), "nanometer"))
+
+        positions = topology.get_positions()
+
+        assert positions.shape == (topology.n_atoms, 3)
+        assert positions.units == "nanometer"
+
     @pytest.fixture()
     def topology(self) -> Topology:
         methane = Molecule.from_mapped_smiles("[H:2][C:1]([H:3])([H:4])[H:5]")
         water = Molecule.from_mapped_smiles("[H:2][O:1][H:3]")
         topology = Topology.from_molecules([methane] + [water] * 4)
+
+        return topology
+
+    @pytest.fixture()
+    def topology_with_positions(self, topology) -> Topology:
+        # These conformers will obviously overlap, but they'll be the right data type
+        for molecule in topology.molecules:
+            molecule.generate_conformers(n_conformers=1)
 
         return topology
 
@@ -2323,6 +2458,30 @@ class TestTopologyPositions:
         topology.set_positions(positions)
         topology._molecules[0]._conformers = None
         assert topology.get_positions() is None
+
+    def test_clear_and_re_set_positions(self, topology_with_positions):
+        initial_positions = topology_with_positions.get_positions()
+        assert initial_positions is not None
+        assert initial_positions.shape == (topology_with_positions.n_atoms, 3)
+
+        with pytest.raises(
+            ValueError,
+            match="cannot be None.*use clear_positions",
+        ):
+            topology_with_positions.set_positions(None)
+
+        topology_with_positions.clear_positions()
+
+        assert topology_with_positions.get_positions() is None
+
+        for molecule in topology_with_positions.molecules:
+            assert molecule.conformers is None
+
+        # re-set positions back to their original values
+        topology_with_positions.set_positions(initial_positions)
+
+        assert initial_positions is not None
+        assert initial_positions.shape == (topology_with_positions.n_atoms, 3)
 
 
 @requires_rdkit
@@ -2458,3 +2617,17 @@ class TestTopologyFromPdbCustomSubstructures:
 
         assert sorted(sym_atoms) == [3, 4, 10, 13]
         assert sorted(sym_bonds) == [(2, 3), (2, 4), (9, 10), (9, 13)]
+
+
+class TestMixedTopology:
+    def test_reinitialized_mixed_topology(self, mixed_topology):
+        copied = Topology(mixed_topology)
+
+        assert copied.n_atoms == mixed_topology.n_atoms
+        assert copied.n_bonds == mixed_topology.n_bonds
+        assert copied.n_molecules == mixed_topology.n_molecules
+
+        assert (
+            copied.atom(int(copied.n_atoms / 2)).atomic_number
+            == mixed_topology.atom(int(mixed_topology.n_atoms / 2)).atomic_number
+        )

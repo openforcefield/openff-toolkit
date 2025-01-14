@@ -12,8 +12,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macOS-latest, ubuntu-latest]
-        python-version: ["3.9", "3.10"]
+        os: [macOS-12, ubuntu-latest]
+        python-version: ["3.10", "3.11"]
 
     env:
       CI_OS: ${{ matrix.os }}
@@ -25,6 +25,7 @@ jobs:
     - name: Install conda environment
       uses: mamba-org/setup-micromamba@v1
       with:
+        micromamba-version: '1.5.10-0'
         environment-file: devtools/conda-envs/installer.yaml
         create-args: >-
           python=${{ matrix.python-version }}
@@ -108,4 +109,3 @@ jobs:
         # This should work if run directly at release time, but a safer approach would be
         # to `git checkout` the corresponding tag of the release, see PR #577
         pytest $PYTEST_ARGS ../
-

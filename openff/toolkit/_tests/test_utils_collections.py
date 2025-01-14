@@ -182,6 +182,10 @@ class TestValidatedDict(TestValidatedMixin):
             d.update((("moe", 2), ("larry", 3), ("curly", -4)))
         with pytest.raises(TypeError, match="value is not positive"):
             d.update({"moe": 2, "larry": 3, "curly": -4})
+        with pytest.raises(TypeError, match="exactly one positional"):
+            d.update({"moe": 2}, {"larry": 3}, {"curly": -4})
+        with pytest.raises(TypeError, match="not accept named"):
+            d.update({"moe": 2}, moe=2, larry=3, curly=-4)
 
     def test_converters(self):
         """Custom converters of ValidatedDict are called correctly."""

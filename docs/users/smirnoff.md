@@ -18,7 +18,7 @@ lengths to ensure reproducibility of results generated from its force fields.
 The OpenFF Toolkit is the reference implementation of the SMIRNOFF spec. The
 toolkit is responsible for reading and writing `.offxml` files, for
 facilitating their modification, and for applying them to a molecular system in
-order to produce an [`Interchange`] object. The OpenFF Interchange project then
+order to produce an [`Interchange`] object. The `Interchange` object then
 takes over and is responsible for [producing input files and data] for actual
 MD software. The toolkit strives to be backwards compatible with old versions
 of the spec, but owing to the vagaries of the arrow of time cannot be forward
@@ -84,7 +84,7 @@ general or as specific as needed.
 [SMIRKS]: https://www.daylight.com/dayhtml/doc/theory/theory.smirks.html
 [standards repository]: https://openforcefield.github.io/standards/standards/smirnoff/
 [`Interchange`]: openff.interchange.Interchange
-[producing input files and data]: openff.interchange:using/output
+[producing input files and data]: inv:openff.interchange#using/output
 
 :::{hint} 
 This page is not the SMIRNOFF spec; it has been moved to the
