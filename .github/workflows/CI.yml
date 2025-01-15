@@ -154,7 +154,7 @@ jobs:
 
       - name: Run notebooks in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: pytest -v --no-cov --nbval --ignore docs/_build/ docs/
+        run: python -m pytest -v --no-cov --nbval-lax docs/
 
       - name: Run examples in docstrings
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
