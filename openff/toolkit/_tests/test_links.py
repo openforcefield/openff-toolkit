@@ -1,9 +1,8 @@
+import pathlib
 import re
 from urllib.request import Request, urlopen
 
 import pytest
-
-from openff.toolkit._tests.utils import _get_readme_path
 
 
 def find_readme_links() -> list[str]:
@@ -14,16 +13,23 @@ def find_readme_links() -> list[str]:
     readme_examples : list[str]
         The list of links included in the README.md file.
     """
-    readme_file_path = _get_readme_path()
-
-    if readme_file_path is None:
+    if "site-packages" in __file__:
+        # This test file is being collected from the installed package, which
+        # does not provide the README file.
+        # Note that there will likely be a mis-bundled file
+        # $CONDA_PREFIX/lib/python3.x/site-packages/README.md, but this is not
+        # the toolkit's README file!
         return list()
 
     else:
+        readme_file_path = pathlib.Path(__file__).parents[3] / "README.md"
         with open(readme_file_path.as_posix()) as f:
             readme_content = f.read()
 
-        return re.findall("http[s]?://(?:[0-9a-zA-Z]|[-/.%:_])+", readme_content)
+    with open(readme_file_path.as_posix()) as f:
+        readme_content = f.read()
+
+    return re.findall("http[s]?://(?:[0-9a-zA-Z]|[-/.%:_])+", readme_content)
 
 
 @pytest.mark.parametrize("readme_link", find_readme_links())

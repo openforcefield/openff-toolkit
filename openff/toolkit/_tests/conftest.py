@@ -1,9 +1,5 @@
 """
 Configuration file for pytest.
-
-This adds the following command line options.
-- runslow: Run tests marked as slow (default is False).
-
 """
 
 import logging
@@ -18,16 +14,6 @@ try:
     import qcportal  # noqa
 except ImportError:
     pass
-
-
-def pytest_configure(config):
-    """
-    Initialization hook to register custom markers without a pytest.ini
-    More info: https://docs.pytest.org/en/latest/reference.html#initialization-hooks
-    """
-    config.addinivalue_line(
-        "markers", "slow: marks tests as slow (deselect with `-m 'not slow'`)"
-    )
 
 
 def untar_full_alkethoh_and_freesolv_set():

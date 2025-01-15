@@ -291,11 +291,10 @@ class ParameterAttribute:
     >>> my_par.attr_quantity = '1.0 * nanometer'
     >>> my_par.attr_quantity
     <Quantity(1.0, 'nanometer')>
-    >>> my_par.attr_quantity = 3.0
+    >>> my_par.attr_quantity = 3.0  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    openff.toolkit.utils.exceptions.IncompatibleUnitError:
-    attr_quantity=3.0 dimensionless should have units of angstrom
+    openff.toolkit.utils.exceptions.IncompatibleUnitError: attr_quantity=3.0 dimensionless should have units of angstrom
 
     You can attach a custom converter to an attribute.
 
@@ -334,7 +333,7 @@ class ParameterAttribute:
     ...
     TypeError: Cannot convert '4.0' to float
 
-    """
+    """  # noqa: E501
 
     UNDEFINED = UNDEFINED
     """Marker type for an undeclared default parameter."""
@@ -734,21 +733,18 @@ class _ParameterAttributeHandler:
 
     While assigning incompatible units is forbidden.
 
-    >>> my_par.k = 3.0 * unit.gram
+    >>> my_par.k = 3.0 * unit.gram  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    openff.toolkit.utils.exceptions.IncompatibleUnitError:
-    k=3.0 gram should have units of kilocalorie / angstrom ** 2 / mole
+    openff.toolkit.utils.exceptions.IncompatibleUnitError: k=3.0 gram should have units of kilocalorie / angstrom ** 2 / mole
 
     On top of type checking, the constructor implemented in ``_ParameterAttributeHandler``
     checks if some required parameters are not given.
 
-    >>> ParameterTypeOrHandler(length=3.0*unit.nanometer)
+    >>> ParameterTypeOrHandler(length=3.0*unit.nanometer)  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    openff.toolkit.utils.exceptions.SMIRNOFFSpecError:
-    <class '...ParameterTypeOrHandler'> require the following missing
-    parameters: ['k']. Defined kwargs are ['length']
+    openff.toolkit.utils.exceptions.SMIRNOFFSpecError: <class '...ParameterTypeOrHandler'> require the following missing parameters: ['k']. Defined kwargs are ['length']
 
     Each attribute can be made optional by specifying a default value,
     and you can attach a converter function by passing a callable as an
@@ -812,7 +808,7 @@ class _ParameterAttributeHandler:
     >>> my_par.periodicity
     [1, 6]
 
-    """
+    """  # noqa: E501
 
     def __init__(self, allow_cosmetic_attributes=False, **kwargs):
         """
@@ -1697,11 +1693,10 @@ class ParameterType(_ParameterAttributeHandler):
     ... )
     >>> my_par.length
     <Quantity(1.01, 'angstrom')>
-    >>> my_par.k = 3.0 * unit.gram
+    >>> my_par.k = 3.0 * unit.gram  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    openff.toolkit.utils.exceptions.IncompatibleUnitError:
-    k=3.0 gram should have units of kilocalorie / angstrom ** 2 / mole
+    openff.toolkit.utils.exceptions.IncompatibleUnitError: k=3.0 gram should have units of kilocalorie / angstrom ** 2 / mole
 
     Each attribute can be made optional by specifying a default value,
     and you can attach a converter function by passing a callable as an
@@ -1769,7 +1764,7 @@ class ParameterType(_ParameterAttributeHandler):
     >>> my_par.periodicity
     [1, 6]
 
-    """
+    """  # noqa: E501
 
     # The string mapping to this ParameterType in a SMIRNOFF data source
     _ELEMENT_NAME: Optional[str] = None

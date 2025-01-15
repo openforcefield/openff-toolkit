@@ -78,7 +78,7 @@ jobs:
         run: |
           PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_examples.py"
           PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_links.py"
-          PYTEST_ARGS+=" --runslow"
+          PYTEST_ARGS+=" -m 'slow or not slow'"
           pytest $PYTEST_ARGS
 
       - name: Run code snippets in docs

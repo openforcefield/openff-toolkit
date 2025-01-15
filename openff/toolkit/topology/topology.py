@@ -1688,12 +1688,7 @@ class Topology(Serializable):
         (24, 23, 29, 36)
         (32, 31, 40, 42)
         >>> [*top.hierarchy_iterator("residues")]
-        [HierarchyElement ('A', '1', ' ', 'ACE') of iterator 'residues' containing 6 atom(s),
-         HierarchyElement ('A', '2', ' ', 'SER') of iterator 'residues' containing 11 atom(s),
-         HierarchyElement ('A', '3', ' ', 'NME') of iterator 'residues' containing 6 atom(s),
-         HierarchyElement ('B', '1', ' ', 'ACE') of iterator 'residues' containing 6 atom(s),
-         HierarchyElement ('B', '2', ' ', 'CYS') of iterator 'residues' containing 11 atom(s),
-         HierarchyElement ('B', '3', ' ', 'NME') of iterator 'residues' containing 6 atom(s)]
+        [HierarchyElement ('A', '1', ' ', 'ACE') of iterator 'residues' containing 6 atom(s), HierarchyElement ('A', '2', ' ', 'SER') of iterator 'residues' containing 11 atom(s), HierarchyElement ('A', '3', ' ', 'NME') of iterator 'residues' containing 6 atom(s), HierarchyElement ('B', '1', ' ', 'ACE') of iterator 'residues' containing 6 atom(s), HierarchyElement ('B', '2', ' ', 'CYS') of iterator 'residues' containing 11 atom(s), HierarchyElement ('B', '3', ' ', 'NME') of iterator 'residues' containing 6 atom(s)]
 
         Polymer systems can also be supported if ``_custom_substructures`` are
         given as a ``dict[str, list[str]]``, where the keys are unique atom
@@ -1716,7 +1711,7 @@ class Topology(Serializable):
         ...          get_data_file_path("systems/test_systems/PE.pdb"),
         ...          _custom_substructures=PE_substructs,
         ...      )
-        """
+        """  # noqa: E501
         import io
         import json
 
