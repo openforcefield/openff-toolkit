@@ -10,7 +10,6 @@ Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) for
    * Speed up overall import time by putting non-global imports only where they are needed
 
 """
-import copy
 import logging
 import os
 import pathlib
@@ -285,6 +284,10 @@ class ForceField:
         See Also
         --------
         parse_sources
+
+        Notes
+        -----
+        No effort is made to de-duplicate redundant parameters or parameters with identical SMIRKS patterns.
 
         """
         # Clear all object fields
@@ -1137,16 +1140,28 @@ class ForceField:
         )
         io_handler.to_file(filename, smirnoff_data)
 
-    def combine(self, other: "ForceField") -> "ForceField":
-        import tempfile
+    def combine(
+        self,
+        other: "ForceField",
+        allow_cosmetic_attributes: bool = False,
+    ) -> "ForceField":
+        """
+        Combine this `ForceField` with another `ForceField`, returning a new `ForceField`.
 
-        with tempfile.NamedTemporaryFile(suffix=".offxml") as file1, tempfile.NamedTemporaryFile(
-            suffix=".offxml"
-        ) as file2:
-            self.to_file(file1.name)
-            other.to_file(file2.name)
+        The same rules as `ForceField.__init__` are followed.
+        """
+        import copy
 
-            return ForceField(file1.name, file2.name)
+        combined = copy.deepcopy(self)
+
+        combined._load_smirnoff_data(
+            smirnoff_data=other._to_smirnoff_data(
+                discard_cosmetic_attributes=False,
+            ),
+            allow_cosmetic_attributes=allow_cosmetic_attributes,
+        )
+
+        return combined
 
     # TODO: Should we also accept a Molecule as an alternative to a Topology?
     @requires_package("openmm")
@@ -1432,6 +1447,7 @@ class ForceField:
         Notable behavior:
           * `author` and `date` are stripped from the ForceField
           * `id` and `parent_id` are stripped from each ParameterType"""
+        import copy
 
         # Completely re-constructing the force field may be overkill
         # compared to deepcopying and modifying, but is not currently slow
