@@ -778,6 +778,13 @@ class _ForceFieldFixtures:
     def force_field(self):
         return ForceField(get_data_file_path("test_forcefields/test_forcefield.offxml"))
 
+    @pytest.fixture
+    def force_field_with_cosmetic_attributes(self):
+        return ForceField(
+            xml_ff_w_cosmetic_elements,
+            allow_cosmetic_attributes=True,
+        )
+
 
 class TestForceField(_ForceFieldFixtures):
     """Test the ForceField class"""
@@ -1053,6 +1060,60 @@ class TestForceField(_ForceFieldFixtures):
         # Ensure that the new XML string does NOT have cosmetic attributes in it
         assert 'cosmetic_element="why not?"' not in string_3
         assert 'parameterize_eval="blah=blah2"' not in string_3
+
+    def test_combine_order_dependent(self):
+        assert hash(
+            ForceField("openff-1.3.0.offxml").combine(ForceField("openff-2.2.0.offxml"))
+        ) != hash(
+            ForceField("openff-2.2.0.offxml").combine(ForceField("openff-1.3.0.offxml"))
+        )
+
+    def test_combine_same_force_field(self, force_field):
+        combined = force_field.combine(force_field)
+
+        for handler_name in force_field.registered_parameter_handlers:
+            n_parameters = len(force_field[handler_name].parameters)
+            assert len(combined[handler_name].parameters) == 2 * n_parameters
+
+            for parameter_index, parameter in enumerate(force_field[handler_name].parameters):
+                # __eq__ is undefined, comparing dicts should be close enough
+                assert combined[handler_name].parameters[parameter_index + n_parameters].to_dict() == parameter.to_dict()
+
+        assert hash(force_field) != hash(combined)
+
+    def test_combine_same_results_as_loading(self):
+        assert hash(
+            ForceField("openff-1.3.0.offxml").combine(ForceField("openff-2.2.0.offxml"))
+        ) == hash(
+            ForceField("openff-1.3.0.offxml", "openff-2.2.0.offxml")
+        )
+
+    def test_combine_chain_calls(self, force_field):
+        """Just test that nothing weird happens if squishing together twice."""
+        tripled = force_field.combine(force_field.combine(force_field))
+
+        assert len(tripled['vdW'].parameters) == 3 * len(force_field['vdW'].parameters)
+
+    def test_combine_basic_with_cosmetic_attributes(self, force_field_with_cosmetic_attributes):
+        combined = force_field_with_cosmetic_attributes.combine(
+            force_field_with_cosmetic_attributes, allow_cosmetic_attributes=True)
+
+        original_cosmetics = force_field_with_cosmetic_attributes['Bonds'].parameters[0]._cosmetic_attribs
+
+        # should be ['parameters', 'parameterize_eval']
+        assert len(original_cosmetics) == 2
+
+        assert combined['Bonds'].parameters[0]._cosmetic_attribs == original_cosmetics
+
+    def test_combine_errors_with_cosmetic_attributes(self, force_field_with_cosmetic_attributes):
+        with pytest.raises(
+            SMIRNOFFSpecError,
+            match="parameters.*k, length",
+        ):
+            force_field_with_cosmetic_attributes.combine(
+                force_field_with_cosmetic_attributes,
+                allow_cosmetic_attributes=False,
+            )
 
     def test_read_0_1_smirnoff(self):
         """Test reading an 0.1 spec OFFXML file"""
