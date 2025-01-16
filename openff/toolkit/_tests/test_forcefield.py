@@ -1054,13 +1054,25 @@ class TestForceField(_ForceFieldFixtures):
         assert 'cosmetic_element="why not?"' not in string_3
         assert 'parameterize_eval="blah=blah2"' not in string_3
 
+    def test_combine_order_dependent(self):
+        assert hash(
+            ForceField("openff-1.3.0.offxml").combine(ForceField("openff-2.2.0.offxml"))
+        ) != hash(
+            ForceField("openff-2.2.0.offxml").combine(ForceField("openff-1.3.0.offxml"))
+        )
+
     def test_combine_same_force_field(self, force_field):
         combined = force_field.combine(force_field)
 
         for handler_name in force_field.registered_parameter_handlers:
-            assert len(combined[handler_name].parameters) == len(force_field[handler_name].parameters)
+            n_parameters = len(force_field[handler_name].parameters)
+            assert len(combined[handler_name].parameters) == 2 * n_parameters
 
-        assert hash(force_field) == hash(combined)
+            for parameter_index, parameter in enumerate(force_field[handler_name].parameters):
+                # __eq__ is undefined, comparing dicts should be close enough
+                assert combined[handler_name].parameters[parameter_index + n_parameters].to_dict() == parameter.to_dict()
+
+        assert hash(force_field) != hash(combined)
 
 
     def test_read_0_1_smirnoff(self):
