@@ -4,15 +4,10 @@ on:
   push:
     branches:
       - "main"
-      - "maintenance/.*"
   pull_request:
     branches:
       - "main"
-      - "maintenance/.*"
   schedule:
-    # Nightly tests run on main by default:
-    #   Scheduled workflows run on the latest commit on the default or base branch.
-    #   (from https://help.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events-schedule)
     - cron: "21 0 * * *"
 
 defaults:
@@ -41,7 +36,6 @@ jobs:
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
-      PACKAGE: openff
       PYTEST_ARGS: -r fE --tb=short -nauto
       COV: --cov=openff/toolkit --cov-append --cov-report=xml
 
@@ -149,7 +143,7 @@ jobs:
           PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_examples.py"
           PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_links.py"
           if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
-            PYTEST_ARGS+=" --runslow"
+            PYTEST_ARGS+=" -m 'slow or not slow'"
           fi
 
           python -m pytest --durations=20 $PYTEST_ARGS $COV
@@ -160,7 +154,7 @@ jobs:
 
       - name: Run notebooks in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: pytest -v --no-cov --nbval --ignore docs/_build/ docs/
+        run: python -m pytest -v --no-cov --nbval-lax docs/
 
       - name: Run examples in docstrings
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}

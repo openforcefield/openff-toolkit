@@ -27,7 +27,7 @@ dependencies:
     # https://github.com/rdkit/rdkit/issues/7221 and https://github.com/rdkit/rdkit/issues/7583
   - rdkit !=2024.03.6,!=2024.03.5
     # Test-only/optional/dev/typing
-  - pytest
+  - pytest =8
   - pytest-cov
   - pytest-xdist
   - pytest-rerunfailures
