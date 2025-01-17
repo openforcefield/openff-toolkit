@@ -26,7 +26,7 @@ dependencies:
     # Toolkit-specific
   - openeye-toolkits
     # Test-only/optional/dev/typing
-  - pytest
+  - pytest =8
   - pytest-cov
   - pytest-xdist
   - pytest-rerunfailures
