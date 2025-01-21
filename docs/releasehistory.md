@@ -28,6 +28,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 - [PR #1981](https://github.com/openforcefield/openff-toolkit/pull/1981): Updates documentation to run quicker and use new features, including some in Interchange 0.4.
 
+### Miscellaneous
+
+- [PR #1822](https://github.com/openforcefield/openff-toolkit/pull/1922): Updates internal tests to use Pytest 8.
+
 ## 0.16.7
 
 ### Bugfixes
