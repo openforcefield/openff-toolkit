@@ -1810,10 +1810,10 @@ class Topology(Serializable):
         )
 
         for off_atom, atom in zip([*topology.atoms], pdb.topology.atoms()):
-            off_atom.metadata["residue_name"] = atom.residue.name
-            off_atom.metadata["residue_number"] = atom.residue.id
-            off_atom.metadata["insertion_code"] = atom.residue.insertionCode
-            off_atom.metadata["chain_id"] = atom.residue.chain.id
+            off_atom.metadata["residue_name"] = atom.residue.name # type:ignore[attr-defined]
+            off_atom.metadata["residue_number"] = atom.residue.id # type:ignore[attr-defined]
+            off_atom.metadata["insertion_code"] = atom.residue.insertionCode # type:ignore[attr-defined]
+            off_atom.metadata["chain_id"] = atom.residue.chain.id # type:ignore[attr-defined]
             off_atom.name = atom.name
 
         for offmol in topology.molecules:

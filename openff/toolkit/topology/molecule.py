@@ -160,7 +160,7 @@ class Particle(Serializable):
         """
         Returns the index of this particle in its molecule
         """
-        return self._molecule.atoms.index(self)
+        return self._molecule.atoms.index(self) # type:ignore
 
     @property
     def name(self) -> str:
@@ -1209,6 +1209,7 @@ class FrozenMolecule(Serializable):
                 list[str],
                 list[bytes],
                 list[HierarchyElement],
+                list[dict[str, Any]],
             ],
         ] = dict()
         molecule_dict["name"] = self._name
@@ -5072,7 +5073,7 @@ class FrozenMolecule(Serializable):
             for i in range(self.n_atoms):
                 # get the old atom info
                 old_atom = self._atoms[new_to_cur[i]]
-                new_molecule._add_atom(**old_atom.to_dict())
+                new_molecule._add_atom(**old_atom.to_dict()) # type:ignore
         # this is the first time we access the mapping; catch an index error
         # here corresponding to mapping that starts from 0 or higher
         except (KeyError, IndexError):
@@ -5086,7 +5087,7 @@ class FrozenMolecule(Serializable):
             bond_dict = bond.to_dict()
             bond_dict["atom1"] = atoms[0]
             bond_dict["atom2"] = atoms[1]
-            new_molecule._add_bond(**bond_dict)
+            new_molecule._add_bond(**bond_dict) # type:ignore
 
         # we can now resort the bonds
         sorted_bonds = sorted(
@@ -5371,7 +5372,7 @@ class Molecule(FrozenMolecule):
         atomic_number: int,
         formal_charge: int,
         is_aromatic: bool,
-        stereochemistry: Optional[str] = None,
+        stereochemistry: Literal["R", "S", None] = None,
         name: Optional[str] = None,
         metadata: Optional[dict[str, Union[int, str]]] = None,
     ) -> int:
@@ -5437,7 +5438,7 @@ class Molecule(FrozenMolecule):
         atom2: Union[int, "Atom"],
         bond_order: int,
         is_aromatic: bool,
-        stereochemistry: Optional[str] = None,
+        stereochemistry: Literal["E", "Z", None] = None,
         fractional_bond_order: Optional[float] = None,
     ) -> int:
         """
@@ -5820,7 +5821,7 @@ def _networkx_graph_to_hill_formula(graph: "nx.Graph[int]") -> str:
         raise ValueError("The graph must be a NetworkX graph.")
 
     atom_nums = list(dict(graph.nodes(data="atomic_number", default=1)).values())
-    return _atom_nums_to_hill_formula(atom_nums)
+    return _atom_nums_to_hill_formula(atom_nums) # type:ignore[arg-type]
 
 
 def _atom_nums_to_hill_formula(atom_nums: list[int]) -> str:
