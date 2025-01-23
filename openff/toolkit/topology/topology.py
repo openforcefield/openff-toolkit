@@ -22,7 +22,6 @@ from typing import (
     TYPE_CHECKING,
     Literal,
     Optional,
-    Self,
     TextIO,
     Union,
 )
@@ -527,7 +526,7 @@ class Topology(Serializable):
     def from_molecules(
         cls,
         molecules: MoleculeLike | Iterable[MoleculeLike],
-    ) -> Self:
+    ) -> "Topology":
         """
         Create a new Topology object containing one copy of each of the specified molecule(s).
 
