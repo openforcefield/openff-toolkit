@@ -341,7 +341,7 @@ class Atom(Particle):
         return self._formal_charge
 
     @formal_charge.setter
-    def formal_charge(self, other: int | Quantity | OMMQuantity):
+    def formal_charge(self, other: "int | Quantity | OMMQuantity"):
         """
         Set the atom's formal charge. Accepts either ints or unit-wrapped ints with units of charge.
         """
