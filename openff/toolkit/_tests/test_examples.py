@@ -36,8 +36,7 @@ def run_script_str(script_str):
 
     """
     with tempfile.TemporaryDirectory() as tmp_dir:
-        temp_file_path = pathlib.Path(tmp_dir, "temp.py").as_posix()
-
+        temp_file_path = (pathlib.Path(tmp_dir) / "temp.py").as_posix()
         # Create temporary python script.
         with open(temp_file_path, "w") as f:
             f.write(script_str)
@@ -57,16 +56,17 @@ def find_example_scripts() -> list[str]:
     example_file_paths : list[str]
         List of full paths to python scripts to execute.
     """
-    # Count on the examples/ path being equivalently accessible as the README file
-    readme_file_path = _get_readme_path()
-
-    if readme_file_path is None:
+    if "site-packages" in __file__:
+        # This test file is being collected from the installed package, which
+        # does not provide the examples folder in the same location
         return list()
 
-    examples_dir_path = pathlib.Path(_get_readme_path().parent, "examples")
+    examples_dir_path = pathlib.Path(__file__).parents[3] / "examples"
 
     # Examples that require RDKit
-    rdkit_examples = {examples_dir_path / "conformer_energies/conformer_energies.py"}
+    rdkit_examples = {
+        examples_dir_path / "conformer_energies/conformer_energies.py",
+    }
 
     example_file_paths = []
     for example_file_path in examples_dir_path.glob("*/*.py"):

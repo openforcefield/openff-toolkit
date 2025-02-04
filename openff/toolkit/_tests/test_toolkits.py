@@ -2250,6 +2250,27 @@ class TestRDKitToolkitWrapper:
         )
         assert offmol.n_atoms == 4
 
+    def test_rdkit_from_smiles_hydrogens_are_explicit_and_in_graph(self):
+        """
+        Test to ensure that RDKitToolkitWrapper.from_smiles has the proper behavior with
+        respect to its hydrogens_are_explicit kwarg and that a CMILES entry has all hydrogens
+        in the graph.
+
+        `Issue #936 <https://github.com/openforcefield/openff-toolkit/issues/936>`,
+        `Issue #1696 <https://github.com/openforcefield/openff-toolkit/issues/1696>`,
+        """
+        toolkit_wrapper = RDKitToolkitWrapper()
+        smiles_impl = "[H][C]([H])([H])[NH+]([H])[C]([H])([H])[H]"
+        with pytest.raises(
+            ValueError,
+            match="the following SMILES as having some nonexplicit hydrogens",
+        ):
+            _ = Molecule.from_smiles(
+                smiles_impl,
+                toolkit_registry=toolkit_wrapper,
+                hydrogens_are_explicit=True,
+            )
+
     @pytest.mark.parametrize("molecule", get_mini_drug_bank(RDKitToolkitWrapper))
     def test_to_inchi(self, molecule):
         """Test, but do not validate, conversion to standard and non-standard InChI"""

@@ -60,7 +60,6 @@ from openff.toolkit.utils.exceptions import (
 from openff.toolkit.utils.utils import inherit_docstrings
 
 if TYPE_CHECKING:
-    import networkx
     import openmm.app
 
     from openff.toolkit.topology.molecule import Atom, Bond, FrozenMolecule, Molecule
@@ -841,38 +840,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 self._check_mol2_gaff_atom_type(mol, file_path)
 
         return mols
-
-    def _smarts_to_networkx(self, substructure_smarts: str) -> "networkx.Graph":
-        import networkx as nx
-        from openeye import oechem
-
-        qmol = oechem.OEQMol()
-        if not oechem.OEParseSmiles(qmol, substructure_smarts):
-            raise SMILESParseError(f"Error parsing SMARTS '{substructure_smarts}'")
-
-        oechem.OEAssignHybridization(qmol)
-
-        graph: nx.classes.graph.Graph = nx.Graph()
-        for atom in qmol.GetAtoms():
-            atomic_number = atom.GetAtomicNum()
-
-            graph.add_node(
-                atom.GetIdx(),
-                atomic_number=atomic_number,
-                formal_charge=atom.GetFormalCharge(),
-                map_index=atom.GetMapIdx(),
-            )
-        for bond in qmol.GetBonds():
-            bond_order = bond.GetOrder()
-            if bond_order == 0:
-                raise SMILESParseError(f"A bond in '{substructure_smarts} has order 0")
-
-            graph.add_edge(
-                bond.GetBgnIdx(),
-                bond.GetEndIdx(),
-                bond_order=bond_order,
-            )
-        return graph
 
     def _assign_aromaticity_and_stereo_from_3d(self, offmol):
         from openeye import oechem

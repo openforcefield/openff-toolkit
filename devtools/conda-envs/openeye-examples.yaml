@@ -27,7 +27,7 @@ dependencies:
     # Toolkit-specific
   - openeye-toolkits
     # Test-only/optional/dev/typing/examples
-  - pytest
+  - pytest =8
   - pytest-xdist
   - pytest-rerunfailures
   - pyyaml
