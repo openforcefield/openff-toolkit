@@ -28,6 +28,7 @@ from typing import (
 
 import numpy as np
 from numpy.typing import NDArray
+from openff.units import Unit
 from typing_extensions import TypeAlias
 
 from openff.toolkit import Quantity, unit
@@ -75,6 +76,20 @@ if TYPE_CHECKING:
 
 TKR: TypeAlias = Union["ToolkitRegistry", "ToolkitWrapper"]
 MoleculeLike: TypeAlias = Union["Molecule", "FrozenMolecule", "_SimpleMolecule"]
+
+_DISTANCE_UNITS = set(
+    [
+        Unit(val) for val in
+        [
+            'nanometer',
+            'angstrom',
+            'micron',
+            'bohr',
+            'meter',
+            'fermi',
+        ]
+    ]
+)
 
 
 class _TransformedDict(MutableMapping):
@@ -623,10 +638,7 @@ class Topology(Serializable):
             else:
                 raise InvalidBoxVectorsError("Given unitless box vectors")
 
-        # Unit.compatible_units() returns False with itself, for some reason
-        if (box_vectors.units != unit.nm) and (
-            box_vectors.units not in unit.nm.compatible_units()
-        ):
+        if box_vectors.units in _DISTANCE_UNITS:
             raise InvalidBoxVectorsError(
                 f"Cannot set box vectors with quantities with unit {box_vectors.units}"
             )
