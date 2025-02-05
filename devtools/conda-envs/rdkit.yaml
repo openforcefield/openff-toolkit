@@ -38,5 +38,3 @@ dependencies:
   - qcportal >=0.50
   - qcengine
   - nglview
-  # shim
-  - libabseil=20240722.0=*_1
