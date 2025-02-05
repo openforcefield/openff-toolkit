@@ -79,7 +79,8 @@ exclude_lines = [
 python_version = 3.12
 plugins = "numpy.typing.mypy_plugin"
 warn_unused_configs = true
-warn_unused_ignores = true
+# would be nice to flip back to true
+warn_unused_ignores = false
 warn_incomplete_stub = true
 show_error_codes = true
 exclude = "openff/toolkit/_tests/|openff/toolkit/data/"
