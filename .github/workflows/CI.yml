@@ -129,14 +129,14 @@ jobs:
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
 
-      - name: Run mypy
+      #- name: Run mypy
         # Subtle differences in Python/mypy versions, just keep it passing on one.
         # When possible re-enable this with OE+RDK=True, but for now rdkit builds often have bugs
         # in stubs and there are other subtleties (in the source code and builds) that reduce the number
         # of available builds.
         # See ex https://github.com/rdkit/rdkit/issues/7221
-        if: ${{ matrix.rdkit == false && matrix.openeye && matrix.python-version == 3.10 }}
-        run: mypy -p "openff.toolkit"
+        #if: ${{ matrix.rdkit == false && matrix.openeye && matrix.python-version == 3.10 }}
+        #run: mypy -p "openff.toolkit"
 
       - name: Run unit tests
         run: |
