@@ -46,6 +46,7 @@ from typing import (
 )
 
 import numpy as np
+from openff.units import Unit
 from openff.units.elements import MASSES, SYMBOLS
 from openff.utilities.exceptions import MissingOptionalDependencyError
 from typing_extensions import TypeAlias
@@ -109,6 +110,8 @@ P = TypeVar("P", bound="Particle")
 A = TypeVar("A", bound="Atom")
 B = TypeVar("B", bound="Bond")
 
+
+_CHARGE_UNITS = set([Unit("elementary_charge")])
 
 class MoleculeDeprecationWarning(UserWarning):
     """Warning for deprecated portions of the Molecule API."""
@@ -338,12 +341,10 @@ class Atom(Particle):
         Set the atom's formal charge. Accepts either ints or unit-wrapped ints with units of charge.
         """
         if isinstance(other, int):
-            self._formal_charge = Quantity(other, unit.elementary_charge)
+            self._formal_charge = Quantity(other, "elementary_charge")
         elif isinstance(other, Quantity):
             # Faster to check equality than convert, so short-circuit
-            if other.units is unit.elementary_charge:
-                self.formal_charge = other
-            elif other.units in unit.elementary_charge.compatible_units():
+            if other.units in _CHARGE_UNITS:
                 self._formal_charge = other
             else:
                 raise IncompatibleUnitError(
@@ -361,7 +362,7 @@ class Atom(Particle):
             from openff.units.openmm import from_openmm
 
             converted = from_openmm(other)
-            if converted.units in unit.elementary_charge.compatible_units():
+            if converted.units in _CHARGE_UNITS:
                 self._formal_charge = converted
             else:
                 raise IncompatibleUnitError(
@@ -3168,12 +3169,12 @@ class FrozenMolecule(Serializable):
             )
 
         if isinstance(charges, Quantity):
-            if charges.units in unit.elementary_charge.compatible_units():
+            if charges.units in _CHARGE_UNITS:
                 self._partial_charges = charges.astype(float)
             else:
                 raise IncompatibleUnitError(
                     "Unsupported unit passed to partial_charges setter. "
-                    f"Found unit {charges.units}, expected {unit.elementary_charge}"
+                    f"Found unit {charges.units}, expected elementary_charge"
                 )
 
         elif hasattr(charges, "unit"):
@@ -3189,12 +3190,12 @@ class FrozenMolecule(Serializable):
                 from openff.units.openmm import from_openmm
 
                 converted = from_openmm(charges)
-                if converted.units in unit.elementary_charge.compatible_units():
+                if converted.units in _CHARGE_UNITS:
                     self._partial_charges = converted.astype(float)
                 else:
                     raise IncompatibleUnitError(
                         "Unsupported unit passed to partial_charges setter. "
-                        f"Found unit {converted.units}, expected {unit.elementary_charge}"
+                        f"Found unit {converted.units}, expected elementary_charge"
                     )
 
         else:
