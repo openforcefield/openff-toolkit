@@ -16,7 +16,8 @@ dependencies:
   - openmm >=7.6
   - openff-forcefields >=2023.05.1
   - smirnoff99Frosst
-  - openff-units =0.2.0
+  - openff-units
+  - pint =0.24
   - openff-amber-ff-ports
   - openff-utilities >=0.1.5
   - openff-interchange-base =0.4
