@@ -20,7 +20,6 @@ jobs:
     name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.rdkit }}, OpenEye=${{ matrix.openeye }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
         python-version: ["3.10", "3.11", "3.12"]
@@ -81,7 +80,7 @@ jobs:
 
       - name: Install Pint 0.24.4 and `openff-units` branch
         run: |
-          pip install "pint==0.24.4" git+https://github.com/openforcefield/openff-units.git@pint-0.24
+          pip install "pint==0.24.4" git+https://github.com/openforcefield/openff-units.git@99366459466a801792d95d7ca00715aef4162801
 
       - name: Install package
         run: |
