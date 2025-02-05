@@ -638,7 +638,7 @@ class Topology(Serializable):
             else:
                 raise InvalidBoxVectorsError("Given unitless box vectors")
 
-        if box_vectors.units in _DISTANCE_UNITS:
+        if box_vectors.units not in _DISTANCE_UNITS:
             raise InvalidBoxVectorsError(
                 f"Cannot set box vectors with quantities with unit {box_vectors.units}"
             )
