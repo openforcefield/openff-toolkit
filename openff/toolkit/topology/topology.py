@@ -1236,7 +1236,7 @@ class Topology(Serializable):
         return_dict["aromaticity_model"] = self._aromaticity_model
 
         return_dict["constrained_atom_pairs"] = {
-            constrained_atom_pair: quantity_to_string(distance)
+            constrained_atom_pair: quantity_to_string(distance)  # type: ignore[arg-type]
             for constrained_atom_pair, distance in self._constrained_atom_pairs.items()
         }
 
@@ -2045,7 +2045,7 @@ class Topology(Serializable):
         if isinstance(positions, openmm.unit.Quantity):
             openmm_positions: openmm.unit.Quantity = positions
         elif isinstance(positions, Quantity):
-            openmm_positions = positions.to_openmm()
+            openmm_positions = positions.to_openmm()  # type: ignore[attr-defined]
         elif isinstance(positions, np.ndarray):
             openmm_positions = openmm.unit.Quantity(positions, openmm.unit.angstroms)
         elif positions is None:
@@ -2152,18 +2152,18 @@ class Topology(Serializable):
 
         # Copy the array in nanometers and make it an OpenFF Quantity
         array = Quantity(np.asarray(array.to(unit.nanometer).magnitude), unit.nanometer)
-        if array.shape != (self.n_atoms, 3):
+        if array.shape != (self.n_atoms, 3):  # type: ignore[attr-defined]
             raise WrongShapeError(
-                f"Array has shape {array.shape} but should have shape {self.n_atoms, 3}"
+                f"Array has shape {array.shape} but should have shape {self.n_atoms, 3}"  # type: ignore[attr-defined]
             )
 
         start = 0
         for molecule in self.molecules:
             stop = start + molecule.n_atoms
             if molecule.conformers is None:
-                molecule._conformers = [array[start:stop]]
+                molecule._conformers = [array[start:stop]]  # type: ignore[index]
             else:
-                molecule.conformers[0:1] = [array[start:stop]]
+                molecule.conformers[0:1] = [array[start:stop]]  # type: ignore[index]
             start = stop
 
     @classmethod

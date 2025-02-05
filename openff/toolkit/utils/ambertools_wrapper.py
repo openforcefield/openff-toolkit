@@ -265,12 +265,11 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
             with open(f"{tmpdir}/charges.txt") as infile:
                 contents = infile.read()
             text_charges = contents.split()
-            charges = np.zeros([molecule.n_atoms], np.float64)
+            charges_array = np.zeros([molecule.n_atoms], np.float64)
             for index, token in enumerate(text_charges):
-                charges[index] = float(token)
+                charges_array[index] = float(token)
             # TODO: Ensure that the atoms in charged.mol2 are in the same order as in molecule.sdf
-        charges = Quantity(charges, unit.elementary_charge)
-        molecule.partial_charges = charges
+        molecule.partial_charges = Quantity(charges_array, unit.elementary_charge)
 
         if normalize_partial_charges:
             molecule._normalize_partial_charges()

@@ -3073,14 +3073,14 @@ class FrozenMolecule(Serializable):
         index
             The index of this conformer
         """
-        if coordinates.shape != (self.n_atoms, 3):
+        if coordinates.shape != (self.n_atoms, 3):  # type: ignore[attr-defined]
             raise InvalidConformerError(
                 "molecule.add_conformer given input of the wrong shape: "
-                f"Given {coordinates.shape}, expected {(self.n_atoms, 3)}"
+                f"Given {coordinates.shape}, expected {(self.n_atoms, 3)}"  # type: ignore[attr-defined]
             )
 
         if isinstance(coordinates, Quantity):
-            if not coordinates.units.is_compatible_with(unit.angstrom):
+            if not coordinates.units.is_compatible_with(unit.angstrom):  # type: ignore[attr-defined]
                 raise IncompatibleUnitError(
                     "Coordinates passed to Molecule._add_conformer with incompatible units. "
                     "Ensure that units are dimension of length."
@@ -3115,7 +3115,7 @@ class FrozenMolecule(Serializable):
             np.zeros(shape=(self.n_atoms, 3), dtype=float), unit.angstrom
         )
         try:
-            tmp_conf[:] = coordinates
+            tmp_conf[:] = coordinates  # type: ignore[index]
         except AttributeError as e:
             # TODO: Make this a warning, log it, or do something other than print
             print(e)
@@ -4108,7 +4108,7 @@ class FrozenMolecule(Serializable):
         # add the data to the xyz_data list
         for i, geometry in enumerate(conformers, 1):
             xyz_data.write(f"{self.n_atoms}\n" + title(end))
-            for j, atom_coords in enumerate(geometry.m_as(unit.angstrom)):
+            for j, atom_coords in enumerate(geometry.m_as(unit.angstrom)):  # type: ignore[arg-type]
                 x, y, z = atom_coords
                 xyz_data.write(
                     f"{SYMBOLS[self.atoms[j].atomic_number]}       {x: .10f}   {y: .10f}   {z: .10f}\n"

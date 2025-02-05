@@ -1675,7 +1675,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 # OE needs a 1 x (3*n_Atoms) double array as input
                 flat_coords = np.zeros(shape=oemol.NumAtoms() * 3, dtype=np.float64)
                 for index, oe_idx in off_to_oe_idx.items():
-                    (x, y, z) = conf[index, :].m_as(unit.angstrom)
+                    (x, y, z) = conf[index, :].m_as(unit.angstrom)  # type: ignore[index]
                     flat_coords[(3 * oe_idx)] = x
                     flat_coords[(3 * oe_idx) + 1] = y
                     flat_coords[(3 * oe_idx) + 2] = z
@@ -2561,7 +2561,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             index = oeatom.GetIdx()
             charge = oeatom.GetPartialCharge()
             charge = charge * unit.elementary_charge
-            charges[index] = charge
+            charges[index] = charge  # type: ignore[index]
 
         molecule.partial_charges = charges
 

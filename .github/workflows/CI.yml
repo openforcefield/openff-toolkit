@@ -80,7 +80,7 @@ jobs:
 
       - name: Install Pint 0.24.4 and `openff-units` branch
         run: |
-          pip install "pint==0.24.4" git+https://github.com/openforcefield/openff-units.git@99366459466a801792d95d7ca00715aef4162801
+          pip install "pint==0.24.4" git+https://github.com/openforcefield/openff-units.git@d68fdeb333671e627fcf1d7db8b07724783274ab
 
       - name: Install package
         run: |
