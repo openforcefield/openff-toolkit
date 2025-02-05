@@ -148,7 +148,7 @@ jobs:
           if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
             PYTEST_ARGS+=" -m 'slow or not slow'"
           fi
-
+          python -c "from pint import __version__; print(__version__)"
           python -m pytest --durations=20 $PYTEST_ARGS $COV
 
       - name: Run code snippets in docs
