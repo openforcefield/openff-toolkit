@@ -17,7 +17,7 @@ dependencies:
   - openff-forcefields >=2023.05.1
   - smirnoff99Frosst
   - openff-units
-  - pint =0.24
+  - pint
   - openff-amber-ff-ports
   - openff-utilities >=0.1.5
   - openff-interchange-base =0.4
@@ -65,3 +65,4 @@ dependencies:
   - libabseil=20240722.0=*_1
   - pip:
     - git+https://github.com/openforcefield/openff-units.git@99366459466a801792d95d7ca00715aef4162801
+    - pint==0.24
