@@ -3267,7 +3267,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 atom1, atom2 = bond.GetBeginAtom(), bond.GetEndAtom()
                 msg += (
                     f" - Bond {undefined_bond_idx} (atoms {atom1.GetIdx()}-{atom2.GetIdx()} of element "
-                    "({atom1.GetSymbol()}-{atom2.GetSymbol()})\n"
+                    f"({atom1.GetSymbol()}-{atom2.GetSymbol()})\n"
                 )
 
         raise UndefinedStereochemistryError(err_msg_prefix + msg)
