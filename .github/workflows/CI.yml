@@ -143,7 +143,7 @@ jobs:
           PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_examples.py"
           PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_links.py"
           #if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
-          PYTEST_ARGS+=" -m 'slow or not slow'"
+          PYTEST_ARGS+=" -m 'not slow' "
           #fi
           echo $PYTEST_ARGS
           echo $COV
