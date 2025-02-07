@@ -1264,6 +1264,8 @@ class Topology(Serializable):
         """
         Create a new Topology from a dictionary representation
 
+        The structure of the dict expected by this function is defined by the output of `Topology.to_dict()`.
+
         Parameters
         ----------
         topology_dict

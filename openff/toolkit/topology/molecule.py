@@ -315,7 +315,11 @@ class Atom(Particle):
 
     @classmethod
     def from_dict(cls: type[A], atom_dict: dict) -> A:
-        """Create an Atom from a dict representation."""
+        """
+        Create an Atom from a dict representation.
+
+        The structure of the dict expected by this function is defined by the output of `Atom.to_dict()`.
+        """
         return cls(**atom_dict)
 
     @property
@@ -707,7 +711,11 @@ class Bond(Serializable):
 
     @classmethod
     def from_dict(cls: type[B], molecule: FM, d: dict) -> B:  # type: ignore[override]
-        """Create a Bond from a dict representation."""
+        """
+        Create a Bond from a dict representation.
+
+        The structure of the dict expected by this function is defined by the output of `Bond.to_dict()`.
+        """
         # TODO: This is not used anywhere (`Molecule._initialize_bonds_from_dict()` just calls grabs
         #       the two atoms and calls `Molecule._add_bond`). Remove or change that?
         # TODO: There is no point in feeding in a `molecule` argument since `Bond.__init__` already
@@ -1235,6 +1243,8 @@ class FrozenMolecule(Serializable):
     def from_dict(cls: type[FM], molecule_dict: dict) -> FM:
         """
         Create a new Molecule from a dictionary representation
+
+        The structure of the dict expected by this function is defined by the output of `Molecule.to_dict()`.
 
         Parameters
         ----------
