@@ -295,7 +295,7 @@ def convert_all_quantities_to_string(
 @overload
 def convert_all_quantities_to_string(
     smirnoff_data: dict,
-) -> Union[list[str], dict[str, Any]]: ...
+) -> dict[str, Any]: ...
 
 
 @overload
