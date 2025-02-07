@@ -5438,6 +5438,14 @@ class Molecule(FrozenMolecule):
 
         return self._add_conformer(coordinates)
 
+    def clear_conformers(self):
+        """
+        Delete all conformers of this molecule, if any exist.
+
+        """
+        self._conformers = None
+
+
     @overload
     def visualize(
         self,

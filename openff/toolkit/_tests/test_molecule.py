@@ -2678,6 +2678,32 @@ class TestMolecule:
         with pytest.raises(IncompatibleUnitError):
             molecule.add_conformer(conf_unitless)
 
+    def test_clear_conformers(self):
+        # simpler molecules don't always like to have many (> 1) conformers
+        # https://greglandrum.github.io/rdkit-blog/posts/2023-02-04-working-with-conformers.html
+        molecule = Molecule.from_smiles(
+            "COc1ccc2[n-]c([S@@+]([O-])Cc3ncc(C)c(OC)c3C)nc2c1"
+        )
+        molecule.generate_conformers(n_conformers=10)
+
+        assert molecule.n_conformers > 0
+
+        molecule.clear_conformers()
+
+        assert molecule.n_conformers == 0
+
+    def test_clear_conformers_none(self):
+        """
+        Ensure nothing weird happens when calling clear_conformers() on a molecule that already has no conformers.
+        """
+        molecule = create_ethanol()
+
+        assert molecule.n_conformers == 0
+
+        molecule.clear_conformers()
+
+        assert molecule.n_conformers == 0
+
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_add_atoms_and_bonds(self, molecule):
         """Test the creation of a molecule from the addition of atoms and bonds"""
