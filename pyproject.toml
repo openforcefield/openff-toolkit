@@ -52,6 +52,7 @@ testpaths = [
 markers = [
     "slow: marks tests as slow"
 ]
+addopts = '-m "not slow"'
 filterwarnings = [
     "ignore:Molecule.from_pdb_and_smiles.*deprecated in favor of .*from_pdb"
 ]
