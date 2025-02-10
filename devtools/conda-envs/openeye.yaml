@@ -41,7 +41,7 @@ dependencies:
   - mdtraj
   - nglview
   - parmed =3
-  - mypy
+  - mypy <1.15
   - typing_extensions
   - pip:
     - types-setuptools
