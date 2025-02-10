@@ -1918,7 +1918,7 @@ class Topology(Serializable):
                     (last_residue.name == atom_residue_name)
                     and (int(last_residue.id) == int(atom_residue_number))
                     and (last_residue.insertionCode == atom_insertion_code)
-                    and (chain.id == last_chain.id)
+                    and (chain.id == last_chain.id)  # type: ignore[union-attr]
                 ):
                     residue = last_residue
                 else:
