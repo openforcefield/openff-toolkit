@@ -45,23 +45,6 @@ select = ["I", "E", "F", "W", "NPY", "UP", "RUF"]
 known-third-party = ["openff.interchange", "openff.utilities", "openff.units"]
 known-first-party = ["openff.toolkit"]
 
-[tool.pytest.ini_options]
-testpaths = [
-    "openff/toolkit/_tests/",
-]
-markers = [
-    "slow: marks tests as slow"
-]
-addopts = '-m "not slow"'
-filterwarnings = [
-    "ignore:Molecule.from_pdb_and_smiles.*deprecated in favor of .*from_pdb"
-]
-doctest_optionflags = [
-    "ELLIPSIS",
-    "DONT_ACCEPT_TRUE_FOR_1",
-    "NORMALIZE_WHITESPACE",
-]
-
 [tool.coverage.run]
 omit = [
     "*/*/_tests/*",
