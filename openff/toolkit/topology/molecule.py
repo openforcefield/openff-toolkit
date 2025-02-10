@@ -1159,7 +1159,7 @@ class FrozenMolecule(Serializable):
     ####################################################################################################
 
     def to_dict(self) -> dict:
-        """
+        r"""
         Return a dictionary representation of the molecule.
 
         .. todo ::
@@ -1193,7 +1193,7 @@ class FrozenMolecule(Serializable):
               `OpenFF Units module <https://docs.openforcefield.org/projects/units/en/stable/api/generated/openff.units.html>`_.
               If ``partial_charges`` is also included, the default is ``"elementary_charge"`` instead.
             
-        """        
+        """
         from openff.toolkit.utils.utils import serialize_numpy
 
         # typing.TypedDict might make this cleaner
