@@ -22,12 +22,11 @@ dependencies:
   - openff-interchange-base =0.4
   - openff-nagl-base >=0.4.0
   - openff-nagl-models >=0.3.0
+  - typing_extensions
     # Toolkit-specific
   - ambertools >=22
     # rdkit 2024.03.6 and 2024.09.1 packages fail when run natively on osx-arm64 macs
     # https://github.com/rdkit/rdkit/issues/7583
-    # and a bad stub (causing mypy failure only)
-    # https://github.com/rdkit/rdkit/issues/7221
   - rdkit !=2024.03.6,!=2024.09.1
 
   - openeye-toolkits
@@ -50,13 +49,3 @@ dependencies:
   - nbval
   # No idea why this is necessary, see https://github.com/openforcefield/openff-toolkit/pull/1821
   - nomkl
-  - mypy <1.15
-  - typing_extensions
-  - pip:
-    - types-setuptools
-    - types-toml
-    - types-PyYAML
-    - types-networkx
-    - types-xmltodict
-    - types-cachetools
-    - mongo-types
