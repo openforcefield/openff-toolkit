@@ -20,7 +20,7 @@ jobs:
     name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.rdkit }}, OpenEye=${{ matrix.openeye }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: true  # TODO: flip to false before merge
       matrix:
         os: [ubuntu-latest, macos-latest]
         python-version: ["3.10", "3.11", "3.12"]
@@ -37,7 +37,7 @@ jobs:
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PYTEST_ARGS: -r fE --tb=short -nauto
-      COV: --cov=openff/toolkit --cov-append --cov-report=xml
+      COV: --cov=openff/toolkit/ --cov-append --cov-report=xml
 
     steps:
       - uses: actions/checkout@v4
@@ -142,11 +142,11 @@ jobs:
         run: |
           PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_examples.py"
           PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_links.py"
-          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
-            PYTEST_ARGS+=" -m 'slow or not slow'"
-          fi
 
-          python -m pytest --durations=20 $PYTEST_ARGS $COV
+          # TODO: Flip back to schedule condition before merge
+          PYTEST_ARGS+=" --runslow"
+
+          python -m pytest --durations=20 $PYTEST_ARGS $COV openff/toolkit/_tests
 
       - name: Run code snippets in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
