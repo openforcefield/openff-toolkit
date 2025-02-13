@@ -17,7 +17,7 @@ defaults:
 jobs:
   test:
     if: (github.event_name == 'schedule' && github.repository == 'openforcefield/openff-toolkit') || (github.event_name != 'schedule')
-    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.rdkit }}, OpenEye=${{ matrix.openeye }}  "new Pint" {{ matrix.new-pint }}
+    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.rdkit }}, OpenEye=${{ matrix.openeye }}  "new Pint" ${{ matrix.new-pint }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
