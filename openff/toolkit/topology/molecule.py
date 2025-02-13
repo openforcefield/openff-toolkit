@@ -5902,7 +5902,7 @@ class HierarchyElement:
         for id_component, uniqueness_component in zip(identifier, scheme.uniqueness_criteria):
             setattr(self, uniqueness_component, id_component)
 
-    def to_dict(self) -> dict[str, Union[tuple[Union[str, int]], Sequence[int]]]:
+    def to_dict(self) -> dict[str, tuple[str | int, ...] | Sequence[int]]:
         """
         Serialize this object to a basic dict of strings and lists of ints.
         """
