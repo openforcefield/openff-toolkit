@@ -1183,11 +1183,11 @@ class FrozenMolecule(Serializable):
 
             - **hierarchy_schemes** (dict[dict]): Dictionary where keys (such as ``"residues"`` and ``"chains"``)
               represent dictionary outputs from :meth:`HierarchyScheme.to_dict()`
-            - **conformers_unit** (float, default="angstrom"): Valid unit of length input for the
+            - **conformers_unit** (str, default="angstrom"): Valid unit of length input for the
               `OpenFF Units module <https://docs.openforcefield.org/projects/units/en/stable/api/generated/openff.units.html>`_.
             - **partial_charges** (list[float], default=None): Array of partial charge (in elementary charges)
               for atoms in the same order as the output,``atoms``.
-            - **partial_charge_unit** (float, default=None): Valid unit of charge input for the
+            - **partial_charge_unit** (str, default=None): Valid unit of charge input for the
               `OpenFF Units module <https://docs.openforcefield.org/projects/units/en/stable/api/generated/openff.units.html>`_.
               If ``partial_charges`` is also included, the default is ``"elementary_charge"`` instead.
 
