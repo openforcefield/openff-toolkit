@@ -30,7 +30,7 @@ dependencies:
     # https://github.com/rdkit/rdkit/issues/7221 and https://github.com/rdkit/rdkit/issues/7583
   - rdkit =2024
     # Test-only/optional/dev/typing/examples
-  - pytest
+  - pytest =8
   - pytest-xdist
   - pytest-rerunfailures
   - pyyaml
