@@ -1175,7 +1175,7 @@ class FrozenMolecule(Serializable):
             - **bonds** (list[dict]): A list of dictionary inputs for :meth:`Bond.from_dict()`
             - **conformers** (list[list[float]]): A list containing the cartesian coordinates of each atom in units
               of ``conformer_unit`` in the order defined in ``atoms``.
-            - **properties** (dict): Outputs from chosen a chosen toolkit:
+            - **properties** (dict): Outputs from a chosen toolkit:
 
                 - **atom_map** (dict): Dictionary of atom index (as in ``atoms`` entry) and the mapped index relevant
                   to a mapped canonical smiles string
