@@ -12,6 +12,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Behavior changes
 - [PR #1963](https://github.com/openforcefield/openff-toolkit/pull/1963): Always use `getattr` in lazy loading machinery.
+- [PR #1990](https://github.com/openforcefield/openff-toolkit/pull/1990): `Molecule.partial_charge` and `Atom.formal_charge` setters now require that the `Quantity`s have units of `"elementary_charge"`. Previously they could be any unit with compatible dimensionality.
 
 ### Bugfixes
 
@@ -23,6 +24,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1979](https://github.com/openforcefield/openff-toolkit/pull/1979): Cache some string-to-`Quantity` conversions, which speeds up loading of many SMIRNOFF force fields from `.offxml` files.
 
 ### New features
+- [PR #1990](https://github.com/openforcefield/openff-toolkit/pull/1990): Adds support for Pint 0.24 and `openff-units` 0.3.x.
 
 ### Improved documentation and warnings
 
