@@ -37,7 +37,7 @@ jobs:
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PYTEST_ARGS: -r fE --tb=short -nauto
-      COV: --cov=openff/toolkit --cov-append --cov-report=xml
+      COV: --cov=openff/toolkit/ --cov-append --cov-report=xml
 
     steps:
       - uses: actions/checkout@v4
@@ -137,23 +137,23 @@ jobs:
         run: pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
 
       - name: Run mypy
-        # Subtle differences in Python/mypy versions, just keep it passing on one.
         # When possible re-enable this with OE+RDK=True, but for now rdkit builds often have bugs
         # in stubs and there are other subtleties (in the source code and builds) that reduce the number
         # of available builds.
         # See ex https://github.com/rdkit/rdkit/issues/7221
-        if: ${{ matrix.rdkit == false && matrix.openeye && matrix.python-version == 3.10 }}
+        # and https://github.com/rdkit/rdkit/issues/7583
+        if: ${{ matrix.rdkit == false && matrix.openeye == true }}
         run: mypy -p "openff.toolkit"
 
       - name: Run unit tests
         run: |
           PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_examples.py"
           PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_links.py"
-          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
-            PYTEST_ARGS+=" -m 'slow or not slow'"
-          fi
-          python -c "from pint import __version__; print(__version__)"
-          python -m pytest --durations=20 $PYTEST_ARGS $COV
+
+          # TODO: Flip back to schedule condition before merge
+          PYTEST_ARGS+=" --runslow"
+
+          python -m pytest --durations=20 $PYTEST_ARGS $COV openff/toolkit/_tests
 
       - name: Run code snippets in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}

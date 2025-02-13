@@ -27,6 +27,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Improved documentation and warnings
 
 - [PR #1981](https://github.com/openforcefield/openff-toolkit/pull/1981): Updates documentation to run quicker and use new features, including some in Interchange 0.4.
+- [PR #2007](https://github.com/openforcefield/openff-toolkit/pull/2007): Documents that the dicts expected by various `from_dict` methods are expected to match the structure of the results of corresponding `to_dict` methods.
 
 ### Miscellaneous
 
