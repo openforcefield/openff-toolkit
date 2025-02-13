@@ -1173,8 +1173,8 @@ class FrozenMolecule(Serializable):
             - **name** (str): An optional name to be associated with the molecule
             - **atoms** (list[dict]): A list of dictionary inputs for :meth:`Atom.from_dict()`
             - **bonds** (list[dict]): A list of dictionary inputs for :meth:`Bond.from_dict()`
-            - **conformers** (list[list]): A list containing the cartesian coordinates of each atoms in the order
-              defined in ``atoms``.
+            - **conformers** (list[list[float]]): A list containing the cartesian coordinates of each atom in units
+              of ``conformer_unit`` in the order defined in ``atoms``.
             - **properties** (dict): Outputs from chosen a chosen toolkit:
 
                 - **atom_map** (dict): Dictionary of atom index (as in ``atoms`` entry) and the mapped index relevant
@@ -1185,8 +1185,8 @@ class FrozenMolecule(Serializable):
               represent dictionary outputs from :meth:`HierarchyScheme.to_dict()`
             - **conformers_unit** (str, default="angstrom"): Valid unit of length input for the
               `OpenFF Units module <https://docs.openforcefield.org/projects/units/en/stable/api/generated/openff.units.html>`_.
-            - **partial_charges** (list[float], default=None): Array of partial charge (in elementary charges)
-              for atoms in the same order as the output,``atoms``.
+            - **partial_charges** (list[float], default=None): Array of partial charge (in unit defined by
+              ``partial_charge_unit``) for atoms in the same order as the output,``atoms``.
             - **partial_charge_unit** (str, default=None): Valid unit of charge input for the
               `OpenFF Units module <https://docs.openforcefield.org/projects/units/en/stable/api/generated/openff.units.html>`_.
               If ``partial_charges`` is also included, the default is ``"elementary_charge"`` instead.
