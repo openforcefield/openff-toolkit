@@ -1085,7 +1085,7 @@ class Topology(Serializable):
                     topology_atom_indices = []
                     for molecule_atom_index in match:
                         atom = mol_instance.atom(atom_map[molecule_atom_index])
-                        topology_atom_indices.append(self.atom_index(atom))
+                        topology_atom_indices.append(self.atom_index(atom))  # type: ignore[arg-type]
 
                     environment_match = Topology._ChemicalEnvironmentMatch(
                         tuple(match), unique_mol, tuple(topology_atom_indices)
@@ -2343,7 +2343,8 @@ class Topology(Serializable):
             if next_molecule_start_index > atom_topology_index:
                 atom_molecule_index = atom_topology_index - this_molecule_start_index
                 # NOTE: the index here should still be in the topology index order, NOT the reference molecule's
-                return molecule.atom(atom_molecule_index)
+                # can Molecule.atom be a _SimpleAtom?
+                return molecule.atom(atom_molecule_index)  # type: ignore[return-value]
             this_molecule_start_index += molecule.n_atoms
 
         raise AtomNotInTopologyError(
