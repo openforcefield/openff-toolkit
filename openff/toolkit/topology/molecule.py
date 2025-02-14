@@ -268,7 +268,7 @@ class Atom(Particle):
 
         # Use the setter here, since it will handle either ints or Quantities
         # and it is designed to quickly process ints
-        self.formal_charge = formal_charge
+        self.formal_charge = formal_charge  # type: ignore[assignment]
         self._is_aromatic = is_aromatic
         self._stereochemistry = stereochemistry
         if name is None:
@@ -308,9 +308,13 @@ class Atom(Particle):
         """
         # TODO: Should this be implicit in the atom ordering when saved?
         # atom_dict['molecule_atom_index'] = self._molecule_atom_index
+
+        # trust that the unit is e
+        formal_charge: int = self._formal_charge.m  # type: ignore
+
         return {
             "atomic_number": self._atomic_number,
-            "formal_charge": self._formal_charge.m,  # Trust that the unit is e
+            "formal_charge": formal_charge,
             "is_aromatic": self._is_aromatic,
             "stereochemistry": self._stereochemistry,
             "name": self._name,
@@ -5960,7 +5964,7 @@ class HierarchyElement:
         for id_component, uniqueness_component in zip(identifier, scheme.uniqueness_criteria):
             setattr(self, uniqueness_component, id_component)
 
-    def to_dict(self) -> dict[str, tuple[str | int, ...] |  Sequence[int]]:
+    def to_dict(self) -> dict[str, tuple[str | int, ...] | Sequence[int]]:
         """Serialize this object to a basic dict of strings and lists of ints.
 
         Keys and values align with parameters used to initialize the :class:`HierarchyElement` class.
