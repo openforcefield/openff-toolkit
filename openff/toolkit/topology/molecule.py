@@ -750,11 +750,11 @@ class Bond(Serializable):
 
     @property
     def atom1_index(self) -> int:
-        return self.molecule.atoms.index(self._atom1)
+        return self._atom1.molecule_atom_index
 
     @property
     def atom2_index(self) -> int:
-        return self.molecule.atoms.index(self._atom2)
+        return self._atom2.molecule_atom_index
 
     @property
     def atoms(self):
@@ -1259,9 +1259,14 @@ class FrozenMolecule(Serializable):
         if self._ordered_connection_table_hash is not None:
             return self._ordered_connection_table_hash
 
+        # Pre-assign molecule atom indices in O(N) time to avoid use of List.index to get index of each one
+        # in O(N^2) time
+        for index, atom in enumerate(self.atoms):
+            atom._molecule_atom_index = index
+
         id = ""
         for atom in self.atoms:
-            id += f"{atom.symbol}_{atom.formal_charge}_{atom.stereochemistry}__"
+            id += f"{atom.atomic_number}_{atom.formal_charge.magnitude}_{atom.stereochemistry}__"
         for bond in self.bonds:
             id += f"{bond.bond_order}_{bond.stereochemistry}_{bond.atom1_index}_{bond.atom2_index}__"
 
@@ -1958,23 +1963,7 @@ class FrozenMolecule(Serializable):
         return molecule
 
     def _is_exactly_the_same_as(self, other):
-        for atom1, atom2 in zip(self.atoms, other.atoms):
-            if (
-                (atom1.atomic_number != atom2.atomic_number)
-                or (atom1.formal_charge != atom2.formal_charge)
-                or (atom1.is_aromatic != atom2.is_aromatic)
-                or (atom1.stereochemistry != atom2.stereochemistry)
-            ):
-                return False
-        for bond1, bond2 in zip(self.bonds, other.bonds):
-            if (
-                (bond1.atom1_index != bond2.atom1_index)
-                or (bond1.atom2_index != bond2.atom2_index)
-                or (bond1.is_aromatic != bond2.is_aromatic)
-                or (bond1.stereochemistry != bond2.stereochemistry)
-            ):
-                return False
-        return True
+        return self.ordered_connection_table_hash() == other.ordered_connection_table_hash()
 
     @staticmethod
     def are_isomorphic(
