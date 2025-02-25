@@ -803,7 +803,7 @@ class ForceField:
                 smirnoff_data, allow_cosmetic_attributes=allow_cosmetic_attributes
             )
 
-    def _to_smirnoff_data(self, discard_cosmetic_attributes: bool = False) -> dict:
+    def _to_smirnoff_data(self, discard_cosmetic_attributes: bool = False) -> list | dict:
         """
         Convert this ForceField and all related ParameterHandlers to a dict representing a SMIRNOFF
         data object.
@@ -843,7 +843,7 @@ class ForceField:
                 discard_cosmetic_attributes=discard_cosmetic_attributes
             )
 
-        smirnoff_data = dict()
+        smirnoff_data: dict[str, dict] = dict()
         smirnoff_data["SMIRNOFF"] = l1_dict
 
         return convert_all_quantities_to_string(smirnoff_data)

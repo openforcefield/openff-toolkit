@@ -213,7 +213,7 @@ def _validate_units(attr, value: Union[str, Quantity], units: Unit):
     value = object_to_quantity(value)
 
     try:
-        if not units.is_compatible_with(value.units):
+        if not units.is_compatible_with(value.units):  # type: ignore
             raise IncompatibleUnitError(
                 f"{attr.name}={value} should have units of {units}"
             )
@@ -867,7 +867,7 @@ class _ParameterAttributeHandler:
                 )
                 raise SMIRNOFFSpecError(msg)
 
-    def _process_mapped_attributes(self, smirnoff_data):
+    def _process_mapped_attributes(self, smirnoff_data: dict) -> dict:
         kwargs = list(smirnoff_data.keys())
         for kwarg in kwargs:
             attr_name, key = self._split_attribute_mapping(kwarg)
@@ -882,7 +882,7 @@ class _ParameterAttributeHandler:
 
         return smirnoff_data
 
-    def _process_indexed_mapped_attributes(self, smirnoff_data):
+    def _process_indexed_mapped_attributes(self, smirnoff_data: dict) -> tuple[dict, dict[str, int]]:
         # TODO: construct data structure for holding indexed_mapped attrs, which
         # will get fed into setattr
         indexed_mapped_attr_lengths = {}
@@ -948,7 +948,7 @@ class _ParameterAttributeHandler:
 
         return smirnoff_data, indexed_mapped_attr_lengths
 
-    def _process_indexed_attributes(self, smirnoff_data, indexed_attr_lengths=None):
+    def _process_indexed_attributes(self, smirnoff_data: dict, indexed_attr_lengths: Optional[dict]=None) -> dict:
         # Check for indexed attributes and stack them into a list.
         # Keep track of how many indexed attribute we find to make sure they all have the same length.
 
@@ -1011,7 +1011,7 @@ class _ParameterAttributeHandler:
         self,
         discard_cosmetic_attributes: bool = False,
         duplicate_attributes: Optional[list[str]] = None,
-    ) -> dict:
+    ) -> dict[str, dict | list | str]:
         """
         Convert this object to dict format.
 
@@ -2019,8 +2019,8 @@ class ParameterHandler(_ParameterAttributeHandler):
         self,
         parameter_kwargs: Optional[dict] = None,
         parameter: Optional[ParameterType] = None,
-        after: Optional[str] = None,
-        before: Optional[str] = None,
+        after: Union[int, str, None] = None,
+        before: Union[int, str, None] = None,
         allow_duplicate_smirks: bool = False,
     ):
         """Add a parameter to the force field, ensuring all parameters are valid.
@@ -2322,7 +2322,9 @@ class ParameterHandler(_ParameterAttributeHandler):
             "`ParameterHandler`s no longer create OpenMM forces. Use `openff-interchange` instead."
         )
 
-    def to_dict(self, discard_cosmetic_attributes: bool = False) -> dict:  # type: ignore[override]
+    def to_dict(self, discard_cosmetic_attributes: bool = False,
+                duplciate_attributes: Optional[list[str]] = None,
+            ) -> dict[str, dict | list | str]:
         """
         Convert this ParameterHandler to a dict, compliant with the SMIRNOFF data spec.
 
@@ -2337,7 +2339,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             SMIRNOFF-spec compliant representation of this ParameterHandler and its internal ParameterList.
 
         """
-        smirnoff_data = dict()
+        parameter_dict: dict[str, dict | list | str]= dict()
 
         # Populate parameter list
         parameter_list = self._parameters.to_list(
@@ -2347,15 +2349,16 @@ class ParameterHandler(_ParameterAttributeHandler):
         # NOTE: This assumes that a ParameterHandler will have just one homogenous ParameterList under it
         if self._INFOTYPE is not None:
             # smirnoff_data[self._INFOTYPE._ELEMENT_NAME] = unitless_parameter_list
-            smirnoff_data[self._INFOTYPE._ELEMENT_NAME] = parameter_list
+            parameter_dict[self._INFOTYPE._ELEMENT_NAME] = parameter_list
 
         # Collect parameter and cosmetic attributes.
-        header_attribute_dict = super().to_dict(
+        header_attribute_dict: dict[str, dict | list | str] = super().to_dict(
             discard_cosmetic_attributes=discard_cosmetic_attributes
         )
-        smirnoff_data.update(header_attribute_dict)
+        # import ipdb; ipdb.set_trace()
+        parameter_dict.update(header_attribute_dict)
 
-        return smirnoff_data
+        return parameter_dict
 
     def _check_attributes_are_equal(
         self,

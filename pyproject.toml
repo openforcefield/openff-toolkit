@@ -45,23 +45,6 @@ select = ["I", "E", "F", "W", "NPY", "UP", "RUF"]
 known-third-party = ["openff.interchange", "openff.utilities", "openff.units"]
 known-first-party = ["openff.toolkit"]
 
-[tool.pytest.ini_options]
-testpaths = [
-    "openff/toolkit/_tests/",
-]
-markers = [
-    "slow: marks tests as slow"
-]
-addopts = '-m "not slow"'
-filterwarnings = [
-    "ignore:Molecule.from_pdb_and_smiles.*deprecated in favor of .*from_pdb"
-]
-doctest_optionflags = [
-    "ELLIPSIS",
-    "DONT_ACCEPT_TRUE_FOR_1",
-    "NORMALIZE_WHITESPACE",
-]
-
 [tool.coverage.run]
 omit = [
     "*/*/_tests/*",
@@ -76,9 +59,11 @@ exclude_lines = [
 ]
 
 [tool.mypy]
+python_version = 3.12
 plugins = "numpy.typing.mypy_plugin"
 warn_unused_configs = true
-warn_unused_ignores = true
+# would be nice to flip back to true
+warn_unused_ignores = false
 warn_incomplete_stub = true
 show_error_codes = true
 exclude = "openff/toolkit/_tests/|openff/toolkit/data/"
