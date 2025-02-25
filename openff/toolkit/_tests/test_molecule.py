@@ -2682,7 +2682,7 @@ class TestMolecule:
         # simpler molecules don't always like to have many (> 1) conformers
         # https://greglandrum.github.io/rdkit-blog/posts/2023-02-04-working-with-conformers.html
         molecule = Molecule.from_smiles(
-            "COc1ccc2[n-]c([S@@+]([O-])Cc3ncc(C)c(OC)c3C)nc2c1"
+            "CCCCCCNCNCNCCCCN"
         )
         molecule.generate_conformers(n_conformers=10)
 
