@@ -304,7 +304,11 @@ class Atom(Particle):
         self._bonds.append(bond)
 
     def to_dict(self) -> dict[str, Union[None, str, int, bool, dict[Any, Any]]]:
-        """Return a dict representation of the atom."""
+        """Return a dict representation of the :class:`Atom` class instance.
+
+        Output dictionary keys and values align with parameters used to initialize
+        the :class:`Atom` class.
+        """
         # TODO: Should this be implicit in the atom ordering when saved?
         # atom_dict['molecule_atom_index'] = self._molecule_atom_index
         return {
@@ -318,10 +322,10 @@ class Atom(Particle):
 
     @classmethod
     def from_dict(cls: type[A], atom_dict: dict) -> A:
-        """
-        Create an Atom from a dict representation.
+        """Create an :class:`Atom` class instance from a dict representation.
 
-        The structure of the dict expected by this function is defined by the output of `Atom.to_dict()`.
+        The structure of the dict expected by this function is defined by the output of
+        :meth:`Atom.to_dict()`.
         """
         return cls(**atom_dict)
 
@@ -697,8 +701,10 @@ class Bond(Serializable):
         self._stereochemistry = stereochemistry
 
     def to_dict(self) -> dict[str, Union[int, bool, str, float]]:
-        """
-        Return a dict representation of the bond.
+        """Return a ``dict`` representation of the bond.
+
+        The output dictionary keys and values align with parameters used to initialize
+        the :class:`Bond` class.
 
         """
         return {
@@ -715,7 +721,8 @@ class Bond(Serializable):
         """
         Create a Bond from a dict representation.
 
-        The structure of the dict expected by this function is defined by the output of `Bond.to_dict()`.
+        The structure of the dict expected by this function is defined by the output of
+        :meth:`Bond.to_dict()`.
         """
         # TODO: This is not used anywhere (`Molecule._initialize_bonds_from_dict()` just calls grabs
         #       the two atoms and calls `Molecule._add_bond`). Remove or change that?
@@ -1151,7 +1158,7 @@ class FrozenMolecule(Serializable):
     ####################################################################################################
 
     def to_dict(self) -> dict:
-        """
+        r"""
         Return a dictionary representation of the molecule.
 
         .. todo ::
@@ -1163,6 +1170,27 @@ class FrozenMolecule(Serializable):
         -------
         molecule_dict
             A dictionary representation of the molecule.
+
+            - **name** (str): An optional name to be associated with the molecule
+            - **atoms** (list[dict]): A list of dictionary inputs for :meth:`Atom.from_dict()`
+            - **bonds** (list[dict]): A list of dictionary inputs for :meth:`Bond.from_dict()`
+            - **conformers** (list[list[float]]): A list containing the cartesian coordinates of each atom in units
+              of ``conformer_unit`` in the order defined in ``atoms``.
+            - **properties** (dict): Outputs from a chosen toolkit:
+
+                - **atom_map** (dict): Dictionary of atom index (as in ``atoms`` entry) and the mapped index relevant
+                  to a mapped canonical smiles string
+                - **\*\*kwargs**: Other toolkit dependent outputs
+
+            - **hierarchy_schemes** (dict[dict]): Dictionary where keys (such as ``"residues"`` and ``"chains"``)
+              represent dictionary outputs from :meth:`HierarchyScheme.to_dict()`
+            - **conformers_unit** (str, default="angstrom"): Valid unit of length input for the
+              `OpenFF Units module <https://docs.openforcefield.org/projects/units/en/stable/api/generated/openff.units.html>`_.
+            - **partial_charges** (list[float], default=None): Array of partial charge (in unit defined by
+              ``partial_charge_unit``) for atoms in the same order as the output,``atoms``.
+            - **partial_charge_unit** (str, default=None): Valid unit of charge input for the
+              `OpenFF Units module <https://docs.openforcefield.org/projects/units/en/stable/api/generated/openff.units.html>`_.
+              If ``partial_charges`` is also included, the default is ``"elementary_charge"`` instead.
 
         """
         from openff.toolkit.utils.utils import serialize_numpy
@@ -1245,17 +1273,16 @@ class FrozenMolecule(Serializable):
         """
         Create a new Molecule from a dictionary representation
 
-        The structure of the dict expected by this function is defined by the output of `Molecule.to_dict()`.
-
         Parameters
         ----------
         molecule_dict
-            A dictionary representation of the molecule.
+            A dictionary representation of the molecule defined by the inputs of
+            :meth:`Molecule.to_dict()`.
 
         Returns
         -------
         molecule
-            A Molecule created from the dictionary representation
+            A :class:`Molecule` class instance created from the dictionary representation
 
         """
         # This implementation is a compromise to let this remain as a classmethod
@@ -5877,14 +5904,13 @@ class HierarchyScheme:
 
         Parameters
         ----------
-
         parent
-            The ``Molecule`` to which this scheme belongs.
+            The :class:`Molecule` to which this scheme belongs.
         uniqueness_criteria
-            The names of ``Atom`` metadata entries that define this scheme. An
-            atom belongs to a ``HierarchyElement`` only if its metadata has the
+            The names of :class:`Atom` metadata entries that define this scheme. An
+            atom belongs to a :class:`HierarchyElement` only if its metadata has the
             same values for these criteria as the other atoms in the
-            ``HierarchyElement``.
+            :class:`HierarchyElement`.
         iterator_name
             The name of the iterator that will be exposed to access the hierarchy
             elements generated by this scheme
@@ -5918,8 +5944,9 @@ class HierarchyScheme:
         self.hierarchy_elements: list[HierarchyElement] = list()
 
     def to_dict(self) -> dict:
-        """
-        Serialize this object to a basic dict of strings, ints, and floats
+        """Serialize this object to a basic dict of strings and lists of ints.
+
+        Keys and values align with parameters used to initialize the :class:`HierarchyScheme` class.
         """
         return_dict: dict[str, Union[str, Sequence[Union[str, int, dict]]]] = dict()
         return_dict["uniqueness_criteria"] = self.uniqueness_criteria
@@ -6065,7 +6092,6 @@ class HierarchyElement:
 
         Parameters
         ----------
-
         scheme
             The scheme to which this ``HierarchyElement`` belongs
         identifier
@@ -6084,8 +6110,9 @@ class HierarchyElement:
             setattr(self, uniqueness_component, id_component)
 
     def to_dict(self) -> dict[str, Union[tuple[Union[str, int]], Sequence[int]]]:
-        """
-        Serialize this object to a basic dict of strings and lists of ints.
+        """Serialize this object to a basic dict of strings and lists of ints.
+
+        Keys and values align with parameters used to initialize the :class:`HierarchyElement` class.
         """
         return {
             "identifier": self.identifier,
