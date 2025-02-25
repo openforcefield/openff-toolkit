@@ -6,9 +6,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-## Current development
-
-### API-breaking changes
+## 0.16.8
 
 ### Behavior changes
 - [PR #1963](https://github.com/openforcefield/openff-toolkit/pull/1963): Always use `getattr` in lazy loading machinery.
