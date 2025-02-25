@@ -25,6 +25,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### New features
 - [PR #1990](https://github.com/openforcefield/openff-toolkit/pull/1990): Adds support for Pint 0.24 and `openff-units` 0.3.x.
+- [PR #2015](https://github.com/openforcefield/openff-toolkit/pull/2015): Adds `Molecule.clear_conformers`.
 
 ### Improved documentation and warnings
 
