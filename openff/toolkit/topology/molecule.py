@@ -1354,15 +1354,20 @@ class FrozenMolecule(Serializable):
                     tuple(element_dict["identifier"]), element_dict["atom_indices"]
                 )
 
-    def __repr__(self):
-        """Return a summary of this molecule; SMILES if valid, Hill formula if not."""
+    def __repr__(self) -> str:
+        """Return a summary of this molecule; SMILES if valid, Hill formula if not or if large."""
         description = f"Molecule with name '{self.name}'"
+
+        if self.n_atoms > 500:
+            hill = self.to_hill_formula()
+            return description + f" with Hill formula '{hill}'"
+
         try:
             smiles = self.to_smiles()
+            return description + f" and SMILES '{smiles}'"
         except Exception:
             hill = self.to_hill_formula()
             return description + f" with bad SMILES and Hill formula '{hill}'"
-        return description + f" and SMILES '{smiles}'"
 
     def _initialize(self):
         """
