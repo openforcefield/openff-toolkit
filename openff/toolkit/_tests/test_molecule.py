@@ -636,7 +636,7 @@ class TestMolecule:
 
         assert "Hill formula" in this_repr
         assert "SMILES" not in this_repr
-        assert "C2294H3662N688O678S18" in this_repr
+        assert "C200H502N100" in this_repr
 
         # can be displayed on one line
         assert len(this_repr) < 100
