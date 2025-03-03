@@ -806,7 +806,7 @@ class ForceField:
                 smirnoff_data, allow_cosmetic_attributes=allow_cosmetic_attributes
             )
 
-    def _to_smirnoff_data(self, discard_cosmetic_attributes: bool = False) -> list | dict:
+    def _to_smirnoff_data(self, discard_cosmetic_attributes: bool = False) -> dict:
         """
         Convert this ForceField and all related ParameterHandlers to a dict representing a SMIRNOFF
         data object.
