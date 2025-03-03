@@ -10,11 +10,10 @@ from copy import deepcopy
 import numpy as np
 import pytest
 from openff.units.openmm import from_openmm
-from openff.units.units import Quantity
 from openff.utilities import skip_if_missing
 from openmm import app
 
-from openff.toolkit import unit
+from openff.toolkit import Quantity, unit
 from openff.toolkit._tests.create_molecules import (
     create_ammonia,
     create_cyclohexane,

@@ -117,7 +117,7 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
             )
         else:
             mol_copy._conformers = None
-            for conformer in use_conformers:
+            for conformer in use_conformers:  # type: ignore[attr-defined]
                 mol_copy._add_conformer(conformer)
             self._check_n_conformers(
                 mol_copy,
