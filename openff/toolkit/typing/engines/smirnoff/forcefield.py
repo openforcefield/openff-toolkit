@@ -1143,7 +1143,6 @@ class ForceField:
     def combine(
         self,
         other: "ForceField",
-        allow_cosmetic_attributes: bool = False,
     ) -> "ForceField":
         """
         Combine this `ForceField` with another `ForceField`, returning a new `ForceField`.
@@ -1158,7 +1157,7 @@ class ForceField:
             smirnoff_data=other._to_smirnoff_data(
                 discard_cosmetic_attributes=False,
             ),
-            allow_cosmetic_attributes=allow_cosmetic_attributes,
+            allow_cosmetic_attributes=True,
         )
 
         return combined
