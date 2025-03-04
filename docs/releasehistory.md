@@ -16,6 +16,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### New features
 
+- [PR #1996](https://github.com/openforcefield/openff-toolkit/pull/1996): Adds `ForceField.combine`.
+
 ### Improved documentation and warnings
 
 ## 0.16.8
