@@ -629,6 +629,18 @@ class TestMolecule:
         expected_repr = "Molecule with name '' with bad SMILES and Hill formula 'Cl3'"
         assert molecule.__repr__() == expected_repr
 
+    def test_repr_large_molecule(self):
+        large_molecule = Molecule.from_smiles("CNC" * 100)
+
+        this_repr = repr(large_molecule)
+
+        assert "Hill formula" in this_repr
+        assert "SMILES" not in this_repr
+        assert "C200H502N100" in this_repr
+
+        # can be displayed on one line
+        assert len(this_repr) < 100
+
     @pytest.mark.parametrize("toolkit", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_to_from_smiles(self, molecule, toolkit):
