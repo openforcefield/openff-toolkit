@@ -1,5 +1,6 @@
 name: openff-toolkit-test-rdkit
 channels:
+  - conda-forge/label/openff-interchange_rc
   - conda-forge
 dependencies:
     # Base depends
@@ -15,7 +16,7 @@ dependencies:
   - openmm >=7.6
   - openff-forcefields >=2023.05.1
   - smirnoff99Frosst
-  - openff-units =0.2.0
+  - openff-units ~=0.3.0
   - openff-amber-ff-ports
   - openff-utilities >=0.1.5
   - openff-interchange-base =0.4
