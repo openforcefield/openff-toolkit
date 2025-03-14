@@ -2249,23 +2249,44 @@ class ParameterHandler(_ParameterAttributeHandler):
         """
         logger.debug(f"Finding matches for {self.__class__.__name__}")
 
+        # need to match potentially multiple for virtual sites, but no others
+        match_all = True
+
         matches = transformed_dict_cls()
 
         # TODO: There are probably performance gains to be had here
-        #       by performing this loop in reverse order, and breaking early once
+        #       by breaking early once
         #       all environments have been matched.
-        for parameter_type in self._parameters:
+        for parameter_type in reversed(self._parameters):
             matches_for_this_type = {}
 
-            for environment_match in entity.chemical_environment_matches(
-                parameter_type.smirks,
-                unique=unique,
-            ):
-                # Update the matches for this parameter type.
-                handler_match = self._Match(parameter_type, environment_match)
-                matches_for_this_type[environment_match.topology_atom_indices] = (
-                    handler_match
+            these_matches = entity.chemical_environment_matches(
+                    parameter_type.smirks,
+                    unique=unique,
                 )
+
+            if match_all:
+                for environment_match in these_matches:
+                    # Update the matches for this parameter type.
+                    if environment_match.topology_atom_indices in matches_for_this_type:
+                        continue
+                    handler_match = self._Match(parameter_type, environment_match)
+                    matches_for_this_type[environment_match.topology_atom_indices] = (
+                        handler_match
+                    )
+            else:
+
+                if len(these_matches) == 0:
+                    continue
+
+                else:
+                    last_match = these_matches[-1]
+
+                matches_for_this_type[last_match.topology_atom_indices] = self._Match(
+                    parameter_type, last_match
+                )
+
+            del these_matches
 
             # Update matches of all parameter types.
             matches.update(matches_for_this_type)
@@ -2273,6 +2294,8 @@ class ParameterHandler(_ParameterAttributeHandler):
             logger.debug(
                 f"{parameter_type.smirks:64} : {len(matches_for_this_type):8} matches"
             )
+
+            del matches_for_this_type
 
         logger.debug(f"{len(matches)} matches identified")
         return matches
