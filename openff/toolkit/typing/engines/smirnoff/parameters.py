@@ -2260,20 +2260,22 @@ class ParameterHandler(_ParameterAttributeHandler):
         for parameter_type in reversed(self._parameters):
             matches_for_this_type = {}
 
-            these_matches = entity.chemical_environment_matches(
+            these_matches = [
+                match for match in
+                entity.chemical_environment_matches(
                     parameter_type.smirks,
                     unique=unique,
-                )
+                ) if match.topology_atom_indices not in matches_for_this_type
+            ]
 
             if match_all:
                 for environment_match in these_matches:
                     # Update the matches for this parameter type.
-                    if environment_match.topology_atom_indices in matches_for_this_type:
-                        continue
                     handler_match = self._Match(parameter_type, environment_match)
                     matches_for_this_type[environment_match.topology_atom_indices] = (
                         handler_match
                     )
+
             else:
 
                 if len(these_matches) == 0:
