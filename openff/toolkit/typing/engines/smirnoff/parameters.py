@@ -2254,10 +2254,24 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         matches = transformed_dict_cls()
 
-        # TODO: There are probably performance gains to be had here
-        #       by breaking early once
-        #       all environments have been matched.
+        # guess the number of matches to find and short-circuit at
+        if "vdW" in self.__class__.__name__:
+            n_slots = entity.n_atoms
+        elif "Bond" in self.__class__.__name__:
+            n_slots = entity.n_bonds
+        elif "Angle" in self.__class__.__name__:
+            n_slots = entity.n_angles
+        elif "Propers" in self.__class__.__name__:
+            n_slots = entity.n_propers
+        elif "Impropers" in self.__class__.__name__:
+            n_slots = entity.n_impropers
+        else:
+            n_slots = None
+
         for parameter_type in reversed(self._parameters):
+            if len(matches) == n_slots:
+                continue
+
             matches_for_this_type = {}
 
             these_matches = [
