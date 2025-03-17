@@ -1982,13 +1982,63 @@ class FrozenMolecule(Serializable):
                 return False
         return True
 
+
     @staticmethod
     def _r_isomorphic(
-        graph1: "rustworkx.PyGraph",
-        graph2: "rustworkx.PyGraph",
+        mol1: "rustworkx.PyGraph",
+        mol2: "rustworkx.PyGraph",
         return_atom_map: bool = False,
     ) -> tuple[bool, Optional[dict[int, int]]]:
         import rustworkx
+
+        _cls = FrozenMolecule
+
+        if isinstance(mol1, rustworkx.PyGraph) and isinstance(mol2, rustworkx.PyGraph):
+            pass
+
+        elif isinstance(mol1, rustworkx.PyGraph):
+            assert isinstance(mol2, _cls)
+
+        elif isinstance(mol2, rustworkx.PyGraph):
+            assert isinstance(mol1, _cls)
+
+        else:
+            # static methods (by definition) know nothing about their class,
+            # so the class to compare to must be hard-coded here
+            if not (isinstance(mol1, _cls) and isinstance(mol2, _cls)):
+                return False, None
+
+        def _object_to_n_atoms(obj):
+            if isinstance(obj, FrozenMolecule):
+                return obj.n_atoms
+            elif isinstance(obj, nx.Graph):
+                return obj.number_of_nodes()
+            else:
+                raise TypeError(
+                    "are_isomorphic accepts a NetworkX Graph or OpenFF "
+                    + f"(Frozen)Molecule, not {type(obj)}"
+                )
+
+        # Quick number of atoms check. Important for large molecules
+        if _object_to_n_atoms(mol1) != _object_to_n_atoms(mol2):
+            return False, None
+
+        # If the number of atoms match, check the Hill formula
+        if Molecule._object_to_hill_formula(mol1) != Molecule._object_to_hill_formula(
+            mol2
+        ):
+            return False, None
+
+        # Do a quick check to see whether the inputs are totally identical (including being in the same atom order)
+        if isinstance(mol1, FrozenMolecule) and isinstance(mol2, FrozenMolecule):
+            if mol1._is_exactly_the_same_as(mol2):
+                if return_atom_map:
+                    return True, {i: i for i in range(mol1.n_atoms)}
+                else:
+                    return True, None
+
+        graph1 = mol1._to_rustworkx()
+        graph2 = mol2._to_rustworkx()
 
         if return_atom_map:
             are_isomorphic = rustworkx.is_isomorphic(graph1, graph2)
