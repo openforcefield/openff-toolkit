@@ -69,10 +69,6 @@ jobs:
           OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
         run: echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
 
-      - name: Install Pint 0.24.4 and `openff-units` branch
-        run: |
-          pip install "pint==0.24.4" git+https://github.com/openforcefield/openff-units.git@pint-0.24
-
       - name: Install package
         run: python -m pip install .
 
@@ -107,6 +103,12 @@ jobs:
           micromamba info
           micromamba list
           pip list
+
+        # See https://github.com/openforcefield/openff-units/issues/111
+        # for more or better solution - possibly not needed when links are checked
+        # before a parallel pytest run
+      - name: Shim for `pytest-xdist` + Pint cross-interaction
+        run: python -c "from openff.toolkit import *"
 
       - name: Run example scripts
         run: |
