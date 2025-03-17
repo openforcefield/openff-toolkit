@@ -1143,8 +1143,13 @@ class Topology(Serializable):
         >>> top.identical_molecule_groups
         {0: [(0, {0: 0, 1: 1, 2: 2}), (1, {0: 1, 1: 0, 2: 2})]}
         """
+        import traceback
         # Check whether this was run previously, and a cached result is available.
         if self._cached_chemically_identical_molecules is not None:
+            print("REBUILDING GRAPH CACHE")
+            # import ipdb; ipdb.set_trace()
+            # print(inspect.stack())
+            traceback.print_stack()
             return self._cached_chemically_identical_molecules
 
         # Convert molecule identity maps into groups of identical molecules
@@ -1233,7 +1238,8 @@ class Topology(Serializable):
         self._constrained_atom_pairs = copy.deepcopy(other._constrained_atom_pairs)
         self._box_vectors = copy.deepcopy(other._box_vectors)
         self._molecules = copy.deepcopy(other._molecules)
-        self._invalidate_cached_properties()
+        # self._invalidate_cached_properties()
+        self._cached_chemically_identical_molecules = copy.deepcopy(other._cached_chemically_identical_molecules)
 
     def to_dict(self) -> dict:
         from openff.toolkit.utils.utils import serialize_numpy
