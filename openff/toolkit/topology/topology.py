@@ -1196,8 +1196,10 @@ class Topology(Serializable):
                     continue
                 mol2 = self.molecule(mol2_idx)
                 if isinstance(mol1, type(mol2)) or isinstance(mol2, type(mol1)):
-                    are_isomorphic, atom_map = mol1.are_isomorphic(
-                        mol1, mol2, return_atom_map=True
+                    are_isomorphic, atom_map = mol1._r_isomorphic(
+                        mol1._to_rustworkx(),
+                        mol2._to_rustworkx(),
+                        return_atom_map=True,
                     )
                 else:
                     are_isomorphic = False
