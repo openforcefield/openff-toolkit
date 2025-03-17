@@ -22,7 +22,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Improved documentation and warnings
 
-- [PR #2032](https://github.com/openforcefield/openff-toolkit/pull/20XX): Drops examples which depend on ParmEd.
+- [PR #2032](https://github.com/openforcefield/openff-toolkit/pull/2032): Drops examples which depend on ParmEd.
 
 ## 0.16.8
 
