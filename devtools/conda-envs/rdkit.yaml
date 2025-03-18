@@ -8,6 +8,7 @@ dependencies:
   - packaging
   - numpy
   - networkx
+  - rustworkx
   - cachetools
   - cached-property
   - xmltodict
