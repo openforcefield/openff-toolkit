@@ -128,4 +128,4 @@ jobs:
 
       - name: Run example notebooks
         run: |
-          python -m pytest -r fE -v -x --tb=short --nbval-lax --ignore=examples/deprecated examples
+          python -m pytest -r fE -v -x --tb=short --nbval-lax --ignore=examples/deprecated --ignore=examples/external examples
