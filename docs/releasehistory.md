@@ -16,6 +16,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+- [PR #2039](https://github.com/openforcefield/openff-toolkit/pull/2039): Prevent an error displaying a `Molecule` in IPython when `nglview` is not installed.
+
 ### New features
 
 - [PR #1996](https://github.com/openforcefield/openff-toolkit/pull/1996): Adds `ForceField.combine`.
