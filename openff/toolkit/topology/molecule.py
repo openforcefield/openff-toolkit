@@ -5766,7 +5766,7 @@ class Molecule(FrozenMolecule):
 
         try:
             return display(self.visualize(backend="nglview"))
-        except (ImportError, ValueError):
+        except (MissingOptionalDependencyError, ValueError):
             pass
 
         try:
