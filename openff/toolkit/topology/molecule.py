@@ -1774,6 +1774,10 @@ class FrozenMolecule(Serializable):
         InChI is a standardised representation that does not capture tautomers unless specified using the fixed
         hydrogen layer.
 
+        If RDKit is used, the /LargeMolecules switch will be used.
+
+        If OEChem is used, an error will be raised if the molecule is large (1024+ atoms).
+
         For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
 
         Parameters
@@ -1820,6 +1824,10 @@ class FrozenMolecule(Serializable):
         Create an InChIKey for the molecule using the requested toolkit backend.
         InChIKey is a standardised representation that does not capture tautomers unless specified
         using the fixed hydrogen layer.
+
+        If RDKit is used, the /LargeMolecules switch will be used.
+
+        If OEChem is used, an error will be raised if the molecule is large (1024+ atoms).
 
         For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
 
