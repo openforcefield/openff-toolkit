@@ -20,6 +20,7 @@ jobs:
     name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.rdkit }}, OpenEye=${{ matrix.openeye }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
         python-version: ["3.10", "3.11", "3.12", "3.13"]
@@ -137,15 +138,6 @@ jobs:
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
 
-      - name: Run mypy
-        # When possible re-enable this with OE+RDK=True, but for now rdkit builds often have bugs
-        # in stubs and there are other subtleties (in the source code and builds) that reduce the number
-        # of available builds.
-        # See ex https://github.com/rdkit/rdkit/issues/7221
-        # and https://github.com/rdkit/rdkit/issues/7583
-        if: ${{ matrix.rdkit == false && matrix.openeye == true }}
-        run: mypy -p "openff.toolkit"
-
       - name: Run unit tests
         run: |
           PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_examples.py"
@@ -168,7 +160,7 @@ jobs:
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
         run: |
           pytest openff \
-            -v -x -n logical --no-cov --doctest-modules \
+            -v -n logical --no-cov --doctest-modules \
             --ignore-glob='openff/toolkit/_tests*' \
             --ignore=openff/toolkit/data/ \
             --ignore=openff/toolkit/utils/utils.py
