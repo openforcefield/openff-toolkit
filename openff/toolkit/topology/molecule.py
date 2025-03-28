@@ -1256,10 +1256,10 @@ class FrozenMolecule(Serializable):
 
     def ordered_connection_table_hash(self) -> int:
         """
-        Compute an ordered hash of the atoms and bonds in the molecule. 
+        Compute an ordered hash of the atoms and bonds in the molecule.
         This hash method is intended for comparison of Molecule objects at
-        runtime, and hashes from one version of the software should not be 
-        compared with hashes generated using different versions. 
+        runtime, and hashes from one version of the software should not be
+        compared with hashes generated using different versions.
         """
         if self._ordered_connection_table_hash is not None:
             return self._ordered_connection_table_hash
