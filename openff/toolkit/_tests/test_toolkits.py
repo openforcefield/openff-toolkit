@@ -2404,6 +2404,14 @@ class TestRDKitToolkitWrapper:
                 method,
             )(toolkit_registry=RDKitToolkitWrapper())
 
+    @pytest.mark.parametrize("method", ["to_inchi", "to_inchikey"])
+    def test_large_molecule(self, method):
+        getattr(
+            Molecule.from_smiles(342 * "C"),
+            method,
+        )(toolkit_registry=RDKitToolkitWrapper())
+
+
     def test_smiles_charged(self):
         """Test RDKitWrapper functions for reading/writing charged SMILES"""
         toolkit_wrapper = RDKitToolkitWrapper()

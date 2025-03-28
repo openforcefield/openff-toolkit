@@ -21,6 +21,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### New features
 
 - [PR #1996](https://github.com/openforcefield/openff-toolkit/pull/1996): Adds `ForceField.combine`.
+- [PR #2040](https://github.com/openforcefield/openff-toolkit/pull/2040): Adds support for InChI with large molecules when using RDKit.
 
 ### Improved documentation and warnings
 
