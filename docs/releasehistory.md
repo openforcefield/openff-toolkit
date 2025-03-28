@@ -13,6 +13,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Behavior changes
 
 - [PR #2026](https://github.com/openforcefield/openff-toolkit/pull/2026): Makes `Molecule.__repr__` more succinct for large molecules.
+- [PR #2025](https://github.com/openforcefield/openff-toolkit/pull/2025): Speeds up `Molecule.ordered_connection_table_hash`, but changes the specific hash outputted for a given molecule. The meaning of hash identity within a single OpenFF Toolkit version is unchanged. Updates documentation to state that these this method is only intended for comparing Molecule objects using the same version of the OpenFF Toolkit, and that hashes may not be stable between versions. 
 
 ### Bugfixes
 
