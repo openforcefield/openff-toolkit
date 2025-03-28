@@ -1917,6 +1917,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         else:
             inchi = oechem.OEMolToSTDInChI(oemol)
 
+        # TODO: Add support for /LargeMolecules switch when OpenEye allows it
+        #       (underlying InChI tool does)
         if len(inchi) == 0:
             raise EmptyInChiError(
                 "OEChem failed to generate an InChI for the molecule."

@@ -1359,15 +1359,20 @@ class FrozenMolecule(Serializable):
                     tuple(element_dict["identifier"]), element_dict["atom_indices"]
                 )
 
-    def __repr__(self):
-        """Return a summary of this molecule; SMILES if valid, Hill formula if not."""
+    def __repr__(self) -> str:
+        """Return a summary of this molecule; SMILES if valid, Hill formula if not or if large."""
         description = f"Molecule with name '{self.name}'"
+
+        if self.n_atoms > 500:
+            hill = self.to_hill_formula()
+            return description + f" with Hill formula '{hill}'"
+
         try:
             smiles = self.to_smiles()
+            return description + f" and SMILES '{smiles}'"
         except Exception:
             hill = self.to_hill_formula()
             return description + f" with bad SMILES and Hill formula '{hill}'"
-        return description + f" and SMILES '{smiles}'"
 
     def _initialize(self):
         """
@@ -1774,6 +1779,10 @@ class FrozenMolecule(Serializable):
         InChI is a standardised representation that does not capture tautomers unless specified using the fixed
         hydrogen layer.
 
+        If RDKit is used, the /LargeMolecules switch will be used.
+
+        If OEChem is used, an error will be raised if the molecule is large (1024+ atoms).
+
         For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
 
         Parameters
@@ -1820,6 +1829,10 @@ class FrozenMolecule(Serializable):
         Create an InChIKey for the molecule using the requested toolkit backend.
         InChIKey is a standardised representation that does not capture tautomers unless specified
         using the fixed hydrogen layer.
+
+        If RDKit is used, the /LargeMolecules switch will be used.
+
+        If OEChem is used, an error will be raised if the molecule is large (1024+ atoms).
 
         For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
 
@@ -5465,6 +5478,14 @@ class Molecule(FrozenMolecule):
 
         return self._add_conformer(coordinates)
 
+    def clear_conformers(self):
+        """
+        Delete all conformers of this molecule, if any exist.
+
+        """
+        self._conformers = None
+
+
     @overload
     def visualize(
         self,
@@ -5742,7 +5763,7 @@ class Molecule(FrozenMolecule):
 
         try:
             return display(self.visualize(backend="nglview"))
-        except (ImportError, ValueError):
+        except (MissingOptionalDependencyError, ValueError):
             pass
 
         try:
