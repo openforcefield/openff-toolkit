@@ -13,6 +13,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Behavior changes
 
 - [PR #2026](https://github.com/openforcefield/openff-toolkit/pull/2026): Makes `Molecule.__repr__` more succinct for large molecules.
+- [PR #2041](https://github.com/openforcefield/openff-toolkit/pull/2041): Drop testing on Python 3.10
 
 ### Bugfixes
 
