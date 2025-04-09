@@ -24,7 +24,6 @@ Molecular chemical entity representation and routines to interface with cheminfo
    * Speed up overall import time by putting non-global imports only where they are needed
 
 """
-
 import json
 import operator
 import pathlib
@@ -46,6 +45,7 @@ from typing import (
 )
 
 import numpy as np
+import rustworkx
 from openff.units import Unit
 from openff.units.elements import MASSES, SYMBOLS
 from openff.utilities.exceptions import MissingOptionalDependencyError
@@ -91,6 +91,7 @@ if TYPE_CHECKING:
     import IPython.display
     import networkx as nx
     import nglview
+    import rustworkx
     from rdkit.Chem import Mol as RDMol
 
     from openff.toolkit.topology._mm_molecule import _SimpleAtom, _SimpleMolecule
@@ -1989,7 +1990,74 @@ class FrozenMolecule(Serializable):
                 return False
         return True
 
+
     @staticmethod
+    def _r_isomorphic(
+        mol1: "rustworkx.PyGraph",
+        mol2: "rustworkx.PyGraph",
+        return_atom_map: bool = False,
+    ) -> tuple[bool, Optional[dict[int, int]]]:
+        import rustworkx
+
+        _cls = FrozenMolecule
+
+        if isinstance(mol1, rustworkx.PyGraph) and isinstance(mol2, rustworkx.PyGraph):
+            pass
+
+        elif isinstance(mol1, rustworkx.PyGraph):
+            assert isinstance(mol2, _cls)
+
+        elif isinstance(mol2, rustworkx.PyGraph):
+            assert isinstance(mol1, _cls)
+
+        else:
+            # static methods (by definition) know nothing about their class,
+            # so the class to compare to must be hard-coded here
+            if not (isinstance(mol1, _cls) and isinstance(mol2, _cls)):
+                return False, None
+
+        def _object_to_n_atoms(obj):
+            if isinstance(obj, FrozenMolecule):
+                return obj.n_atoms
+            elif isinstance(obj, nx.Graph):
+                return obj.number_of_nodes()
+            else:
+                raise TypeError(
+                    "are_isomorphic accepts a NetworkX Graph or OpenFF "
+                    + f"(Frozen)Molecule, not {type(obj)}"
+                )
+
+        # Quick number of atoms check. Important for large molecules
+        if _object_to_n_atoms(mol1) != _object_to_n_atoms(mol2):
+            return False, None
+
+        # If the number of atoms match, check the Hill formula
+        if Molecule._object_to_hill_formula(mol1) != Molecule._object_to_hill_formula(
+            mol2
+        ):
+            return False, None
+
+        # Do a quick check to see whether the inputs are totally identical (including being in the same atom order)
+        if isinstance(mol1, FrozenMolecule) and isinstance(mol2, FrozenMolecule):
+            if mol1._is_exactly_the_same_as(mol2):
+                if return_atom_map:
+                    return True, {i: i for i in range(mol1.n_atoms)}
+                else:
+                    return True, None
+
+        graph1 = mol1._to_rustworkx()
+        graph2 = mol2._to_rustworkx()
+
+        if return_atom_map:
+            are_isomorphic = rustworkx.is_isomorphic(graph1, graph2)
+
+            if are_isomorphic:
+                return True, dict(next(rustworkx.graph_vf2_mapping(graph1, graph2)))
+            else:
+                return False, None
+        else:
+            return rustworkx.is_isomorphic(graph1, graph2), None
+
     def are_isomorphic(
         mol1: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"],
         mol2: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"],
@@ -2889,6 +2957,17 @@ class FrozenMolecule(Serializable):
             # G.add_edge(bond.atom1_index, bond.atom2_index, attr_dict={'order':bond.bond_order})
 
         return G
+
+    def _to_rustworkx(self) -> rustworkx.PyGraph:
+        graph = rustworkx.PyGraph()
+
+        for atom in self.atoms:
+            graph.add_node(atom)
+
+        for bond in self.bonds:
+            graph.add_edge(bond.atom1_index, bond.atom2_index, bond)
+
+        return graph
 
     def find_rotatable_bonds(
         self,
