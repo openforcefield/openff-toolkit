@@ -82,13 +82,13 @@ class _SimpleMolecule:
     def n_conformers(self) -> int:
         return 0 if self._conformers is None else len(self._conformers)
 
-    def atom(self, index):
+    def atom(self, index: int) -> "_SimpleAtom":
         return self.atoms[index]
 
     def atom_index(self, atom) -> int:
         return self.atoms.index(atom)
 
-    def bond(self, index):
+    def bond(self, index: int) -> "_SimpleBond":
         return self.bonds[index]
 
     def get_bond_between(self, atom1_index, atom2_index):
@@ -340,9 +340,7 @@ class _SimpleMolecule:
             molecule_dict["conformers"] = None
         else:
             molecule_dict["conformers"] = []
-            molecule_dict["conformers_unit"] = (
-                "angstrom"  # Have this defined as a class variable?
-            )
+            molecule_dict["conformers_unit"] = "angstrom"  # Have this defined as a class variable?
             for conf in self._conformers:
                 conf_unitless = conf.m_as(unit.angstrom)
                 conf_serialized, conf_shape = serialize_numpy(conf_unitless)
@@ -368,9 +366,7 @@ class _SimpleMolecule:
         for bond_dict in bond_dicts:
             atom1_index = bond_dict["atom1_index"]
             atom2_index = bond_dict["atom2_index"]
-            molecule.add_bond(
-                atom1=molecule.atom(atom1_index), atom2=molecule.atom(atom2_index)
-            )
+            molecule.add_bond(atom1=molecule.atom(atom1_index), atom2=molecule.atom(atom2_index))
 
         conformers = molecule_dict.pop("conformers")
         if conformers is None:
@@ -438,9 +434,7 @@ class _SimpleMolecule:
             "an OpenFF Molecule with sufficiently specified chemistry."
         )
 
-    def is_isomorphic_with(
-        self, other: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"], **kwargs
-    ) -> bool:
+    def is_isomorphic_with(self, other: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"], **kwargs) -> bool:
         """
         Check for pseudo-isomorphism.
 
@@ -504,9 +498,7 @@ class _SimpleMolecule:
             if return_atom_map:
                 topology_atom_map = matcher.mapping
 
-                return True, {
-                    key: topology_atom_map[key] for key in sorted(topology_atom_map)
-                }
+                return True, {key: topology_atom_map[key] for key in sorted(topology_atom_map)}
 
             else:
                 return True, None
@@ -534,9 +526,7 @@ class _SimpleMolecule:
         try:
             return self.__dict__["_hierarchy_schemes"][name].hierarchy_elements
         except KeyError:
-            raise AttributeError(
-                f"'{self.__class__.__name__}' object has no attribute {name!r}"
-            )
+            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute {name!r}")
 
     def __deepcopy__(self, memo):
         return self.__class__.from_dict(self.to_dict())
@@ -585,10 +575,7 @@ class _SimpleAtom:
         if not isinstance(value, int):
             raise ValueError("atomic_number must be an integer")
         if value < 0:
-            raise ValueError(
-                "atomic_number must be non-negative. An atomic number "
-                "of 0 is acceptable."
-            )
+            raise ValueError("atomic_number must be non-negative. An atomic number of 0 is acceptable.")
         self._atomic_number = value
 
     @property
