@@ -105,6 +105,7 @@ GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
         RDKitToolkitWrapper,
         AmberToolsToolkitWrapper,
         BuiltInToolkitWrapper,
+        NAGLToolkitWrapper
     ],
     exception_if_unavailable=False,
 )
