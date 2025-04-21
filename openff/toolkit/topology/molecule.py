@@ -25,6 +25,7 @@ Molecular chemical entity representation and routines to interface with cheminfo
 
 """
 
+import hashlib
 import json
 import operator
 import pathlib
@@ -1275,7 +1276,7 @@ class FrozenMolecule(Serializable):
         for bond in self.bonds:
             id += f"{bond.bond_order}_{bond.stereochemistry}_{bond.atom1_index}_{bond.atom2_index}__"
 
-        self._ordered_connection_table_hash = hash(id)
+        self._ordered_connection_table_hash = hashlib.sha3_224(id.encode("utf-8")).hexdigest()
         return self._ordered_connection_table_hash
 
     @classmethod
@@ -1981,7 +1982,15 @@ class FrozenMolecule(Serializable):
         return molecule
 
     def _is_exactly_the_same_as(self, other):
-        return self.ordered_connection_table_hash() == other.ordered_connection_table_hash()
+        self_id = (
+            tuple((atom.atomic_number, atom.formal_charge.magnitude, atom.stereochemistry) for atom in self.atoms),
+            tuple((bond.bond_order, bond.stereochemistry, bond.atom1_index, bond.atom2_index) for bond in self.bonds),
+        )
+        other_id = (
+            tuple((atom.atomic_number, atom.formal_charge.magnitude, atom.stereochemistry) for atom in other.atoms),
+            tuple((bond.bond_order, bond.stereochemistry, bond.atom1_index, bond.atom2_index) for bond in other.bonds),
+        )
+        return self_id == other_id
 
     @staticmethod
     def are_isomorphic(
