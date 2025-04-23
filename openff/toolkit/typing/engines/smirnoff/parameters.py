@@ -29,6 +29,7 @@ __all__ = [
     "LibraryChargeHandler",
     "LibraryChargeType",
     "MappedParameterAttribute",
+    "NAGLChargesHandler",
     "NotEnoughPointsForInterpolationError",
     "ParameterAttribute",
     "ParameterHandler",
@@ -3253,6 +3254,41 @@ class LibraryChargeHandler(_NonbondedHandler):
             unique=unique,
         )
 
+class NAGLChargesHandler(_NonbondedHandler):
+    """ParameterHandler for applying partial charges from a pretrained NAGL model."""
+
+    _TAGNAME = "NAGLCharges"
+    _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler, LibraryChargeHandler]
+    _INFOTYPE = None  # No separate parameter types; just a model path
+    _MAX_SUPPORTED_SECTION_VERSION = Version("0.3")
+    model_file = ParameterAttribute(converter=str)
+
+    def check_handler_compatibility(
+        self,
+        other_handler: "NAGLChargesHandler",
+        assume_missing_is_default: bool = True,
+    ):
+        """
+        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag.
+
+        Parameters
+        ----------
+        other_handler
+            The handler to compare to.
+        assume_missing_is_default
+
+        Raises
+        ------
+        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
+        """
+        if self.model_file != other_handler.model_file:
+            raise IncompatibleParameterError("Attempted to initialize two NAGLCharges sections with different "
+                                             "model_files: "
+                                             f"{self.model_file=} is not identical to {other_handler.model_file=}")
+
+
+
 
 class ToolkitAM1BCCHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<ToolkitAM1BCC>`` tags
@@ -3261,7 +3297,7 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
     """
 
     _TAGNAME = "ToolkitAM1BCC"  # SMIRNOFF tag name to process
-    _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler, LibraryChargeHandler]
+    _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler, LibraryChargeHandler, NAGLChargesHandler]
     _KWARGS = ["toolkit_registry"]  # Kwargs to catch when create_force is called
 
     def check_handler_compatibility(
@@ -3380,6 +3416,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             entity, transformed_dict_cls=TagSortedDict, unique=unique
         )
         return matches
+
 
 
 class GBSAHandler(ParameterHandler):

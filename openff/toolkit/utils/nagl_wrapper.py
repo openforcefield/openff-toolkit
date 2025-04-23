@@ -135,7 +135,7 @@ class NAGLToolkitWrapper(ToolkitWrapper):
         except FileNotFoundError as error:
             raise ChargeMethodUnavailableError(
                 f"Charge model {partial_charge_method} not supported by "
-                f"{self.__class__.__name__}."
+                f"{self.__class__.__name__}, or model file can not be found."
             ) from error
 
         model = GNNModel.load(model_path, eval_mode=True)
