@@ -1258,6 +1258,7 @@ class FrozenMolecule(Serializable):
     def ordered_connection_table_hash(self) -> int:
         """
         Compute an ordered hash of the atoms and bonds in the molecule.
+        
         This hash method is intended for comparison of Molecule objects at
         runtime, and hashes from one version of the software should not be
         compared with hashes generated using different versions.
@@ -1982,6 +1983,13 @@ class FrozenMolecule(Serializable):
         return molecule
 
     def _is_exactly_the_same_as(self, other):
+        # Pre-assign molecule atom indices in O(N) time to avoid use of List.index to get index of each one
+        # in O(N^2) time
+        for index, atom in enumerate(self.atoms):
+            atom._molecule_atom_index = index
+        for index, atom in enumerate(other.atoms):
+            atom._molecule_atom_index = index
+
         self_id = (
             tuple((atom.atomic_number, atom.formal_charge.magnitude, atom.stereochemistry) for atom in self.atoms),
             tuple((bond.bond_order, bond.stereochemistry, bond.atom1_index, bond.atom2_index) for bond in self.bonds),
