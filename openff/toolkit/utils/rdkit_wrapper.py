@@ -886,7 +886,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 atom.GetIdx()
             )  # reorder atom map nums to later recover ids
 
-        qmol = Chem.RemoveAllHs(qmol)
+        qmol = Chem.RemoveAllHs(qmol, sanitize=False)
         idx_to_map_num = dict(
             [(a.GetIdx(), a.GetAtomMapNum()) for a in qmol.GetAtoms()]
         )
