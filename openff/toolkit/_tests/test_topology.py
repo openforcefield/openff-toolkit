@@ -926,6 +926,16 @@ class TestTopology:
         assert phenylphosphate.is_isomorphic_with(top2.molecule(1))
 
     @requires_rdkit
+    def test_from_pdb_unique_mol_ammonium(self):
+        """
+        Test that Topology.from_pdb can load ammonium unique mol.
+        See https://github.com/openforcefield/openff-toolkit/issues/2051
+        """
+        nh4 = Molecule.from_smiles('[NH4+]')
+        offtop = Topology.from_pdb(get_data_file_path('molecules/nh4.pdb'), unique_molecules=[nh4])
+        assert nh4.is_isomorphic_with(offtop.molecule(0))
+
+    @requires_rdkit
     def test_from_pdb_additional_substructures(self):
         """Test that the _additional_substructures arg is wired up correctly"""
         with pytest.raises(UnassignedChemistryInPDBError):
