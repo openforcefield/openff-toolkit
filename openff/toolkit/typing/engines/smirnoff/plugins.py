@@ -23,6 +23,7 @@ inherits from ``ParameterHandler`` named ``CustomHandler``.
 """
 
 import logging
+from importlib.metadata import entry_points
 
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 
@@ -45,7 +46,6 @@ def _load_handler_plugins(handler_name: str, expected_type: type) -> list[type]:
         handler plugins the expected class type is ``ParameterIOHandler``. Any
         classes not matching the expected type will be skipped.
     """
-    from importlib_metadata import entry_points
 
     if handler_name not in SUPPORTED_PLUGIN_NAMES:
         raise NotImplementedError(
