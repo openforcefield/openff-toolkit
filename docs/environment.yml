@@ -24,7 +24,6 @@ dependencies:
     - packaging
     - openff-units
     - openff-utilities
-    - cached_property
     - cachetools
     - python-constraint
     - mdtraj
