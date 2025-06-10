@@ -6,7 +6,7 @@ dependencies:
   - python
   - versioningit
   - packaging
-  - numpy
+  - numpy <2.3
   - networkx
   - cachetools
   - xmltodict
