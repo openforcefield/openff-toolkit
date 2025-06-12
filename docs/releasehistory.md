@@ -15,6 +15,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Bugfixes
 - [PR #2052](https://github.com/openforcefield/openff-toolkit/pull/2052): Fixes bug where `Topology.from_pdb` couldn't load NH4+ ([Issue #2051](https://github.com/openforcefield/openff-toolkit/issues/2051))
 
+### Miscellaneous
+
+- [PR #2XXX](https://github.com/openforcefield/openff-toolkit/pull/2XXX): Removes internal use of `importlib_metadata` where `importlib.metadata` is appropriate.
 
 ### New features
 
