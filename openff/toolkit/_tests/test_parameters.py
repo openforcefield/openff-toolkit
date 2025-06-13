@@ -2722,6 +2722,16 @@ class TestChargeIncrementModelHandler:
             ],
         )
 
+class TestNAGLChargesHandler:
+    def test_nagl_charges_handler_serialization(self):
+        from openff.toolkit.typing.engines.smirnoff import NAGLChargesHandler
+        handler = NAGLChargesHandler(model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt", skip_version_check=True)
+        assert handler.model_file == "openff-gnn-am1bcc-0.1.0-rc.3.pt"
+        handler_dict = handler.to_dict()
+        assert handler_dict["model_file"] == "openff-gnn-am1bcc-0.1.0-rc.3.pt"
+
+        # TODO: test_nagl_charges_handler_are_compatible
+
 
 class TestGBSAHandler:
     def test_create_default_gbsahandler(self):
