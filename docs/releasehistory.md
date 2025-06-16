@@ -15,6 +15,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Bugfixes
 - [PR #2052](https://github.com/openforcefield/openff-toolkit/pull/2052): Fixes bug where `Topology.from_pdb` couldn't load NH4+ ([Issue #2051](https://github.com/openforcefield/openff-toolkit/issues/2051))
 
+### Miscellaneous
+
+- [PR #2054](https://github.com/openforcefield/openff-toolkit/pull/2054): Removes internal use of `importlib_metadata` where `importlib.metadata` is appropriate.
 
 ### New features
 - [PR #2066](https://github.com/openforcefield/openff-toolkit/pull/2066): Improves runtime in some situations by making AmberToolsToolkitWrapper perform lazy evaluation of AmberTools version. (@vamironov)

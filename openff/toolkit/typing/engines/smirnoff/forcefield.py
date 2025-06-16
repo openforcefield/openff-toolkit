@@ -13,6 +13,7 @@ Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) for
 import logging
 import os
 import pathlib
+from importlib.metadata import entry_points
 from typing import IO, TYPE_CHECKING, Any, Optional, Union
 
 from packaging.version import Version
@@ -85,7 +86,6 @@ def _get_installed_offxml_dir_paths() -> list[str]:
     """
     global _installed_offxml_dir_paths
     if len(_installed_offxml_dir_paths) == 0:
-        from importlib_metadata import entry_points
 
         # Find all registered entry points that should return a list of
         # paths to directories where to search for offxml files.
