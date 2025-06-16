@@ -17,6 +17,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 
 ### New features
+- [PR #2066](https://github.com/openforcefield/openff-toolkit/pull/2066): Improves runtime in some situations by making AmberToolsToolkitWrapper perform lazy evaluation of AmberTools version. (@vamironov)
+
 
 ### Improved documentation and warnings
 
