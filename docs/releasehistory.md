@@ -17,7 +17,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Miscellaneous
 
-- [PR #2XXX](https://github.com/openforcefield/openff-toolkit/pull/2XXX): Removes internal use of `importlib_metadata` where `importlib.metadata` is appropriate.
+- [PR #2054](https://github.com/openforcefield/openff-toolkit/pull/2054): Removes internal use of `importlib_metadata` where `importlib.metadata` is appropriate.
 
 ### New features
 
