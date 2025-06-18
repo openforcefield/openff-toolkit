@@ -10,7 +10,6 @@ dependencies:
   - numpy <2.3
   - networkx
   - cachetools
-  - cached-property
   - xmltodict
   - python-constraint
   - openmm >=7.6
