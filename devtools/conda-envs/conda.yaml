@@ -8,3 +8,5 @@ dependencies:
   - pytest=7.4
   - pytest-rerunfailures
   - nbval
+  # Remove once https://github.com/ParmEd/ParmEd/pull/1387 gets into a release
+  - numpy <2.3
