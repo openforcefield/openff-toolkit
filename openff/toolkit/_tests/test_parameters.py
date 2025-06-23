@@ -822,6 +822,44 @@ class TestParameterHandler:
         ):
             handler.create_force()
 
+    def test_hash(self):
+        bh = BondHandler(skip_version_check=True, allow_cosmetic_attributes=True)
+
+        hash1 = hash(bh)
+        # Ensure hash changes when a new parameter is added
+        bh.add_parameter(
+            {
+                "smirks": "[*:1]-[*:2]",
+                "length": 1 * unit.angstrom,
+                "k": 10 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
+                "id": "b0",
+            }
+        )
+        hash2 = hash(bh)
+        assert hash1 != hash2
+
+        # Ensure hash changes when another parameter that differs only by SMIRKS is added
+        bh.add_parameter(
+            {
+                "smirks": "[C:1]-[C:2]",
+                "length": 1 * unit.angstrom,
+                "k": 10 * unit.kilocalorie / unit.mole / unit.angstrom ** 2,
+                "id": "b0",
+            }
+        )
+        hash3 = hash(bh)
+        assert hash2 != hash3
+
+        # Ensure hash changes when a cosmetic attribute is added
+        bh.parameters[0].add_cosmetic_attribute("foo", "bar")
+        hash4 = hash(bh)
+        assert hash3 != hash4
+
+        # Ensure hash changes when parameters are reordered
+        param = bh.parameters.pop(0)
+        bh.parameters.append(param)
+        hash5 = hash(bh)
+        assert hash4 != hash5
 
 class TestParameterList:
     """Test capabilities of ParameterList for accessing and manipulating SMIRNOFF parameter definitions."""
