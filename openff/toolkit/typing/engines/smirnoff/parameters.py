@@ -54,7 +54,6 @@ __all__ = [
 
 import copy
 import functools
-import hashlib
 import inspect
 import logging
 import re
