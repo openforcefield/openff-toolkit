@@ -23,15 +23,10 @@ from typing import TYPE_CHECKING, Any, Optional, Union
 
 import numpy as np
 from cachetools import LRUCache, cached
+from openff.units.elements import SYMBOLS
 from typing_extensions import TypeAlias
 
 from openff.toolkit import Quantity, unit
-
-if TYPE_CHECKING:
-    from openff.toolkit.topology.molecule import Atom, Bond, FrozenMolecule, Molecule
-
-from openff.units.elements import SYMBOLS
-
 from openff.toolkit.utils.base_wrapper import (
     ToolkitWrapper,
     _ChargeSettings,
@@ -63,6 +58,12 @@ from openff.toolkit.utils.exceptions import (
     UndefinedStereochemistryError,
 )
 from openff.toolkit.utils.utils import inherit_docstrings
+
+if TYPE_CHECKING:
+    import openmm.app
+
+    from openff.toolkit.topology.molecule import Atom, Bond, FrozenMolecule, Molecule
+
 
 logger = logging.getLogger(__name__)
 
@@ -332,8 +333,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     def _polymer_openmm_topology_to_oemol(
         self,
-        omm_top,
-        substructure_library,
+        omm_top: "openmm.app.Topology",
+        substructure_library: dict[str, dict],
     ):
         """
         Parameters
@@ -1674,7 +1675,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 # OE needs a 1 x (3*n_Atoms) double array as input
                 flat_coords = np.zeros(shape=oemol.NumAtoms() * 3, dtype=np.float64)
                 for index, oe_idx in off_to_oe_idx.items():
-                    (x, y, z) = conf[index, :].m_as(unit.angstrom)
+                    (x, y, z) = conf[index, :].m_as(unit.angstrom)  # type: ignore[index]
                     flat_coords[(3 * oe_idx)] = x
                     flat_coords[(3 * oe_idx) + 1] = y
                     flat_coords[(3 * oe_idx) + 2] = z
@@ -1916,6 +1917,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         else:
             inchi = oechem.OEMolToSTDInChI(oemol)
 
+        # TODO: Add support for /LargeMolecules switch when OpenEye allows it
+        #       (underlying InChI tool does)
         if len(inchi) == 0:
             raise EmptyInChiError(
                 "OEChem failed to generate an InChI for the molecule."
@@ -2560,7 +2563,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             index = oeatom.GetIdx()
             charge = oeatom.GetPartialCharge()
             charge = charge * unit.elementary_charge
-            charges[index] = charge
+            charges[index] = charge  # type: ignore[index]
 
         molecule.partial_charges = charges
 

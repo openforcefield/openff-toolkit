@@ -11,7 +11,49 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### API-breaking changes
 
 ### Behavior changes
+
+### Bugfixes
+- [PR #2052](https://github.com/openforcefield/openff-toolkit/pull/2052): Fixes bug where `Topology.from_pdb` couldn't load NH4+ ([Issue #2051](https://github.com/openforcefield/openff-toolkit/issues/2051))
+
+### Miscellaneous
+
+- [PR #2054](https://github.com/openforcefield/openff-toolkit/pull/2054): Removes internal use of `importlib_metadata` where `importlib.metadata` is appropriate.
+
+- [PR #2067](https://github.com/openforcefield/openff-toolkit/pull/2067): Removes `cached-property` as a listed dependency, which was not used.
+
+### New features
+- [PR #2066](https://github.com/openforcefield/openff-toolkit/pull/2066): Improves runtime in some situations by making AmberToolsToolkitWrapper perform lazy evaluation of AmberTools version. (@vamironov)
+
+
+### Improved documentation and warnings
+
+
+## 0.16.9
+
+### Behavior changes
+
+- [PR #2026](https://github.com/openforcefield/openff-toolkit/pull/2026): Makes `Molecule.__repr__` more succinct for large molecules.
+- [PR #2025](https://github.com/openforcefield/openff-toolkit/pull/2025): Speeds up `Molecule.ordered_connection_table_hash`, but changes the specific hash outputted for a given molecule. The meaning of hash identity within a single OpenFF Toolkit version is unchanged. Updates documentation to state that these this method is only intended for comparing Molecule objects using the same version of the OpenFF Toolkit, and that hashes may not be stable between versions. 
+- [PR #2041](https://github.com/openforcefield/openff-toolkit/pull/2041): Drop testing on Python 3.10
+
+### Bugfixes
+
+- [PR #2039](https://github.com/openforcefield/openff-toolkit/pull/2039): Prevent an error displaying a `Molecule` in IPython when `nglview` is not installed.
+
+### New features
+
+- [PR #1996](https://github.com/openforcefield/openff-toolkit/pull/1996): Adds `ForceField.combine`.
+- [PR #2040](https://github.com/openforcefield/openff-toolkit/pull/2040): Adds support for InChI with large molecules when using RDKit.
+
+### Improved documentation and warnings
+
+- [PR #2032](https://github.com/openforcefield/openff-toolkit/pull/2032): Drops examples which depend on ParmEd.
+
+## 0.16.8
+
+### Behavior changes
 - [PR #1963](https://github.com/openforcefield/openff-toolkit/pull/1963): Always use `getattr` in lazy loading machinery.
+- [PR #1990](https://github.com/openforcefield/openff-toolkit/pull/1990): `Molecule.partial_charge` and `Atom.formal_charge` setters now require that the `Quantity`s have units of `"elementary_charge"`. Previously they could be any unit with compatible dimensionality.
 
 ### Bugfixes
 
@@ -23,11 +65,15 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #1979](https://github.com/openforcefield/openff-toolkit/pull/1979): Cache some string-to-`Quantity` conversions, which speeds up loading of many SMIRNOFF force fields from `.offxml` files.
 
 ### New features
+- [PR #1990](https://github.com/openforcefield/openff-toolkit/pull/1990): Adds support for Pint 0.24 and `openff-units` 0.3.x.
+- [PR #2015](https://github.com/openforcefield/openff-toolkit/pull/2015): Adds `Molecule.clear_conformers`.
 
 ### Improved documentation and warnings
 
 - [PR #1981](https://github.com/openforcefield/openff-toolkit/pull/1981): Updates documentation to run quicker and use new features, including some in Interchange 0.4.
 - [PR #2007](https://github.com/openforcefield/openff-toolkit/pull/2007): Documents that the dicts expected by various `from_dict` methods are expected to match the structure of the results of corresponding `to_dict` methods.
+- [PR #2006](https://github.com/openforcefield/openff-toolkit/pull/2006): Fixes and adds some type hints to various methods. 
+- [PR #2018](https://github.com/openforcefield/openff-toolkit/pull/2018): Interlinking of docstrings for further clarity in use of `from_dict` and `to_dict` for `Atom`, `Bond`, and `Molecule` classes.
 
 ### Miscellaneous
 

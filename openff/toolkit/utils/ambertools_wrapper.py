@@ -4,6 +4,7 @@ Wrapper class providing a minimal consistent interface to `AmberTools <http://am
 
 __all__ = ("AmberToolsToolkitWrapper",)
 
+import functools
 import subprocess
 import tempfile
 from collections import defaultdict
@@ -61,8 +62,6 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
     SUPPORTED_CHARGE_METHODS = _supported_charge_methods
 
     def __init__(self):
-        from openff.utilities.provenance import get_ambertools_version
-
         super().__init__()
 
         if not self.is_available():
@@ -71,11 +70,14 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
                 f"available. {self._toolkit_installation_instructions}"
             )
 
-        self._toolkit_version = get_ambertools_version()
-
         # TODO: Find AMBERHOME or executable home, checking miniconda if needed
         # Store an instance of an RDKitToolkitWrapper for file I/O
         self._rdkit_toolkit_wrapper = rdkit_wrapper.RDKitToolkitWrapper()
+
+    @functools.cached_property
+    def _toolkit_version(self):
+        from openff.utilities.provenance import get_ambertools_version
+        return get_ambertools_version()
 
     @staticmethod
     def is_available() -> bool:
@@ -265,12 +267,11 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
             with open(f"{tmpdir}/charges.txt") as infile:
                 contents = infile.read()
             text_charges = contents.split()
-            charges = np.zeros([molecule.n_atoms], np.float64)
+            charges_array = np.zeros([molecule.n_atoms], np.float64)
             for index, token in enumerate(text_charges):
-                charges[index] = float(token)
+                charges_array[index] = float(token)
             # TODO: Ensure that the atoms in charged.mol2 are in the same order as in molecule.sdf
-        charges = Quantity(charges, unit.elementary_charge)
-        molecule.partial_charges = charges
+        molecule.partial_charges = Quantity(charges_array, unit.elementary_charge)
 
         if normalize_partial_charges:
             molecule._normalize_partial_charges()

@@ -886,7 +886,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 atom.GetIdx()
             )  # reorder atom map nums to later recover ids
 
-        qmol = Chem.RemoveAllHs(qmol)
+        qmol = Chem.RemoveAllHs(qmol, sanitize=False)
         idx_to_map_num = dict(
             [(a.GetIdx(), a.GetAtomMapNum()) for a in qmol.GetAtoms()]
         )
@@ -2772,6 +2772,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         InChI is a standardised representation that does not capture tautomers
         unless specified using the fixed hydrogen layer.
 
+        The /LargeMolecules option is used.
+
         For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
 
         Parameters
@@ -2797,10 +2799,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         from rdkit import Chem
 
         rdmol = self.to_rdkit(molecule)
+
+        options = "/LargeMolecules"
+
         if fixed_hydrogens:
-            inchi = Chem.MolToInchi(rdmol, options="-FixedH")
-        else:
-            inchi = Chem.MolToInchi(rdmol)
+            options += " /FixedH"
+
+        inchi = Chem.MolToInchi(rdmol, options)
 
         if len(inchi) == 0:
             raise EmptyInChiError("RDKit failed to generate an InChI for the molecule.")
@@ -2812,6 +2817,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         Create an InChIKey for the molecule using the RDKit Toolkit.
         InChIKey is a standardised representation that does not capture tautomers
         unless specified using the fixed hydrogen layer.
+
+        The /LargeMolecules option is used.
 
         For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
 
@@ -2838,15 +2845,16 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         from rdkit import Chem
 
         rdmol = self.to_rdkit(molecule)
+
+        options = "/LargeMolecules"
+
         if fixed_hydrogens:
-            inchi_key = Chem.MolToInchiKey(rdmol, options="-FixedH")
-        else:
-            inchi_key = Chem.MolToInchiKey(rdmol)
+            options += " /FixedH"
+
+        inchi_key = Chem.MolToInchiKey(rdmol, options)
 
         if len(inchi_key) == 0:
-            raise EmptyInChiError(
-                "RDKit failed to generate an InChI key for the molecule."
-            )
+            raise EmptyInChiError("RDKit failed to generate an InChI key for the molecule.")
 
         return inchi_key
 

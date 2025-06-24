@@ -25,6 +25,7 @@ Molecular chemical entity representation and routines to interface with cheminfo
 
 """
 
+import hashlib
 import json
 import operator
 import pathlib
@@ -46,6 +47,7 @@ from typing import (
 )
 
 import numpy as np
+from openff.units import Unit
 from openff.units.elements import MASSES, SYMBOLS
 from openff.utilities.exceptions import MissingOptionalDependencyError
 from typing_extensions import TypeAlias
@@ -109,6 +111,8 @@ P = TypeVar("P", bound="Particle")
 A = TypeVar("A", bound="Atom")
 B = TypeVar("B", bound="Bond")
 
+
+_CHARGE_UNITS = set([Unit("elementary_charge")])
 
 class MoleculeDeprecationWarning(UserWarning):
     """Warning for deprecated portions of the Molecule API."""
@@ -301,7 +305,11 @@ class Atom(Particle):
         self._bonds.append(bond)
 
     def to_dict(self) -> dict[str, Union[None, str, int, bool, dict[Any, Any]]]:
-        """Return a dict representation of the atom."""
+        """Return a dict representation of the :class:`Atom` class instance.
+
+        Output dictionary keys and values align with parameters used to initialize
+        the :class:`Atom` class.
+        """
         # TODO: Should this be implicit in the atom ordering when saved?
         # atom_dict['molecule_atom_index'] = self._molecule_atom_index
         return {
@@ -315,10 +323,10 @@ class Atom(Particle):
 
     @classmethod
     def from_dict(cls: type[A], atom_dict: dict) -> A:
-        """
-        Create an Atom from a dict representation.
+        """Create an :class:`Atom` class instance from a dict representation.
 
-        The structure of the dict expected by this function is defined by the output of `Atom.to_dict()`.
+        The structure of the dict expected by this function is defined by the output of
+        :meth:`Atom.to_dict()`.
         """
         return cls(**atom_dict)
 
@@ -342,12 +350,10 @@ class Atom(Particle):
         Set the atom's formal charge. Accepts either ints or unit-wrapped ints with units of charge.
         """
         if isinstance(other, int):
-            self._formal_charge = Quantity(other, unit.elementary_charge)
+            self._formal_charge = Quantity(other, "elementary_charge")
         elif isinstance(other, Quantity):
             # Faster to check equality than convert, so short-circuit
-            if other.units is unit.elementary_charge:
-                self.formal_charge = other
-            elif other.units in unit.elementary_charge.compatible_units():
+            if other.units in _CHARGE_UNITS:
                 self._formal_charge = other
             else:
                 raise IncompatibleUnitError(
@@ -365,7 +371,7 @@ class Atom(Particle):
             from openff.units.openmm import from_openmm
 
             converted = from_openmm(other)
-            if converted.units in unit.elementary_charge.compatible_units():
+            if converted.units in _CHARGE_UNITS:
                 self._formal_charge = converted
             else:
                 raise IncompatibleUnitError(
@@ -696,8 +702,10 @@ class Bond(Serializable):
         self._stereochemistry = stereochemistry
 
     def to_dict(self) -> dict[str, Union[int, bool, str, float]]:
-        """
-        Return a dict representation of the bond.
+        """Return a ``dict`` representation of the bond.
+
+        The output dictionary keys and values align with parameters used to initialize
+        the :class:`Bond` class.
 
         """
         return {
@@ -714,7 +722,8 @@ class Bond(Serializable):
         """
         Create a Bond from a dict representation.
 
-        The structure of the dict expected by this function is defined by the output of `Bond.to_dict()`.
+        The structure of the dict expected by this function is defined by the output of
+        :meth:`Bond.to_dict()`.
         """
         # TODO: This is not used anywhere (`Molecule._initialize_bonds_from_dict()` just calls grabs
         #       the two atoms and calls `Molecule._add_bond`). Remove or change that?
@@ -742,11 +751,11 @@ class Bond(Serializable):
 
     @property
     def atom1_index(self) -> int:
-        return self.molecule.atoms.index(self._atom1)
+        return self._atom1.molecule_atom_index
 
     @property
     def atom2_index(self) -> int:
-        return self.molecule.atoms.index(self._atom2)
+        return self._atom2.molecule_atom_index
 
     @property
     def atoms(self):
@@ -1150,7 +1159,7 @@ class FrozenMolecule(Serializable):
     ####################################################################################################
 
     def to_dict(self) -> dict:
-        """
+        r"""
         Return a dictionary representation of the molecule.
 
         .. todo ::
@@ -1162,6 +1171,27 @@ class FrozenMolecule(Serializable):
         -------
         molecule_dict
             A dictionary representation of the molecule.
+
+            - **name** (str): An optional name to be associated with the molecule
+            - **atoms** (list[dict]): A list of dictionary inputs for :meth:`Atom.from_dict()`
+            - **bonds** (list[dict]): A list of dictionary inputs for :meth:`Bond.from_dict()`
+            - **conformers** (list[list[float]]): A list containing the cartesian coordinates of each atom in units
+              of ``conformer_unit`` in the order defined in ``atoms``.
+            - **properties** (dict): Outputs from a chosen toolkit:
+
+                - **atom_map** (dict): Dictionary of atom index (as in ``atoms`` entry) and the mapped index relevant
+                  to a mapped canonical smiles string
+                - **\*\*kwargs**: Other toolkit dependent outputs
+
+            - **hierarchy_schemes** (dict[dict]): Dictionary where keys (such as ``"residues"`` and ``"chains"``)
+              represent dictionary outputs from :meth:`HierarchyScheme.to_dict()`
+            - **conformers_unit** (str, default="angstrom"): Valid unit of length input for the
+              `OpenFF Units module <https://docs.openforcefield.org/projects/units/en/stable/api/generated/openff.units.html>`_.
+            - **partial_charges** (list[float], default=None): Array of partial charge (in unit defined by
+              ``partial_charge_unit``) for atoms in the same order as the output,``atoms``.
+            - **partial_charge_unit** (str, default=None): Valid unit of charge input for the
+              `OpenFF Units module <https://docs.openforcefield.org/projects/units/en/stable/api/generated/openff.units.html>`_.
+              If ``partial_charges`` is also included, the default is ``"elementary_charge"`` instead.
 
         """
         from openff.toolkit.utils.utils import serialize_numpy
@@ -1226,17 +1256,28 @@ class FrozenMolecule(Serializable):
         return hash(self.to_smiles())
 
     def ordered_connection_table_hash(self) -> int:
-        """Compute an ordered hash of the atoms and bonds in the molecule"""
+        """
+        Compute an ordered hash of the atoms and bonds in the molecule.
+
+        This hash method is intended for comparison of Molecule objects at
+        runtime, and hashes from one version of the software should not be
+        compared with hashes generated using different versions.
+        """
         if self._ordered_connection_table_hash is not None:
             return self._ordered_connection_table_hash
 
+        # Pre-assign molecule atom indices in O(N) time to avoid use of List.index to get index of each one
+        # in O(N^2) time
+        for index, atom in enumerate(self.atoms):
+            atom._molecule_atom_index = index
+
         id = ""
         for atom in self.atoms:
-            id += f"{atom.symbol}_{atom.formal_charge}_{atom.stereochemistry}__"
+            id += f"{atom.atomic_number}_{atom.formal_charge.magnitude}_{atom.stereochemistry}__"
         for bond in self.bonds:
             id += f"{bond.bond_order}_{bond.stereochemistry}_{bond.atom1_index}_{bond.atom2_index}__"
 
-        self._ordered_connection_table_hash = hash(id)
+        self._ordered_connection_table_hash = hashlib.sha3_224(id.encode("utf-8")).hexdigest()
         return self._ordered_connection_table_hash
 
     @classmethod
@@ -1244,17 +1285,16 @@ class FrozenMolecule(Serializable):
         """
         Create a new Molecule from a dictionary representation
 
-        The structure of the dict expected by this function is defined by the output of `Molecule.to_dict()`.
-
         Parameters
         ----------
         molecule_dict
-            A dictionary representation of the molecule.
+            A dictionary representation of the molecule defined by the inputs of
+            :meth:`Molecule.to_dict()`.
 
         Returns
         -------
         molecule
-            A Molecule created from the dictionary representation
+            A :class:`Molecule` class instance created from the dictionary representation
 
         """
         # This implementation is a compromise to let this remain as a classmethod
@@ -1326,15 +1366,20 @@ class FrozenMolecule(Serializable):
                     tuple(element_dict["identifier"]), element_dict["atom_indices"]
                 )
 
-    def __repr__(self):
-        """Return a summary of this molecule; SMILES if valid, Hill formula if not."""
+    def __repr__(self) -> str:
+        """Return a summary of this molecule; SMILES if valid, Hill formula if not or if large."""
         description = f"Molecule with name '{self.name}'"
+
+        if self.n_atoms > 500:
+            hill = self.to_hill_formula()
+            return description + f" with Hill formula '{hill}'"
+
         try:
             smiles = self.to_smiles()
+            return description + f" and SMILES '{smiles}'"
         except Exception:
             hill = self.to_hill_formula()
             return description + f" with bad SMILES and Hill formula '{hill}'"
-        return description + f" and SMILES '{smiles}'"
 
     def _initialize(self):
         """
@@ -1741,6 +1786,10 @@ class FrozenMolecule(Serializable):
         InChI is a standardised representation that does not capture tautomers unless specified using the fixed
         hydrogen layer.
 
+        If RDKit is used, the /LargeMolecules switch will be used.
+
+        If OEChem is used, an error will be raised if the molecule is large (1024+ atoms).
+
         For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
 
         Parameters
@@ -1787,6 +1836,10 @@ class FrozenMolecule(Serializable):
         Create an InChIKey for the molecule using the requested toolkit backend.
         InChIKey is a standardised representation that does not capture tautomers unless specified
         using the fixed hydrogen layer.
+
+        If RDKit is used, the /LargeMolecules switch will be used.
+
+        If OEChem is used, an error will be raised if the molecule is large (1024+ atoms).
 
         For information on InChi see here https://iupac.org/who-we-are/divisions/division-details/inchi/
 
@@ -1930,23 +1983,22 @@ class FrozenMolecule(Serializable):
         return molecule
 
     def _is_exactly_the_same_as(self, other):
-        for atom1, atom2 in zip(self.atoms, other.atoms):
-            if (
-                (atom1.atomic_number != atom2.atomic_number)
-                or (atom1.formal_charge != atom2.formal_charge)
-                or (atom1.is_aromatic != atom2.is_aromatic)
-                or (atom1.stereochemistry != atom2.stereochemistry)
-            ):
-                return False
-        for bond1, bond2 in zip(self.bonds, other.bonds):
-            if (
-                (bond1.atom1_index != bond2.atom1_index)
-                or (bond1.atom2_index != bond2.atom2_index)
-                or (bond1.is_aromatic != bond2.is_aromatic)
-                or (bond1.stereochemistry != bond2.stereochemistry)
-            ):
-                return False
-        return True
+        # Pre-assign molecule atom indices in O(N) time to avoid use of List.index to get index of each one
+        # in O(N^2) time
+        for index, atom in enumerate(self.atoms):
+            atom._molecule_atom_index = index
+        for index, atom in enumerate(other.atoms):
+            atom._molecule_atom_index = index
+
+        self_id = (
+            tuple((atom.atomic_number, atom.formal_charge.magnitude, atom.stereochemistry) for atom in self.atoms),
+            tuple((bond.bond_order, bond.stereochemistry, bond.atom1_index, bond.atom2_index) for bond in self.bonds),
+        )
+        other_id = (
+            tuple((atom.atomic_number, atom.formal_charge.magnitude, atom.stereochemistry) for atom in other.atoms),
+            tuple((bond.bond_order, bond.stereochemistry, bond.atom1_index, bond.atom2_index) for bond in other.bonds),
+        )
+        return self_id == other_id
 
     @staticmethod
     def are_isomorphic(
@@ -3083,14 +3135,14 @@ class FrozenMolecule(Serializable):
         index
             The index of this conformer
         """
-        if coordinates.shape != (self.n_atoms, 3):
+        if coordinates.shape != (self.n_atoms, 3):  # type: ignore[attr-defined]
             raise InvalidConformerError(
                 "molecule.add_conformer given input of the wrong shape: "
-                f"Given {coordinates.shape}, expected {(self.n_atoms, 3)}"
+                f"Given {coordinates.shape}, expected {(self.n_atoms, 3)}"  # type: ignore[attr-defined]
             )
 
         if isinstance(coordinates, Quantity):
-            if not coordinates.units.is_compatible_with(unit.angstrom):
+            if not coordinates.units.is_compatible_with(unit.angstrom):  # type: ignore[attr-defined]
                 raise IncompatibleUnitError(
                     "Coordinates passed to Molecule._add_conformer with incompatible units. "
                     "Ensure that units are dimension of length."
@@ -3125,7 +3177,7 @@ class FrozenMolecule(Serializable):
             np.zeros(shape=(self.n_atoms, 3), dtype=float), unit.angstrom
         )
         try:
-            tmp_conf[:] = coordinates
+            tmp_conf[:] = coordinates  # type: ignore[index]
         except AttributeError as e:
             # TODO: Make this a warning, log it, or do something other than print
             print(e)
@@ -3178,12 +3230,12 @@ class FrozenMolecule(Serializable):
             )
 
         if isinstance(charges, Quantity):
-            if charges.units in unit.elementary_charge.compatible_units():
+            if charges.units in _CHARGE_UNITS:
                 self._partial_charges = charges.astype(float)
             else:
                 raise IncompatibleUnitError(
                     "Unsupported unit passed to partial_charges setter. "
-                    f"Found unit {charges.units}, expected {unit.elementary_charge}"
+                    f"Found unit {charges.units}, expected elementary_charge"
                 )
 
         elif hasattr(charges, "unit"):
@@ -3199,12 +3251,12 @@ class FrozenMolecule(Serializable):
                 from openff.units.openmm import from_openmm
 
                 converted = from_openmm(charges)
-                if converted.units in unit.elementary_charge.compatible_units():
+                if converted.units in _CHARGE_UNITS:
                     self._partial_charges = converted.astype(float)
                 else:
                     raise IncompatibleUnitError(
                         "Unsupported unit passed to partial_charges setter. "
-                        f"Found unit {converted.units}, expected {unit.elementary_charge}"
+                        f"Found unit {converted.units}, expected elementary_charge"
                     )
 
         else:
@@ -4118,7 +4170,7 @@ class FrozenMolecule(Serializable):
         # add the data to the xyz_data list
         for i, geometry in enumerate(conformers, 1):
             xyz_data.write(f"{self.n_atoms}\n" + title(end))
-            for j, atom_coords in enumerate(geometry.m_as(unit.angstrom)):
+            for j, atom_coords in enumerate(geometry.m_as(unit.angstrom)):  # type: ignore[arg-type]
                 x, y, z = atom_coords
                 xyz_data.write(
                     f"{SYMBOLS[self.atoms[j].atomic_number]}       {x: .10f}   {y: .10f}   {z: .10f}\n"
@@ -5448,6 +5500,14 @@ class Molecule(FrozenMolecule):
 
         return self._add_conformer(coordinates)
 
+    def clear_conformers(self):
+        """
+        Delete all conformers of this molecule, if any exist.
+
+        """
+        self._conformers = None
+
+
     @overload
     def visualize(
         self,
@@ -5725,7 +5785,7 @@ class Molecule(FrozenMolecule):
 
         try:
             return display(self.visualize(backend="nglview"))
-        except (ImportError, ValueError):
+        except (MissingOptionalDependencyError, ValueError):
             pass
 
         try:
@@ -5876,14 +5936,13 @@ class HierarchyScheme:
 
         Parameters
         ----------
-
         parent
-            The ``Molecule`` to which this scheme belongs.
+            The :class:`Molecule` to which this scheme belongs.
         uniqueness_criteria
-            The names of ``Atom`` metadata entries that define this scheme. An
-            atom belongs to a ``HierarchyElement`` only if its metadata has the
+            The names of :class:`Atom` metadata entries that define this scheme. An
+            atom belongs to a :class:`HierarchyElement` only if its metadata has the
             same values for these criteria as the other atoms in the
-            ``HierarchyElement``.
+            :class:`HierarchyElement`.
         iterator_name
             The name of the iterator that will be exposed to access the hierarchy
             elements generated by this scheme
@@ -5917,8 +5976,9 @@ class HierarchyScheme:
         self.hierarchy_elements: list[HierarchyElement] = list()
 
     def to_dict(self) -> dict:
-        """
-        Serialize this object to a basic dict of strings, ints, and floats
+        """Serialize this object to a basic dict of strings and lists of ints.
+
+        Keys and values align with parameters used to initialize the :class:`HierarchyScheme` class.
         """
         return_dict: dict[str, Union[str, Sequence[Union[str, int, dict]]]] = dict()
         return_dict["uniqueness_criteria"] = self.uniqueness_criteria
@@ -6064,7 +6124,6 @@ class HierarchyElement:
 
         Parameters
         ----------
-
         scheme
             The scheme to which this ``HierarchyElement`` belongs
         identifier
@@ -6083,8 +6142,9 @@ class HierarchyElement:
             setattr(self, uniqueness_component, id_component)
 
     def to_dict(self) -> dict[str, Union[tuple[Union[str, int]], Sequence[int]]]:
-        """
-        Serialize this object to a basic dict of strings and lists of ints.
+        """Serialize this object to a basic dict of strings and lists of ints.
+
+        Keys and values align with parameters used to initialize the :class:`HierarchyElement` class.
         """
         return {
             "identifier": self.identifier,

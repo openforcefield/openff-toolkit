@@ -10,22 +10,10 @@ Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) for
    * Speed up overall import time by putting non-global imports only where they are needed
 
 """
-
-__all__ = [
-    "MAX_SUPPORTED_VERSION",
-    "ForceField",
-    "ParameterHandlerRegistrationError",
-    "PartialChargeVirtualSitesError",
-    "SMIRNOFFAromaticityError",
-    "SMIRNOFFParseError",
-    "SMIRNOFFVersionError",
-    "get_available_force_fields",
-]
-
-import copy
 import logging
 import os
 import pathlib
+from importlib.metadata import entry_points
 from typing import IO, TYPE_CHECKING, Any, Optional, Union
 
 from packaging.version import Version
@@ -63,6 +51,18 @@ if TYPE_CHECKING:
     from openff.toolkit.utils.base_wrapper import ToolkitWrapper
     from openff.toolkit.utils.toolkit_registry import ToolkitRegistry
 
+
+__all__ = [
+    "MAX_SUPPORTED_VERSION",
+    "ForceField",
+    "ParameterHandlerRegistrationError",
+    "PartialChargeVirtualSitesError",
+    "SMIRNOFFAromaticityError",
+    "SMIRNOFFParseError",
+    "SMIRNOFFVersionError",
+    "get_available_force_fields",
+]
+
 logger = logging.getLogger(__name__)
 
 # Directory paths used by ForceField to discover offxml files.
@@ -86,7 +86,6 @@ def _get_installed_offxml_dir_paths() -> list[str]:
     """
     global _installed_offxml_dir_paths
     if len(_installed_offxml_dir_paths) == 0:
-        from importlib_metadata import entry_points
 
         # Find all registered entry points that should return a list of
         # paths to directories where to search for offxml files.
@@ -285,6 +284,10 @@ class ForceField:
         See Also
         --------
         parse_sources
+
+        Notes
+        -----
+        No effort is made to de-duplicate redundant parameters or parameters with identical SMIRKS patterns.
 
         """
         # Clear all object fields
@@ -843,7 +846,7 @@ class ForceField:
                 discard_cosmetic_attributes=discard_cosmetic_attributes
             )
 
-        smirnoff_data = dict()
+        smirnoff_data: dict[str, dict] = dict()
         smirnoff_data["SMIRNOFF"] = l1_dict
 
         return convert_all_quantities_to_string(smirnoff_data)
@@ -1137,6 +1140,28 @@ class ForceField:
         )
         io_handler.to_file(filename, smirnoff_data)
 
+    def combine(
+        self,
+        other: "ForceField",
+    ) -> "ForceField":
+        """
+        Combine this `ForceField` with another `ForceField`, returning a new `ForceField`.
+
+        The same rules as `ForceField.__init__` are followed.
+        """
+        import copy
+
+        combined = copy.deepcopy(self)
+
+        combined._load_smirnoff_data(
+            smirnoff_data=other._to_smirnoff_data(
+                discard_cosmetic_attributes=False,
+            ),
+            allow_cosmetic_attributes=True,
+        )
+
+        return combined
+
     # TODO: Should we also accept a Molecule as an alternative to a Topology?
     @requires_package("openmm")
     def create_openmm_system(
@@ -1421,6 +1446,7 @@ class ForceField:
         Notable behavior:
           * `author` and `date` are stripped from the ForceField
           * `id` and `parent_id` are stripped from each ParameterType"""
+        import copy
 
         # Completely re-constructing the force field may be overkill
         # compared to deepcopying and modifying, but is not currently slow

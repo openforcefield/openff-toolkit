@@ -8,8 +8,8 @@ __pycache__/
 # OS X extra files
 *.DS_Store
 
-# VSCode 
-.vscode
+# VSCode
+*.vscode
 
 # Distribution / packaging
 .Python

@@ -1,8 +1,14 @@
 name: Examples
 
 on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "0 4 * * *"
 
 defaults:
   run:
@@ -17,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["3.10"]
+        python-version: ["3.11", "3.12"]
         rdkit: [true, false]
         openeye: [true, false]
         exclude:
@@ -30,7 +36,7 @@ jobs:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openff
       PYTEST_ARGS: -r fE -v -x --tb=short -nauto --durations=10
-      NB_ARGS: --nbval-lax --dist loadscope --ignore=examples/deprecated --ignore=examples/external
+      NB_ARGS: --nbval-lax --dist loadscope --ignore=examples/deprecated
 
     steps:
       - uses: actions/checkout@v4
@@ -97,6 +103,12 @@ jobs:
           micromamba info
           micromamba list
           pip list
+
+        # See https://github.com/openforcefield/openff-units/issues/111
+        # for more or better solution - possibly not needed when links are checked
+        # before a parallel pytest run
+      - name: Shim for `pytest-xdist` + Pint cross-interaction
+        run: python -c "from openff.toolkit import *"
 
       - name: Run example scripts
         run: |

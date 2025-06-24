@@ -7,17 +7,16 @@ dependencies:
   - python
   - versioningit
   - packaging
-  - numpy
+  - numpy <2.3
   - networkx
   - cachetools
-  - cached-property
   - xmltodict
   - python-constraint
   - openmm >=7.6
   - openff-forcefields >=2023.11
   - smirnoff99Frosst
   - openff-amber-ff-ports >=0.0.3
-  - openff-units =0.2.0
+  - openff-units
   - openff-utilities >=0.1.5
   - openff-interchange-base =0.4
   - openff-nagl-base >=0.4.0
