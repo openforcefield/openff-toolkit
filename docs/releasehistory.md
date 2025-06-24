@@ -32,6 +32,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Miscellaneous
 
 - [PR #1822](https://github.com/openforcefield/openff-toolkit/pull/1922): Updates internal tests to use Pytest 8.
+- [PR #2078](https://github.com/openforcefield/openff-toolkit/pull/2078): Updates molecule cookbook molecule.from_qcschema()
 
 ## 0.16.7
 
