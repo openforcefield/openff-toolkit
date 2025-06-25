@@ -850,16 +850,25 @@ class TestParameterHandler:
         hash3 = hash(bh)
         assert hash2 != hash3
 
+        bh.add_cosmetic_attribute("fizz", "buzz")
+        hash3p5 = hash(bh)
+        assert hash3 != hash3p5
+
         # Ensure hash changes when a cosmetic attribute is added
         bh.parameters[0].add_cosmetic_attribute("foo", "bar")
         hash4 = hash(bh)
-        assert hash3 != hash4
+        assert hash3p5 != hash4
 
         # Ensure hash changes when parameters are reordered
         param = bh.parameters.pop(0)
         bh.parameters.append(param)
         hash5 = hash(bh)
         assert hash4 != hash5
+
+        # Ensure hash doesn't change when the contents haven't changed
+        hash6 = hash(bh)
+        assert hash5 == hash6
+
 
 class TestParameterList:
     """Test capabilities of ParameterList for accessing and manipulating SMIRNOFF parameter definitions."""
