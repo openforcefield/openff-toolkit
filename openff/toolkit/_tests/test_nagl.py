@@ -14,6 +14,7 @@ from openff.toolkit._tests.create_molecules import (
     create_reversed_ethanol,
 )
 from openff.toolkit._tests.utils import requires_openeye
+from openff.toolkit.utils import GLOBAL_TOOLKIT_REGISTRY
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ToolkitUnavailableException,
@@ -37,6 +38,10 @@ class TestNAGLToolkitWrapper:
         from openff.nagl import __version__ as parsed_version
 
         assert parsed_version == NAGLToolkitWrapper()._toolkit_version
+
+    def test_nagl_in_global_toolkit_registry(self):
+        assert "NAGL" in GLOBAL_TOOLKIT_REGISTRY.__repr__()
+
 
     @requires_openeye
     @pytest.mark.parametrize(
@@ -66,7 +71,7 @@ class TestNAGLToolkitWrapper:
 
         molecule.assign_partial_charges(
             partial_charge_method=nagl_model,
-            toolkit_registry=NAGLToolkitWrapper(),
+            #toolkit_registry=NAGLToolkitWrapper(),
         )
 
         assert molecule.partial_charges is not None
