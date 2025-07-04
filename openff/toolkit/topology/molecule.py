@@ -6210,7 +6210,7 @@ class HierarchyElement:
 
 
 def _has_unique_atom_names(
-    obj: FrozenMolecule | _SimpleMolecule | HierarchyElement,
+    obj: "FrozenMolecule | _SimpleMolecule | HierarchyElement",
 ) -> bool:
     """``True`` if the object has unique atom names, ``False`` otherwise."""
     unique_atom_names = set([atom.name for atom in obj.atoms])
