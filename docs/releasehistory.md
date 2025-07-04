@@ -14,6 +14,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 - [PR #2052](https://github.com/openforcefield/openff-toolkit/pull/2052): Fixes bug where `Topology.from_pdb` couldn't load NH4+ ([Issue #2051](https://github.com/openforcefield/openff-toolkit/issues/2051))
+- [PR #2000](https://github.com/openforcefield/openff-toolkit/pull/2000): Assorted type annotation fixes
+- [PR #2000](https://github.com/openforcefield/openff-toolkit/pull/2000): `Molecule.to_rdkit()` no longer raises an exception when converting a molecule with non-decimal residue numbers to RDKit.
 
 ### Miscellaneous
 
