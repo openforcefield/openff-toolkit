@@ -2716,8 +2716,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 res.SetResidueName(atom.metadata["residue_name"])
 
             if "residue_number" in atom.metadata:
-                atom_has_any_metadata = True
-                res.SetResidueNumber(int(atom.metadata["residue_number"]))
+                try:
+                    residue_number_int = int(atom.metadata["residue_number"])
+                except ValueError:
+                    # Residue number is a string that could not be converted to int
+                    pass
+                else:
+                    atom_has_any_metadata = True
+                    res.SetResidueNumber(residue_number_int)
 
             if "insertion_code" in atom.metadata:
                 atom_has_any_metadata = True
