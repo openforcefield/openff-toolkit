@@ -208,7 +208,7 @@ class ValenceDict(_TransformedDict):
         return self.key_transform(key)
 
     def __repr__(self):
-        return f"ValenceDict({repr({k: v for k, v in self.items()})})"
+        return f"ValenceDict({ {k: v for k, v in self.items()}!r})"
 
     def _repr_pretty_(self, p, cycle):
         if cycle:
