@@ -18,8 +18,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Miscellaneous
 
 - [PR #2054](https://github.com/openforcefield/openff-toolkit/pull/2054): Removes internal use of `importlib_metadata` where `importlib.metadata` is appropriate.
-
 - [PR #2067](https://github.com/openforcefield/openff-toolkit/pull/2067): Removes `cached-property` as a listed dependency, which was not used.
+- [PR #2078](https://github.com/openforcefield/openff-toolkit/pull/2078): Updates molecule cookbook molecule.from_qcschema()
 
 ### New features
 - [PR #2066](https://github.com/openforcefield/openff-toolkit/pull/2066): Improves runtime in some situations by making AmberToolsToolkitWrapper perform lazy evaluation of AmberTools version. (@vamironov)
