@@ -1905,7 +1905,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         # Initialize ParameterAttributes and cosmetic attributes.
         super().__init__(allow_cosmetic_attributes=allow_cosmetic_attributes, **kwargs)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         """
         Hash a ParameterHandler and all of its contents (INCLUDING cosmetic attributes).
 
@@ -1913,29 +1913,22 @@ class ParameterHandler(_ParameterAttributeHandler):
         physics/chemistry but different cosmetic attributes or units. Instead this is a hash of all
         of the ParameterHandler's contents, even if they don't affect system creation in any way.
         """
-        handler_string = ''
-        attribute_dict = self.__dict__
-        for key, val in attribute_dict.items():
-            if isinstance(val, ParameterList):
-                handler_string += f'___{key}'
-                for parameter in val:
-                    # print(parameter)
-                    for attribute_name, attribute_val in parameter.__dict__.items():
-                        # print(attribute_name, attribute_val)
-                        if isinstance(attribute_val, list):
-                            #print(attribute_val)
-                            if len(attribute_val) > 0 and isinstance(attribute_val[0], Quantity):
-                                attribute_val = tuple([(i.m, hash(i.units)) for i in attribute_val])
-                            #else:
-                        if isinstance(attribute_val, Quantity):
-                            # print(dir(attribute_val))
-                            attribute_val = (attribute_val.m, hash(attribute_val.units))
-                            # break
-                        handler_string += f'__{attribute_name}_{attribute_val}'
-            else:
-                handler_string += f'{key}__{val}'
+        import xmltodict
 
-        return hash(handler_string)
+        from openff.toolkit.utils.utils import convert_all_quantities_to_string
+
+        return hash(
+            xmltodict.unparse(
+                {
+                    'ROOT': convert_all_quantities_to_string(
+                        self.to_dict(
+                            discard_cosmetic_attributes=False,
+                        )
+                    )
+                }
+            )
+        )
+
 
     def _add_parameters(self, section_dict, allow_cosmetic_attributes=False):
         """
