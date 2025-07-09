@@ -1905,6 +1905,31 @@ class ParameterHandler(_ParameterAttributeHandler):
         # Initialize ParameterAttributes and cosmetic attributes.
         super().__init__(allow_cosmetic_attributes=allow_cosmetic_attributes, **kwargs)
 
+    def __hash__(self) -> int:
+        """
+        Hash a ParameterHandler and all of its contents (INCLUDING cosmetic attributes).
+
+        This method does not attempt to return the same hash for ParameterHandlers with equivalent
+        physics/chemistry but different cosmetic attributes or units. Instead this is a hash of all
+        of the ParameterHandler's contents, even if they don't affect system creation in any way.
+        """
+        import xmltodict
+
+        from openff.toolkit.utils.utils import convert_all_quantities_to_string
+
+        return hash(
+            xmltodict.unparse(
+                {
+                    'ROOT': convert_all_quantities_to_string(
+                        self.to_dict(
+                            discard_cosmetic_attributes=False,
+                        )
+                    )
+                }
+            )
+        )
+
+
     def _add_parameters(self, section_dict, allow_cosmetic_attributes=False):
         """
         Extend the ParameterList in this ParameterHandler using a SMIRNOFF data source.
