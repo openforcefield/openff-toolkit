@@ -2779,8 +2779,8 @@ class TestNAGLChargesHandler:
         assert handler_dict["model_file_hash"] == "144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0"
         assert handler_dict["digital_object_identifier"] == "10.5072/zenodo.203601"
         
-        # Test deserialization
-        handler_from_dict = NAGLChargesHandler.from_dict(handler_dict)
+        # Test deserialization via constructor
+        handler_from_dict = NAGLChargesHandler(**handler_dict)
         assert handler_from_dict.model_file == "openff-gnn-am1bcc-0.1.0-rc.3.pt"
         assert handler_from_dict.model_file_hash == "144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0"
         assert handler_from_dict.digital_object_identifier == "10.5072/zenodo.203601"
