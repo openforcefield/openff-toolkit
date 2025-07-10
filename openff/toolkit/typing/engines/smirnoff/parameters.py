@@ -3255,7 +3255,66 @@ class LibraryChargeHandler(_NonbondedHandler):
         )
 
 class NAGLChargesHandler(_NonbondedHandler):
-    """ParameterHandler for applying partial charges from a pretrained NAGL model."""
+    """ParameterHandler for applying partial charges from a pretrained NAGL model.
+    
+    This handler processes the NAGLCharges section of SMIRNOFF force fields, which
+    specifies a pre-trained NAGL model for computing
+    partial charges on molecules.
+    
+    Parameters
+    ----------
+    model_file : str
+        Path to the PyTorch model file (e.g., "openff-gnn-am1bcc-0.1.0-rc.3.pt").
+        This is the model that will be used for charge assignment.
+    model_file_hash : str, optional
+        SHA-256 hash of the model file for integrity verification. When provided,
+        the hash will be validated against the actual model file.
+    digital_object_identifier : str, optional
+        Zenodo DOI that can be used to retrieve the model file if it's not found
+        locally. Must point to a Zenodo record with an attached file matching
+        the model_file name.
+    version : str, optional
+        The version of the NAGLCharges section specification.
+    skip_version_check : bool, optional, default=False
+        If True, skips validation of the version parameter and sets it to the highest
+        supported version.
+    allow_cosmetic_attributes : bool, optional, default=False
+        If True, allows non-specification attributes to be present.
+    
+    Examples
+    --------
+    Create a handler with just the model file:
+    
+    >>> handler = NAGLChargesHandler(
+    ...     model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+    ...     skip_version_check=True
+    ... )
+    
+    Create a handler with hash verification:
+    
+    >>> handler = NAGLChargesHandler(
+    ...     model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+    ...     model_file_hash="144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0",
+    ...     skip_version_check=True
+    ... )
+    
+    Create a handler with DOI for model retrieval:
+    
+    >>> handler = NAGLChargesHandler(
+    ...     model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+    ...     digital_object_identifier="10.5072/zenodo.203601",
+    ...     skip_version_check=True
+    ... )
+    
+    Notes
+    -----
+    NAGLChargesHandler compatibility is determined solely by the model_file parameter. Two
+    handlers are compatible if and only if they specify the same model_file,
+    regardless of the values of model_file_hash or digital_object_identifier.
+    
+    The actual model loading, hash verification, and DOI-based retrieval are
+    handled by the openff-nagl-models package, not by this handler directly.
+    """
 
     _TAGNAME = "NAGLCharges"
     _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler, LibraryChargeHandler]
