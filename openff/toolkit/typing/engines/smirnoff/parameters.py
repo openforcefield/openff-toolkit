@@ -3262,6 +3262,8 @@ class NAGLChargesHandler(_NonbondedHandler):
     _INFOTYPE = None  # No separate parameter types; just a model path
     _MAX_SUPPORTED_SECTION_VERSION = Version("0.3")
     model_file = ParameterAttribute(converter=str)
+    model_file_hash = ParameterAttribute(default=None, converter=str)
+    digital_object_identifier = ParameterAttribute(default=None, converter=str)
 
     def check_handler_compatibility(
         self,
