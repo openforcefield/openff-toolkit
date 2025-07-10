@@ -71,7 +71,7 @@ class TestNAGLToolkitWrapper:
 
         molecule.assign_partial_charges(
             partial_charge_method=nagl_model,
-            #toolkit_registry=NAGLToolkitWrapper(),
+            toolkit_registry=NAGLToolkitWrapper(),
         )
 
         assert molecule.partial_charges is not None
