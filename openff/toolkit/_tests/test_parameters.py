@@ -2730,7 +2730,96 @@ class TestNAGLChargesHandler:
         handler_dict = handler.to_dict()
         assert handler_dict["model_file"] == "openff-gnn-am1bcc-0.1.0-rc.3.pt"
 
-        # TODO: test_nagl_charges_handler_are_compatible
+    def test_nagl_charges_handler_with_optional_fields(self):
+        from openff.toolkit.typing.engines.smirnoff import NAGLChargesHandler
+        
+        # Test with model_file_hash
+        handler = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0",
+            skip_version_check=True
+        )
+        assert handler.model_file == "openff-gnn-am1bcc-0.1.0-rc.3.pt"
+        assert handler.model_file_hash == "144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0"
+        assert handler.digital_object_identifier is None
+        
+        # Test with digital_object_identifier
+        handler = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            digital_object_identifier="10.5072/zenodo.203601",
+            skip_version_check=True
+        )
+        assert handler.model_file == "openff-gnn-am1bcc-0.1.0-rc.3.pt"
+        assert handler.model_file_hash is None
+        assert handler.digital_object_identifier == "10.5072/zenodo.203601"
+        
+        # Test with both optional fields
+        handler = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0",
+            digital_object_identifier="10.5072/zenodo.203601",
+            skip_version_check=True
+        )
+        assert handler.model_file == "openff-gnn-am1bcc-0.1.0-rc.3.pt"
+        assert handler.model_file_hash == "144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0"
+        assert handler.digital_object_identifier == "10.5072/zenodo.203601"
+
+    def test_nagl_charges_handler_serialization_with_optional_fields(self):
+        from openff.toolkit.typing.engines.smirnoff import NAGLChargesHandler
+        
+        # Test serialization with all fields
+        handler = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0",
+            digital_object_identifier="10.5072/zenodo.203601",
+            skip_version_check=True
+        )
+        handler_dict = handler.to_dict()
+        assert handler_dict["model_file"] == "openff-gnn-am1bcc-0.1.0-rc.3.pt"
+        assert handler_dict["model_file_hash"] == "144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0"
+        assert handler_dict["digital_object_identifier"] == "10.5072/zenodo.203601"
+        
+        # Test deserialization
+        handler_from_dict = NAGLChargesHandler.from_dict(handler_dict)
+        assert handler_from_dict.model_file == "openff-gnn-am1bcc-0.1.0-rc.3.pt"
+        assert handler_from_dict.model_file_hash == "144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0"
+        assert handler_from_dict.digital_object_identifier == "10.5072/zenodo.203601"
+
+    def test_nagl_charges_handler_compatibility(self):
+        from openff.toolkit.typing.engines.smirnoff import NAGLChargesHandler
+        from openff.toolkit.utils.exceptions import IncompatibleParameterError
+        
+        # Test compatible handlers (same model_file)
+        handler1 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            skip_version_check=True
+        )
+        handler2 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0",
+            skip_version_check=True
+        )
+        # Should not raise exception
+        handler1.check_handler_compatibility(handler2)
+        
+        # Test incompatible handlers (different model_file)
+        handler3 = NAGLChargesHandler(
+            model_file="different-model-file.pt",
+            skip_version_check=True
+        )
+        with pytest.raises(IncompatibleParameterError, match="different model_files"):
+            handler1.check_handler_compatibility(handler3)
+
+    def test_nagl_charges_handler_defaults(self):
+        from openff.toolkit.typing.engines.smirnoff import NAGLChargesHandler
+        
+        # Test that optional fields default to None
+        handler = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            skip_version_check=True
+        )
+        assert handler.model_file_hash is None
+        assert handler.digital_object_identifier is None
 
 
 class TestGBSAHandler:
