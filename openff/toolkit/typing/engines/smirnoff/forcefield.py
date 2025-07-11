@@ -10,6 +10,7 @@ Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) for
    * Speed up overall import time by putting non-global imports only where they are needed
 
 """
+
 import logging
 import os
 import pathlib
@@ -86,12 +87,9 @@ def _get_installed_offxml_dir_paths() -> list[str]:
     """
     global _installed_offxml_dir_paths
     if len(_installed_offxml_dir_paths) == 0:
-
         # Find all registered entry points that should return a list of
         # paths to directories where to search for offxml files.
-        for entry_point in entry_points().select(
-            group="openforcefield.smirnoff_forcefield_directory"
-        ):
+        for entry_point in entry_points().select(group="openforcefield.smirnoff_forcefield_directory"):
             _installed_offxml_dir_paths.extend(entry_point.load()())
     return _installed_offxml_dir_paths
 
@@ -129,9 +127,7 @@ def get_available_force_fields(full_paths=False):
 
 
 # TODO: Instead of having a global version number, alow each Force to have a separate version number
-MAX_SUPPORTED_VERSION = (
-    "1.0"  # maximum version of the SMIRNOFF spec supported by this SMIRNOFF force field
-)
+MAX_SUPPORTED_VERSION = "1.0"  # maximum version of the SMIRNOFF spec supported by this SMIRNOFF force field
 
 
 class ForceField:
@@ -314,9 +310,7 @@ class ForceField:
             # option is explicitly defining a set of default handlers
 
             default_handlers: list[type[ParameterHandler]] = [
-                handler
-                for handler in all_subclasses(ParameterHandler)
-                if handler.__module__ == internal_module
+                handler for handler in all_subclasses(ParameterHandler) if handler.__module__ == internal_module
             ]
 
             # We could also track a list of the plugins that were already loaded, but that's not necessary here
@@ -385,9 +379,7 @@ class ForceField:
         if self.disable_version_check:
             pass
         else:
-            if (
-                parse(str(version)) > parse(str(self._MAX_SUPPORTED_SMIRNOFF_VERSION))
-            ) or (
+            if (parse(str(version)) > parse(str(self._MAX_SUPPORTED_SMIRNOFF_VERSION))) or (
                 parse(str(version)) < parse(str(self._MIN_SUPPORTED_SMIRNOFF_VERSION))
             ):
                 raise SMIRNOFFVersionError(
@@ -567,9 +559,7 @@ class ForceField:
                         "{self._parameter_io_handler_classes[serialization_format]} has already been registered to "
                         "handle that tag."
                     )
-                self._parameter_io_handler_classes[serialization_format] = (
-                    parameter_io_handler_class
-                )
+                self._parameter_io_handler_classes[serialization_format] = parameter_io_handler_class
 
     def register_parameter_handler(self, parameter_handler: ParameterHandler):
         """
@@ -596,9 +586,7 @@ class ForceField:
             )
 
         self._parameter_handlers[parameter_handler._TAGNAME] = parameter_handler
-        self._parameter_handler_classes[parameter_handler._TAGNAME] = type(
-            parameter_handler
-        )
+        self._parameter_handler_classes[parameter_handler._TAGNAME] = type(parameter_handler)
 
     def register_parameter_io_handler(self, parameter_io_handler: ParameterIOHandler):
         """
@@ -756,9 +744,7 @@ class ForceField:
         """
         if isinstance(handler, ParameterHandler):
             tagname = handler.TAGNAME
-        elif isinstance(
-            handler, str
-        ):  # Catch case of name (as str) before checking subclass
+        elif isinstance(handler, str):  # Catch case of name (as str) before checking subclass
             tagname = handler
         elif issubclass(handler, ParameterHandler):
             tagname = handler._TAGNAME
@@ -802,9 +788,7 @@ class ForceField:
         # TODO: If a non-first source fails here, the force field might be partially modified
         for source in sources:
             smirnoff_data = self.parse_smirnoff_from_source(source)
-            self._load_smirnoff_data(
-                smirnoff_data, allow_cosmetic_attributes=allow_cosmetic_attributes
-            )
+            self._load_smirnoff_data(smirnoff_data, allow_cosmetic_attributes=allow_cosmetic_attributes)
 
     def _to_smirnoff_data(self, discard_cosmetic_attributes: bool = False) -> dict:
         """
@@ -842,9 +826,7 @@ class ForceField:
             # If _TAGNAME is None, the default value, an error should have been
             # thrown upon registering it, so assume it is str here
             handler_tag: str = parameter_handler._TAGNAME  # type: ignore[assignment]
-            l1_dict[handler_tag] = parameter_handler.to_dict(
-                discard_cosmetic_attributes=discard_cosmetic_attributes
-            )
+            l1_dict[handler_tag] = parameter_handler.to_dict(discard_cosmetic_attributes=discard_cosmetic_attributes)
 
         smirnoff_data: dict[str, dict] = dict()
         smirnoff_data["SMIRNOFF"] = l1_dict
@@ -876,9 +858,7 @@ class ForceField:
         elif "SMIRFF" in smirnoff_data:
             version = smirnoff_data["SMIRFF"]["version"]
         else:
-            raise SMIRNOFFParseError(
-                "'version' attribute must be specified in SMIRNOFF tag"
-            )
+            raise SMIRNOFFParseError("'version' attribute must be specified in SMIRNOFF tag")
 
         self._check_smirnoff_version_compatibility(str(version))
 
@@ -896,9 +876,7 @@ class ForceField:
 
         # Ensure that SMIRNOFF is a top-level key of the dict
         if "SMIRNOFF" not in smirnoff_data:
-            raise SMIRNOFFParseError(
-                "'SMIRNOFF' must be a top-level key in the SMIRNOFF object model"
-            )
+            raise SMIRNOFFParseError("'SMIRNOFF' must be a top-level key in the SMIRNOFF object model")
 
         # Check that the aromaticity model required by this parameter set is compatible with
         # others loaded by this ForceField
@@ -974,9 +952,7 @@ class ForceField:
                 section_dict,
                 allow_cosmetic_attributes=allow_cosmetic_attributes,
             )
-            handler._add_parameters(
-                parameter_list_dict, allow_cosmetic_attributes=allow_cosmetic_attributes
-            )
+            handler._add_parameters(parameter_list_dict, allow_cosmetic_attributes=allow_cosmetic_attributes)
 
     def parse_smirnoff_from_source(self, source: Union[str, IO]) -> dict:
         """
@@ -1096,9 +1072,7 @@ class ForceField:
         else:
             io_handler = self.get_parameter_io_handler(io_format)
 
-        smirnoff_data = self._to_smirnoff_data(
-            discard_cosmetic_attributes=discard_cosmetic_attributes
-        )
+        smirnoff_data = self._to_smirnoff_data(discard_cosmetic_attributes=discard_cosmetic_attributes)
         string_data = io_handler.to_string(smirnoff_data)
         return string_data
 
@@ -1135,9 +1109,7 @@ class ForceField:
             io_handler = self.get_parameter_io_handler(io_format)
 
         # Write out the SMIRNOFF data to the IOHandler
-        smirnoff_data = self._to_smirnoff_data(
-            discard_cosmetic_attributes=discard_cosmetic_attributes
-        )
+        smirnoff_data = self._to_smirnoff_data(discard_cosmetic_attributes=discard_cosmetic_attributes)
         io_handler.to_file(filename, smirnoff_data)
 
     def combine(
@@ -1332,9 +1304,7 @@ class ForceField:
 
                 if param_is_list:
                     for match in matches:
-                        parameter_matches[match] = [
-                            m.parameter_type for m in matches[match]
-                        ]
+                        parameter_matches[match] = [m.parameter_type for m in matches[match]]
                 else:
                     for match in matches:
                         parameter_matches[match] = matches[match].parameter_type
@@ -1410,18 +1380,17 @@ class ForceField:
         """
         from openff.toolkit import Molecule, unit
 
-
         if not isinstance(molecule, Molecule):
             raise ValueError(
-                "`molecule` argument must be a `Molecule` or subclass object. Found type "
-                f"{type(molecule)}"
+                f"`molecule` argument must be a `Molecule` or subclass object. Found type {type(molecule)}"
             )
 
         return Quantity(
             [
                 c.m
                 for c in self.create_interchange(
-                    topology=molecule.to_topology(), **kwargs,
+                    topology=molecule.to_topology(),
+                    **kwargs,
                 )["Electrostatics"].charges.values()
             ],
             unit.elementary_charge,

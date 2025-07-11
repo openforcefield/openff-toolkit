@@ -57,9 +57,7 @@ def _load_handler_plugins(handler_name: str, expected_type: type) -> list[type]:
 
     discovered_plugins: list[PluginType] = list()
 
-    for entry_point in entry_points().select(
-        group=f"openff.toolkit.plugins.{handler_name}"
-    ):
+    for entry_point in entry_points().select(group=f"openff.toolkit.plugins.{handler_name}"):
         try:
             discovered_plugins.append(entry_point.load())
         except (ImportError, AttributeError):

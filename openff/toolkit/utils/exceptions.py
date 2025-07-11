@@ -363,9 +363,7 @@ class VirtualSitesUnsupportedError(OpenFFToolkitException):
     """Exception raised when trying to store virtual sites in a `Molecule` or `Topology` object."""
 
 
-class MissingIndexedAttributeError(
-    OpenFFToolkitException, IndexError, KeyError, AttributeError
-):
+class MissingIndexedAttributeError(OpenFFToolkitException, IndexError, KeyError, AttributeError):
     """Error raised when an indexed attribute does not exist"""
 
 
@@ -407,8 +405,10 @@ class OpenEyeImportError(OpenFFToolkitException):
 class MultipleMoleculesInPDBError(OpenFFToolkitException):
     """Error raised when a multiple molecules are found when one was expected"""
 
+
 class MultipleComponentsInMoleculeWarning(UserWarning):
     """Warning emitted when user attempts to make an OpenFF Molecule with multiple disconnected components"""
+
 
 class WrongShapeError(OpenFFToolkitException):
     """Error raised when an array of the wrong shape is found"""
@@ -440,11 +440,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
         self.unassigned_atoms = [] if unassigned_atoms is None else unassigned_atoms
         self.matches = matches
 
-        message = (
-            ["Some bonds or atoms in the input could not be identified.", ""]
-            if msg is None
-            else [msg, ""]
-        )
+        message = ["Some bonds or atoms in the input could not be identified.", ""] if msg is None else [msg, ""]
 
         message += [
             *self.missing_hydrogens_hint(),
@@ -478,8 +474,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
                     + "substructure library:"
                 ),
                 *(
-                    f"    Atom {i: >5} ({self._atoms[i].name}) in residue "
-                    + f"{self.residue_of_atom_as_str(i)}"
+                    f"    Atom {i: >5} ({self._atoms[i].name}) in residue " + f"{self.residue_of_atom_as_str(i)}"
                     for i in self.unassigned_atoms
                 ),
                 "",
@@ -535,24 +530,16 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
 
     def unknown_residue_hint(self) -> list[str]:
         if self.substructure_library and self.omm_top:
-            unassigned_resnames = [
-                self._atoms[i].residue.name for i in self.unassigned_atoms
-            ]
+            unassigned_resnames = [self._atoms[i].residue.name for i in self.unassigned_atoms]
             unknown_resnames = set(
-                [
-                    resname
-                    for resname in unassigned_resnames
-                    if resname not in self.substructure_library
-                ]
+                [resname for resname in unassigned_resnames if resname not in self.substructure_library]
             )
             # Only raise this error if we're in Molecule.from_polymer_pdb,
             # since Topology.from_pdb DOES accept multiple
             # chains. We can tell the difference because
             # Topology.from_pdb will have added the
             # "UNIQUE_MOLECULE" key to the substructure library,
-            if ("HOH" in unknown_resnames) and (
-                "UNIQUE_MOLECULE" not in self.substructure_library
-            ):
+            if ("HOH" in unknown_resnames) and ("UNIQUE_MOLECULE" not in self.substructure_library):
                 solvent_note = [
                     "Note: 'HOH' is a residue code for water. You may have "
                     + "crystallographic waters in your PDB file. Please remove "
@@ -580,9 +567,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
         # chains. We can tell the difference because
         # Topology.from_pdb will have added the
         # "UNIQUE_MOLECULE" key to the substructure library,
-        if (self.omm_top.getNumChains() > 1) and (
-            "UNIQUE_MOLECULE" not in self.substructure_library
-        ):
+        if (self.omm_top.getNumChains() > 1) and ("UNIQUE_MOLECULE" not in self.substructure_library):
             return [
                 "Hint: The input has multiple chain identifiers. The OpenFF "
                 + "Toolkit Molecule.from_polymer_pdb method only supports "
@@ -653,9 +638,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
             return []
 
         # Collect all the unassigned atoms by residue
-        unassigned_residues: Mapping[OpenMMResidue, list[OpenMMAtom]] = defaultdict(
-            list
-        )
+        unassigned_residues: Mapping[OpenMMResidue, list[OpenMMAtom]] = defaultdict(list)
         for i in self.unassigned_atoms:
             atom = self._atoms[i]
             res: OpenMMResidue = atom.residue
@@ -720,13 +703,7 @@ class SubstructureAtomSmartsInvalid(OpenFFToolkitException):
 
     def __init__(self, name, atom_smarts, smarts, reason):
         msg = f"Invalid atom smarts found in substructure smarts for {name}:\n"
-        msg += (
-            smarts
-            + "\n"
-            + " " * smarts.find(atom_smarts)
-            + "^" * len(atom_smarts)
-            + "\n"
-        )
+        msg += smarts + "\n" + " " * smarts.find(atom_smarts) + "^" * len(atom_smarts) + "\n"
         msg += "REASON: " + reason
         super().__init__(msg)
         self.msg = msg

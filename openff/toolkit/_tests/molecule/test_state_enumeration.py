@@ -12,9 +12,7 @@ class TestTautomerEnumeration:
         {"molecule": "c1[nH]c2c(=O)[nH]c(nc2n1)N", "tautomers": 14},
     ]
 
-    @pytest.mark.parametrize(
-        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
-    )
+    @pytest.mark.parametrize("toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     @pytest.mark.parametrize("molecule_data", tautomer_data)
     def test_enumerating_tautomers(self, molecule_data, toolkit_class):
         """Test the ability of each toolkit to produce tautomers of an input molecule."""
@@ -39,9 +37,7 @@ class TestTautomerEnumeration:
         else:
             pytest.skip("Required toolkit is unavailable")
 
-    @pytest.mark.parametrize(
-        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
-    )
+    @pytest.mark.parametrize("toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     def test_enumerating_tautomers_options(self, toolkit_class):
         """Test the enumeration options"""
 
@@ -55,15 +51,11 @@ class TestTautomerEnumeration:
             )
 
             tauts_no = 5
-            tautomers = mol.enumerate_tautomers(
-                max_states=tauts_no, toolkit_registry=toolkit
-            )
+            tautomers = mol.enumerate_tautomers(max_states=tauts_no, toolkit_registry=toolkit)
             assert len(tautomers) <= tauts_no
             assert mol not in tautomers
 
-    @pytest.mark.parametrize(
-        "toolkit_class", [RDKitToolkitWrapper, OpenEyeToolkitWrapper]
-    )
+    @pytest.mark.parametrize("toolkit_class", [RDKitToolkitWrapper, OpenEyeToolkitWrapper])
     def test_enumerating_no_tautomers(self, toolkit_class):
         """Test that the toolkits return an empty list if there are no tautomers to enumerate."""
 
@@ -148,17 +140,13 @@ class TestProtomerEnumeration:
 
 
 class TestStereoisomerEnumeration:
-    @pytest.mark.parametrize(
-        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
-    )
+    @pytest.mark.parametrize("toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     def test_enumerating_stereobonds(self, toolkit_class):
         """Test the backend toolkits in enumerating the stereo bonds in a molecule."""
 
         if toolkit_class.is_available():
             toolkit = toolkit_class()
-            mol = Molecule.from_smiles(
-                "ClC=CCl", allow_undefined_stereo=True, toolkit_registry=toolkit
-            )
+            mol = Molecule.from_smiles("ClC=CCl", allow_undefined_stereo=True, toolkit_registry=toolkit)
 
             # use the default options
             isomers = mol.enumerate_stereoisomers()
@@ -184,17 +172,13 @@ class TestStereoisomerEnumeration:
         else:
             pytest.skip("Required toolkit is unavailable")
 
-    @pytest.mark.parametrize(
-        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
-    )
+    @pytest.mark.parametrize("toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     def test_enumerating_stereocenters(self, toolkit_class):
         """Test the backend toolkits in enumerating the stereo centers in a molecule."""
 
         if toolkit_class.is_available():
             toolkit = toolkit_class()
-            mol = Molecule.from_smiles(
-                "NC(Cl)(F)O", toolkit_registry=toolkit, allow_undefined_stereo=True
-            )
+            mol = Molecule.from_smiles("NC(Cl)(F)O", toolkit_registry=toolkit, allow_undefined_stereo=True)
 
             isomers = mol.enumerate_stereoisomers(toolkit_registry=toolkit)
 
@@ -220,9 +204,7 @@ class TestStereoisomerEnumeration:
         else:
             pytest.skip("Required toolkit is unavailable")
 
-    @pytest.mark.parametrize(
-        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
-    )
+    @pytest.mark.parametrize("toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     def test_enumerating_stereo_options(self, toolkit_class):
         """Test the enumerating stereo chem options"""
 
@@ -230,32 +212,20 @@ class TestStereoisomerEnumeration:
             toolkit = toolkit_class()
 
             # test undefined only
-            mol = Molecule.from_smiles(
-                "ClC=CCl", toolkit_registry=toolkit, allow_undefined_stereo=True
-            )
-            isomers = mol.enumerate_stereoisomers(
-                undefined_only=True, rationalise=False
-            )
+            mol = Molecule.from_smiles("ClC=CCl", toolkit_registry=toolkit, allow_undefined_stereo=True)
+            isomers = mol.enumerate_stereoisomers(undefined_only=True, rationalise=False)
 
             assert len(isomers) == 2
             for isomer in isomers:
                 assert isomer.n_conformers == 0
 
-            mol = Molecule.from_smiles(
-                r"Cl/C=C\Cl", toolkit_registry=toolkit, allow_undefined_stereo=True
-            )
-            isomers = mol.enumerate_stereoisomers(
-                undefined_only=True, rationalise=False
-            )
+            mol = Molecule.from_smiles(r"Cl/C=C\Cl", toolkit_registry=toolkit, allow_undefined_stereo=True)
+            isomers = mol.enumerate_stereoisomers(undefined_only=True, rationalise=False)
 
             assert isomers == []
 
-            mol = Molecule.from_smiles(
-                r"Cl/C=C\Cl", toolkit_registry=toolkit, allow_undefined_stereo=True
-            )
-            isomers = mol.enumerate_stereoisomers(
-                undefined_only=False, rationalise=False
-            )
+            mol = Molecule.from_smiles(r"Cl/C=C\Cl", toolkit_registry=toolkit, allow_undefined_stereo=True)
+            isomers = mol.enumerate_stereoisomers(undefined_only=False, rationalise=False)
 
             assert len(isomers) == 1
 
@@ -279,9 +249,7 @@ class TestStereoisomerEnumeration:
         else:
             pytest.skip("Required toolkit is unavailable")
 
-    @pytest.mark.parametrize(
-        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
-    )
+    @pytest.mark.parametrize("toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     @pytest.mark.parametrize(
         "smiles, undefined_only, expected",
         [
@@ -304,9 +272,7 @@ class TestStereoisomerEnumeration:
             ("F[C@H](Cl)Br", True, []),
         ],
     )
-    def test_enumerating_stereo_partially_defined(
-        self, toolkit_class, smiles, undefined_only, expected
-    ):
+    def test_enumerating_stereo_partially_defined(self, toolkit_class, smiles, undefined_only, expected):
         """Test the enumerating stereo of molecules with partially defined chirality"""
 
         if not toolkit_class.is_available():
@@ -315,12 +281,8 @@ class TestStereoisomerEnumeration:
         toolkit = toolkit_class()
 
         # test undefined only
-        mol = Molecule.from_smiles(
-            smiles, toolkit_registry=toolkit, allow_undefined_stereo=True
-        )
-        stereoisomers = mol.enumerate_stereoisomers(
-            undefined_only=undefined_only, rationalise=False
-        )
+        mol = Molecule.from_smiles(smiles, toolkit_registry=toolkit, allow_undefined_stereo=True)
+        stereoisomers = mol.enumerate_stereoisomers(undefined_only=undefined_only, rationalise=False)
 
         # Ensure that the results of the enumeration are what the test expects.
         # This roundtrips the expected output from SMILES --> OFFMol --> SMILES,

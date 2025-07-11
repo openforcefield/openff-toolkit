@@ -30,10 +30,7 @@ def test_force_field_custom_handler():
     with pytest.raises(KeyError) as error_info:
         ForceField(force_field_contents)
 
-    assert (
-        "Cannot find a registered parameter handler class for tag 'CustomHandler'"
-        in error_info.value.args[0]
-    )
+    assert "Cannot find a registered parameter handler class for tag 'CustomHandler'" in error_info.value.args[0]
 
     # Otherwise the FF should be created as expected.
     force_field = ForceField(force_field_contents, load_plugins=True)

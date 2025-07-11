@@ -78,9 +78,7 @@ def molecule_with_bogus_atom():
 
 @pytest.fixture()
 def t4():
-    return _SimpleMolecule.from_molecule(
-        Topology.from_pdb(get_data_file_path("proteins/T4-protein.pdb")).molecule(0)
-    )
+    return _SimpleMolecule.from_molecule(Topology.from_pdb(get_data_file_path("proteins/T4-protein.pdb")).molecule(0))
 
 
 class TestMMMolecule:
@@ -135,10 +133,7 @@ class TestMMMolecule:
         assert roundtrip.n_bonds == water.n_bonds
 
         for atom_index in range(roundtrip.n_atoms):
-            assert (
-                roundtrip.atom(atom_index).atomic_number
-                == water.atom(atom_index).atomic_number
-            )
+            assert roundtrip.atom(atom_index).atomic_number == water.atom(atom_index).atomic_number
 
     def test_dict_roundtrip_conformers(self, water):
         water_molecule = Molecule.from_smiles("O")
@@ -222,9 +217,7 @@ class TestMMMolecule:
         assert topology.getNumBonds() == methanol.n_bonds
 
     @pytest.mark.slow
-    @pytest.mark.skip(
-        reason="Fails because of https://github.com/openforcefield/openff-toolkit/issues/1783"
-    )
+    @pytest.mark.skip(reason="Fails because of https://github.com/openforcefield/openff-toolkit/issues/1783")
     def test_to_openmm_topology_t4(self, t4):
         topology = t4.to_topology().to_openmm()
 
@@ -232,7 +225,6 @@ class TestMMMolecule:
         assert topology.getNumBonds() == t4.n_bonds
 
     def test_generate_unique_atom_names(self, water):
-
         # Initially atom names default to empty string
         assert hasattr(water.atom(0), "name")
         assert water.atom(0).name == ""
@@ -301,17 +293,13 @@ class TestIsomorphism:
     @pytest.fixture()
     def n_propanol(self):
         return _SimpleMolecule.from_molecule(
-            Molecule.from_mapped_smiles(
-                "[H:5][C:1]([H:6])([H:7])[C:2]([H:8])([H:9])[C:3]([H:10])([H:11])[O:4][H:12]"
-            )
+            Molecule.from_mapped_smiles("[H:5][C:1]([H:6])([H:7])[C:2]([H:8])([H:9])[C:3]([H:10])([H:11])[O:4][H:12]")
         )
 
     @pytest.fixture()
     def iso_propanol(self):
         return _SimpleMolecule.from_molecule(
-            Molecule.from_mapped_smiles(
-                "[H:5][C:1]([H:6])([H:7])[C:2]([H:8])([C:3]([H:10])([H:11])[H:12])[O:4][H:9]"
-            )
+            Molecule.from_mapped_smiles("[H:5][C:1]([H:6])([H:7])[C:2]([H:8])([C:3]([H:10])([H:11])[H:12])[O:4][H:9]")
         )
 
     @pytest.fixture()
@@ -372,9 +360,7 @@ class TestIsomorphism:
     def test_propanol_isopropanol_not_isomorphic(self, n_propanol, iso_propanol):
         assert not _SimpleMolecule.are_isomorphic(n_propanol, iso_propanol)[0]
 
-    def test_o_m_dichlorobenzene_not_isomorphic(
-        self, o_dichlorobezene, m_dichlorobezene
-    ):
+    def test_o_m_dichlorobenzene_not_isomorphic(self, o_dichlorobezene, m_dichlorobezene):
         assert not _SimpleMolecule.are_isomorphic(o_dichlorobezene, m_dichlorobezene)[0]
 
 
@@ -393,9 +379,9 @@ class TestHierarchyData:
         assert mm_molecule.hierarchy_schemes.keys() == molecule.hierarchy_schemes.keys()
 
         for scheme_name in molecule.hierarchy_schemes:
-            assert len(
-                mm_molecule.hierarchy_schemes[scheme_name].hierarchy_elements
-            ) == len(molecule.hierarchy_schemes[scheme_name].hierarchy_elements)
+            assert len(mm_molecule.hierarchy_schemes[scheme_name].hierarchy_elements) == len(
+                molecule.hierarchy_schemes[scheme_name].hierarchy_elements
+            )
 
     def test_hierarchy_preserved_dict_roundtrip(self, simple_dipeptide):
         roundtripped = _SimpleMolecule.from_dict(simple_dipeptide.to_dict())

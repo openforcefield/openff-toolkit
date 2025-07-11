@@ -146,8 +146,7 @@ class Callbackable:
                 attr._callback_events
             except AttributeError:
                 raise CallbackRegistrationError(
-                    f"{self.__class__}.{event_name} is not "
-                    f"tagged with the @callback_method decorator"
+                    f"{self.__class__}.{event_name} is not tagged with the @callback_method decorator"
                 )
 
         # Update the instance callbacks dictionary.
@@ -170,8 +169,7 @@ class Callbackable:
 
         # The event wasn't found.
         raise CallbackRegistrationError(
-            f"No method of {self.__class__} is associated "
-            f'to the callback event "{event_name}".'
+            f'No method of {self.__class__} is associated to the callback event "{event_name}".'
         )
 
     def _raise_callback_events(self, func_name, *args, **kwargs):
