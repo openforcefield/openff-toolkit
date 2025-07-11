@@ -31,9 +31,7 @@ class NAGLToolkitWrapper(ToolkitWrapper):
     try:
         from openff.nagl_models import list_available_nagl_models
 
-        _supported_charge_methods = {
-            pathlib.Path(path).name: dict() for path in list_available_nagl_models()
-        }
+        _supported_charge_methods = {pathlib.Path(path).name: dict() for path in list_available_nagl_models()}
     except ImportError:
         _supported_charge_methods = dict()
 
@@ -134,8 +132,7 @@ class NAGLToolkitWrapper(ToolkitWrapper):
             model_path = validate_nagl_model_path(model=partial_charge_method)
         except FileNotFoundError as error:
             raise ChargeMethodUnavailableError(
-                f"Charge model {partial_charge_method} not supported by "
-                f"{self.__class__.__name__}."
+                f"Charge model {partial_charge_method} not supported by {self.__class__.__name__}."
             ) from error
 
         model = GNNModel.load(model_path, eval_mode=True)

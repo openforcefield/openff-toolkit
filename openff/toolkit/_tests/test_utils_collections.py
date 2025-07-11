@@ -215,9 +215,7 @@ class TestValidatedDict(TestValidatedMixin):
                 raise TypeError("value is not positive")
 
         # Validators are run after converters.
-        d = ValidatedDict(
-            {"a": 1, "b": 2, "c": -3}, converter=abs, validator=is_positive
-        )
+        d = ValidatedDict({"a": 1, "b": 2, "c": -3}, converter=abs, validator=is_positive)
         assert d == {"a": 1, "b": 2, "c": 3}
 
         # __setitem__

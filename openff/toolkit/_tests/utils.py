@@ -187,9 +187,7 @@ def get_monomer_mol2_file_path(prefix="ethanol"):
 
 def extract_compressed_molecules(tar_file_name, file_subpaths=None, filter_func=None):
     if (file_subpaths is None) == (filter_func is None):
-        raise ValueError(
-            "Only one between file_subpaths and filter_func must be specified."
-        )
+        raise ValueError("Only one between file_subpaths and filter_func must be specified.")
 
     # Find the path of the tarfile with respect to the data/molecules/ folder.
     molecules_dir_path = get_data_file_path("molecules")
@@ -204,8 +202,7 @@ def extract_compressed_molecules(tar_file_name, file_subpaths=None, filter_func=
         # We can already check the paths of the extracted files
         # and skipping opening the tarball if not necessary.
         extracted_file_paths = [
-            os.path.join(molecules_dir_path, tar_root_dir_name, file_subpath)
-            for file_subpath in file_subpaths
+            os.path.join(molecules_dir_path, tar_root_dir_name, file_subpath) for file_subpath in file_subpaths
         ]
 
         # Remove files that we have already extracted.
@@ -245,16 +242,10 @@ def extract_compressed_molecules(tar_file_name, file_subpaths=None, filter_func=
 
         # Built the paths to the extracted molecules we didn't already.
         if extracted_file_paths is None:
-            extracted_file_paths = [
-                os.path.join(molecules_dir_path, m.name) for m in members
-            ]
+            extracted_file_paths = [os.path.join(molecules_dir_path, m.name) for m in members]
 
         # Extract only the members that we haven't already extracted.
-        members = [
-            member
-            for member, fullpath in zip(members, extracted_file_paths)
-            if not os.path.isfile(fullpath)
-        ]
+        members = [member for member, fullpath in zip(members, extracted_file_paths) if not os.path.isfile(fullpath)]
         tar_file.extractall(path=molecules_dir_path, members=members)
 
     return extracted_file_paths
@@ -292,9 +283,7 @@ def get_alkethoh_file_path(alkethoh_name, get_amber=False):
         file_subpaths.append(file_base_subpath + ".top")
         file_subpaths.append(file_base_subpath + ".crd")
 
-    return extract_compressed_molecules(
-        "AlkEthOH_tripos.tar.gz", file_subpaths=file_subpaths
-    )
+    return extract_compressed_molecules("AlkEthOH_tripos.tar.gz", file_subpaths=file_subpaths)
 
 
 def get_freesolv_file_path(freesolv_id, ff_version):
@@ -367,19 +356,14 @@ def quantities_allclose(quantity1, quantity2, **kwargs):
     if isinstance(quantity1, openmm_unit.Quantity):
         # Check that the two Quantities have compatible units.
         if not quantity1.unit.is_compatible(quantity2.unit):
-            raise ValueError(
-                "The two quantities don't have compatible units: "
-                f"{quantity1.unit} and {quantity2.unit}"
-            )
+            raise ValueError(f"The two quantities don't have compatible units: {quantity1.unit} and {quantity2.unit}")
         # Compare the values stripped of the units.
         quantity1 = quantity1.value_in_unit_system(openmm_unit.md_unit_system)
         quantity2 = quantity2.value_in_unit_system(openmm_unit.md_unit_system)
     return np.allclose(quantity1, quantity2, **kwargs)
 
 
-def get_context_potential_energy(
-    context, positions, box_vectors=None, by_force_group=True
-):
+def get_context_potential_energy(context, positions, box_vectors=None, by_force_group=True):
     """Compute the potential energy of a System in a Context object.
 
     This is simply a shortcut that takes care of setting
@@ -443,9 +427,7 @@ class FailedEnergyComparisonError(AssertionError):
         self.potential_energy2 = potential_energy2
 
 
-def compare_context_energies(
-    context1, context2, *args, rtol=1.0e-5, atol=1.0e-8, **kwargs
-):
+def compare_context_energies(context1, context2, *args, rtol=1.0e-5, atol=1.0e-8, **kwargs):
     """Compare energies of two Contexts given the same positions.
 
     Parameters
@@ -494,17 +476,13 @@ def compare_context_energies(
     def raise_assert(assertion, err_msg, format_args):
         """Shortcut to raise a custom error and format the error message."""
         if not assertion:
-            raise FailedEnergyComparisonError(
-                err_msg.format(*format_args), potential_energy1, potential_energy2
-            )
+            raise FailedEnergyComparisonError(err_msg.format(*format_args), potential_energy1, potential_energy2)
 
     # If by_force_group is True, then the return value will be a
     # dictionary and we need to compare force group by force group.
     if isinstance(potential_energy1, openmm_unit.Quantity):
         raise_assert(
-            assertion=quantities_allclose(
-                potential_energy1, potential_energy2, rtol=rtol, atol=atol
-            ),
+            assertion=quantities_allclose(potential_energy1, potential_energy2, rtol=rtol, atol=atol),
             err_msg="potential energy 1 {}, potential energy 2: {}",
             format_args=(potential_energy1, potential_energy2),
         )
@@ -638,9 +616,7 @@ def compare_system_energies(
 
             # Set particle charges to 0.0.
             for particle_idx in range(nonbonded_force.getNumParticles()):
-                charge, sigma, epsilon = nonbonded_force.getParticleParameters(
-                    particle_idx
-                )
+                charge, sigma, epsilon = nonbonded_force.getParticleParameters(particle_idx)
                 nonbonded_force.setParticleParameters(particle_idx, 0.0, sigma, epsilon)
 
             # Set particle exceptions charge products to 0.0.
@@ -652,24 +628,19 @@ def compare_system_energies(
                     sigma,
                     epsilon,
                 ) = nonbonded_force.getExceptionParameters(exception_idx)
-                nonbonded_force.setExceptionParameters(
-                    exception_idx, atom1, atom2, 0.0, sigma, epsilon
-                )
+                nonbonded_force.setExceptionParameters(exception_idx, atom1, atom2, 0.0, sigma, epsilon)
 
     # Create Contexts and compare the energies.
     integrator = openmm.VerletIntegrator(1.0 * openmm_unit.femtoseconds)
     from openmm import Platform
+
     context1 = openmm.Context(system1, integrator, Platform.getPlatformByName("Reference"))
     context2 = openmm.Context(system2, copy.deepcopy(integrator), Platform.getPlatformByName("Reference"))
 
     def map_energies_by_force_type(potential_energy1, potential_energy2):
         """Convert dictionary force_group -> energy to force_type -> energy."""
-        potential_energy1 = {
-            group_to_force[group]: energy for group, energy in potential_energy1.items()
-        }
-        potential_energy2 = {
-            group_to_force[group]: energy for group, energy in potential_energy2.items()
-        }
+        potential_energy1 = {group_to_force[group]: energy for group, energy in potential_energy1.items()}
+        potential_energy2 = {group_to_force[group]: energy for group, energy in potential_energy2.items()}
         return potential_energy1, potential_energy2
 
     # Catch the exception and log table force type -> energy.
@@ -688,9 +659,7 @@ def compare_system_energies(
         if not by_force_type:
             raise
         # Add to the error message the table of energies by force type.
-        potential_energy1, potential_energy2 = map_energies_by_force_type(
-            e.potential_energy1, e.potential_energy2
-        )
+        potential_energy1, potential_energy2 = map_energies_by_force_type(e.potential_energy1, e.potential_energy2)
         # Pretty-print the dictionaries.
         table = "\n\npotential energy system1:\n" + pprint.pformat(potential_energy1)
         table += "\n\npotential energy system2:\n" + pprint.pformat(potential_energy2)
@@ -762,9 +731,7 @@ class _ParametersComparer:
         diff_list = []
         for par_name in sorted(diff.keys()):
             par1, par2 = diff[par_name]
-            diff_list.append(
-                f"{par_name}: {par1} != {par2}"
-            )
+            diff_list.append(f"{par_name}: {par1} != {par2}")
         separator = "\n" if new_line else ""
         diff_str = separator.join(diff_list)
         if indent:
@@ -790,9 +757,7 @@ class _ParametersComparer:
         parameter_order = sorted(self.parameters)
         # Quantities in a dictionary are normally printed in the
         # format "Quantity(value, unit=unit)" so we make it prettier.
-        par_str = ", ".join(
-            f"{p}: {self.parameters[p]}" for p in parameter_order
-        )
+        par_str = ", ".join(f"{p}: {self.parameters[p]}" for p in parameter_order)
         return "(" + par_str + ")"
 
 
@@ -881,9 +846,7 @@ class _TorsionParametersComparer:
         return True
 
     def __str__(self):
-        return self._pretty_format_parameters(
-            self.parameters, new_line=False, indent=False
-        )
+        return self._pretty_format_parameters(self.parameters, new_line=False, indent=False)
 
 
 class FailedParameterComparisonError(AssertionError):
@@ -965,9 +928,7 @@ def _compare_parameters(
     if force_name != "":
         force_name += " "  # Add space after.
     if systems_labels is not None:
-        systems_labels = " for the {} and {} systems respectively".format(
-            *systems_labels
-        )
+        systems_labels = " for the {} and {} systems respectively".format(*systems_labels)
     else:
         systems_labels = ""
 
@@ -983,7 +944,7 @@ def _compare_parameters(
             diff_msg += f"\n{interaction_type} {key}:\n{parameters_diff}"
 
     if diff_msg != "":
-        diff_msg = (f"A difference between {interaction_type} was detected. " "Details follow.") + diff_msg
+        diff_msg = (f"A difference between {interaction_type} was detected. Details follow.") + diff_msg
         raise FailedParameterComparisonError(diff_msg + "\n", different_parameters)
 
 
@@ -1021,9 +982,7 @@ def _get_force_parameters(force, system, ignored_parameters):
         "proper torsion", "bond").
 
     """
-    raise NotImplementedError(
-        f"Comparison between {type(force)}s is not currently " "supported."
-    )
+    raise NotImplementedError(f"Comparison between {type(force)}s is not currently supported.")
 
 
 @_get_force_parameters.register(openmm.HarmonicBondForce)
@@ -1075,9 +1034,7 @@ def _get_nonbonded_force_parameters(force, _, ignored_parameters):
         charge, sigma, epsilon = force.getParticleParameters(particle_idx)
 
         # Ignore sigma parameter if epsilon is 0.0.
-        particle_parameters[particle_idx] = _ParametersComparer(
-            charge=charge, epsilon=epsilon
-        )
+        particle_parameters[particle_idx] = _ParametersComparer(charge=charge, epsilon=epsilon)
         if epsilon._value != 0.0:
             particle_parameters[particle_idx].parameters["sigma"] = sigma
         particle_parameters[particle_idx].remove_parameters(ignored_parameters)
@@ -1085,16 +1042,12 @@ def _get_nonbonded_force_parameters(force, _, ignored_parameters):
     # Build the dictionary representation of the particle exceptions.
     exception_parameters = {}
     for exception_idx in range(force.getNumExceptions()):
-        atom1, atom2, chargeprod, sigma, epsilon = force.getExceptionParameters(
-            exception_idx
-        )
+        atom1, atom2, chargeprod, sigma, epsilon = force.getExceptionParameters(exception_idx)
 
         # Reorder the atom indices to have a canonical key.
         exception_key = tuple(sorted([atom1, atom2]))
         # Ignore sigma parameter if epsilon is 0.0.
-        exception_parameters[exception_key] = _ParametersComparer(
-            charge=chargeprod, epsilon=epsilon
-        )
+        exception_parameters[exception_key] = _ParametersComparer(charge=chargeprod, epsilon=epsilon)
         if epsilon._value != 0.0:
             exception_parameters[exception_key].parameters["sigma"] = sigma
         exception_parameters[exception_key].remove_parameters(ignored_parameters)
@@ -1158,9 +1111,7 @@ def _get_torsion_force_parameters(force, system, ignored_parameters):
     proper_parameters = {}
     improper_parameters = {}
     for torsion_idx in range(force.getNumTorsions()):
-        atom1, atom2, atom3, atom4, periodicity, phase, k = force.getTorsionParameters(
-            torsion_idx
-        )
+        atom1, atom2, atom3, atom4, periodicity, phase, k = force.getTorsionParameters(torsion_idx)
 
         # Ignore torsions that don't contribute to the energy.
         if k._value == 0.0:
@@ -1168,9 +1119,7 @@ def _get_torsion_force_parameters(force, system, ignored_parameters):
 
         torsion_key = [atom1, atom2, atom3, atom4]
         if len(set(torsion_key)) != 4:
-            raise ValueError(
-                f"Torsion {torsion_idx} is defined on less than 4 atoms: {torsion_key}"
-            )
+            raise ValueError(f"Torsion {torsion_idx} is defined on less than 4 atoms: {torsion_key}")
 
         # Check if this is proper or not.
         torsion_bonds = [(torsion_key[i], torsion_key[i + 1]) for i in range(3)]
@@ -1224,9 +1173,7 @@ def _find_all_bonds(system):
 
     """
     # Find the force with information on the bonds.
-    bond_force = [
-        f for f in system.getForces() if isinstance(f, openmm.HarmonicBondForce)
-    ]
+    bond_force = [f for f in system.getForces() if isinstance(f, openmm.HarmonicBondForce)]
     assert len(bond_force) == 1
     bond_force = bond_force[0]
 
@@ -1352,12 +1299,8 @@ def compare_system_parameters(
         ignored_parameters_by_force["PeriodicTorsionForce"] = ["n_improper_folds"]
 
     # We need to perform some checks on the type and number of forces in the Systems.
-    force_names1 = collections.Counter(
-        f.__class__.__name__ for f in system1.getForces()
-    )
-    force_names2 = collections.Counter(
-        f.__class__.__name__ for f in system2.getForces()
-    )
+    force_names1 = collections.Counter(f.__class__.__name__ for f in system1.getForces())
+    force_names2 = collections.Counter(f.__class__.__name__ for f in system2.getForces())
     err_msg = "Only systems having 1 force per type are supported."
     assert set(force_names1.values()) == {1}, err_msg
     assert set(force_names2.values()) == {1}, err_msg
@@ -1481,9 +1424,7 @@ def compare_amber_smirnoff(
 
     # Test energies and parameters.
     if check_parameters:
-        compare_system_parameters(
-            amber_system, ff_system, systems_labels=("AMBER", "SMIRNOFF"), **kwargs
-        )
+        compare_system_parameters(amber_system, ff_system, systems_labels=("AMBER", "SMIRNOFF"), **kwargs)
 
     if check_energies:
         amber_energies, forcefield_energies = compare_system_energies(
@@ -1568,14 +1509,10 @@ def reorder_openmm_to_openff(xyz, n_atoms_per_mol, n_vptls_per_mol):
     n_mols = xyz.shape[0] // n_particles_per_mol
 
     atom_base_indices = np.arange(n_atoms_per_mol)
-    atom_indices = np.hstack(
-        [atom_base_indices + (i * n_particles_per_mol) for i in range(n_mols)]
-    )
+    atom_indices = np.hstack([atom_base_indices + (i * n_particles_per_mol) for i in range(n_mols)])
 
     vsite_base_indices = np.arange(n_vptls_per_mol) + n_atoms_per_mol
-    vsite_indices = np.hstack(
-        [vsite_base_indices + (i * n_particles_per_mol) for i in range(n_mols)]
-    )
+    vsite_indices = np.hstack([vsite_base_indices + (i * n_particles_per_mol) for i in range(n_mols)])
 
     mask = np.hstack([atom_indices, vsite_indices])
 
@@ -1620,9 +1557,7 @@ def openmm_evaluate_vsites_and_energy(omm_top, omm_sys, atom_xyz_in_nm, minimize
 
     state = sim.context.getState(getEnergy=True, getPositions=True)
     ene = state.getPotentialEnergy()
-    pos = [
-        list(xyz) for xyz in state.getPositions().value_in_unit(openmm_unit.nanometer)
-    ] * unit.nanometer
+    pos = [list(xyz) for xyz in state.getPositions().value_in_unit(openmm_unit.nanometer)] * unit.nanometer
     return pos, ene
 
 
@@ -1769,18 +1704,14 @@ def evaluate_molecules_off(molecules, forcefield, minimize=False):
     # Need an openMM topology, an openMM system, and a set of positions
     # to calculate the energy. Also returns the vsite positions based
     # on supplied atom coordinates
-    xyz, ene = openmm_evaluate_vsites_and_energy(
-        top.to_openmm(), sys, atom_xyz, minimize=minimize
-    )
+    xyz, ene = openmm_evaluate_vsites_and_energy(top.to_openmm(), sys, atom_xyz, minimize=minimize)
 
     return xyz, ene
 
 
 def get_14_scaling_factors(omm_sys: openmm.System) -> tuple[list, list]:
     """Find the 1-4 scaling factors as they are applied to an OpenMM System"""
-    nonbond_force = next(
-        f for f in omm_sys.getForces() if type(f) is openmm.NonbondedForce
-    )
+    nonbond_force = next(f for f in omm_sys.getForces() if type(f) is openmm.NonbondedForce)
 
     vdw_14 = list()
     coul_14 = list()
@@ -1803,9 +1734,7 @@ def get_14_scaling_factors(omm_sys: openmm.System) -> tuple[list, list]:
 
 
 def compare_partial_charges(system1, system2):
-    assert (
-        system1.getNumParticles() == system2.getNumParticles()
-    ), "Systems do not have the same number of particles"
+    assert system1.getNumParticles() == system2.getNumParticles(), "Systems do not have the same number of particles"
 
     n_particles = system1.getNumParticles()
 

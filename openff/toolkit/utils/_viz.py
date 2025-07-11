@@ -7,9 +7,8 @@ from nglview.base_adaptor import Structure, Trajectory
 if TYPE_CHECKING:
     from openff.toolkit import Molecule, Topology
 
-MOLECULE_DEFAULT_REPS = [
-    dict(type="licorice", params=dict(radius=0.25, multipleBond=True))
-]
+MOLECULE_DEFAULT_REPS = [dict(type="licorice", params=dict(radius=0.25, multipleBond=True))]
+
 
 class MoleculeNGLViewTrajectory(Structure, Trajectory):
     """
@@ -45,9 +44,7 @@ class MoleculeNGLViewTrajectory(Structure, Trajectory):
         ext: str = "MOL2",
     ):
         if not molecule.conformers:
-            raise ValueError(
-                "Cannot visualize a molecule without conformers with NGLView"
-            )
+            raise ValueError("Cannot visualize a molecule without conformers with NGLView")
         self.molecule = molecule
         self.ext = ext.lower()
         self.params: dict = dict()

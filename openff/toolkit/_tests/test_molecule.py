@@ -131,10 +131,7 @@ def is_three_membered_ring_torsion(torsion):
     for atom in torsion:
         for bond in atom.bonds:
             # Consider the bond only if both atoms are in the torsion.
-            if (
-                bond.atom1_index in torsion_atom_indices
-                and bond.atom2_index in torsion_atom_indices
-            ):
+            if bond.atom1_index in torsion_atom_indices and bond.atom2_index in torsion_atom_indices:
                 bonds_by_atom_idx[bond.atom1_index].add(bond.atom2_index)
                 bonds_by_atom_idx[bond.atom2_index].add(bond.atom1_index)
 
@@ -146,26 +143,18 @@ def is_three_membered_ring_torsion(torsion):
 
     # Find the atom outside the ring.
     atom_indices = [i for i in torsion_atom_indices if len(bonds_by_atom_idx[i]) == 1]
-    if (
-        len(atom_indices) != 1
-        or central_atom_idx not in bonds_by_atom_idx[atom_indices[0]]
-    ):
+    if len(atom_indices) != 1 or central_atom_idx not in bonds_by_atom_idx[atom_indices[0]]:
         return False
     outside_atom_idx = atom_indices[0]
 
     # Check that the remaining two atoms are non-central atoms in the membered ring.
-    atom1, atom2 = (
-        i for i in torsion_atom_indices if i not in [central_atom_idx, outside_atom_idx]
-    )
+    atom1, atom2 = (i for i in torsion_atom_indices if i not in [central_atom_idx, outside_atom_idx])
     # The two atoms are bonded to each other.
     if atom2 not in bonds_by_atom_idx[atom1] or atom1 not in bonds_by_atom_idx[atom2]:
         return False
     # Check that they are both bonded to the central atom and none other.
     for atom_idx in [atom1, atom2]:
-        if (
-            central_atom_idx not in bonds_by_atom_idx[atom_idx]
-            or len(bonds_by_atom_idx[atom_idx]) != 2
-        ):
+        if central_atom_idx not in bonds_by_atom_idx[atom_idx] or len(bonds_by_atom_idx[atom_idx]) != 2:
             return False
 
     # This is a torsion including a three-membered ring.
@@ -363,9 +352,7 @@ class TestAtom:
         # Ensure that invalid types raise appropriate errors
         with pytest.raises(InvalidAtomMetadataError, match="non-string key"):
             atom3.metadata[1] = "one"
-        with pytest.raises(
-            InvalidAtomMetadataError, match="non-string or integer value"
-        ):
+        with pytest.raises(InvalidAtomMetadataError, match="non-string or integer value"):
             atom3.metadata["length"] = 3.0 * unit.angstrom
 
     def test_set_molecule(self):
@@ -408,9 +395,7 @@ class TestAtom:
         )
 
     def test_set_partial_charges_no_charges(self, water_without_charges):
-        with pytest.raises(
-            MissingPartialChargesError, match="in a molecule with no partial charges."
-        ):
+        with pytest.raises(MissingPartialChargesError, match="in a molecule with no partial charges."):
             water_without_charges.atoms[2].partial_charge = 0.0 * unit.elementary_charge
 
     def test_set_partial_charges_int(self, water):
@@ -426,9 +411,7 @@ class TestAtom:
 
     def test_set_partial_charges_array(self, water):
         with pytest.raises(ValueError, match="unit-wrapped.*numpy.ndarray"):
-            water.atoms[2].partial_charge = unit.Quantity(
-                [0.0, 0.0], unit.elementary_charge
-            )
+            water.atoms[2].partial_charge = unit.Quantity([0.0, 0.0], unit.elementary_charge)
 
     def test_set_partial_charges_bogus(self, water):
         with pytest.raises(ValueError, match="Cannot set.*class 'str'"):
@@ -665,17 +648,11 @@ class TestMolecule:
         undefined_stereo = molecule.name in undefined_stereo_mols
         # Since OpenEye did the original reading of MiniDrugBank, if OPENEYE doesn't
         # think a feature is stereogenic, then "molecule" won't have stereochemistry defined
-        stereogenic_in_rdk_but_not_openeye = (
-            molecule.name in drugbank_stereogenic_in_rdkit_but_not_openeye
-        )
+        stereogenic_in_rdk_but_not_openeye = molecule.name in drugbank_stereogenic_in_rdkit_but_not_openeye
 
         smiles1 = molecule.to_smiles(toolkit_registry=toolkit_wrapper)
-        if undefined_stereo or (
-            (toolkit is RDKitToolkitWrapper) and stereogenic_in_rdk_but_not_openeye
-        ):
-            molecule2 = Molecule.from_smiles(
-                smiles1, allow_undefined_stereo=True, toolkit_registry=toolkit_wrapper
-            )
+        if undefined_stereo or ((toolkit is RDKitToolkitWrapper) and stereogenic_in_rdk_but_not_openeye):
+            molecule2 = Molecule.from_smiles(smiles1, allow_undefined_stereo=True, toolkit_registry=toolkit_wrapper)
         else:
             molecule2 = Molecule.from_smiles(smiles1, toolkit_registry=toolkit_wrapper)
 
@@ -690,12 +667,8 @@ class TestMolecule:
         mol = Molecule.from_smiles("C", name="bob")
         assert mol.name == "bob"
 
-    @pytest.mark.parametrize(
-        "smiles, expected", [("[Cl:1]Cl", {0: 1}), ("[Cl:1][Cl:2]", {0: 1, 1: 2})]
-    )
-    @pytest.mark.parametrize(
-        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
-    )
+    @pytest.mark.parametrize("smiles, expected", [("[Cl:1]Cl", {0: 1}), ("[Cl:1][Cl:2]", {0: 1, 1: 2})])
+    @pytest.mark.parametrize("toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     def test_from_smiles_with_map(self, smiles, expected, toolkit_class):
         if not (toolkit_class.is_available()):
             pytest.skip(f"Required toolkit {toolkit_class} is unavailable")
@@ -728,9 +701,7 @@ class TestMolecule:
         },
     ]
 
-    @pytest.mark.parametrize(
-        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
-    )
+    @pytest.mark.parametrize("toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     @pytest.mark.parametrize("data", smiles_types)
     def test_smiles_types(self, data, toolkit_class):
         """Test that the toolkit is passing the correct args to the toolkit backends across different combinations."""
@@ -797,13 +768,9 @@ class TestMolecule:
                     assert {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5} == atom_map
 
         else:
-            pytest.skip(
-                f"The required toolkit ({toolkit_class.toolkit_name}) is not available."
-            )
+            pytest.skip(f"The required toolkit ({toolkit_class.toolkit_name}) is not available.")
 
-    @pytest.mark.parametrize(
-        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
-    )
+    @pytest.mark.parametrize("toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     def test_smiles_cache(self, toolkit_class):
         """Make sure that the smiles cache is being used correctly."""
 
@@ -815,12 +782,7 @@ class TestMolecule:
             # now lets populate the cache with a test result
             # first we need to make the cache key for the default input
             isomeric, explicit_hydrogens, mapped = True, True, False
-            cache_key = (
-                toolkit.to_smiles.__qualname__
-                + str(isomeric)
-                + str(explicit_hydrogens)
-                + str(mapped)
-            )
+            cache_key = toolkit.to_smiles.__qualname__ + str(isomeric) + str(explicit_hydrogens) + str(mapped)
             cache_key += str(mol._properties.get("atom_map", None))
             mol._cached_smiles = {cache_key: None}
             assert (
@@ -849,9 +811,7 @@ class TestMolecule:
             assert len(mol._cached_smiles) == 2
 
         else:
-            pytest.skip(
-                f"The required toolkit ({toolkit_class.toolkit_name}) is not available."
-            )
+            pytest.skip(f"The required toolkit ({toolkit_class.toolkit_name}) is not available.")
 
     def test_atom_index_cache(self):
         """Test that the atom index cache is invalidated when a molecule is modified"""
@@ -879,9 +839,7 @@ class TestMolecule:
         {"atom_map": {0: 1, 1: 2, 2: 3, 3: 4}},
     ]
 
-    @pytest.mark.parametrize(
-        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
-    )
+    @pytest.mark.parametrize("toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     @pytest.mark.parametrize("data", mapped_types)
     def test_partial_mapped_smiles(self, toolkit_class, data):
         if toolkit_class.is_available():
@@ -910,9 +868,7 @@ class TestMolecule:
                     assert f"[{mol.atoms[atom].symbol}:{index + 1 if increment else index}]"
 
         else:
-            pytest.skip(
-                f"The required toolkit ({toolkit_class.toolkit_name}) is not available."
-            )
+            pytest.skip(f"The required toolkit ({toolkit_class.toolkit_name}) is not available.")
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_unique_atom_names(self, molecule):
@@ -927,13 +883,9 @@ class TestMolecule:
         # Check that the molecule has unique atom names
         assert molecule.has_unique_atom_names
         # Check molecule.has_unique_atom_names is working correctly
-        assert (
-            len(set([atom.name for atom in molecule.atoms])) == molecule.n_atoms
-        ) == molecule.has_unique_atom_names
+        assert (len(set([atom.name for atom in molecule.atoms])) == molecule.n_atoms) == molecule.has_unique_atom_names
         molecule.atoms[1].name = molecule.atoms[0].name  # no longer unique
-        assert (
-            len(set([atom.name for atom in molecule.atoms])) == molecule.n_atoms
-        ) == molecule.has_unique_atom_names
+        assert (len(set([atom.name for atom in molecule.atoms])) == molecule.n_atoms) == molecule.has_unique_atom_names
         assert all(a.name.endswith("x") for a in molecule.atoms)
 
     def test_generate_unique_atom_names(self):
@@ -996,9 +948,7 @@ class TestMolecule:
         toolkit = OpenEyeToolkitWrapper()
         ref_mol = data["molecule"]
         # make a molecule from inchi
-        inchi_mol = Molecule.from_inchi(
-            data["standard_inchi"], toolkit_registry=toolkit
-        )
+        inchi_mol = Molecule.from_inchi(data["standard_inchi"], toolkit_registry=toolkit)
         assert inchi_mol.to_inchi(toolkit_registry=toolkit) == data["standard_inchi"]
 
         def compare_mols(ref_mol, inchi_mol):
@@ -1011,13 +961,9 @@ class TestMolecule:
         compare_mols(ref_mol, inchi_mol)
 
         # now make the molecule from the non-standard inchi and compare
-        nonstandard_inchi_mol = Molecule.from_inchi(
-            data["fixed_hydrogen_inchi"], toolkit_registry=toolkit
-        )
+        nonstandard_inchi_mol = Molecule.from_inchi(data["fixed_hydrogen_inchi"], toolkit_registry=toolkit)
         assert (
-            nonstandard_inchi_mol.to_inchi(
-                fixed_hydrogens=True, toolkit_registry=toolkit
-            )
+            nonstandard_inchi_mol.to_inchi(fixed_hydrogens=True, toolkit_registry=toolkit)
             == data["fixed_hydrogen_inchi"]
         )
 
@@ -1039,17 +985,13 @@ class TestMolecule:
 
         molecule1 = Molecule(filename, allow_undefined_stereo=True)
         with open(filename) as infile:
-            molecule2 = Molecule(
-                infile, file_format="MOL2", allow_undefined_stereo=True
-            )
+            molecule2 = Molecule(infile, file_format="MOL2", allow_undefined_stereo=True)
         assert molecule1 == molecule2
 
         import gzip
 
         with gzip.GzipFile(filename + ".gz", "r") as infile:
-            molecule3 = Molecule(
-                infile, file_format="MOL2", allow_undefined_stereo=True
-            )
+            molecule3 = Molecule(infile, file_format="MOL2", allow_undefined_stereo=True)
         assert molecule3 == molecule1
 
         # Ensure that attempting to initialize a single Molecule from a file
@@ -1075,7 +1017,6 @@ class TestMolecule:
 
     @pytest.mark.parametrize("toolkit", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     def test_to_pathlib_path(self, tmp_path, toolkit):
-
         if toolkit == OpenEyeToolkitWrapper:
             pytest.importorskip("openeye")
         elif toolkit == RDKitToolkitWrapper:
@@ -1157,9 +1098,7 @@ class TestMolecule:
         assert molecule_smiles == test_mol_smiles
 
         # Check that the two topologies are isomorphic.
-        assert_molecule_is_equal(
-            molecule, test_mol, "Molecule.to_rdkit()/Molecule(rdmol) round trip failed"
-        )
+        assert_molecule_is_equal(molecule, test_mol, "Molecule.to_rdkit()/Molecule(rdmol) round trip failed")
 
         # Second, test making a molecule using the Molecule.from_openeye(oemol) method
 
@@ -1176,9 +1115,7 @@ class TestMolecule:
         assert molecule_smiles == test_mol_smiles
 
         # Check that the two topologies are isomorphic.
-        assert_molecule_is_equal(
-            molecule, test_mol, "Molecule.to_rdkit()/from_rdkit() round trip failed"
-        )
+        assert_molecule_is_equal(molecule, test_mol, "Molecule.to_rdkit()/from_rdkit() round trip failed")
 
     @requires_openeye
     def test_to_from_iupac(self):
@@ -1209,9 +1146,7 @@ class TestMolecule:
 
         cholesterol_iupac = cholesterol.to_iupac()
 
-        assert Molecule.are_isomorphic(
-            cholesterol, Molecule.from_iupac(cholesterol_iupac)
-        )
+        assert Molecule.are_isomorphic(cholesterol, Molecule.from_iupac(cholesterol_iupac))
 
     @requires_openeye
     def test_to_from_iupac_wrapper(self):
@@ -1219,9 +1154,9 @@ class TestMolecule:
         from openff.toolkit.utils import OpenEyeToolkitWrapper
 
         assert (
-            Molecule.from_iupac(
-                "benzene", toolkit_registry=OpenEyeToolkitWrapper()
-            ).to_iupac(toolkit_registry=OpenEyeToolkitWrapper())
+            Molecule.from_iupac("benzene", toolkit_registry=OpenEyeToolkitWrapper()).to_iupac(
+                toolkit_registry=OpenEyeToolkitWrapper()
+            )
             == "benzene"
         )
 
@@ -1294,9 +1229,7 @@ class TestMolecule:
         tkw = OpenEyeToolkitWrapper()
 
         # load a molecule with a single conformation
-        toluene = Molecule.from_file(
-            get_data_file_path("molecules/toluene.sdf"), "sdf", toolkit_registry=tkw
-        )
+        toluene = Molecule.from_file(get_data_file_path("molecules/toluene.sdf"), "sdf", toolkit_registry=tkw)
         # make sure it has one conformer
         assert toluene.n_conformers == 1
 
@@ -1382,9 +1315,7 @@ class TestMolecule:
         tkw = RDKitToolkitWrapper()
 
         # load a molecule with a single conformation
-        toluene = Molecule.from_file(
-            get_data_file_path("molecules/toluene.sdf"), "sdf", toolkit_registry=tkw
-        )
+        toluene = Molecule.from_file(get_data_file_path("molecules/toluene.sdf"), "sdf", toolkit_registry=tkw)
         # make sure it has one conformer
         assert toluene.n_conformers == 1
 
@@ -1441,9 +1372,7 @@ class TestMolecule:
             "sdf",
             pytest.param(
                 "pdb",
-                marks=pytest.mark.wip(
-                    reason="Read from pdb has not been implemented properly yet"
-                ),
+                marks=pytest.mark.wip(reason="Read from pdb has not been implemented properly yet"),
             ),
         ],
     )
@@ -1472,9 +1401,7 @@ class TestMolecule:
             if undefined_stereo:
                 with pytest.raises(UndefinedStereochemistryError):
                     Molecule.from_file(iofile.name)
-            molecule2 = Molecule.from_file(
-                iofile.name, allow_undefined_stereo=undefined_stereo
-            )
+            molecule2 = Molecule.from_file(iofile.name, allow_undefined_stereo=undefined_stereo)
             assert molecule == molecule2
             # TODO: Test to make sure properties are preserved?
             # NOTE: We can't read pdb files and expect chemical information to be preserved
@@ -1536,9 +1463,7 @@ class TestMolecule:
         assert molecule_smiles == test_mol_smiles
 
         # Check that the two topologies are isomorphic.
-        assert_molecule_is_equal(
-            molecule, test_mol, "Molecule.to_openeye()/from_openeye() round trip failed"
-        )
+        assert_molecule_is_equal(molecule, test_mol, "Molecule.to_openeye()/from_openeye() round trip failed")
 
     def test_name(self):
         """Test Molecule name property"""
@@ -1581,13 +1506,9 @@ class TestMolecule:
         assert molecule.hill_formula == molecule_file.hill_formula
 
         # make sure the topology molecule gives the same formula
-        assert molecule.hill_formula == Molecule._object_to_hill_formula(
-            molecule.to_networkx()
-        )
+        assert molecule.hill_formula == Molecule._object_to_hill_formula(molecule.to_networkx())
 
-        assert molecule.hill_formula == _networkx_graph_to_hill_formula(
-            molecule.to_networkx()
-        )
+        assert molecule.hill_formula == _networkx_graph_to_hill_formula(molecule.to_networkx())
 
     def test_isomorphic_general(self):
         """Test the matching using different input types"""
@@ -1601,10 +1522,7 @@ class TestMolecule:
         assert ethanol.is_isomorphic_with(ethanol_reverse) is True
         # check a reference mapping between ethanol and ethanol_reverse matches that calculated
         ref_mapping = {0: 8, 1: 7, 2: 6, 3: 3, 4: 4, 5: 5, 6: 1, 7: 2, 8: 0}
-        assert (
-            Molecule.are_isomorphic(ethanol, ethanol_reverse, return_atom_map=True)[1]
-            == ref_mapping
-        )
+        assert Molecule.are_isomorphic(ethanol, ethanol_reverse, return_atom_map=True)[1] == ref_mapping
         # check matching with nx.Graph atomic numbers and connectivity only
         assert (
             Molecule.are_isomorphic(
@@ -1756,9 +1674,7 @@ class TestMolecule:
         """Test the basic behavior of strip_atom_stereochemistry"""
         mol = Molecule.from_smiles("CCC[N@@](C)CC")
 
-        nitrogen_idx = next(
-            atom.molecule_atom_index for atom in mol.atoms if atom.symbol == "N"
-        )
+        nitrogen_idx = next(atom.molecule_atom_index for atom in mol.atoms if atom.symbol == "N")
 
         # TODO: This fails with RDKitToolkitWrapper because it perceives
         # the stereochemistry of this nitrogen as None
@@ -1797,9 +1713,7 @@ class TestMolecule:
         assert Molecule.are_isomorphic(mol2, mol1)
 
         assert mol1 == mol2
-        assert Molecule.from_smiles("CCC[N@](C)CC") == Molecule.from_smiles(
-            "CCC[N@@](C)CC"
-        )
+        assert Molecule.from_smiles("CCC[N@](C)CC") == Molecule.from_smiles("CCC[N@@](C)CC")
 
     def test_short_circuit_heterogeneous_input(self):
         from openff.toolkit.topology._mm_molecule import _SimpleMolecule
@@ -1825,22 +1739,14 @@ class TestMolecule:
         atom_map = {index: index for index in range(molecule.n_atoms)}
 
         # If not returning the map, isomorphic inputs should always return (True, None)
-        assert Molecule.are_isomorphic(
-            molecule, exactly_the_same, return_atom_map=False
-        ) == (True, None)
-        assert Molecule.are_isomorphic(
-            molecule, not_exactly_the_same, return_atom_map=False
-        ) == (True, None)
+        assert Molecule.are_isomorphic(molecule, exactly_the_same, return_atom_map=False) == (True, None)
+        assert Molecule.are_isomorphic(molecule, not_exactly_the_same, return_atom_map=False) == (True, None)
 
         # If returning the mapping, isomorphic inputs should always return True and some mapping ...
-        assert Molecule.are_isomorphic(
-            molecule, exactly_the_same, return_atom_map=True
-        ) == (True, atom_map)
+        assert Molecule.are_isomorphic(molecule, exactly_the_same, return_atom_map=True) == (True, atom_map)
 
         # but the ordering is not guaranteed, so just check that the map is a dict of the right length
-        result, mapping = Molecule.are_isomorphic(
-            molecule, not_exactly_the_same, return_atom_map=True
-        )
+        result, mapping = Molecule.are_isomorphic(molecule, not_exactly_the_same, return_atom_map=True)
         assert result
         assert isinstance(mapping, dict)
         assert len(mapping) == molecule.n_atoms
@@ -1861,9 +1767,7 @@ class TestMolecule:
                 assert atoms[0].to_dict() == atoms[1].to_dict()
             # bonds will not be in the same order in the molecule and the atom1 and atom2 indecies could be out of
             # order make a dict to compare them both
-            remapped_bonds = dict(
-                ((bond.atom1_index, bond.atom2_index), bond) for bond in mol2.bonds
-            )
+            remapped_bonds = dict(((bond.atom1_index, bond.atom2_index), bond) for bond in mol2.bonds)
             for bond in mol1.bonds:
                 key = (bond.atom1_index, bond.atom2_index)
                 if key not in remapped_bonds:
@@ -1900,13 +1804,9 @@ class TestMolecule:
 
             # test round trip (double remapping a molecule)
             new_ethanol = ethanol.remap(mapping, current_to_new=True)
-            isomorphic, round_trip_mapping = Molecule.are_isomorphic(
-                new_ethanol, ethanol, return_atom_map=True
-            )
+            isomorphic, round_trip_mapping = Molecule.are_isomorphic(new_ethanol, ethanol, return_atom_map=True)
             assert isomorphic is True
-            round_trip_ethanol = new_ethanol.remap(
-                round_trip_mapping, current_to_new=True
-            )
+            round_trip_ethanol = new_ethanol.remap(round_trip_mapping, current_to_new=True)
             self.assert_molecules_match_after_remap(round_trip_ethanol, ethanol)
 
         @pytest.mark.parametrize("current_to_new", [True, False])
@@ -1942,9 +1842,7 @@ class TestMolecule:
         )
         @pytest.mark.parametrize("current_to_new", [True, False])
         @pytest.mark.parametrize("partial", [True, False])
-        def test_remap_fails_with_out_of_range_indices(
-            self, mapping, current_to_new, partial
-        ):
+        def test_remap_fails_with_out_of_range_indices(self, mapping, current_to_new, partial):
             """Make sure the remap fails when indices are out of range
 
             This tests current_to_new in both directions and ensures the
@@ -1953,19 +1851,14 @@ class TestMolecule:
             """
             ethanol = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
             mapping = {0: 2, 1: 1, 2: 0, 3: 6, 4: 7, 5: 8, 6: 4, 7: 5, 8: 3}
-            wrong_index_mapping = dict(
-                (i + 10, new_id) for i, new_id in enumerate(mapping.values())
-            )
+            wrong_index_mapping = dict((i + 10, new_id) for i, new_id in enumerate(mapping.values()))
             with pytest.raises(
                 RemapIndexError,
                 match=re.escape(
-                    "All indices in a mapping_dict for a molecule with 9 atoms"
-                    + " must be integers between 0 and 8"
+                    "All indices in a mapping_dict for a molecule with 9 atoms" + " must be integers between 0 and 8"
                 ),
             ):
-                ethanol.remap(
-                    wrong_index_mapping, current_to_new=current_to_new, partial=partial
-                )
+                ethanol.remap(wrong_index_mapping, current_to_new=current_to_new, partial=partial)
 
         def test_remap_fails_with_missing_indices(self):
             ethanol = create_ethanol()
@@ -2012,12 +1905,10 @@ class TestMolecule:
 
             # Check the updated atom map
             expected_atom_map_with_names = {
-                atom_name_or(k, ethanol, k): v
-                for k, v in ethanol.properties["atom_map"].items()
+                atom_name_or(k, ethanol, k): v for k, v in ethanol.properties["atom_map"].items()
             }
             actual_atom_map_with_names = {
-                atom_name_or(k, new_ethanol, k): v
-                for k, v in new_ethanol.properties["atom_map"].items()
+                atom_name_or(k, new_ethanol, k): v for k, v in new_ethanol.properties["atom_map"].items()
             }
             assert expected_atom_map_with_names == actual_atom_map_with_names
 
@@ -2083,17 +1974,14 @@ class TestMolecule:
             ],
         )
         @pytest.mark.parametrize("current_to_new", [True, False])
-        def test_remap_partial_fails_with_out_of_range_indices(
-            self, mapping, current_to_new
-        ):
+        def test_remap_partial_fails_with_out_of_range_indices(self, mapping, current_to_new):
             """Make sure the remap fails when the indexing starts from the wrong value"""
             ethanol = Molecule.from_file(get_data_file_path("molecules/ethanol.sdf"))
 
             with pytest.raises(
                 RemapIndexError,
                 match=re.escape(
-                    "All indices in a mapping_dict for a molecule with 9 atoms"
-                    + " must be integers between 0 and 8"
+                    "All indices in a mapping_dict for a molecule with 9 atoms" + " must be integers between 0 and 8"
                 ),
             ):
                 ethanol.remap(
@@ -2174,9 +2062,7 @@ class TestMolecule:
             # Guarantee wrong_smiles is wrong, even if more parameter options
             # are added in future
             wrong_smiles = "CC"
-            if Molecule.from_smiles(wrong_smiles).is_isomorphic_with(
-                Molecule.from_smiles(smiles)
-            ):
+            if Molecule.from_smiles(wrong_smiles).is_isomorphic_with(Molecule.from_smiles(smiles)):
                 wrong_smiles = "CCC"
 
             # Run the test
@@ -2216,9 +2102,7 @@ class TestMolecule:
             pdb_mdtraj = mdtraj.load_pdb(pdb_path)
 
             mdtraj_coordinates = pdb_mdtraj.xyz
-            pdb_coordinates = np.asarray(
-                [conformer.m_as(unit.nanometer) for conformer in mol.conformers]
-            )
+            pdb_coordinates = np.asarray([conformer.m_as(unit.nanometer) for conformer in mol.conformers])
 
             assert np.all(np.abs(mdtraj_coordinates - pdb_coordinates) < 1e-3)
 
@@ -2263,12 +2147,8 @@ class TestMolecule:
                 hydrogens_are_explicit=True,
             )
 
-            expected_connectivity = sorted(
-                sorted([bond.atom1_index, bond.atom2_index]) for bond in rdkit_mol.bonds
-            )
-            actual_connectivity = sorted(
-                sorted([bond.atom1_index, bond.atom2_index]) for bond in mol.bonds
-            )
+            expected_connectivity = sorted(sorted([bond.atom1_index, bond.atom2_index]) for bond in rdkit_mol.bonds)
+            actual_connectivity = sorted(sorted([bond.atom1_index, bond.atom2_index]) for bond in mol.bonds)
 
             assert expected_connectivity == actual_connectivity
 
@@ -2302,13 +2182,9 @@ class TestMolecule:
             sdf_mol = Molecule.from_file(sdf_path)
 
             # Check that the SDF and PDB are isomorphic with identical atom ordering
-            isomorphic, atom_map = Molecule.are_isomorphic(
-                pdb_mol, sdf_mol, return_atom_map=True
-            )
+            isomorphic, atom_map = Molecule.are_isomorphic(pdb_mol, sdf_mol, return_atom_map=True)
             assert isomorphic, "SDF and PDB must be the same molecule"
-            assert atom_map == {
-                i: i for i in range(pdb_mol.n_atoms)
-            }, "SDF and PDB must have same atom ordering"
+            assert atom_map == {i: i for i in range(pdb_mol.n_atoms)}, "SDF and PDB must have same atom ordering"
 
             # Check that the coordinates are identical
             np.testing.assert_allclose(
@@ -2333,10 +2209,7 @@ class TestMolecule:
                 assert sdf_atom_dict == pdb_atom_dict
 
             # Check that the bonds match, though possibly in a different order
-            sdf_bonds = {
-                tuple(sorted([bond.atom1_index, bond.atom2_index])): bond
-                for bond in sdf_mol.bonds
-            }
+            sdf_bonds = {tuple(sorted([bond.atom1_index, bond.atom2_index])): bond for bond in sdf_mol.bonds}
 
             for pdb_bond in pdb_mol.bonds:
                 key = tuple(sorted([pdb_bond.atom1_index, pdb_bond.atom2_index]))
@@ -2358,9 +2231,7 @@ class TestMolecule:
         with pytest.raises(KeyError):
             mol._properties["atom_map"]
 
-    @pytest.mark.parametrize(
-        "toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
-    )
+    @pytest.mark.parametrize("toolkit_class", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     def test_from_mapped_smiles_partial(self, toolkit_class):
         """Test that creating a molecule from a partially mapped SMILES raises an
         exception."""
@@ -2422,11 +2293,7 @@ class TestMolecule:
             is_chain &= not proper[0].is_bonded_to(proper[3])
             is_chain &= not proper[1].is_bonded_to(proper[3])
 
-            assert (
-                is_chain
-                or is_three_membered_ring_torsion(proper)
-                or is_four_membered_ring_torsion(proper)
-            )
+            assert is_chain or is_three_membered_ring_torsion(proper) or is_four_membered_ring_torsion(proper)
 
     @pytest.mark.parametrize("molecule", mini_drug_bank())
     def test_impropers(self, molecule):
@@ -2693,9 +2560,7 @@ class TestMolecule:
     def test_clear_conformers(self):
         # simpler molecules don't always like to have many (> 1) conformers
         # https://greglandrum.github.io/rdkit-blog/posts/2023-02-04-working-with-conformers.html
-        molecule = Molecule.from_smiles(
-            "CCCCCCNCNCNCCCCN"
-        )
+        molecule = Molecule.from_smiles("CCCCCCNCNCNCCCCN")
         molecule.generate_conformers(n_conformers=10)
 
         assert molecule.n_conformers > 0
@@ -2766,33 +2631,19 @@ class TestMolecule:
         molecule.add_bond(atom_C, atom_Br, 1, False)
         molecule.add_bond(atom_C, atom_F, 1, False)
         # Test known cases
-        matches = molecule.chemical_environment_matches(
-            "[#6:1]", toolkit_registry=toolkit_wrapper
-        )
-        assert (
-            len(matches) == 1
-        )  # there should be a unique match, so one atom tuple is returned
+        matches = molecule.chemical_environment_matches("[#6:1]", toolkit_registry=toolkit_wrapper)
+        assert len(matches) == 1  # there should be a unique match, so one atom tuple is returned
         assert len(matches[0]) == 1  # it should have one tagged atom
         assert set(matches[0]) == set([atom_C])
-        matches = molecule.chemical_environment_matches(
-            "[#6:1]~[#1:2]", toolkit_registry=toolkit_wrapper
-        )
-        assert (
-            len(matches) == 1
-        )  # there should be a unique match, so one atom tuple is returned
+        matches = molecule.chemical_environment_matches("[#6:1]~[#1:2]", toolkit_registry=toolkit_wrapper)
+        assert len(matches) == 1  # there should be a unique match, so one atom tuple is returned
         assert len(matches[0]) == 2  # it should have two tagged atoms
         assert set(matches[0]) == set([atom_C, atom_H])
-        matches = molecule.chemical_environment_matches(
-            "[Cl:1]-[C:2]-[H:3]", toolkit_registry=toolkit_wrapper
-        )
-        assert (
-            len(matches) == 1
-        )  # there should be a unique match, so one atom tuple is returned
+        matches = molecule.chemical_environment_matches("[Cl:1]-[C:2]-[H:3]", toolkit_registry=toolkit_wrapper)
+        assert len(matches) == 1  # there should be a unique match, so one atom tuple is returned
         assert len(matches[0]) == 3  # it should have three tagged atoms
         assert set(matches[0]) == set([atom_Cl, atom_C, atom_H])
-        matches = molecule.chemical_environment_matches(
-            "[#6:1]~[*:2]", toolkit_registry=toolkit_wrapper
-        )
+        matches = molecule.chemical_environment_matches("[#6:1]~[*:2]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 4  # there should be four matches
         for match in matches:
             assert len(match) == 2  # each match should have two tagged atoms
@@ -2806,9 +2657,7 @@ class TestMolecule:
         matches = molecule.chemical_environment_matches(
             "[#6@@:1](-[F:2])(-[Cl])(-[Br])(-[H])", toolkit_registry=toolkit_wrapper
         )
-        assert (
-            len(matches) == 0
-        )  # this is the wrong stereochemistry, so there shouldn't be any matches
+        assert len(matches) == 0  # this is the wrong stereochemistry, so there shouldn't be any matches
 
     # TODO: Test forgive undef amide enol stereo
     # TODO: test forgive undef phospho linker stereo
@@ -2833,33 +2682,19 @@ class TestMolecule:
         molecule.add_bond(atom_C, atom_Br, 1, False)
         molecule.add_bond(atom_C, atom_F, 1, False)
         # Test known cases
-        matches = molecule.chemical_environment_matches(
-            "[#6:1]", toolkit_registry=toolkit_wrapper
-        )
-        assert (
-            len(matches) == 1
-        )  # there should be a unique match, so one atom tuple is returned
+        matches = molecule.chemical_environment_matches("[#6:1]", toolkit_registry=toolkit_wrapper)
+        assert len(matches) == 1  # there should be a unique match, so one atom tuple is returned
         assert len(matches[0]) == 1  # it should have one tagged atom
         assert set(matches[0]) == set([atom_C])
-        matches = molecule.chemical_environment_matches(
-            "[#6:1]~[#1:2]", toolkit_registry=toolkit_wrapper
-        )
-        assert (
-            len(matches) == 1
-        )  # there should be a unique match, so one atom tuple is returned
+        matches = molecule.chemical_environment_matches("[#6:1]~[#1:2]", toolkit_registry=toolkit_wrapper)
+        assert len(matches) == 1  # there should be a unique match, so one atom tuple is returned
         assert len(matches[0]) == 2  # it should have two tagged atoms
         assert set(matches[0]) == set([atom_C, atom_H])
-        matches = molecule.chemical_environment_matches(
-            "[Cl:1]-[C:2]-[H:3]", toolkit_registry=toolkit_wrapper
-        )
-        assert (
-            len(matches) == 1
-        )  # there should be a unique match, so one atom tuple is returned
+        matches = molecule.chemical_environment_matches("[Cl:1]-[C:2]-[H:3]", toolkit_registry=toolkit_wrapper)
+        assert len(matches) == 1  # there should be a unique match, so one atom tuple is returned
         assert len(matches[0]) == 3  # it should have three tagged atoms
         assert set(matches[0]) == set([atom_Cl, atom_C, atom_H])
-        matches = molecule.chemical_environment_matches(
-            "[#6:1]~[*:2]", toolkit_registry=toolkit_wrapper
-        )
+        matches = molecule.chemical_environment_matches("[#6:1]~[*:2]", toolkit_registry=toolkit_wrapper)
         assert len(matches) == 4  # there should be four matches
         for match in matches:
             assert len(match) == 2  # each match should have two tagged atoms
@@ -2873,9 +2708,7 @@ class TestMolecule:
         matches = molecule.chemical_environment_matches(
             "[#6@@:1](-[F:2])(-[Cl])(-[Br])(-[H])", toolkit_registry=toolkit_wrapper
         )
-        assert (
-            len(matches) == 0
-        )  # this is the wrong stereochemistry, so there shouldn't be any matches
+        assert len(matches) == 0  # this is the wrong stereochemistry, so there shouldn't be any matches
 
     @requires_rdkit
     @requires_openeye
@@ -2927,15 +2760,11 @@ class TestMolecule:
         charges_sum_unitless = initial_charges.sum().m_as(unit.elementary_charge)
         total_charge_unitless = molecule.total_charge.m_as(unit.elementary_charge)
 
-        np.testing.assert_allclose(
-            charges_sum_unitless, total_charge_unitless, atol=0.002
-        )
+        np.testing.assert_allclose(charges_sum_unitless, total_charge_unitless, atol=0.002)
 
         # Call should be faster second time due to caching
         # TODO: Implement caching
-        molecule.assign_partial_charges(
-            partial_charge_method=method, toolkit_registry=toolkit_registry
-        )
+        molecule.assign_partial_charges(partial_charge_method=method, toolkit_registry=toolkit_registry)
         recomputed_charges = molecule._partial_charges
         np.testing.assert_allclose(initial_charges, recomputed_charges, atol=0.002)
 
@@ -2971,9 +2800,7 @@ class TestMolecule:
         with pytest.raises(IncompatibleUnitError):
             molecule.partial_charges = np.zeros(5) * openmm.unit.angstrom
 
-    @pytest.mark.parametrize(
-        "toolkit_wrapper", [OpenEyeToolkitWrapper, RDKitToolkitWrapper]
-    )
+    @pytest.mark.parametrize("toolkit_wrapper", [OpenEyeToolkitWrapper, RDKitToolkitWrapper])
     @pytest.mark.parametrize("use_registry", [True, False])
     def test_apply_elf_conformer_selection(self, toolkit_wrapper, use_registry):
         """Test applying the ELF10 method."""
@@ -3093,17 +2920,13 @@ class TestMolecule:
         # Do not modify the original molecules.
         molecules = copy.deepcopy(mini_drug_bank())
 
-        toolkits_to_bondorder_method = {
-            (OpenEyeToolkitWrapper,): ["am1-wiberg", "pm3-wiberg"]
-        }
+        toolkits_to_bondorder_method = {(OpenEyeToolkitWrapper,): ["am1-wiberg", "pm3-wiberg"]}
         # Don't test AmberTools here since it takes too long
         # (AmberToolsToolkitWrapper, RDKitToolkitWrapper):['am1-wiberg']}
         for toolkits in list(toolkits_to_bondorder_method.keys()):
             toolkit_registry = ToolkitRegistry(toolkit_precedence=toolkits)
             for bond_order_model in toolkits_to_bondorder_method[toolkits]:
-                for molecule in molecules[
-                    :5
-                ]:  # Just test first five molecules for speed
+                for molecule in molecules[:5]:  # Just test first five molecules for speed
                     molecule.generate_conformers(toolkit_registry=toolkit_registry)
                     molecule.assign_fractional_bond_orders(
                         bond_order_model=bond_order_model,
@@ -3123,9 +2946,7 @@ class TestMolecule:
     @requires_openeye
     @pytest.mark.slow
     @pytest.mark.parametrize("model", ["AM1-Wiberg", "am1-wiberg"])
-    @pytest.mark.parametrize(
-        "toolkit", [OpenEyeToolkitWrapper, AmberToolsToolkitWrapper]
-    )
+    @pytest.mark.parametrize("toolkit", [OpenEyeToolkitWrapper, AmberToolsToolkitWrapper])
     def test_bond_order_method_passing(self, model, toolkit):
         """Test that different calls to Molecule.assign_fractional_bond_orders do not
         produce unexpected errors, but do not asses validity of results"""
@@ -3157,9 +2978,7 @@ class TestMolecule:
         carbons = [a for a in mol.atoms if a.atomic_number == 6]
 
         bond_from_atoms = mol.get_bond_between(carbons[0], carbons[1])
-        bond_from_idx = mol.get_bond_between(
-            carbons[0].molecule_atom_index, carbons[1].molecule_atom_index
-        )
+        bond_from_idx = mol.get_bond_between(carbons[0].molecule_atom_index, carbons[1].molecule_atom_index)
         assert bond_from_idx == bond_from_atoms
 
         with pytest.raises(NotBondedError):
@@ -3196,9 +3015,7 @@ class TestMolecule:
         mol_copy = copy.deepcopy(mol_source)
 
         assert mol_source._conformers is not mol_copy._conformers
-        assert all(
-            a is not b for a, b in zip(mol_source._conformers, mol_copy._conformers)
-        )
+        assert all(a is not b for a, b in zip(mol_source._conformers, mol_copy._conformers))
 
         assert mol_source._atoms is not mol_copy._atoms
         assert all(a is not b for a, b in zip(mol_source._atoms, mol_copy._atoms))
@@ -3207,10 +3024,7 @@ class TestMolecule:
         assert all(a is not b for a, b in zip(mol_source._bonds, mol_copy._bonds))
 
         assert mol_source._hierarchy_schemes is not mol_copy._hierarchy_schemes
-        assert all(
-            a is not b
-            for a, b in zip(mol_source._hierarchy_schemes, mol_copy._hierarchy_schemes)
-        )
+        assert all(a is not b for a, b in zip(mol_source._hierarchy_schemes, mol_copy._hierarchy_schemes))
 
         assert mol_source._properties is not mol_copy._properties
         assert mol_source._partial_charges is not mol_copy._partial_charges
@@ -3250,29 +3064,21 @@ class TestQCArchiveInterface:
             assert charge == qcschema.molecular_charge
             assert connectivity == qcschema.connectivity
             assert symbols == qcschema.symbols.tolist()
-            assert (
-                qcschema.geometry.all() == ethanol.conformers[0].m_as(unit.bohr).all()
-            )
+            assert qcschema.geometry.all() == ethanol.conformers[0].m_as(unit.bohr).all()
 
         assert_check()
         assert qcschema.extras["test_tag"] == "test"
-        assert qcschema.extras[
-            "canonical_isomeric_explicit_hydrogen_mapped_smiles"
-        ] == ethanol.to_smiles(mapped=True)
+        assert qcschema.extras["canonical_isomeric_explicit_hydrogen_mapped_smiles"] == ethanol.to_smiles(mapped=True)
         # # now run again with no extras passed, only cmiles entry will be present with fix-720
         qcschema = ethanol.to_qcschema()
         assert_check()
-        assert qcschema.extras[
-            "canonical_isomeric_explicit_hydrogen_mapped_smiles"
-        ] == ethanol.to_smiles(mapped=True)
+        assert qcschema.extras["canonical_isomeric_explicit_hydrogen_mapped_smiles"] == ethanol.to_smiles(mapped=True)
 
     def test_to_qcschema_no_connections(self):
         mol = Molecule.from_mapped_smiles("[Br-:1].[K+:2]")
         mol.add_conformer(
             unit.Quantity(
-                np.array(
-                    [[0.188518, 0.015684, 0.001562], [0.148794, 0.21268, 0.11992]]
-                ),
+                np.array([[0.188518, 0.015684, 0.001562], [0.148794, 0.21268, 0.11992]]),
                 unit.nanometers,
             )
         )
@@ -3367,9 +3173,7 @@ class TestQCArchiveInterface:
             assert mol_from_instance.n_conformers == 1
 
         # now make a molecule from the smiles and make sure they are isomorphic
-        mol_from_smiles = Molecule.from_smiles(
-            entry.attributes["canonical_explicit_hydrogen_smiles"], True
-        )
+        mol_from_smiles = Molecule.from_smiles(entry.attributes["canonical_explicit_hydrogen_smiles"], True)
 
         assert mol_from_dict.is_isomorphic_with(mol_from_smiles) is True
 
@@ -3391,9 +3195,7 @@ class TestQCArchiveInterface:
         mol = Molecule.from_qcschema(entry)  # , client)
 
         # find and grab the initial molecule record
-        iterator = client.query_molecules(
-            molecule_hash=entry.initial_molecule.identifiers.molecule_hash
-        )
+        iterator = client.query_molecules(molecule_hash=entry.initial_molecule.identifiers.molecule_hash)
 
         qca_mol = next(iter(iterator))
 
@@ -3403,9 +3205,7 @@ class TestQCArchiveInterface:
         assert qcschema.atom_labels.tolist() == qca_mol.atom_labels.tolist()
         assert qcschema.symbols.tolist() == qca_mol.symbols.tolist()
         # due to conversion using different programs there is a slight difference here
-        assert qcschema.geometry.flatten().tolist() == pytest.approx(
-            qca_mol.geometry.flatten().tolist(), rel=1.0e-5
-        )
+        assert qcschema.geometry.flatten().tolist() == pytest.approx(qca_mol.geometry.flatten().tolist(), rel=1.0e-5)
         assert qcschema.connectivity == qca_mol.connectivity
         assert qcschema.atomic_numbers.tolist() == qca_mol.atomic_numbers.tolist()
         assert qcschema.fragment_charges == qca_mol.fragment_charges
@@ -3428,9 +3228,7 @@ class TestQCArchiveInterface:
 
         client = qcportal.PortalClient("https://api.qcarchive.molssi.org:443")
 
-        ds = client.get_dataset(
-            "torsiondrive", "OpenFF-benchmark-ligand-fragments-v1.0"
-        )
+        ds = client.get_dataset("torsiondrive", "OpenFF-benchmark-ligand-fragments-v1.0")
         # grab an entry from the torsiondrive data set
         entry = ds.get_entry(
             "[H]c1[c:1]([c:2](c(c(c1[H])N([H])C(=O)[H])[H])[C:3]2=C(C(=C([S:4]2)[H])OC([H])([H])[H])Br)[H]".lower()
@@ -3452,9 +3250,7 @@ class TestQCArchiveInterface:
 
         client = qcportal.PortalClient("https://api.qcarchive.molssi.org:443")
 
-        ds = client.get_dataset(
-            "torsiondrive", "OpenFF-benchmark-ligand-fragments-v1.0"
-        )
+        ds = client.get_dataset("torsiondrive", "OpenFF-benchmark-ligand-fragments-v1.0")
         # grab an entry from the torsiondrive data set
         entry = ds.get_entry(
             "[H]c1[c:1]([c:2](c(c(c1[H])N([H])C(=O)[H])[H])[C:3]2=C(C(=C([S:4]2)[H])OC([H])([H])[H])Br)[H]".lower()
@@ -3491,9 +3287,7 @@ class TestQCArchiveInterface:
 
         mol_dict = off_qcschema.dict()
         del mol_dict["extras"]["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
-        del mol_dict["identifiers"][
-            "canonical_isomeric_explicit_hydrogen_mapped_smiles"
-        ]
+        del mol_dict["identifiers"]["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
         with pytest.raises(MissingCMILESError):
             Molecule.from_qcschema(mol_dict)
 
@@ -3524,17 +3318,13 @@ class TestGetAvailableChargeMethods:
         )
 
     def test_with_explicit_wrapper(self):
-        assert "zeros" in create_ethanol().get_available_charge_methods(
-            toolkit_registry=BuiltInToolkitWrapper()
-        )
+        assert "zeros" in create_ethanol().get_available_charge_methods(toolkit_registry=BuiltInToolkitWrapper())
 
     def test_error_with_type(self):
         from openff.toolkit.utils.exceptions import InvalidToolkitRegistryError
 
         with pytest.raises(InvalidToolkitRegistryError):
-            create_ethanol().get_available_charge_methods(
-                toolkit_registry=BuiltInToolkitWrapper
-            )
+            create_ethanol().get_available_charge_methods(toolkit_registry=BuiltInToolkitWrapper)
 
 
 class TestMoleculeVisualization:
@@ -3602,23 +3392,15 @@ class TestMoleculeVisualization:
     def test_get_coordinates(self):
         from openff.toolkit.utils._viz import MoleculeNGLViewTrajectory
 
-        molecule = Molecule.from_smiles(
-            "C1CC2=C3C(=CC=C2)C(=CN3C1)[C@H]4[C@@H](C(=O)NC4=O)C5=CNC6=CC=CC=C65"
-        )
+        molecule = Molecule.from_smiles("C1CC2=C3C(=CC=C2)C(=CN3C1)[C@H]4[C@@H](C(=O)NC4=O)C5=CNC6=CC=CC=C65")
         molecule.generate_conformers(n_conformers=3)
 
         trajectory = MoleculeNGLViewTrajectory(molecule)
 
         # _OFFTrajectoryNGLView.get_coordinates returns a unitless array implicitly in Angstroms
-        np.testing.assert_allclose(
-            trajectory.get_coordinates(), molecule.conformers[0].m
-        )
-        np.testing.assert_allclose(
-            trajectory.get_coordinates(0), molecule.conformers[0].m
-        )
-        np.testing.assert_allclose(
-            trajectory.get_coordinates(1), molecule.conformers[1].m
-        )
+        np.testing.assert_allclose(trajectory.get_coordinates(), molecule.conformers[0].m)
+        np.testing.assert_allclose(trajectory.get_coordinates(0), molecule.conformers[0].m)
+        np.testing.assert_allclose(trajectory.get_coordinates(1), molecule.conformers[1].m)
 
         with pytest.raises(IndexError, match="out of range"):
             trajectory.get_coordinates(100000)
@@ -3672,9 +3454,7 @@ class TestMoleculeResiduePerception:
                 counter += 1
         assert counter == offmol.n_atoms
 
-    def test_perceive_residues_natoms_mainchain_charged_glutamic_acid(
-        self, strict_chirality
-    ):
+    def test_perceive_residues_natoms_mainchain_charged_glutamic_acid(self, strict_chirality):
         """Test number of matches atoms in residue perception with MainChain form of charged
         Glutamic acid."""
         offmol = Molecule.from_file(get_data_file_path("proteins/MainChain_GLH.sdf"))
@@ -3796,9 +3576,7 @@ class TestMoleculeFromPDB:
         """Test off Molecule contains expected number of atoms from T4 pdb."""
         # We expect/know the molecule contains this number of atoms
         expected_n_atoms = 2634
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/T4-protein.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/T4-protein.pdb"))
         assert offmol.n_atoms == expected_n_atoms
 
     def test_from_pdb_metadata(self):
@@ -3810,9 +3588,7 @@ class TestMoleculeFromPDB:
             + [(" ", "3", " ", "NME")] * 6
         )
 
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ALA_ALA_icodes.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_ALA_ALA_icodes.pdb"))
         for atom, metadata_tuple in zip(offmol.atoms, expected_metadata):
             metadata_dict = {
                 "chain_id": metadata_tuple[0],
@@ -3823,14 +3599,10 @@ class TestMoleculeFromPDB:
             assert atom.metadata == metadata_dict
 
     def test_molecule_from_pdb_mainchain_ala_dipeptide(self):
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ALA.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_ALA.pdb"))
         assert offmol.n_atoms == 22
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C)C(=O)NC")
-        assert offmol.is_isomorphic_with(
-            expected_mol, atom_stereochemistry_matching=False
-        )
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
 
         with NamedTemporaryFile(suffix="pdb") as iofile:
             offmol.to_file(iofile.name, file_format="pdb")
@@ -3843,166 +3615,102 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_name(self):
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ALA.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_ALA.pdb"))
         assert offmol.name == ""
 
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ALA.pdb"), name="bob"
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_ALA.pdb"), name="bob")
         assert offmol.name == "bob"
 
     def test_molecule_from_pdb_ace_ala_nh2(self):
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/ace-ala-nh2.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/ace-ala-nh2.pdb"))
         assert offmol.n_atoms == 19
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C)C(=O)N")
-        assert offmol.is_isomorphic_with(
-            expected_mol, atom_stereochemistry_matching=False
-        )
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
 
     def test_molecule_from_pdb_mainchain_ala_tripeptide(self):
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ALA_ALA.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
         assert offmol.n_atoms == 32
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C)C(=O)N[C@H](C)C(=O)NC")
-        assert offmol.is_isomorphic_with(
-            expected_mol, atom_stereochemistry_matching=False
-        )
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
 
     def test_molecule_from_pdb_cterm_ala_dipeptide(self):
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/CTerminal_ALA.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/CTerminal_ALA.pdb"))
         assert offmol.n_atoms == 17
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C)C(=O)[O-]")
-        assert offmol.is_isomorphic_with(
-            expected_mol, atom_stereochemistry_matching=False
-        )
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
 
     def test_molecule_from_pdb_cterm_ala_tripeptide(self):
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/CTerminal_ALA_ALA.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/CTerminal_ALA_ALA.pdb"))
         assert offmol.n_atoms == 27
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C)C(=O)N[C@H](C)C(=O)[O-]")
-        assert offmol.is_isomorphic_with(
-            expected_mol, atom_stereochemistry_matching=False
-        )
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
 
     def test_molecule_from_pdb_nterm_ala_dipeptide(self):
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/NTerminal_ALA.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/NTerminal_ALA.pdb"))
         assert offmol.n_atoms == 18
         expected_mol = Molecule.from_smiles("[N+]([H])([H])([H])[C@H](C)C(=O)NC")
-        assert offmol.is_isomorphic_with(
-            expected_mol, atom_stereochemistry_matching=False
-        )
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
 
     def test_molecule_from_pdb_mainchain_arg_dipeptide(self):
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ARG.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_ARG.pdb"))
         assert offmol.n_atoms == 36
-        expected_mol = Molecule.from_smiles(
-            "CC(=O)N[C@H](CCCNC(N)=[N+]([H])[H])C(=O)NC"
-        )
-        assert offmol.is_isomorphic_with(
-            expected_mol, atom_stereochemistry_matching=False
-        )
+        expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CCCNC(N)=[N+]([H])[H])C(=O)NC")
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
 
     def test_molecule_from_pdb_cterm_arg_dipeptide(self):
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/CTerminal_ARG.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/CTerminal_ARG.pdb"))
         assert offmol.n_atoms == 31
-        expected_mol = Molecule.from_smiles(
-            "CC(=O)N[C@H](CCCNC(N)=[N+]([H])([H]))C(=O)[O-]"
-        )
-        assert offmol.is_isomorphic_with(
-            expected_mol, atom_stereochemistry_matching=False
-        )
+        expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CCCNC(N)=[N+]([H])([H]))C(=O)[O-]")
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
 
     def test_molecule_from_pdb_mainchain_cys_dipeptide(self):
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_CYS.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_CYS.pdb"))
         assert offmol.n_atoms == 23
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CS)C(=O)NC")
-        assert offmol.is_isomorphic_with(
-            expected_mol, atom_stereochemistry_matching=False
-        )
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
 
     def test_molecule_from_pdb_mainchain_cym_dipeptide(self):
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_CYM.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_CYM.pdb"))
         assert offmol.n_atoms == 22
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](C[S-])C(=O)NC")
-        assert offmol.is_isomorphic_with(
-            expected_mol, atom_stereochemistry_matching=False
-        )
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
 
     def test_molecule_from_pdb_mainchain_cyx_dipeptide(self):
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_CYX.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_CYX.pdb"))
         assert offmol.n_atoms == 44
-        expected_mol = Molecule.from_smiles(
-            "CC(=O)N[C@H](CSSC[C@H](NC(=O)C)C(=O)NC)C(=O)NC"
-        )
-        assert offmol.is_isomorphic_with(
-            expected_mol, atom_stereochemistry_matching=False
-        )
+        expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CSSC[C@H](NC(=O)C)C(=O)NC)C(=O)NC")
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
 
     def test_molecule_from_pdb_mainchain_hid_dipeptide(self):
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_HID.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_HID.pdb"))
         assert offmol.n_atoms == 29
         assert offmol.total_charge == 0 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 0
         assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 0
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CC1NC=NC=1)C(=O)NC")
-        assert offmol.is_isomorphic_with(
-            expected_mol, atom_stereochemistry_matching=False, aromatic_matching=False
-        )
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False, aromatic_matching=False)
 
     def test_molecule_from_pdb_mainchain_hie_dipeptide(self):
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_HIE.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_HIE.pdb"))
         assert offmol.n_atoms == 29
         assert offmol.total_charge == 0 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 0
         assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 0
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CC1N=C[NH]C=1)C(=O)NC")
-        assert offmol.is_isomorphic_with(
-            expected_mol, atom_stereochemistry_matching=False, aromatic_matching=False
-        )
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False, aromatic_matching=False)
 
     def test_molecule_from_pdb_mainchain_hip_dipeptide(self):
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_HIP.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_HIP.pdb"))
         assert offmol.n_atoms == 30
         assert offmol.total_charge == 1 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 0
         assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 0
 
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CC1[N+]([H])=CNC=1)C(=O)NC")
-        assert offmol.is_isomorphic_with(
-            expected_mol, atom_stereochemistry_matching=False, aromatic_matching=False
-        )
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False, aromatic_matching=False)
 
     def test_molecule_from_pdb_mainchain_trp_dipeptide(self):
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_TRP.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_TRP.pdb"))
         assert offmol.n_atoms == 36
         assert offmol.total_charge == 0 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 6
@@ -4017,9 +3725,7 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_cterminal_trp_dipeptide(self):
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/CTerminal_TRP.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/CTerminal_TRP.pdb"))
         assert offmol.n_atoms == 31
         assert offmol.total_charge == -1 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 6
@@ -4034,17 +3740,13 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_nterminal_trp_dipeptide(self):
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/NTerminal_TRP.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/NTerminal_TRP.pdb"))
         assert offmol.n_atoms == 32
         assert offmol.total_charge == 1 * unit.elementary_charge
         assert sum([1 for atom in offmol.atoms if atom.is_aromatic]) == 6
         assert sum([1 for bond in offmol.bonds if bond.is_aromatic]) == 6
 
-        expected_mol = Molecule.from_smiles(
-            "[N+]([H])([H])([H])[C@H](CC1C2=CC=CC=C2NC=1)C(=O)NC"
-        )
+        expected_mol = Molecule.from_smiles("[N+]([H])([H])([H])[C@H](CC1C2=CC=CC=C2NC=1)C(=O)NC")
         assert offmol.is_isomorphic_with(
             expected_mol,
             atom_stereochemistry_matching=False,
@@ -4053,25 +3755,17 @@ class TestMoleculeFromPDB:
         )
 
     def test_molecule_from_pdb_mainchain_pro_dipeptide(self):
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_PRO.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_PRO.pdb"))
         assert offmol.n_atoms == 26
         assert offmol.total_charge == 0 * unit.elementary_charge
         expected_mol = Molecule.from_smiles("CC(=O)N1[C@H](CCC1)C(=O)NC")
-        assert offmol.is_isomorphic_with(
-            expected_mol, atom_stereochemistry_matching=False
-        )
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
 
     def test_molecule_from_pdb_neutral_arg_dipeptide(self):
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/neutral_arginine.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/neutral_arginine.pdb"))
         assert offmol.n_atoms == 26
         assert offmol.total_charge == 0 * unit.elementary_charge
-        expected_mol = Molecule.from_smiles(
-            "[NH3+][C@H](CCCNC(N)(=N))C(=O)[O-]", allow_undefined_stereo=True
-        )
+        expected_mol = Molecule.from_smiles("[NH3+][C@H](CCCNC(N)(=N))C(=O)[O-]", allow_undefined_stereo=True)
         assert offmol.is_isomorphic_with(
             expected_mol,
             atom_stereochemistry_matching=False,
@@ -4089,9 +3783,7 @@ class TestMoleculeFromPDB:
                 + r"with another package and trying again\."
             ),
         ):
-            Molecule.from_polymer_pdb(
-                get_data_file_path("proteins/MainChain_ALA_ALA_no_hydrogens.pdb")
-            )
+            Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_ALA_ALA_no_hydrogens.pdb"))
 
     def test_molecule_from_pdb_error_non_canonical_aa(self):
         """Test that a PDB with an NCAA raises a descriptive error"""
@@ -4105,9 +3797,7 @@ class TestMoleculeFromPDB:
                 + r"only supports the 20 'canonical' amino acids\.\n\s*DYE"
             ),
         ):
-            Molecule.from_polymer_pdb(
-                get_data_file_path("proteins/fluoresceine_dyed_helix_capped.pdb")
-            )
+            Molecule.from_polymer_pdb(get_data_file_path("proteins/fluoresceine_dyed_helix_capped.pdb"))
 
     def test_molecule_from_pdb_error_misnamed_hydrogens(self):
         """Test that a PDB with two chains raises a clear error"""
@@ -4123,9 +3813,7 @@ class TestMoleculeFromPDB:
                 + r"    Input residue ALA#0003 has misnamed atoms H01, H02, H03"
             ),
         ):
-            Molecule.from_polymer_pdb(
-                get_data_file_path("proteins/CTerminal_ALA_ALA_misnamedH.pdb")
-            )
+            Molecule.from_polymer_pdb(get_data_file_path("proteins/CTerminal_ALA_ALA_misnamedH.pdb"))
 
     def test_molecule_from_pdb_error_crystal_waters(self):
         """Test that a PDB with two chains raises a clear error"""
@@ -4137,9 +3825,7 @@ class TestMoleculeFromPDB:
                 + r"these before proceeding, or use Topology.from_pdb\."
             ),
         ):
-            Molecule.from_polymer_pdb(
-                get_data_file_path("proteins/T4_protein_waters.pdb")
-            )
+            Molecule.from_polymer_pdb(get_data_file_path("proteins/T4_protein_waters.pdb"))
 
     def test_molecule_from_pdb_error_two_polymers(self):
         """Test that a PDB with two capped polymers but no chain IDs raises a clear error"""
@@ -4183,9 +3869,7 @@ class TestMoleculeFromPDB:
                 + r"these before proceeding, or use Topology.from_pdb\."
             ),
         ):
-            Molecule.from_polymer_pdb(
-                get_data_file_path("proteins/T4-protein-unprocessed-4w51.pdb")
-            )
+            Molecule.from_polymer_pdb(get_data_file_path("proteins/T4-protein-unprocessed-4w51.pdb"))
 
     @pytest.mark.xfail()
     def test_from_pdb_t4_n_residues(self):
@@ -4203,9 +3887,7 @@ class TestMoleculeFromPDB:
     @requires_rdkit
     def test_from_t4_to_topology(self):
         """Ensure a large protein can be converted into a `Topology`. See #1319."""
-        Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/T4-protein.pdb")
-        ).to_topology()
+        Molecule.from_polymer_pdb(get_data_file_path("proteins/T4-protein.pdb")).to_topology()
 
 
 class MyMol(FrozenMolecule):
@@ -4259,9 +3941,7 @@ class TestMoleculeSubclass:
             "Fragment Stability Benchmark",
         )
 
-        entry = ds.get_entry(
-            "CC(=O)Nc1cc2c(cc1OC)nc[n:4][c:3]2[NH:2][c:1]3ccc(c(c3)Cl)F".lower()
-        )
+        entry = ds.get_entry("CC(=O)Nc1cc2c(cc1OC)nc[n:4][c:3]2[NH:2][c:1]3ccc(c(c3)Cl)F".lower())
 
         # now make the molecule from the record instance with and without the geometry
         mol = MyMol.from_qcschema(entry)
@@ -4279,9 +3959,7 @@ class TestMoleculeSubclass:
     @requires_rdkit
     def test_molecule_subclass_from_pdb_and_smiles(self):
         """Ensure that the right type of object is returned when running MyMol.from_pdb_and_smiles"""
-        mol = MyMol.from_pdb_and_smiles(
-            get_data_file_path("molecules/toluene.pdb"), "Cc1ccccc1"
-        )
+        mol = MyMol.from_pdb_and_smiles(get_data_file_path("molecules/toluene.pdb"), "Cc1ccccc1")
         assert isinstance(mol, MyMol)
 
     def test_molecule_copy_constructor_from_other_subclass(self):
@@ -4344,15 +4022,11 @@ class TestHierarchies:
         dipeptide_residues_perceived = create_dipeptide()
 
         assert len(dipeptide_residues_perceived.hierarchy_schemes) == 1
-        dipeptide_residues_perceived.add_hierarchy_scheme(
-            ("residue_number",), "res_by_num"
-        )
+        dipeptide_residues_perceived.add_hierarchy_scheme(("residue_number",), "res_by_num")
         assert len(dipeptide_residues_perceived.hierarchy_schemes) == 2
 
         # Redundant hier schemes are OK as long as their iter name is different
-        dipeptide_residues_perceived.add_hierarchy_scheme(
-            ("residue_number",), "res_by_num2"
-        )
+        dipeptide_residues_perceived.add_hierarchy_scheme(("residue_number",), "res_by_num2")
         assert len(dipeptide_residues_perceived.hierarchy_schemes) == 3
 
         # Redundant hier schemes are NOT OK if their iter name is already used
@@ -4360,9 +4034,7 @@ class TestHierarchies:
             HierarchySchemeWithIteratorNameAlreadyRegisteredException,
             match='Can not add iterator with name "res_by_num" to this molecule',
         ):
-            dipeptide_residues_perceived.add_hierarchy_scheme(
-                ("residue_number",), "res_by_num"
-            )
+            dipeptide_residues_perceived.add_hierarchy_scheme(("residue_number",), "res_by_num")
         assert len(dipeptide_residues_perceived.hierarchy_schemes) == 3
 
         # update_hierarchy_schemes() was called by add_hierarchy_scheme
@@ -4386,12 +4058,8 @@ class TestHierarchies:
         offmol = Molecule()
 
         # Raise an error if iterator name isn't a string, even if it's hashable
-        with pytest.raises(
-            TypeError, match="'iterator_name' kwarg must be a string, received 1"
-        ):
-            offmol.add_hierarchy_scheme(
-                ("chain", "residue_number", "insertion_code", "residue_name"), 1
-            )
+        with pytest.raises(TypeError, match="'iterator_name' kwarg must be a string, received 1"):
+            offmol.add_hierarchy_scheme(("chain", "residue_number", "insertion_code", "residue_name"), 1)
 
         # Ensure that the uniqueness criteria kwarg is some sort of iterable
         with pytest.raises(
@@ -4400,9 +4068,7 @@ class TestHierarchies:
         ):
             offmol.add_hierarchy_scheme("residue_number", "residues")
         # Providing uniqueness_criteria as a list is OK
-        offmol.add_hierarchy_scheme(
-            ["chain", "residue_number", "insertion_code", "residue_name"], "residues"
-        )
+        offmol.add_hierarchy_scheme(["chain", "residue_number", "insertion_code", "residue_name"], "residues")
 
         # Ensure that the items in the uniqueness_criteria are strings
         with pytest.raises(
@@ -4425,19 +4091,13 @@ class TestHierarchies:
 
     def test_add_default_hierarchy_schemes(self):
         """Test add_default_hierarchy_schemes and its kwargs"""
-        offmol = Molecule.from_polymer_pdb(
-            get_data_file_path("proteins/MainChain_ALA.pdb")
-        )
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_ALA.pdb"))
         offmol.delete_hierarchy_scheme("residues")
         offmol.delete_hierarchy_scheme("chains")
-        offmol.add_hierarchy_scheme(
-            ("residue_number", "insertion_code", "residue_name"), "residues"
-        )
+        offmol.add_hierarchy_scheme(("residue_number", "insertion_code", "residue_name"), "residues")
         # Make sure that the non-default "residues" iterator that we just added
         # doesn't have "chain_id" as a uniqueness criterion
-        assert (
-            "chain_id" not in offmol.hierarchy_schemes["residues"].uniqueness_criteria
-        )
+        assert "chain_id" not in offmol.hierarchy_schemes["residues"].uniqueness_criteria
         # Test that the overwrite_existing kwarg has the right behavior
         with pytest.raises(HierarchySchemeWithIteratorNameAlreadyRegisteredException):
             offmol.add_default_hierarchy_schemes(overwrite_existing=False)
@@ -4446,15 +4106,9 @@ class TestHierarchies:
         # which should overwrite the "residues" iterator we just defined
         offmol.add_default_hierarchy_schemes()
         # Ensure that the new residues iterator DOES have the correct uniqueness criterion
-        assert (
-            "residue_name" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
-        )
-        assert (
-            "residue_number" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
-        )
-        assert (
-            "insertion_code" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
-        )
+        assert "residue_name" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
+        assert "residue_number" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
+        assert "insertion_code" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
         assert "chain_id" in offmol.hierarchy_schemes["residues"].uniqueness_criteria
         assert next(iter(offmol.residues)).residue_name == "ACE"
         assert next(iter(offmol.residues)).residue_number == "1"
@@ -4480,9 +4134,7 @@ class TestHierarchies:
         assert dipeptide_hierarchy_perceived.residues[0].residue_name == "ACE"
         assert dipeptide_hierarchy_perceived.residues[0].insertion_code == " "
         assert dipeptide_hierarchy_perceived.residues[0].residue_number == "1"
-        assert set(dipeptide_hierarchy_perceived.residues[0].atom_indices) == set(
-            range(6)
-        )
+        assert set(dipeptide_hierarchy_perceived.residues[0].atom_indices) == set(range(6))
 
         assert (
             str(dipeptide_hierarchy_perceived.residues[1])
@@ -4492,9 +4144,7 @@ class TestHierarchies:
         assert dipeptide_hierarchy_perceived.residues[1].residue_name == "ALA"
         assert dipeptide_hierarchy_perceived.residues[1].insertion_code == " "
         assert dipeptide_hierarchy_perceived.residues[1].residue_number == "2"
-        assert set(dipeptide_hierarchy_perceived.residues[1].atom_indices) == set(
-            range(6, 17)
-        )
+        assert set(dipeptide_hierarchy_perceived.residues[1].atom_indices) == set(range(6, 17))
 
         for residue in dipeptide_hierarchy_perceived.residues:
             for atom in residue.atoms:
@@ -4512,13 +4162,9 @@ class TestHierarchies:
 
         for atom in dipeptide_hierarchy_perceived.atoms:
             atom.metadata["chain_id"] = "A"
-        assert ("A", "1", " ", "ACE") != dipeptide_hierarchy_perceived.residues[
-            0
-        ].identifier
+        assert ("A", "1", " ", "ACE") != dipeptide_hierarchy_perceived.residues[0].identifier
         dipeptide_hierarchy_perceived.update_hierarchy_schemes()
-        assert ("A", "1", " ", "ACE") == dipeptide_hierarchy_perceived.residues[
-            0
-        ].identifier
+        assert ("A", "1", " ", "ACE") == dipeptide_hierarchy_perceived.residues[0].identifier
 
     def test_hierarchy_element_generation(self):
         """Ensure that hierarchy elements are generated correctly from atom metadata"""

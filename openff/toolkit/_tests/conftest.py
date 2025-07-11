@@ -63,13 +63,9 @@ def pytest_addoption(parser):
     # the testing to proceed
 
     try:
-        parser.addoption(
-            "--runslow", action="store_true", default=False, help="run slow tests"
-        )
+        parser.addoption("--runslow", action="store_true", default=False, help="run slow tests")
     except ValueError:
-        logger.warning(
-            "Option --runslow already added elsewhere (from a plugin possibly?). Skipping..."
-        )
+        logger.warning("Option --runslow already added elsewhere (from a plugin possibly?). Skipping...")
 
     try:
         parser.addoption(
@@ -79,9 +75,7 @@ def pytest_addoption(parser):
             help="fail work in progress tests",
         )
     except ValueError:
-        logger.warning(
-            "Option --failwip already added elsewhere (from a plugin possibly?). Skipping..."
-        )
+        logger.warning("Option --failwip already added elsewhere (from a plugin possibly?). Skipping...")
 
 
 def pytest_collection_modifyitems(config, items):
@@ -92,25 +86,18 @@ def pytest_collection_modifyitems(config, items):
         untar_full_alkethoh_and_freesolv_set()
     else:
         # Mark for skipping all items marked as slow.
-        skip_slow = pytest.mark.skip(
-            reason="specify --runslow pytest option to run this test."
-        )
+        skip_slow = pytest.mark.skip(reason="specify --runslow pytest option to run this test.")
         for item in items:
             if "slow" in item.keywords:
                 item.add_marker(skip_slow)
 
     # Mark work-in-progress tests for xfail.
     if not config.getoption("failwip"):
-        xfail_wip_reason = (
-            "This is a work in progress test. Specify "
-            "--failwip pytest option to make this test fail."
-        )
+        xfail_wip_reason = "This is a work in progress test. Specify --failwip pytest option to make this test fail."
         for item in items:
             if "wip" in item.keywords:
                 # Augment original reason.
-                reason = xfail_wip_reason + item.get_closest_marker("wip").kwargs.get(
-                    "reason", ""
-                )
+                reason = xfail_wip_reason + item.get_closest_marker("wip").kwargs.get("reason", "")
                 item.add_marker(pytest.mark.xfail(reason=reason))
 
 
