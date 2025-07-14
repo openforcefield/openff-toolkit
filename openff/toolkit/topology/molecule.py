@@ -431,18 +431,17 @@ class Atom(Particle):
 
     @stereochemistry.setter
     def stereochemistry(self, value: Literal["CW", "CCW", None]):
-        """Set the atoms stereochemistry
+        """
+        Set the stereochemistry of this atom.
+
         Parameters
         ----------
         value
-            The stereochemistry around this atom, allowed values are "CW", "CCW", or None,
+            The stereochemistry around this atom, suggested values are "CW", "CCW", or None,
         """
-
-        # if (value != 'CW') and (value != 'CCW') and not(value is None):
-        #    raise Exception(
-        #       "Atom stereochemistry setter expected 'CW', 'CCW', or None. ""
-        #       "Received {} (type {})".format(value, type(value))"
-        # )
+        # there should be some input validation, if we can agree on what possible values this might take.
+        # currently (July 2025) toolkit wrappers only deal with "CW", "CCW", or None.
+        # for more, see https://github.com/openforcefield/openff-toolkit/issues/2084
         self._stereochemistry = value
 
     @property
