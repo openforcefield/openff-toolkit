@@ -29,8 +29,6 @@ jobs:
           - rdkit: false
             openeye: false
           - openeye: true
-            python-version: "3.11"
-          - openeye: true
             python-version: "3.12"
           - openeye: true
             python-version: "3.13"
