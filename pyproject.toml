@@ -78,7 +78,7 @@ module = [
     "openmm",
     "openmm.app",
     "openmm.unit",
-    "rdkit",
+    "rdkit",  # maybe revisit if/when stubs are fixed
     "rdkit.Chem",
     "rdkit.Chem.Draw",
     "rdkit.DataStructs.cDataStructs",
@@ -92,3 +92,11 @@ module = [
     "constraint",
 ]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# bit of a hack to prevent crash
+module=[
+    "rdkit"
+]
+follow_imports = "skip"
+follow_imports_for_stubs = true
