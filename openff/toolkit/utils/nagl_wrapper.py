@@ -68,6 +68,9 @@ class NAGLToolkitWrapper(ToolkitWrapper):
         use_conformers: Optional[list["Quantity"]] = None,
         strict_n_conformers: bool = False,
         normalize_partial_charges: bool = True,
+        doi: str = None,
+        file_hash: str = None,
+
         _cls: Optional[type["FrozenMolecule"]] = None,
     ):
         """
@@ -130,13 +133,27 @@ class NAGLToolkitWrapper(ToolkitWrapper):
                 stacklevel=2,
             )
 
-        try:
-            model_path = validate_nagl_model_path(model=partial_charge_method)
-        except FileNotFoundError as error:
-            raise ChargeMethodUnavailableError(
-                f"Charge model {partial_charge_method} not supported by "
-                f"{self.__class__.__name__}, or model file can not be found."
-            ) from error
+        model_path = get_model(filename=partial_charge_method,
+                               doi=doi,
+                               file_hash=file_hash)
+
+        # try:
+        #     model_path = get_model(filename=partial_charge_method,
+        #                            doi=doi,
+        #                            file_hash=file_hash)
+        # except FileNotFoundError as error:
+        #     raise ChargeMethodUnavailableError(
+        #         f"Charge model {partial_charge_method} not supported by "
+        #         f"{self.__class__.__name__}, or model file can not be found. "
+        #         #f"Note that the NAGLToolkitWrapper.assign_partial_charges method "
+        #         #f"can only use models from the local cache or models fetchable from "
+        #         #f"openff-nagl-models release assets on GitHub. "
+        #         #f"This method does NOT "
+        #         #f"accept custom DOIs to fetch models from other sources. Use "
+        #         #f"NAGLToolkitWrapper.fetch_verify_model_and_assign_partial_charges if "
+        #         #f"you intend to also fetch models from arbitrary Zenodo DOIs and verify "
+        #         #f"their hash."
+        #     ) from error
 
         model = GNNModel.load(model_path, eval_mode=True)
         charges = model.compute_property(
