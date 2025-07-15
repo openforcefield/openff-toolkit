@@ -42,3 +42,4 @@ dependencies:
   - nglview
   - pip:
       - git+https://github.com/openforcefield/openff-interchange.git@naglcharges-handler
+      - git+https://github.com/openforcefield/openff-nagl-models.git@fetch-by-doi2
