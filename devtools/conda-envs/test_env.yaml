@@ -30,6 +30,7 @@ dependencies:
 
   - openeye-toolkits
     # Test-only/optional/dev/typing
+  - mypy =1.17
   - pytest =8
   - pytest-cov
   - pytest-xdist
