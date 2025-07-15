@@ -108,7 +108,12 @@ class NAGLToolkitWrapper(ToolkitWrapper):
             if the charge method is supported by this toolkit, but fails
         """
         from openff.nagl import GNNModel
-        from openff.nagl_models import validate_nagl_model_path
+        from openff.nagl_models._dynamic_fetch import get_model
+
+        if partial_charge_method == "" or partial_charge_method == "None":
+            raise FileNotFoundError("NAGLToolkitWrapper.assign_partial_charges can not accept "
+                                    "a blank model file name. There is no default model, one must be "
+                                    "explicitly defined when being called.")
 
         if _cls is None:
             from openff.toolkit.topology.molecule import Molecule
