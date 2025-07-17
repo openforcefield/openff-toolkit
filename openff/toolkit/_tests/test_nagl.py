@@ -16,7 +16,6 @@ from openff.toolkit._tests.create_molecules import (
 from openff.toolkit._tests.utils import requires_openeye
 from openff.toolkit.utils import GLOBAL_TOOLKIT_REGISTRY
 from openff.toolkit.utils.exceptions import (
-    ChargeMethodUnavailableError,
     ToolkitUnavailableException,
 )
 from openff.toolkit.utils.nagl_wrapper import NAGLToolkitWrapper
