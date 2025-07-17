@@ -14,14 +14,15 @@ from openff.toolkit._tests.create_molecules import (
     create_reversed_ethanol,
 )
 from openff.toolkit._tests.utils import requires_openeye
+from openff.toolkit.utils import GLOBAL_TOOLKIT_REGISTRY
 from openff.toolkit.utils.exceptions import (
-    ChargeMethodUnavailableError,
     ToolkitUnavailableException,
 )
 from openff.toolkit.utils.nagl_wrapper import NAGLToolkitWrapper
 from openff.toolkit.utils.openeye_wrapper import OpenEyeToolkitWrapper
 
 _DEFAULT_MODEL = "openff-gnn-am1bcc-0.1.0-rc.3.pt"
+from openff.nagl_models._dynamic_fetch import BadFileSuffixError
 
 try:
     from openff.nagl_models import list_available_nagl_models
@@ -37,6 +38,10 @@ class TestNAGLToolkitWrapper:
         from openff.nagl import __version__ as parsed_version
 
         assert parsed_version == NAGLToolkitWrapper()._toolkit_version
+
+    def test_nagl_in_global_toolkit_registry(self):
+        assert "NAGL" in GLOBAL_TOOLKIT_REGISTRY.__repr__()
+
 
     @requires_openeye
     @pytest.mark.parametrize(
@@ -123,8 +128,8 @@ class TestNAGLToolkitWrapper:
 
     def test_unsupported_charge_method(self):
         with pytest.raises(
-            ChargeMethodUnavailableError,
-            match="Charge model hartree_fock not supported",
+            BadFileSuffixError,
+            match="NAGLToolkitWrapper does not recognize file path extension on filename='hartree_fock'",
         ):
             create_ethanol().assign_partial_charges(
                 partial_charge_method="hartree_fock",
