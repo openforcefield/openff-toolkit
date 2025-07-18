@@ -345,7 +345,7 @@ class ParameterAttribute:
         converter: Optional[Callable] = None,
         docstring: str = "",
     ):
-        if isinstance(unit, str):
+        if type(unit) is str:
             # be careful with module & variable names
             unit = Unit(unit)
 
@@ -1367,21 +1367,21 @@ class _ParameterAttributeHandler:
     def _get_indexed_mapped_parameter_attributes(cls):
         """Shortcut to retrieve only IndexedMappedParameterAttributes."""
         return cls._get_parameter_attributes(
-            filter=lambda x: isinstance(x, IndexedMappedParameterAttribute)
+            filter=lambda x: type(x) is IndexedMappedParameterAttribute
         )
 
     @classmethod
     def _get_indexed_parameter_attributes(cls):
         """Shortcut to retrieve only IndexedParameterAttributes."""
         return cls._get_parameter_attributes(
-            filter=lambda x: isinstance(x, IndexedParameterAttribute)
+            filter=lambda x: type(x) is  IndexedParameterAttribute
         )
 
     @classmethod
     def _get_mapped_parameter_attributes(cls):
         """Shortcut to retrieve only IndexedParameterAttributes."""
         return cls._get_parameter_attributes(
-            filter=lambda x: isinstance(x, MappedParameterAttribute)
+            filter=lambda x: type(x) is MappedParameterAttribute
         )
 
     @classmethod
@@ -1588,7 +1588,7 @@ class ParameterList(list):
         item
             SMIRKS of item in this ParameterList
         """
-        if isinstance(item, str):
+        if type(item) is str:
             # Special case for SMIRKS strings
             if item in [result.smirks for result in self]:
                 return True
@@ -1947,7 +1947,7 @@ class ParameterHandler(_ParameterAttributeHandler):
                 if key != element_name:
                     break
             # If there are multiple parameters, this will be a list. If there's just one, make it a list
-            if not (isinstance(val, list)):
+            if type(val) is not list:
                 val = [val]
 
             # If we're reading the parameter list, iterate through and attach units to

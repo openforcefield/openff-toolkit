@@ -135,7 +135,7 @@ def unit_to_string(input_unit: Unit) -> str:
 @functools.lru_cache
 def quantity_to_dict(input_quantity):
     value = input_quantity.magnitude
-    if isinstance(value, np.ndarray):
+    if type(value) is np.ndarray:
         value = value.tolist()
 
     return {
@@ -168,7 +168,7 @@ def quantity_to_string(input_quantity: Quantity) -> str:
     unitless_value: float | int | NDArray | list = input_quantity.m
     # The string representation of a numpy array doesn't have commas and breaks the
     # parser, thus we convert any arrays to list here
-    if isinstance(unitless_value, np.ndarray):
+    if type(unitless_value) is np.ndarray:
         unitless_value = list(unitless_value)
 
     unit_string = unit_to_string(input_quantity.units)
@@ -220,7 +220,7 @@ def string_to_quantity(quantity_string: str) -> Union[int, float, Quantity]:
 
     # TODO: Should intentionally unitless array-likes be Quantity objects
     #       or their raw representation?
-    if quantity.units == _DIMENSIONLESS and isinstance(quantity.m, (int, float)):
+    if quantity.units == _DIMENSIONLESS and type(quantity.m) in (int, float):
         return quantity.m
     else:
         return quantity
@@ -257,7 +257,7 @@ def convert_all_strings_to_quantity(
     """
     from pint import DefinitionSyntaxError
 
-    if isinstance(smirnoff_data, dict):
+    if type(smirnoff_data) is dict:
         for key, value in smirnoff_data.items():
             if key in ignore_keys:
                 smirnoff_data[key] = value
@@ -268,7 +268,7 @@ def convert_all_strings_to_quantity(
                 )
         obj_to_return = smirnoff_data
 
-    elif isinstance(smirnoff_data, list):
+    elif type(smirnoff_data) is list:
         for index, item in enumerate(smirnoff_data):
             smirnoff_data[index] = convert_all_strings_to_quantity(
                 item,
@@ -276,7 +276,7 @@ def convert_all_strings_to_quantity(
             )
         obj_to_return = smirnoff_data
 
-    elif isinstance(smirnoff_data, int) or isinstance(smirnoff_data, float):
+    elif type(smirnoff_data) in (int, float):
         obj_to_return = smirnoff_data
 
     else:
@@ -325,15 +325,15 @@ def convert_all_quantities_to_string(
         with ``openff.units.Quantity``s converted to string
     """
 
-    if isinstance(smirnoff_data, dict):
+    if type(smirnoff_data) is dict:
         for key, value in smirnoff_data.items():
             smirnoff_data[key] = convert_all_quantities_to_string(value)
         return smirnoff_data
-    elif isinstance(smirnoff_data, list):
+    elif type(smirnoff_data) is list:
         for index, item in enumerate(smirnoff_data):
             smirnoff_data[index] = convert_all_quantities_to_string(item)
         return smirnoff_data
-    elif isinstance(smirnoff_data, Quantity):
+    elif type(smirnoff_data) is Quantity:
         return quantity_to_string(smirnoff_data)
     else:
         return smirnoff_data
@@ -437,9 +437,9 @@ def deserialize_numpy(
     np_array
         The deserialized numpy array
     """
-    if isinstance(serialized_np, list):
+    if type(serialized_np) is list:
         np_array = np.array(serialized_np)
-    if isinstance(serialized_np, bytes):
+    if type(serialized_np) is bytes:
         dt = np.dtype("float").newbyteorder(">")
         np_array = np.frombuffer(serialized_np, dtype=dt)
     np_array = np_array.reshape(shape)
@@ -679,7 +679,7 @@ def recursive_attach_unit_strings(smirnoff_data, units_to_attach):
 
     # If we're working with a dict, see if there are any new unit entries and store them,
     # then operate recursively on the values in the dict.
-    if isinstance(smirnoff_data, dict):
+    if type(smirnoff_data) is  dict:
         # Go over all key:value pairs once to see if there are new units to attach.
         # Note that units to be attached can be defined in the same dict as the
         # key:value pair they will be attached to, so we need to complete this check
@@ -706,7 +706,7 @@ def recursive_attach_unit_strings(smirnoff_data, units_to_attach):
             )
 
     # If it's a list, operate on each member of the list
-    elif isinstance(smirnoff_data, list):
+    elif type(smirnoff_data) is list:
         for index, value in enumerate(smirnoff_data):
             smirnoff_data[index] = recursive_attach_unit_strings(value, units_to_attach)
 
@@ -807,10 +807,10 @@ def sort_smirnoff_dict(data):
     """
     sorted_dict = dict()
     for key, val in sorted(data.items()):
-        if isinstance(val, dict):
+        if type(val) is  dict:
             # This should hit each ParameterHandler and dicts within them
             sorted_dict[key] = sort_smirnoff_dict(val)
-        elif isinstance(val, list):
+        elif type(val) is list:
             # Handle case of ParameterLists, which show up in
             # the smirnoff dicts as lists of dicts
             new_parameter_list = list()

@@ -430,13 +430,13 @@ def _contains_bytes(val) -> bool:
     """Report if any values in list are bytes."""
     if val is None:
         return False
-    elif isinstance(val, bytes):
+    elif type(val) is bytes:
         return True
-    elif isinstance(val, (int, float, str, bool)):
+    elif type(val) in (int, float, str, bool):
         return False
-    elif isinstance(val, (list, tuple)):
+    elif type(val) in (list, tuple):
         return any([_contains_bytes(x) for x in val])
-    elif isinstance(val, dict):
+    elif type(val) is dict:
         return any([_contains_bytes(x) for x in val.values()])
     else:
         raise ValueError(f"type {val}")
@@ -449,20 +449,23 @@ def _prep_numpy_data_for_json(data: dict) -> dict:
     big_endian_float = np.dtype("float").newbyteorder(">")
 
     for key, val in data.items():
-        if isinstance(val, np.ndarray):
+        if type(val) is  np.ndarray:
             data[key] = val.tolist()
-        if isinstance(val, dict):
+        if type(val) is dict:
             data[key] = _prep_numpy_data_for_json(val)
-        if isinstance(val, bytes):
+        if type(val) is bytes:
             data[key] = np.frombuffer(val, dtype=big_endian_float).tolist()
-        if isinstance(val, (list, tuple)):
+        if type(val) in (list, tuple):
             for i, element in enumerate(val):
-                if isinstance(element, bytes):
+                if type(element) is bytes:
                     # Handles case of list[np.array], like Molecule.conformers
                     data[key][i] = np.frombuffer(
                         element, dtype=big_endian_float
                     ).tolist()
-                elif isinstance(element, dict):
+                elif type(element) is dict:
                     # Handles case of list[Molecule], like Topology.molecules
                     data[key][i] = _prep_numpy_data_for_json(element)
+        else:
+            raise ValueError(f"Value {val=} of type {type(val)=} is not supported for serialization")
+
     return data

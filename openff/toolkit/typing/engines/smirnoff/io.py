@@ -205,18 +205,18 @@ class XMLParameterIOHandler(ParameterIOHandler):
                 A set or list of strings, indicating keys not to prepend in the data structure
 
             """
-            if isinstance(d, dict):
+            if type(d) is dict:
                 for key in list(d.keys()):
                     if key in ignore_keys:
                         continue
-                    if isinstance(d[key], list) or isinstance(d[key], dict):
+                    if type(d[key]) in (list, dict):
                         prepend_all_keys(d[key], char=char, ignore_keys=ignore_keys)
                     else:
                         new_key = char + key
                         d[new_key] = d[key]
                         del d[key]
                         prepend_all_keys(d[new_key], char=char, ignore_keys=ignore_keys)
-            elif isinstance(d, list):
+            elif type(d) is list:
                 for item in d:
                     prepend_all_keys(item, char=char, ignore_keys=ignore_keys)
 
