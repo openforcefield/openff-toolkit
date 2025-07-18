@@ -841,8 +841,7 @@ class ForceField:
         for parameter_handler in self._parameter_handlers.values():
             # If _TAGNAME is None, the default value, an error should have been
             # thrown upon registering it, so assume it is str here
-            handler_tag: str = parameter_handler._TAGNAME  # type: ignore[assignment]
-            l1_dict[handler_tag] = parameter_handler.to_dict(
+            l1_dict[parameter_handler._TAGNAME] = parameter_handler.to_dict(
                 discard_cosmetic_attributes=discard_cosmetic_attributes
             )
 

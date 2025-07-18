@@ -224,12 +224,15 @@ class XMLParameterIOHandler(ParameterIOHandler):
         # unless they're prepended by "@"
         prepend_all_keys(smirnoff_data["SMIRNOFF"], ignore_keys=["Author", "Date"])
 
-        # Reorder parameter sections to put Author and Date at the top (this is the only
-        # way to change the order of items in a dict, as far as I can tell)
-        for key, value in list(smirnoff_data["SMIRNOFF"].items()):
-            if key in ["Author", "Date"]:
-                continue
-            del smirnoff_data["SMIRNOFF"][key]
-            smirnoff_data["SMIRNOFF"][key] = value
+        # Ensure Author and Date are listed first, necessitates creating a new dict
+        return_dict = {
+            "SMIRNOFF": {
+            "Author": smirnoff_data['SMIRNOFF'].pop("Author", "Author Unknown"),
+            "Date": smirnoff_data['SMIRNOFF'].pop("Date", "Date Unknown"),
+        }}
 
-        return xmltodict.unparse(smirnoff_data, pretty=True, indent=" " * 4)
+        return_dict['SMIRNOFF'].update(smirnoff_data['SMIRNOFF'])
+
+        del smirnoff_data
+
+        return xmltodict.unparse(return_dict, pretty=True, indent=" " * 4)

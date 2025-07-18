@@ -1355,13 +1355,13 @@ class _ParameterAttributeHandler:
         # sorts the attribute alphabetically by name. Here we want the order
         # to be the same as the declaration order, which is guaranteed by PEP 520,
         # starting from the parent class.
-        parameter_attributes = dict(
-            (name, descriptor)
+        return {
+            name: descriptor
             for c in reversed(inspect.getmro(cls))
             for name, descriptor in c.__dict__.items()
             if isinstance(descriptor, ParameterAttribute) and filter(descriptor)
-        )
-        return parameter_attributes
+        }
+
 
     @classmethod
     def _get_indexed_mapped_parameter_attributes(cls):
@@ -1595,7 +1595,7 @@ class ParameterList(list):
         # Fall back to traditional access
         return list.__contains__(self, item)
 
-    def to_list(self, discard_cosmetic_attributes=True):
+    def to_list(self, discard_cosmetic_attributes: bool =True) -> list[dict]:
         """
         Render this ParameterList to a normal list, serializing each ParameterType object in it to dict.
 
@@ -1610,15 +1610,12 @@ class ParameterList(list):
         parameter_list :list[dict]
             A serialized representation of a ParameterList, with each ParameterType it contains converted to dict.
         """
-        parameter_list = list()
-
-        for parameter in self:
-            parameter_dict = parameter.to_dict(
+        return [
+            parameter.to_dict(
                 discard_cosmetic_attributes=discard_cosmetic_attributes
             )
-            parameter_list.append(parameter_dict)
-
-        return parameter_list
+            for parameter in self
+        ]
 
 
 class VirtualSiteParameterList(ParameterList):
@@ -3879,13 +3876,12 @@ class VirtualSiteHandler(_NonbondedHandler):
         assigned_matches_by_parent = self._find_matches_by_parent(entity)
         return_dict = {}
         for parent_index, assigned_parameters in assigned_matches_by_parent.items():
-            assigned_matches = []
-            for assigned_parameter, match_orientations in assigned_parameters:
-                for match in match_orientations:
-                    assigned_matches.append(
-                        ParameterHandler._Match(assigned_parameter, match)
-                    )
-            return_dict[(parent_index,)] = assigned_matches
+
+            return_dict[(parent_index,)] = [
+                ParameterHandler._Match(assigned_parameter, match)
+                for assigned_parameter, match_orientations in assigned_parameters
+                for match in match_orientations
+            ]
 
         return return_dict
 

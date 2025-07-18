@@ -127,10 +127,12 @@ def format_unit_simple(unit, registry, **options):
     return " * ".join(f"{u} ** {p}" for u, p in unit.items())
 
 
+@functools.lru_cache
 def unit_to_string(input_unit: Unit) -> str:
     return f"{input_unit:simple}"
 
 
+@functools.lru_cache
 def quantity_to_dict(input_quantity):
     value = input_quantity.magnitude
     if isinstance(value, np.ndarray):
@@ -163,7 +165,7 @@ def quantity_to_string(input_quantity: Quantity) -> str:
         The serialized quantity
 
     """
-    unitless_value: float | int | NDArray | list = input_quantity.m_as(input_quantity.units)
+    unitless_value: float | int | NDArray | list = input_quantity.m
     # The string representation of a numpy array doesn't have commas and breaks the
     # parser, thus we convert any arrays to list here
     if isinstance(unitless_value, np.ndarray):
