@@ -1086,37 +1086,38 @@ class _ParameterAttributeHandler:
     def __getattr__(self, item):
         """Take care of mapping indexed attributes to their respective list elements."""
 
-        # Try matching the case where there are two indices
-        # this indicates a index_mapped parameter
-        attr_name, index, key = self._split_attribute_index_mapping(item)
+        if not item.isalpha():
+            # Try matching the case where there are two indices
+            # this indicates a index_mapped parameter
+            attr_name, index, key = self._split_attribute_index_mapping(item)
 
-        # Check if this is an indexed_mapped attribute.
-        if (
-            key is not None
-            and index is not None
-            and attr_name in self._get_indexed_mapped_parameter_attributes()
-        ):
-            indexed_mapped_attr_value = getattr(self, attr_name)
-            try:
-                return indexed_mapped_attr_value[index][key]
-            except (IndexError, KeyError) as err:
-                raise MissingIndexedAttributeError(
-                    f"{err!s} '{item}' is out of bounds for indexed attribute '{attr_name}'"
-                )
+            # Check if this is an indexed_mapped attribute.
+            if (
+                key is not None
+                and index is not None
+                and attr_name in self._get_indexed_mapped_parameter_attributes()
+            ):
+                indexed_mapped_attr_value = getattr(self, attr_name)
+                try:
+                    return indexed_mapped_attr_value[index][key]
+                except (IndexError, KeyError) as err:
+                    raise MissingIndexedAttributeError(
+                        f"{err!s} '{item}' is out of bounds for indexed attribute '{attr_name}'"
+                    )
 
-        # Otherwise, try indexed attribute
-        # Separate the indexed attribute name from the list index.
-        attr_name, index = self._split_attribute_index(item)
+            # Otherwise, try indexed attribute
+            # Separate the indexed attribute name from the list index.
+            attr_name, index = self._split_attribute_index(item)
 
-        # Check if this is an indexed attribute.
-        if index is not None and attr_name in self._get_indexed_parameter_attributes():
-            indexed_attr_value = getattr(self, attr_name)
-            try:
-                return indexed_attr_value[index]
-            except IndexError:
-                raise MissingIndexedAttributeError(
-                    f"'{item}' is out of bounds for indexed attribute '{attr_name}'"
-                )
+            # Check if this is an indexed attribute.
+            if index is not None and attr_name in self._get_indexed_parameter_attributes():
+                indexed_attr_value = getattr(self, attr_name)
+                try:
+                    return indexed_attr_value[index]
+                except IndexError:
+                    raise MissingIndexedAttributeError(
+                        f"'{item}' is out of bounds for indexed attribute '{attr_name}'"
+                    )
 
         # Otherwise, forward the search to the next class in the MRO.
         try:
