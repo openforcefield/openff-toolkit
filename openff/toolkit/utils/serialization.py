@@ -465,6 +465,9 @@ def _prep_numpy_data_for_json(data: dict) -> dict:
                 elif type(element) is dict:
                     # Handles case of list[Molecule], like Topology.molecules
                     data[key][i] = _prep_numpy_data_for_json(element)
+        elif type(val) in (int, float, str, bool):
+            # these types should be fine?
+            pass
         else:
             raise ValueError(f"Value {val=} of type {type(val)=} is not supported for serialization")
 
