@@ -28,9 +28,7 @@ def test_subclasses():
         pass
 
     subclass_names = [cls.__name__ for cls in all_subclasses(Foo)]
-    assert set(subclass_names) == set(
-        ["FooSubclass1", "FooSubclass2", "FooSubSubclass"]
-    )
+    assert set(subclass_names) == set(["FooSubclass1", "FooSubclass2", "FooSubSubclass"])
 
 
 def test_temporary_cd():
@@ -95,13 +93,9 @@ def test_sort_smirnoff_dict():
     from openff.toolkit.typing.engines.smirnoff import ForceField
     from openff.toolkit.utils.utils import get_data_file_path, sort_smirnoff_dict
 
-    forcefield = ForceField(
-        get_data_file_path("test_forcefields/test_forcefield.offxml")
-    )
+    forcefield = ForceField(get_data_file_path("test_forcefields/test_forcefield.offxml"))
     smirnoff_dict = forcefield._to_smirnoff_data()
 
     # Ensure data is not created or destroyed
     # dict.__eq__ does not check order
-    assert smirnoff_dict == OrderedDict(
-        sort_smirnoff_dict(forcefield._to_smirnoff_data())
-    )
+    assert smirnoff_dict == OrderedDict(sort_smirnoff_dict(forcefield._to_smirnoff_data()))

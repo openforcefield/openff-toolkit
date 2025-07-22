@@ -95,8 +95,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     _toolkit_name = "OpenEye Toolkit"
     _toolkit_installation_instructions = (
-        "The OpenEye Toolkits can be installed via "
-        "`mamba install openeye-toolkits -c openeye`"
+        "The OpenEye Toolkits can be installed via `mamba install openeye-toolkits -c openeye`"
     )
     _toolkit_license_instructions = (
         "The OpenEye Toolkits require a (free for academics) license, see "
@@ -215,8 +214,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         if not self.is_available():
             if self._is_installed is False:
                 raise ToolkitUnavailableException(
-                    "OpenEye Toolkits are not installed."
-                    + self._toolkit_installation_instructions
+                    "OpenEye Toolkits are not installed." + self._toolkit_installation_instructions
                 )
             if self._is_licensed is False:
                 raise LicenseError(
@@ -320,13 +318,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 allow_undefined_stereo=allow_undefined_stereo,
                 _cls=_cls,
             )
-        raise NotImplementedError(
-            f"Cannot create Molecule from {type(obj)} object"
-        )
+        raise NotImplementedError(f"Cannot create Molecule from {type(obj)} object")
 
-    def _polymer_openmm_topology_to_offmol(
-        self, mol_class, omm_top, substructure_dictionary
-    ):
+    def _polymer_openmm_topology_to_offmol(self, mol_class, omm_top, substructure_dictionary):
         oemol = self._polymer_openmm_topology_to_oemol(omm_top, substructure_dictionary)
         offmol = mol_class.from_openeye(oemol, allow_undefined_stereo=True)
         return offmol
@@ -363,54 +357,37 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         for res_name in substructure_library:
             # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes
             # so it just does the biggest substructures first
-            sorted_substructure_smarts = sorted(
-                substructure_library[res_name], key=len, reverse=True
-            )
+            sorted_substructure_smarts = sorted(substructure_library[res_name], key=len, reverse=True)
             for substructure_smarts in sorted_substructure_smarts:
                 ss = self._fuzzy_query(substructure_smarts)
                 for match in ss.Match(oemol, True):
-                    match_mol_atom_indices = [
-                        at.GetIdx() for at in match.GetTargetAtoms()
-                    ]
+                    match_mol_atom_indices = [at.GetIdx() for at in match.GetTargetAtoms()]
                     for i in match_mol_atom_indices:
                         matches[i].append(res_name)
 
-                    if any(
-                        m in already_assigned_nodes for m in match_mol_atom_indices
-                    ) and (res_name not in ["PEPTIDE_BOND", "DISULFIDE"]):
+                    if any(m in already_assigned_nodes for m in match_mol_atom_indices) and (
+                        res_name not in ["PEPTIDE_BOND", "DISULFIDE"]
+                    ):
                         continue
 
-                    for substructure_atom, mol_atom in zip(
-                        match.GetPatternAtoms(), match.GetTargetAtoms()
-                    ):
+                    for substructure_atom, mol_atom in zip(match.GetPatternAtoms(), match.GetTargetAtoms()):
                         mol_atom.SetFormalCharge(substructure_atom.GetFormalCharge())
                         # Set arbitrary initial stereochemistry to avoid
                         # spamming "undefined stereo" warnings. In the from_polymer_pdb
                         # code path, the "real stereo" will be assigned later by a
                         # call to _assign_aromaticity_and_stereo_from_3d.
                         neighs = [n for n in mol_atom.GetAtoms()]
-                        mol_atom.SetStereo(
-                            neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Left
-                        )
+                        mol_atom.SetStereo(neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Left)
 
                         already_assigned_nodes.add(mol_atom.GetIdx())
-                    for substructure_bond, mol_bond in zip(
-                        match.GetPatternBonds(), match.GetTargetBonds()
-                    ):
+                    for substructure_bond, mol_bond in zip(match.GetPatternBonds(), match.GetTargetBonds()):
                         mol_bond.SetOrder(substructure_bond.GetOrder())
-                        already_assigned_edges.add(
-                            tuple(sorted([mol_bond.GetBgnIdx(), mol_bond.GetEndIdx()]))
-                        )
+                        already_assigned_edges.add(tuple(sorted([mol_bond.GetBgnIdx(), mol_bond.GetEndIdx()])))
 
         oemol_n_atoms = len([*oemol.GetAtoms()])
         unassigned_atoms = sorted(set(range(oemol_n_atoms)) - already_assigned_nodes)
 
-        all_bonds = set(
-            [
-                tuple(sorted([bond.GetBgnIdx(), bond.GetEndIdx()]))
-                for bond in oemol.GetBonds()
-            ]
-        )
+        all_bonds = set([tuple(sorted([bond.GetBgnIdx(), bond.GetEndIdx()])) for bond in oemol.GetBonds()])
         unassigned_bonds = sorted(all_bonds - already_assigned_edges)
 
         if unassigned_atoms or unassigned_bonds:
@@ -423,12 +400,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 for smarts, atom_names in smarts_to_atom_names.items():
                     qmol = oechem.OEQMol()
                     oechem.OEParseSmiles(qmol, smarts)
-                    symbols = sorted(
-                        [SYMBOLS[atom.GetAtomicNum()] for atom in qmol.GetAtoms()]
-                    )
-                    resname_to_symbols_and_atomnames[resname].append(
-                        (symbols, atom_names)
-                    )
+                    symbols = sorted([SYMBOLS[atom.GetAtomicNum()] for atom in qmol.GetAtoms()])
+                    resname_to_symbols_and_atomnames[resname].append((symbols, atom_names))
 
             raise UnassignedChemistryInPDBError(
                 substructure_library=resname_to_symbols_and_atomnames,
@@ -479,9 +452,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         )
 
         if not status:
-            raise SMIRKSParsingError(
-                f"OpenEye Toolkit was unable to parse SMIRKS {query}"
-            )
+            raise SMIRKSParsingError(f"OpenEye Toolkit was unable to parse SMIRKS {query}")
         ss = oechem.OESubSearch(qmol, oechem.OEExprOpts_AtomicNumber, 0)
         return ss
 
@@ -547,9 +518,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         ifs.SetFormat(oeformat)
 
-        return self._read_oemolistream_molecules(
-            ifs, allow_undefined_stereo, file_path=_file_path, _cls=_cls
-        )
+        return self._read_oemolistream_molecules(ifs, allow_undefined_stereo, file_path=_file_path, _cls=_cls)
 
     def from_file_obj(
         self,
@@ -616,9 +585,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         except TypeError:
             # Switch to a ValueError and use a more informative exception
             # message to match RDKit.
-            raise ValueError(
-                "Need a text mode file object like StringIO or a file opened with mode 't'"
-            ) from None
+            raise ValueError("Need a text mode file object like StringIO or a file opened with mode 't'") from None
 
         with tempfile.TemporaryDirectory() as tmpdir:
             path = pathlib.Path(tmpdir, f"input.{file_format.lower()}")
@@ -682,9 +649,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oemol.NewConf(oecoords)
         # We're standardizing on putting partial charges into SDFs under the `atom.dprop.PartialCharge` property
         if (file_format.lower() == "sdf") and (molecule.partial_charges is not None):
-            partial_charges_list = [
-                oeatom.GetPartialCharge() for oeatom in oemol.GetAtoms()
-            ]
+            partial_charges_list = [oeatom.GetPartialCharge() for oeatom in oemol.GetAtoms()]
             partial_charges_str = " ".join([f"{val:f}" for val in partial_charges_list])
             # TODO: "dprop" means "double precision" -- Is there any way to make Python more accurately
             #  describe/infer the proper data type?
@@ -779,9 +744,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             oechem.OE3DToInternalStereo(oemol)
 
             # If this is either a multi-conformer or multi-molecule SD file, check to see if there are partial charges
-            if (oemolistream.GetFormat() == oechem.OEFormat_SDF) and hasattr(
-                oemol, "GetConfs"
-            ):
+            if (oemolistream.GetFormat() == oechem.OEFormat_SDF) and hasattr(oemol, "GetConfs"):
                 # The openFF toolkit treats each conformer in a "multiconformer" SDF as
                 # a separate molecule.
                 # https://github.com/openforcefield/openff-toolkit/issues/202
@@ -800,19 +763,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                     # Then, we take any SD data pairs that were on the oemol, and copy them on to "this_conf_oemcmol".
                     # These SD pairs will be populated if we're dealing with a single-conformer SDF.
                     for dp in oechem.OEGetSDDataPairs(oemol):
-                        oechem.OESetSDData(
-                            this_conf_oemcmol, dp.GetTag(), dp.GetValue()
-                        )
+                        oechem.OESetSDData(this_conf_oemcmol, dp.GetTag(), dp.GetValue())
                     # On the other hand, these SD pairs will be populated if we're dealing with a MULTI-conformer SDF.
                     for dp in oechem.OEGetSDDataPairs(conf):
-                        oechem.OESetSDData(
-                            this_conf_oemcmol, dp.GetTag(), dp.GetValue()
-                        )
+                        oechem.OESetSDData(this_conf_oemcmol, dp.GetTag(), dp.GetValue())
                     # This function fishes out the special SD data tag we use for partial charge
                     # ("atom.dprop.PartialCharge"), and applies those as OETK-supported partial charges on the OEAtoms
-                    has_charges = self._turn_oemolbase_sd_charges_into_partial_charges(
-                        this_conf_oemcmol
-                    )
+                    has_charges = self._turn_oemolbase_sd_charges_into_partial_charges(this_conf_oemcmol)
 
                     # Finally, we feed the molecule into `from_openeye`, where it converted into an OFFMol
                     mol = self.from_openeye(
@@ -830,9 +787,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 # In case this is being read from a SINGLE-molecule SD file, convert the SD field where we
                 # stash partial charges into actual per-atom partial charges
                 self._turn_oemolbase_sd_charges_into_partial_charges(oemol)
-                mol = self.from_openeye(
-                    oemol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
-                )
+                mol = self.from_openeye(oemol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls)
                 mols.append(mol)
 
             # Check if this is an AMBER-produced mol2 file, which we can not load because they use GAFF atom types.
@@ -957,9 +912,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return molecules[:max_isomers]
 
-    def enumerate_tautomers(
-        self, molecule: "FrozenMolecule", max_states: int = 20
-    ) -> list["FrozenMolecule"]:
+    def enumerate_tautomers(self, molecule: "FrozenMolecule", max_states: int = 20) -> list["FrozenMolecule"]:
         """
         Enumerate the possible tautomers of the current molecule
 
@@ -992,15 +945,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         for tautomer in oequacpac.OEEnumerateTautomers(oemol, tautomer_options):
             # remove the input tautomer from the output
-            taut = self.from_openeye(
-                tautomer, allow_undefined_stereo=True, _cls=molecule.__class__
-            )
+            taut = self.from_openeye(tautomer, allow_undefined_stereo=True, _cls=molecule.__class__)
             if taut != molecule:
-                tautomers.append(
-                    self.from_openeye(
-                        tautomer, allow_undefined_stereo=True, _cls=molecule.__class__
-                    )
-                )
+                tautomers.append(self.from_openeye(tautomer, allow_undefined_stereo=True, _cls=molecule.__class__))
 
         return tautomers
 
@@ -1171,25 +1118,24 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         # Save the existing SD tags, if any, since they're lost in the cast to
         # OEMol of the input is OEGraphMol. See issue #1711
-        existing_sd_tags = {
-            pair.GetTag(): pair.GetValue() for pair in oechem.OEGetSDDataIter(oemol)
-        }
+        existing_sd_tags = {pair.GetTag(): pair.GetValue() for pair in oechem.OEGetSDDataIter(oemol)}
 
         oemol = oechem.OEMol(oemol)
 
         components = oechem.OEDetermineComponents(oemol)
         if components[0] > 1:
-            warnings.warn("OpenEye OEMol passed to from_openeye consists of more than one molecule, consider running "
-                          "something like https://docs.eyesopen.com/toolkits/python/oechemtk/oechem_examples/"
-                          "oechem_example_parts2mols.html or splitting input SMILES at '.'s to get separate molecules "
-                          "and pass them to from_openeye one at a time. While this is supported for "
-                          "legacy reasons, OpenFF Molecule objects are not supposed to contain disconnected chemical "
-                          "graphs and this may result in undefined behavior later on. The OpenFF ecosystem is built "
-                          "to handle multiple molecules, but they should be in a Topology object, ex: "
-                          "top = Topology.from_molecules([mol1, mol2])",
-                          MultipleComponentsInMoleculeWarning,
-                          stacklevel=2
-                          )
+            warnings.warn(
+                "OpenEye OEMol passed to from_openeye consists of more than one molecule, consider running "
+                "something like https://docs.eyesopen.com/toolkits/python/oechemtk/oechem_examples/"
+                "oechem_example_parts2mols.html or splitting input SMILES at '.'s to get separate molecules "
+                "and pass them to from_openeye one at a time. While this is supported for "
+                "legacy reasons, OpenFF Molecule objects are not supposed to contain disconnected chemical "
+                "graphs and this may result in undefined behavior later on. The OpenFF ecosystem is built "
+                "to handle multiple molecules, but they should be in a Topology object, ex: "
+                "top = Topology.from_molecules([mol1, mol2])",
+                MultipleComponentsInMoleculeWarning,
+                stacklevel=2,
+            )
 
         # Add explicit hydrogens if they're implicit
         if oechem.OEHasImplicitHydrogens(oemol):
@@ -1230,7 +1176,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                     f"chiral: {oeatom.IsChiral()}"
                 )
 
-
             def oebond_to_str(oebond) -> str:
                 return f"order: {oebond.GetOrder()}, chiral: {oebond.IsChiral()}"
 
@@ -1240,9 +1185,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                     description += f"\nbond {oebond_to_str(oebond)} to atom {oeatom_to_str(oebond.GetNbr(oeatom))}"
                 return description
 
-            if (
-                len(problematic_atoms) != 0 or len(problematic_bonds) != 0
-            ) and not allow_undefined_stereo:
+            if (len(problematic_atoms) != 0 or len(problematic_bonds) != 0) and not allow_undefined_stereo:
                 msg = f"OEMol has unspecified stereochemistry. {oemol.GetTitle()=}"
 
                 if len(problematic_atoms) != 0:
@@ -1253,9 +1196,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 if len(problematic_bonds) != 0:
                     msg += f"Problematic bonds are: {problematic_bonds}\n"
 
-                raise UndefinedStereochemistryError(
-                    f"Unable to make OFFMol from OEMol: {msg}"
-                )
+                raise UndefinedStereochemistryError(f"Unable to make OFFMol from OEMol: {msg}")
 
         if _cls is None:
             from openff.toolkit.topology.molecule import Molecule
@@ -1284,12 +1225,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             # Implicit hydrogens are never added to D- and F- block elements,
             # and the MDL valence is always the explicit valence for these
             # elements, so this does not count radical electrons in these blocks.
-            mdl_valence = oechem.OEMDLGetValence(
-                atomic_number, formal_charge, explicit_valence
-            )
-            number_radical_electrons = mdl_valence - (
-                oeatom.GetImplicitHCount() + explicit_valence
-            )
+            mdl_valence = oechem.OEMDLGetValence(atomic_number, formal_charge, explicit_valence)
+            number_radical_electrons = mdl_valence - (oeatom.GetImplicitHCount() + explicit_valence)
 
             if number_radical_electrons > 0:
                 raise RadicalsNotSupportedError(
@@ -1299,24 +1236,16 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 )
 
             is_aromatic = oeatom.IsAromatic()
-            stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(
-                oemol, oeatom
-            )
+            stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(oemol, oeatom)
             # stereochemistry = self._openeye_cip_atom_stereochemistry(oemol, oeatom)
             name = oeatom.GetName()
 
             # Transfer in hierarchy metadata
             metadata_dict = dict()
             if oechem.OEHasResidues(oemol):
-                metadata_dict["residue_name"] = oechem.OEAtomGetResidue(
-                    oeatom
-                ).GetName()
-                metadata_dict["residue_number"] = oechem.OEAtomGetResidue(
-                    oeatom
-                ).GetResidueNumber()
-                metadata_dict["insertion_code"] = oechem.OEAtomGetResidue(
-                    oeatom
-                ).GetInsertCode()
+                metadata_dict["residue_name"] = oechem.OEAtomGetResidue(oeatom).GetName()
+                metadata_dict["residue_number"] = oechem.OEAtomGetResidue(oeatom).GetResidueNumber()
+                metadata_dict["insertion_code"] = oechem.OEAtomGetResidue(oeatom).GetInsertCode()
                 metadata_dict["chain_id"] = oechem.OEAtomGetResidue(oeatom).GetChainID()
             # print('from', metadata_dict)
 
@@ -1329,9 +1258,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 metadata=metadata_dict,
                 invalidate_cache=False,
             )
-            off_to_oe_idx[oe_idx] = (
-                atom_index  # store for mapping oeatom to molecule atom indices below
-            )
+            off_to_oe_idx[oe_idx] = atom_index  # store for mapping oeatom to molecule atom indices below
             atom_mapping[atom_index] = map_id
 
         molecule._invalidate_cached_properties()
@@ -1339,18 +1266,14 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # If we have a full / partial atom map add it to the molecule. Zeroes 0
         # indicates no mapping
         if {*atom_mapping.values()} != {0}:
-            molecule._properties["atom_map"] = {
-                idx: map_idx for idx, map_idx in atom_mapping.items() if map_idx != 0
-            }
+            molecule._properties["atom_map"] = {idx: map_idx for idx, map_idx in atom_mapping.items() if map_idx != 0}
 
         for oebond in oemol.GetBonds():
             atom1_index = off_to_oe_idx[oebond.GetBgnIdx()]
             atom2_index = off_to_oe_idx[oebond.GetEndIdx()]
             bond_order = oebond.GetOrder()
             is_aromatic = oebond.IsAromatic()
-            stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(
-                oemol, oebond
-            )
+            stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(oemol, oebond)
             if oebond.HasData("fractional_bond_order"):
                 fractional_bond_order = oebond.GetData("fractional_bond_order")
             else:
@@ -1405,18 +1328,14 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             unitless_charges[off_idx] = unitless_charge
 
         if any_partial_charge_is_not_nan:
-            molecule.partial_charges = Quantity(
-                unitless_charges, unit.elementary_charge
-            )
+            molecule.partial_charges = Quantity(unitless_charges, unit.elementary_charge)
         else:
             molecule.partial_charges = None
 
         return molecule
 
     @cached(LRUCache(maxsize=4096), key=_mol_to_ctab_and_aro_key)
-    def _connection_table_to_openeye(
-        self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL
-    ):
+    def _connection_table_to_openeye(self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         from openeye import oechem
 
         if aromaticity_model not in ALLOWED_AROMATICITY_MODELS:
@@ -1463,25 +1382,15 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
             # Set arbitrary initial stereochemistry
             neighs = [n for n in oeatom.GetAtoms()]
-            oeatom.SetStereo(
-                neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Right
-            )
+            oeatom.SetStereo(neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Right)
 
             # Flip chirality if stereochemistry is incorrect
-            oeatom_stereochemistry = (
-                OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(oemol, oeatom)
-            )
+            oeatom_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(oemol, oeatom)
             if oeatom_stereochemistry != atom.stereochemistry:
                 # Flip the stereochemistry
-                oeatom.SetStereo(
-                    neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Left
-                )
+                oeatom.SetStereo(neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Left)
                 # Verify it matches now as a sanity check
-                oeatom_stereochemistry = (
-                    OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(
-                        oemol, oeatom
-                    )
-                )
+                oeatom_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(oemol, oeatom)
                 if oeatom_stereochemistry != atom.stereochemistry:
                     raise InconsistentStereochemistryError(
                         "Programming error: OpenEye atom stereochemistry assumptions failed. "
@@ -1508,9 +1417,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             )
 
             # Flip stereochemistry if incorrect
-            oebond_stereochemistry = (
-                OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(oemol, oebond)
-            )
+            oebond_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(oemol, oebond)
             if oebond_stereochemistry != bond.stereochemistry:
                 # Flip the stereochemistry
                 oebond.SetStereo(
@@ -1519,11 +1426,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                     oechem.OEBondStereo_Trans,
                 )
                 # Verify it matches now as a sanity check
-                oebond_stereochemistry = (
-                    OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(
-                        oemol, oebond
-                    )
-                )
+                oebond_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(oemol, oebond)
                 if oebond_stereochemistry != bond.stereochemistry:
                     raise InconsistentStereochemistryError(
                         "Programming error: OpenEye bond stereochemistry assumptions failed. "
@@ -1590,9 +1493,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         from openeye import oechem
 
-        oemol, off_to_oe_idx = self._connection_table_to_openeye(
-            molecule, aromaticity_model=aromaticity_model
-        )
+        oemol, off_to_oe_idx = self._connection_table_to_openeye(molecule, aromaticity_model=aromaticity_model)
         oemol = oechem.OEMol(oemol)
         # if not(molecule.name is None):
         oe_to_off_idx = dict([(j, i) for i, j in off_to_oe_idx.items()])
@@ -1726,9 +1627,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         NotAttachedToMoleculeError
         """
         if atom.molecule is None:
-            raise NotAttachedToMoleculeError(
-                "This Atom does not belong to a Molecule object"
-            )
+            raise NotAttachedToMoleculeError("This Atom does not belong to a Molecule object")
 
         molecule = atom.molecule
         atom_index = atom.molecule_atom_index
@@ -1760,9 +1659,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         NotAttachedToMoleculeError
         """
         if bond.molecule is None:
-            raise NotAttachedToMoleculeError(
-                "This Bond does not belong to a Molecule object"
-            )
+            raise NotAttachedToMoleculeError("This Bond does not belong to a Molecule object")
 
         molecule = bond.molecule
 
@@ -1785,18 +1682,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # this sets up the default settings following the old DEFAULT flag
         # more information on flags can be found here
         # <https://docs.eyesopen.com/toolkits/python/oechemtk/OEChemConstants/OESMILESFlag.html#OEChem::OESMILESFlag>
-        smiles_options = (
-            oechem.OESMILESFlag_Canonical
-            | oechem.OESMILESFlag_Isotopes
-            | oechem.OESMILESFlag_RGroups
-        )
+        smiles_options = oechem.OESMILESFlag_Canonical | oechem.OESMILESFlag_Isotopes | oechem.OESMILESFlag_RGroups
 
         # check if we want an isomeric smiles
         if isomeric:
             # add the atom and bond stereo flags
-            smiles_options |= (
-                oechem.OESMILESFlag_AtomStereo | oechem.OESMILESFlag_BondStereo
-            )
+            smiles_options |= oechem.OESMILESFlag_AtomStereo | oechem.OESMILESFlag_BondStereo
 
         if explicit_hydrogens:
             # add the hydrogen flag
@@ -1843,8 +1734,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         if mapped:
             assert explicit_hydrogens is True, (
-                "Mapped smiles require all hydrogens and "
-                "stereochemsitry to be defined to retain order"
+                "Mapped smiles require all hydrogens and stereochemsitry to be defined to retain order"
             )
 
             # if we only want to map specific atoms check for an atom map
@@ -1920,9 +1810,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # TODO: Add support for /LargeMolecules switch when OpenEye allows it
         #       (underlying InChI tool does)
         if len(inchi) == 0:
-            raise EmptyInChiError(
-                "OEChem failed to generate an InChI for the molecule."
-            )
+            raise EmptyInChiError("OEChem failed to generate an InChI for the molecule.")
 
         return inchi
 
@@ -1967,9 +1855,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             inchi_key = oechem.OEMolToSTDInChIKey(oemol)
 
         if len(inchi_key) == 0:
-            raise EmptyInChiError(
-                "OEChem failed to generate an InChI key for the molecule."
-            )
+            raise EmptyInChiError("OEChem failed to generate an InChI key for the molecule.")
 
         return inchi_key
 
@@ -2034,10 +1920,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         vbnd = []
         for bond in oemol.GetBonds():
-            if (
-                bond.GetBgn().GetAtomicNum() != oechem.OEElemNo_H
-                and bond.GetEnd().GetAtomicNum() != oechem.OEElemNo_H
-            ):
+            if bond.GetBgn().GetAtomicNum() != oechem.OEElemNo_H and bond.GetEnd().GetAtomicNum() != oechem.OEElemNo_H:
                 vbnd.append(bond)
         oemol.OrderBonds(vbnd)
 
@@ -2047,9 +1930,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             if bond.GetBgnIdx() > bond.GetEndIdx():
                 bond.SwapEnds()
 
-        return self.from_openeye(
-            oemol, allow_undefined_stereo=True, _cls=molecule.__class__
-        )
+        return self.from_openeye(oemol, allow_undefined_stereo=True, _cls=molecule.__class__)
 
     def from_smiles(
         self,
@@ -2096,9 +1977,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         if not (hydrogens_are_explicit):
             result = oechem.OEAddExplicitHydrogens(oemol)
             if not result:
-                raise ValueError(
-                    "Addition of explicit hydrogens failed in from_openeye"
-                )
+                raise ValueError("Addition of explicit hydrogens failed in from_openeye")
         elif hydrogens_are_explicit and oechem.OEHasImplicitHydrogens(oemol):
             raise ValueError(
                 f"'hydrogens_are_explicit' was specified as True, but OpenEye Toolkit interpreted "
@@ -2201,17 +2080,13 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         oemol = oechem.OEMol()
         parsing_result = oeiupac.OEParseIUPACName(oemol, iupac_name)
         if not parsing_result:
-            raise InvalidIUPACNameError(
-                f"OpenEye failed to parse {iupac_name} as a IUPAC name"
-            )
+            raise InvalidIUPACNameError(f"OpenEye failed to parse {iupac_name} as a IUPAC name")
         oechem.OETriposAtomNames(oemol)
         result = oechem.OEAddExplicitHydrogens(oemol)
         if not result:
             raise OpenEyeError("Addition of explicit hydrogens failed in from_iupac")
 
-        molecule = self.from_openeye(
-            oemol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls, **kwargs
-        )
+        molecule = self.from_openeye(oemol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls, **kwargs)
 
         return molecule
 
@@ -2276,13 +2151,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             omega.SetStrictStereo(False)
             new_status = omega(oemol)
             if new_status is False:
-                raise ConformerGenerationError(
-                    "OpenEye Omega conformer generation failed"
-                )
+                raise ConformerGenerationError("OpenEye Omega conformer generation failed")
 
-        molecule2 = self.from_openeye(
-            oemol, allow_undefined_stereo=True, _cls=molecule.__class__
-        )
+        molecule2 = self.from_openeye(oemol, allow_undefined_stereo=True, _cls=molecule.__class__)
 
         if clear_existing:
             molecule._conformers = list()
@@ -2455,9 +2326,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 f"Available charge methods are {self.supported_charge_methods}"
             )
 
-        charge_method: _ChargeSettings = self._supported_charge_methods[
-            partial_charge_method
-        ]
+        charge_method: _ChargeSettings = self._supported_charge_methods[partial_charge_method]
 
         if _cls is None:
             _cls = Molecule
@@ -2532,14 +2401,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # This logic handles errors encountered in #34, which can occur when using ELF10 conformer selection
         if not quacpac_status:
             oe_charge_engine = (
-                oequacpac.OEAM1Charges
-                if partial_charge_method == "am1elf10"
-                else oequacpac.OEAM1BCCCharges
+                oequacpac.OEAM1Charges if partial_charge_method == "am1elf10" else oequacpac.OEAM1BCCCharges
             )
 
-            if "SelectElfPop: issue with removing trans COOH conformers" in (
-                errfs.str().decode("UTF-8")
-            ):
+            if "SelectElfPop: issue with removing trans COOH conformers" in (errfs.str().decode("UTF-8")):
                 logger.warning(
                     f"Warning: charge assignment involving ELF10 conformer selection failed due to a "
                     f"known bug (toolkit issue #346). Downgrading to {oe_charge_engine.__name__} "
@@ -2549,16 +2414,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 quacpac_status = oequacpac.OEAssignCharges(oemol, oe_charge_engine())
 
         if quacpac_status is False:
-            raise ChargeCalculationError(
-                f'Unable to assign charges: {errfs.str().decode("UTF-8")}'
-            )
+            raise ChargeCalculationError(f"Unable to assign charges: {errfs.str().decode('UTF-8')}")
 
         # Extract and return charges
         # TODO: Make sure atom mapping remains constant
         # Extract the list of charges, taking into account possible indexing differences
-        charges = Quantity(
-            np.zeros(shape=oemol.NumAtoms(), dtype=np.float64), unit.elementary_charge
-        )
+        charges = Quantity(np.zeros(shape=oemol.NumAtoms(), dtype=np.float64), unit.elementary_charge)
         for oeatom in oemol.GetAtoms():
             index = oeatom.GetIdx()
             charge = oeatom.GetPartialCharge()
@@ -2662,8 +2523,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # Convert the conformers into OE friendly objects to make setting them one
         # at a time easier.
         oe_conformers = [
-            oechem.OEFloatArray(conformer.m_as(unit.angstrom).flatten())
-            for conformer in temp_mol.conformers
+            oechem.OEFloatArray(conformer.m_as(unit.angstrom).flatten()) for conformer in temp_mol.conformers
         ]
 
         oemol = self.to_openeye(temp_mol)
@@ -2676,15 +2536,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             status = am1.CalcAM1(am1results, oemol)
 
             if status is False:
-                raise OpenEyeError(
-                    "Unable to assign charges (in the process of calculating "
-                    "fractional bond orders)"
-                )
+                raise OpenEyeError("Unable to assign charges (in the process of calculating fractional bond orders)")
 
             for bond in oemol.GetBonds():
-                bond_orders[bond.GetIdx()].append(
-                    am1results.GetBondOrder(bond.GetBgnIdx(), bond.GetEndIdx())
-                )
+                bond_orders[bond.GetIdx()].append(am1results.GetBondOrder(bond.GetBgnIdx(), bond.GetEndIdx()))
 
         # TODO: Will bonds always map back to the same index? Consider doing a
         #       topology mapping.
@@ -2727,9 +2582,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         qmol = oechem.OEQMol()
         status = oechem.OEParseSmarts(qmol, smarts)
         if not status:
-            raise SMIRKSParsingError(
-                f"OpenEye Toolkit was unable to parse SMIRKS {smarts}"
-            )
+            raise SMIRKSParsingError(f"OpenEye Toolkit was unable to parse SMIRKS {smarts}")
 
         _unique_tags = set()
         _connections = set()
@@ -2796,9 +2649,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         # Set up query
         qmol = oechem.OEQMol()
         if not oechem.OEParseSmarts(qmol, smarts):
-            raise ChemicalEnvironmentParsingError(
-                f'OpenEye could not parse the SMARTS/SMIRKS string "{smarts}"'
-            )
+            raise ChemicalEnvironmentParsingError(f'OpenEye could not parse the SMARTS/SMIRKS string "{smarts}"')
 
         # OEPrepareSearch will clobber our desired aromaticity model if we don't sync up mol
         # and qmol ahead of time.
@@ -2830,14 +2681,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             atom_indices: dict[int, int] = dict()
             for matched_atom in match.GetAtoms():
                 if matched_atom.pattern.GetMapIdx() != 0:
-                    atom_indices[matched_atom.pattern.GetMapIdx() - 1] = (
-                        matched_atom.target.GetIdx()
-                    )
+                    atom_indices[matched_atom.pattern.GetMapIdx() - 1] = matched_atom.target.GetIdx()
 
             # Compress into tuple
-            matches.append(
-                tuple(atom_indices[index] for index in range(len(atom_indices)))
-            )
+            matches.append(tuple(atom_indices[index] for index in range(len(atom_indices))))
 
         return matches
 

@@ -55,9 +55,7 @@ class StaleForceFieldTests:
         """Test parameter assignment using smirnoff99Frosst on laromustine with ChargeIncrementModel."""
         molecules_file_path = get_data_file_path("molecules/laromustine_tripos.mol2")
         molecule = Molecule.from_file(molecules_file_path)
-        forcefield = ForceField(
-            ["test_forcefields/test_forcefield.offxml", "chargeincrement-test"]
-        )
+        forcefield = ForceField(["test_forcefields/test_forcefield.offxml", "chargeincrement-test"])
         check_system_creation_from_molecule(forcefield, molecule)
         # TODO: We can't implement a test for chargeincrement yet because we
         #       haven't settled on a SMIRNOFF spec for chargeincrementmodel
@@ -65,9 +63,7 @@ class StaleForceFieldTests:
     @pytest.mark.skip(reason="Needs to be updated for 0.2.0 syntax")
     def test_create_system_molecules_parmatfrosst_gbsa(self):
         """Test creation of a System object from small molecules to test parm@frosst force field with GBSA support."""
-        molecules_file_path = get_data_file_path(
-            "molecules/AlkEthOH_test_filt1_tripos.mol2"
-        )
+        molecules_file_path = get_data_file_path("molecules/AlkEthOH_test_filt1_tripos.mol2")
         check_parameter_assignment(
             offxml_file_path="test_forcefields/Frosst_AlkEthOH_GBSA.offxml",
             molecules_file_path=molecules_file_path,
@@ -107,9 +103,7 @@ def test_electrostatics_options(self):
 
     molecules_file_path = get_data_file_path("molecules/laromustine_tripos.mol2")
     molecule = Molecule.from_file(molecules_file_path)
-    forcefield = ForceField(
-        [smirnoff99Frosst_offxml_file_path, charge_increment_offxml_file_path]
-    )
+    forcefield = ForceField([smirnoff99Frosst_offxml_file_path, charge_increment_offxml_file_path])
     for method in ["PME", "reaction-field", "Coulomb"]:
         # Change electrostatics method
         forcefield.forces["Electrostatics"].method = method

@@ -70,9 +70,7 @@ def remove_charge_and_bond_order_from_imidazole(rdmol):
 
     for bond in rdmol.GetBonds():
         # print(dir(bond))
-        if (bond.GetBeginAtomIdx() in all_imidazole_atoms) and (
-            bond.GetEndAtomIdx() in all_imidazole_atoms
-        ):
+        if (bond.GetBeginAtomIdx() in all_imidazole_atoms) and (bond.GetEndAtomIdx() in all_imidazole_atoms):
             bond.SetBondType(rdkit.Chem.BondType.QUADRUPLE)
 
 
@@ -88,9 +86,7 @@ class CifSubstructures:
         """
         Create object with substructures data from CIF files.
         """
-        self.data = defaultdict(
-            defaultdict
-        )  # Dictionary where to store substructures data
+        self.data = defaultdict(defaultdict)  # Dictionary where to store substructures data
         self._cif_multi_entry_object = None
 
     def from_file(
@@ -180,9 +176,7 @@ class CifSubstructures:
         }
         """
 
-        symbol_to_num_dict: dict[str, int] = {
-            symbol: _SYMBOL_TO_ATOMIC_NUMBER[symbol] for symbol in atom_symbol_list
-        }
+        symbol_to_num_dict: dict[str, int] = {symbol: _SYMBOL_TO_ATOMIC_NUMBER[symbol] for symbol in atom_symbol_list}
 
         return symbol_to_num_dict
 
@@ -220,22 +214,12 @@ class CifSubstructures:
         atom_information_array : tuple
             Multidimensional tuple with atoms information.
         """
-        symbol_to_num_dict = self._generate_atom_symbol_number_dictionary(
-            cif_entry_data
-        )
+        symbol_to_num_dict = self._generate_atom_symbol_number_dictionary(cif_entry_data)
         atom_names = cif_entry_data["_chem_comp_atom.atom_id"]
-        atomic_numbers = [
-            symbol_to_num_dict[x] for x in cif_entry_data["_chem_comp_atom.type_symbol"]
-        ]
+        atomic_numbers = [symbol_to_num_dict[x] for x in cif_entry_data["_chem_comp_atom.type_symbol"]]
         formal_charges = [int(x) for x in cif_entry_data["_chem_comp_atom.charge"]]
-        is_aromatic = [
-            False if x == "N" else True
-            for x in cif_entry_data["_chem_comp_atom.pdbx_aromatic_flag"]
-        ]
-        stereochemistry = [
-            None if x == "N" else x
-            for x in cif_entry_data["_chem_comp_atom.pdbx_stereo_config"]
-        ]
+        is_aromatic = [False if x == "N" else True for x in cif_entry_data["_chem_comp_atom.pdbx_aromatic_flag"]]
+        stereochemistry = [None if x == "N" else x for x in cif_entry_data["_chem_comp_atom.pdbx_stereo_config"]]
         leaving_atoms_list = cif_entry_data["_chem_comp_atom.pdbx_leaving_atom_flag"]
         return (
             atom_names,
@@ -257,17 +241,12 @@ class CifSubstructures:
         """
         atom1_name_list = cif_entry_data["_chem_comp_bond.atom_id_1"]
         atom2_name_list = cif_entry_data["_chem_comp_bond.atom_id_2"]
-        bond_order_list = [
-            self.bond_order_dict[x]
-            for x in cif_entry_data["_chem_comp_bond.value_order"]
-        ]
+        bond_order_list = [self.bond_order_dict[x] for x in cif_entry_data["_chem_comp_bond.value_order"]]
         is_aromatic_bond_list = [
-            False if x == "N" else True
-            for x in cif_entry_data["_chem_comp_bond.pdbx_aromatic_flag"]
+            False if x == "N" else True for x in cif_entry_data["_chem_comp_bond.pdbx_aromatic_flag"]
         ]
         stereochemistry_bond_list = [
-            None if x == "N" else x
-            for x in cif_entry_data["_chem_comp_bond.pdbx_stereo_config"]
+            None if x == "N" else x for x in cif_entry_data["_chem_comp_bond.pdbx_stereo_config"]
         ]
         return (
             atom1_name_list,
@@ -301,9 +280,7 @@ class CifSubstructures:
         rdkit.Chem.rdchem.Mol: subset of molecule
         """
         submol = rdkit.Chem.RWMol(rdmol)
-        ix = sorted(
-            [at.GetIdx() for at in rdmol.GetAtoms() if at.GetIdx() not in indices]
-        )
+        ix = sorted([at.GetIdx() for at in rdmol.GetAtoms() if at.GetIdx() not in indices])
         for i in ix[::-1]:
             submol.RemoveAtom(int(i))
         if sanitize:
@@ -509,17 +486,11 @@ class CifSubstructures:
             # Also add a structure with ALL leaving atoms removed
             atoms_info_copy = copy.deepcopy(atoms_information)
             bonds_info_copy = copy.deepcopy(bonds_information)
-            atom_idxs_to_remove = [
-                idx for idx, at in enumerate(atoms_info_copy) if at[5] == "Y"
-            ]
-            atom_names_to_remove = [
-                atoms_info_copy[idx][0] for idx in atom_idxs_to_remove
-            ]
+            atom_idxs_to_remove = [idx for idx, at in enumerate(atoms_info_copy) if at[5] == "Y"]
+            atom_names_to_remove = [atoms_info_copy[idx][0] for idx in atom_idxs_to_remove]
             bond_idxs_to_remove = list()
             for bond_idx, bond in enumerate(bonds_info_copy):
-                if (bond[0] in atom_names_to_remove) or (
-                    bond[1] in atom_names_to_remove
-                ):
+                if (bond[0] in atom_names_to_remove) or (bond[1] in atom_names_to_remove):
                     bond_idxs_to_remove.append(bond_idx)
 
             for atom_idx_to_remove in atom_idxs_to_remove[::-1]:
@@ -538,9 +509,7 @@ class CifSubstructures:
                     remove_charge_bond_order_resonant=remove_charge_bond_order_resonant,
                 )
 
-    def _recursive_prepare_atom_bond_info(
-        self, atoms_info, bonds_info, return_list=list()
-    ):
+    def _recursive_prepare_atom_bond_info(self, atoms_info, bonds_info, return_list=list()):
         """
         This method makes permutations of the substructure with leaving atoms left and removed.
         If some leaving atoms are bound to other leaving atoms, this method produces all permutations
@@ -579,9 +548,7 @@ class CifSubstructures:
 
             # Determine whether the neighbor of the leaving atom is also leaving
             bond_info_tuple = bonds_info[involved_bond_indices[0]]
-            neighbor_atom_name = [
-                name for name in bond_info_tuple[:2] if name != leaving_atom_name
-            ][0]
+            neighbor_atom_name = [name for name in bond_info_tuple[:2] if name != leaving_atom_name][0]
             for neighbor_atom_idx, neighbor_atom_info_tuple in enumerate(atoms_info):
                 if neighbor_atom_info_tuple[0] != neighbor_atom_name:
                     continue
@@ -688,12 +655,8 @@ class CifSubstructures:
         """
 
         # Add common caps
-        self.data["ACE"] = {
-            "[C:1](=[O:2])[C:3]([H:4])([H:5])[H:6]": ["C", "O", "CH3", "H1", "H2", "H3"]
-        }
-        self.data["NME"] = {
-            "[N:1]([C:2]([H:4])([H:5])[H:6])[H:3]": ["N", "C", "H", "H1", "H2", "H3"]
-        }
+        self.data["ACE"] = {"[C:1](=[O:2])[C:3]([H:4])([H:5])[H:6]": ["C", "O", "CH3", "H1", "H2", "H3"]}
+        self.data["NME"] = {"[N:1]([C:2]([H:4])([H:5])[H:6])[H:3]": ["N", "C", "H", "H1", "H2", "H3"]}
         self.data["NH2"] = {"[N:1]([H:2])[H:3]": ["N", "HN1", "HN2"]}
 
     def _add_common_linkages(self):
@@ -751,9 +714,7 @@ class CifSubstructures:
                 ),
                 params,
             )  # create non-query version of substruct
-            Chem.Kekulize(
-                rdmol, clearAromaticFlags=True
-            )  # kekulize using molops (regular molecule required here)
+            Chem.Kekulize(rdmol, clearAromaticFlags=True)  # kekulize using molops (regular molecule required here)
             rdmol = Chem.MolFromSmarts(
                 Chem.MolToSmiles(
                     deepcopy(rdmol),
@@ -762,9 +723,7 @@ class CifSubstructures:
                     canonical=False,
                 )
             )  # remake into query mol
-            current_map_num = 1 + _get_maximum_map_num(
-                rdmol
-            )  # do not change existing atom map numbers!
+            current_map_num = 1 + _get_maximum_map_num(rdmol)  # do not change existing atom map numbers!
             for atom in rdmol.GetAtoms():
                 if atom.GetAtomicNum() > 0:
                     if atom.GetAtomMapNum() == 0:
@@ -853,89 +812,67 @@ class CifSubstructures:
                 5,
             ),
             (
-                Chem.MolFromSmarts(
-                    "[N+](-[H])(-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6])([H:9])[H:10])[H:8]"
-                ),
+                Chem.MolFromSmarts("[N+](-[H])(-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6])([H:9])[H:10])[H:8]"),
                 [8],
                 [],
                 5,
             ),
             (
-                Chem.MolFromSmarts(
-                    "[N+](-[H])(-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S-1:6])([H:9])[H:10])[H:8]"
-                ),
+                Chem.MolFromSmarts("[N+](-[H])(-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S-1:6])([H:9])[H:10])[H:8]"),
                 [],
                 [],
                 5,
             ),
             (
-                Chem.MolFromSmarts(
-                    "[N](-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6]([H]))([H:9])[H:10])[H:8]"
-                ),
+                Chem.MolFromSmarts("[N](-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6]([H]))([H:9])[H:10])[H:8]"),
                 [],
                 [],
                 4,
             ),
             (
-                Chem.MolFromSmarts(
-                    "[N](-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6])([H:9])[H:10])[H:8]"
-                ),
+                Chem.MolFromSmarts("[N](-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6])([H:9])[H:10])[H:8]"),
                 [7],
                 [],
                 4,
             ),
             (
-                Chem.MolFromSmarts(
-                    "[N](-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S-1:6])([H:9])[H:10])[H:8]"
-                ),
+                Chem.MolFromSmarts("[N](-[H])(-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S-1:6])([H:9])[H:10])[H:8]"),
                 [],
                 [],
                 4,
             ),
             (
-                Chem.MolFromSmarts(
-                    "[N](-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6]([H]))([H:9])[H:10])[H:8]"
-                ),
+                Chem.MolFromSmarts("[N](-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6]([H]))([H:9])[H:10])[H:8]"),
                 [0],
                 [],
                 3,
             ),
             (
-                Chem.MolFromSmarts(
-                    "[N](-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6])([H:9])[H:10])[H:8]"
-                ),
+                Chem.MolFromSmarts("[N](-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S+0:6])([H:9])[H:10])[H:8]"),
                 [0, 6],
                 [],
                 3,
             ),
             (
-                Chem.MolFromSmarts(
-                    "[N](-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S-1:6])([H:9])[H:10])[H:8]"
-                ),
+                Chem.MolFromSmarts("[N](-[H])-[C@:2]([C:3](=[O:4]))([C:5]([S-1:6])([H:9])[H:10])[H:8]"),
                 [0],
                 [],
                 3,
             ),
             (
-                Chem.MolFromSmarts(
-                    "[N:1][C@:2]([C:3](=[O:4]))([C:5]([S+0:6]([H]))([H:9])[H:10])[H:8]"
-                ),
+                Chem.MolFromSmarts("[N:1][C@:2]([C:3](=[O:4]))([C:5]([S+0:6]([H]))([H:9])[H:10])[H:8]"),
                 [0, 0],
                 [],
                 2,
             ),
             (
-                Chem.MolFromSmarts(
-                    "[N:1][C@:2]([C:3](=[O:4]))([C:5]([S+0:6])([H:9])[H:10])[H:8]"
-                ),
+                Chem.MolFromSmarts("[N:1][C@:2]([C:3](=[O:4]))([C:5]([S+0:6])([H:9])[H:10])[H:8]"),
                 [0, 0, 5],
                 [],
                 2,
             ),
             (
-                Chem.MolFromSmarts(
-                    "[N:1][C@:2]([C:3](=[O:4]))([C:5]([S-1:6])([H:9])[H:10])[H:8]"
-                ),
+                Chem.MolFromSmarts("[N:1][C@:2]([C:3](=[O:4]))([C:5]([S-1:6])([H:9])[H:10])[H:8]"),
                 [0, 0],
                 [],
                 2,

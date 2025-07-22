@@ -35,8 +35,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     _toolkit_name = "AmberTools"
     _toolkit_installation_instructions = (
-        "The AmberTools toolkit (free and open source) can be found at "
-        "https://anaconda.org/conda-forge/ambertools"
+        "The AmberTools toolkit (free and open source) can be found at https://anaconda.org/conda-forge/ambertools"
     )
     _supported_charge_methods = {
         "am1bcc": {
@@ -77,6 +76,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
     @functools.cached_property
     def _toolkit_version(self):
         from openff.utilities.provenance import get_ambertools_version
+
         return get_ambertools_version()
 
     @staticmethod
@@ -196,18 +196,14 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         ANTECHAMBER_PATH = which("antechamber")
         if ANTECHAMBER_PATH is None:
-            raise AntechamberNotFoundError(
-                "Antechamber not found, cannot run assign_partial_charges()"
-            )
+            raise AntechamberNotFoundError("Antechamber not found, cannot run assign_partial_charges()")
 
         # Compute charges
         with tempfile.TemporaryDirectory() as tmpdir:
             net_charge = mol_copy.total_charge.m_as(unit.elementary_charge)
             # Write out molecule in SDF format
             # TODO: How should we handle multiple conformers?
-            self._rdkit_toolkit_wrapper.to_file(
-                mol_copy, f"{tmpdir}/molecule.sdf", file_format="sdf"
-            )
+            self._rdkit_toolkit_wrapper.to_file(mol_copy, f"{tmpdir}/molecule.sdf", file_format="sdf")
             # Compute desired charges
             # TODO: Add error handling if antechamber chokes
             short_charge_method = charge_method["antechamber_keyword"]
@@ -310,9 +306,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         with open(file_path, "w") as of:
             of.write(new_data)
 
-    def _get_fractional_bond_orders_from_sqm_out(
-        self, file_path, validate_elements=None
-    ):
+    def _get_fractional_bond_orders_from_sqm_out(self, file_path, validate_elements=None):
         """
         Process a SQM output file containing bond orders, and return a dict of the form
         dict[atom_1_index, atom_2_index] = fractional_bond_order
@@ -417,8 +411,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         ANTECHAMBER_PATH = which("antechamber")
         if ANTECHAMBER_PATH is None:
             raise AntechamberNotFoundError(
-                "Antechamber not found, cannot run "
-                "AmberToolsToolkitWrapper.assign_fractional_bond_orders()"
+                "Antechamber not found, cannot run AmberToolsToolkitWrapper.assign_fractional_bond_orders()"
             )
 
         if _cls is None:
@@ -446,9 +439,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # Compute bond orders
         bond_order_model_to_antechamber_keyword = {"am1-wiberg": "mul"}
-        supported_bond_order_models = list(
-            bond_order_model_to_antechamber_keyword.keys()
-        )
+        supported_bond_order_models = list(bond_order_model_to_antechamber_keyword.keys())
         if bond_order_model is None:
             bond_order_model = "am1-wiberg"
 
@@ -468,9 +459,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
                 net_charge = temp_mol.total_charge
                 # Write out molecule in SDF format
                 temp_mol._conformers = [conformer]
-                self._rdkit_toolkit_wrapper.to_file(
-                    temp_mol, f"{tmpdir}/molecule.sdf", file_format="sdf"
-                )
+                self._rdkit_toolkit_wrapper.to_file(temp_mol, f"{tmpdir}/molecule.sdf", file_format="sdf")
                 # Prepare sqm.in file as if we were going to run charge calc
                 # TODO: Add error handling if antechamber chokes
                 subprocess.check_output(
@@ -496,9 +485,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
                 # Modify sqm.in to request bond order calculation
                 self._modify_sqm_in_to_request_bond_orders(f"{tmpdir}/sqm.in")
                 # Run sqm to get bond orders
-                subprocess.check_output(
-                    ["sqm", "-i", "sqm.in", "-o", "sqm.out", "-O"], cwd=tmpdir
-                )
+                subprocess.check_output(["sqm", "-i", "sqm.in", "-o", "sqm.out", "-O"], cwd=tmpdir)
                 # Ensure that antechamber/sqm did not change the indexing by checking against
                 # an ordered list of element symbols for this molecule
                 expected_elements = [atom.symbol for atom in molecule.atoms]
@@ -516,9 +503,5 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
             # The atom index tuples that act as bond indices are ordered from lowest to highest by
             # _get_fractional_bond_orders_from_sqm_out, so here we make sure that we look them up in
             # sorted order as well
-            sorted_atom_indices = sorted(
-                tuple([bond.atom1_index + 1, bond.atom2_index + 1])
-            )
-            bond.fractional_bond_order = np.mean(
-                bond_orders[tuple(sorted_atom_indices)]
-            )
+            sorted_atom_indices = sorted(tuple([bond.atom1_index + 1, bond.atom2_index + 1]))
+            bond.fractional_bond_order = np.mean(bond_orders[tuple(sorted_atom_indices)])

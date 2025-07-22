@@ -27,9 +27,7 @@ class _ChargeSettings(TypedDict, total=False):
     oe_charge_method: str
 
 
-def _mol_to_ctab_and_aro_key(
-    self, molecule: "Molecule", aromaticity_model=DEFAULT_AROMATICITY_MODEL
-) -> str:
+def _mol_to_ctab_and_aro_key(self, molecule: "Molecule", aromaticity_model=DEFAULT_AROMATICITY_MODEL) -> str:
     return f"{molecule.ordered_connection_table_hash()}-{aromaticity_model}"
 
 
@@ -49,9 +47,7 @@ class ToolkitWrapper:
     _is_available: Optional[bool] = None  # True if toolkit is available
     _toolkit_version: Optional[str] = None
     _toolkit_name: Optional[str] = None  # Name of the toolkit
-    _toolkit_installation_instructions: Optional[str] = (
-        None  # Installation instructions for the toolkit
-    )
+    _toolkit_installation_instructions: Optional[str] = None  # Installation instructions for the toolkit
     _supported_charge_methods: dict[str, _ChargeSettings] = dict()
     _toolkit_file_read_formats: list[str] = list()
     _toolkit_file_write_formats: list[str] = list()
@@ -167,9 +163,7 @@ class ToolkitWrapper:
         """
         return NotImplementedError
 
-    def from_file_obj(
-        self, file_obj, file_format, allow_undefined_stereo=False, _cls=None
-    ):
+    def from_file_obj(self, file_obj, file_format, allow_undefined_stereo=False, _cls=None):
         """
         Return an openff.toolkit.topology.Molecule from a file-like object (an object with
         a ".read()" method using this toolkit.
@@ -232,8 +226,7 @@ class ToolkitWrapper:
 
         n_confs = molecule.n_conformers
         wrong_confs_msg = (
-            f"Molecule '{molecule}' has {n_confs} conformers, "
-            f"but charge method '{partial_charge_method}' expects"
+            f"Molecule '{molecule}' has {n_confs} conformers, but charge method '{partial_charge_method}' expects"
         )
         exception_suffix = (
             "You can disable this error by setting `strict_n_conformers=False' "
@@ -272,6 +265,4 @@ class ToolkitWrapper:
             warnings.warn(wrong_confs_msg, IncorrectNumConformersWarning, stacklevel=2)
 
     def __repr__(self):
-        return (
-            f"ToolkitWrapper around {self.toolkit_name} version {self.toolkit_version}"
-        )
+        return f"ToolkitWrapper around {self.toolkit_name} version {self.toolkit_version}"

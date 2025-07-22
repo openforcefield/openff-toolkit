@@ -459,9 +459,7 @@ def _prep_numpy_data_for_json(data: dict) -> dict:
             for i, element in enumerate(val):
                 if isinstance(element, bytes):
                     # Handles case of list[np.array], like Molecule.conformers
-                    data[key][i] = np.frombuffer(
-                        element, dtype=big_endian_float
-                    ).tolist()
+                    data[key][i] = np.frombuffer(element, dtype=big_endian_float).tolist()
                 elif isinstance(element, dict):
                     # Handles case of list[Molecule], like Topology.molecules
                     data[key][i] = _prep_numpy_data_for_json(element)
