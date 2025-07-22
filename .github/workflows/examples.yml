@@ -110,6 +110,23 @@ jobs:
       - name: Shim for `pytest-xdist` + Pint cross-interaction
         run: python -c "from openff.toolkit import *"
 
+      - name: Run code snippets in docs
+        if: ${{ matrix.openeye == true }}
+        run: pytest -v --no-cov --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
+
+      - name: Run notebooks in docs
+        if: ${{ matrix.openeye == true }}
+        run: python -m pytest -v --no-cov --nbval-lax docs/
+
+      - name: Run examples in docstrings
+        if: ${{ matrix.openeye == true }}
+        run: |
+          pytest openff \
+            -v -x -n logical --no-cov --doctest-modules \
+            --ignore-glob='openff/toolkit/_tests*' \
+            --ignore=openff/toolkit/data/ \
+            --ignore=openff/toolkit/utils/utils.py
+
       - name: Run example scripts
         run: |
           if [[ ${{ matrix.rdkit }} == false ]]; then

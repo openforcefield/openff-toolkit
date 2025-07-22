@@ -1277,8 +1277,8 @@ class FrozenMolecule(Serializable):
         for bond in self.bonds:
             id += f"{bond.bond_order}_{bond.stereochemistry}_{bond.atom1_index}_{bond.atom2_index}__"
 
-        self._ordered_connection_table_hash = hashlib.sha3_224(id.encode("utf-8")).hexdigest()
-        return self._ordered_connection_table_hash
+        self._ordered_connection_table_hash = hashlib.sha3_224(id.encode("utf-8")).hexdigest()  # type: ignore[assignment]
+        return self._ordered_connection_table_hash  # type: ignore[return-value]
 
     @classmethod
     def from_dict(cls: type[FM], molecule_dict: dict) -> FM:
