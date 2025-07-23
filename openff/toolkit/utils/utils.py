@@ -163,7 +163,7 @@ def quantity_to_string(input_quantity: Quantity) -> str:
         The serialized quantity
 
     """
-    unitless_value: float | int | NDArray | list = input_quantity.m_as(input_quantity.units)
+    unitless_value: float | int | NDArray | list = input_quantity.m
     # The string representation of a numpy array doesn't have commas and breaks the
     # parser, thus we convert any arrays to list here
     if isinstance(unitless_value, np.ndarray):
