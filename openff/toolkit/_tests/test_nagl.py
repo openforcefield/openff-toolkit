@@ -40,8 +40,7 @@ class TestNAGLToolkitWrapper:
         assert parsed_version == NAGLToolkitWrapper()._toolkit_version
 
     def test_nagl_in_global_toolkit_registry(self):
-        assert "NAGL" in GLOBAL_TOOLKIT_REGISTRY.__repr__()
-
+        assert NAGLToolkitWrapper in {type(tk) for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits}
 
     @requires_openeye
     @pytest.mark.parametrize(
