@@ -6,11 +6,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-## Current development
-
-### API-breaking changes
-
-### Behavior changes
+## 0.16.10
 
 ### Bugfixes
 
@@ -26,9 +22,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 - [PR #2066](https://github.com/openforcefield/openff-toolkit/pull/2066): Improves runtime in some situations by making AmberToolsToolkitWrapper perform lazy evaluation of AmberTools version. (@vamironov)
 - [PR #2090](https://github.com/openforcefield/openff-toolkit/pull/2090): Improves runtime of force field serialization via faster `Quantity` stringification.
-
-
-### Improved documentation and warnings
 
 
 ## 0.16.9
