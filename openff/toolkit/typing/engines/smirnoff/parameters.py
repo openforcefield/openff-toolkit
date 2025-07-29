@@ -3348,8 +3348,17 @@ class NAGLChargesHandler(_NonbondedHandler):
                                              "model_files: "
                                              f"{self.model_file=} is not identical to {other_handler.model_file=}")
 
+        # If both handlers have model_file_hashes defined, ensure they're identical
+        if self.model_file_hash and other_handler.model_file_hash and self.model_file_hash != other_handler.model_file_hash:
+            raise IncompatibleParameterError("Attempted to initialize two NAGLCharges sections with different "
+                                             "model_file_hash values: "
+                                             f"{self.model_file_hash=} is not identical to {other_handler.model_file_hash=}")
 
-
+        # If both handlers have digital_object_identifiers defined, ensure they're identical
+        if self.digital_object_identifier and other_handler.digital_object_identifier and self.digital_object_identifier != other_handler.digital_object_identifier:
+            raise IncompatibleParameterError("Attempted to initialize two NAGLCharges sections with different "
+                                             "digital_object_identifier values: "
+                                             f"{self.digital_object_identifier=} is not identical to {other_handler.digital_object_identifier=}")
 
 class ToolkitAM1BCCHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<ToolkitAM1BCC>`` tags

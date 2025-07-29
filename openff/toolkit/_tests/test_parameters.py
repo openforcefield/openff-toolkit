@@ -2821,6 +2821,121 @@ class TestNAGLChargesHandler:
         assert handler.model_file_hash is None
         assert handler.digital_object_identifier is None
 
+    def test_nagl_charges_handler_hash_compatibility(self):
+        """Test compatibility checks for model_file_hash"""
+        from openff.toolkit.typing.engines.smirnoff import NAGLChargesHandler
+        from openff.toolkit.utils.exceptions import IncompatibleParameterError
+
+        # Test compatible handlers with same hash
+        handler1 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0",
+            skip_version_check=True
+        )
+        handler2 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0",
+            skip_version_check=True
+        )
+        # Should not raise exception
+        handler1.check_handler_compatibility(handler2)
+
+        # Test incompatible handlers with different hashes
+        handler3 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="different_hash_value",
+            skip_version_check=True
+        )
+        with pytest.raises(IncompatibleParameterError, match="different model_file_hash values"):
+            handler1.check_handler_compatibility(handler3)
+
+        # Test compatibility when only one handler has hash (should be compatible)
+        handler4 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            skip_version_check=True
+        )
+        # Should not raise exception
+        handler1.check_handler_compatibility(handler4)
+        handler4.check_handler_compatibility(handler1)
+
+    def test_nagl_charges_handler_doi_compatibility(self):
+        """Test compatibility checks for digital_object_identifier"""
+        from openff.toolkit.typing.engines.smirnoff import NAGLChargesHandler
+        from openff.toolkit.utils.exceptions import IncompatibleParameterError
+
+        # Test compatible handlers with same DOI
+        handler1 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            digital_object_identifier="10.5072/zenodo.203601",
+            skip_version_check=True
+        )
+        handler2 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            digital_object_identifier="10.5072/zenodo.203601",
+            skip_version_check=True
+        )
+        # Should not raise exception
+        handler1.check_handler_compatibility(handler2)
+
+        # Test incompatible handlers with different DOIs
+        handler3 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            digital_object_identifier="10.5072/zenodo.999999",
+            skip_version_check=True
+        )
+        with pytest.raises(IncompatibleParameterError, match="different digital_object_identifier values"):
+            handler1.check_handler_compatibility(handler3)
+
+        # Test compatibility when only one handler has DOI (should be compatible)
+        handler4 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            skip_version_check=True
+        )
+        # Should not raise exception
+        handler1.check_handler_compatibility(handler4)
+        handler4.check_handler_compatibility(handler1)
+
+    def test_nagl_charges_handler_combined_compatibility(self):
+        """Test compatibility checks with both hash and DOI"""
+        from openff.toolkit.typing.engines.smirnoff import NAGLChargesHandler
+        from openff.toolkit.utils.exceptions import IncompatibleParameterError
+
+        # Test compatible handlers with same hash and DOI
+        handler1 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0",
+            digital_object_identifier="10.5072/zenodo.203601",
+            skip_version_check=True
+        )
+        handler2 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0",
+            digital_object_identifier="10.5072/zenodo.203601",
+            skip_version_check=True
+        )
+        # Should not raise exception
+        handler1.check_handler_compatibility(handler2)
+
+        # Test incompatible with same hash but different DOI
+        handler3 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0",
+            digital_object_identifier="10.5072/zenodo.999999",
+            skip_version_check=True
+        )
+        with pytest.raises(IncompatibleParameterError, match="different digital_object_identifier values"):
+            handler1.check_handler_compatibility(handler3)
+
+        # Test incompatible with different hash but same DOI
+        handler4 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="different_hash_value",
+            digital_object_identifier="10.5072/zenodo.203601",
+            skip_version_check=True
+        )
+        with pytest.raises(IncompatibleParameterError, match="different model_file_hash values"):
+            handler1.check_handler_compatibility(handler4)
+
 
 class TestGBSAHandler:
     def test_create_default_gbsahandler(self):
