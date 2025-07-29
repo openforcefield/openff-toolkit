@@ -14,6 +14,7 @@ from packaging.version import Version
 from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.toolkit._tests.mocking import VirtualSiteMocking
 from openff.toolkit._tests.utils import does_not_raise
+from openff.toolkit.typing.engines.smirnoff import NAGLChargesHandler
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
@@ -2724,15 +2725,12 @@ class TestChargeIncrementModelHandler:
 
 class TestNAGLChargesHandler:
     def test_nagl_charges_handler_serialization(self):
-        from openff.toolkit.typing.engines.smirnoff import NAGLChargesHandler
         handler = NAGLChargesHandler(model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt", skip_version_check=True)
         assert handler.model_file == "openff-gnn-am1bcc-0.1.0-rc.3.pt"
         handler_dict = handler.to_dict()
         assert handler_dict["model_file"] == "openff-gnn-am1bcc-0.1.0-rc.3.pt"
 
     def test_nagl_charges_handler_with_optional_fields(self):
-        from openff.toolkit.typing.engines.smirnoff import NAGLChargesHandler
-
         # Test with model_file_hash
         handler = NAGLChargesHandler(
             model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
@@ -2765,8 +2763,6 @@ class TestNAGLChargesHandler:
         assert handler.digital_object_identifier == "10.5072/zenodo.203601"
 
     def test_nagl_charges_handler_serialization_with_optional_fields(self):
-        from openff.toolkit.typing.engines.smirnoff import NAGLChargesHandler
-
         # Test serialization with all fields
         handler = NAGLChargesHandler(
             model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
@@ -2786,9 +2782,6 @@ class TestNAGLChargesHandler:
         assert handler_from_dict.digital_object_identifier == "10.5072/zenodo.203601"
 
     def test_nagl_charges_handler_compatibility(self):
-        from openff.toolkit.typing.engines.smirnoff import NAGLChargesHandler
-        from openff.toolkit.utils.exceptions import IncompatibleParameterError
-
         # Test compatible handlers (same model_file)
         handler1 = NAGLChargesHandler(
             model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
@@ -2811,8 +2804,6 @@ class TestNAGLChargesHandler:
             handler1.check_handler_compatibility(handler3)
 
     def test_nagl_charges_handler_defaults(self):
-        from openff.toolkit.typing.engines.smirnoff import NAGLChargesHandler
-
         # Test that optional fields default to None
         handler = NAGLChargesHandler(
             model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
@@ -2823,9 +2814,6 @@ class TestNAGLChargesHandler:
 
     def test_nagl_charges_handler_hash_compatibility(self):
         """Test compatibility checks for model_file_hash"""
-        from openff.toolkit.typing.engines.smirnoff import NAGLChargesHandler
-        from openff.toolkit.utils.exceptions import IncompatibleParameterError
-
         # Test compatible handlers with same hash
         handler1 = NAGLChargesHandler(
             model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
@@ -2860,9 +2848,6 @@ class TestNAGLChargesHandler:
 
     def test_nagl_charges_handler_doi_compatibility(self):
         """Test compatibility checks for digital_object_identifier"""
-        from openff.toolkit.typing.engines.smirnoff import NAGLChargesHandler
-        from openff.toolkit.utils.exceptions import IncompatibleParameterError
-
         # Test compatible handlers with same DOI
         handler1 = NAGLChargesHandler(
             model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
@@ -2897,9 +2882,6 @@ class TestNAGLChargesHandler:
 
     def test_nagl_charges_handler_combined_compatibility(self):
         """Test compatibility checks with both hash and DOI"""
-        from openff.toolkit.typing.engines.smirnoff import NAGLChargesHandler
-        from openff.toolkit.utils.exceptions import IncompatibleParameterError
-
         # Test compatible handlers with same hash and DOI
         handler1 = NAGLChargesHandler(
             model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
