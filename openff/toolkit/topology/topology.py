@@ -525,7 +525,7 @@ class Topology(Serializable):
     @classmethod
     def from_molecules(
         cls,
-        molecules: Union[MoleculeLike, list[MoleculeLike]],
+        molecules: MoleculeLike | Iterable[MoleculeLike],
     ) -> "Topology":
         """
         Create a new Topology object containing one copy of each of the specified molecule(s).
@@ -703,7 +703,7 @@ class Topology(Serializable):
         return len(self._molecules)
 
     @property
-    def molecules(self) -> Generator[MoleculeLike, None, None]:
+    def molecules(self) -> Iterator[MoleculeLike]:
         """Returns an iterator over all the Molecules in this Topology
 
         Returns
@@ -1085,7 +1085,7 @@ class Topology(Serializable):
                     topology_atom_indices = []
                     for molecule_atom_index in match:
                         atom = mol_instance.atom(atom_map[molecule_atom_index])
-                        topology_atom_indices.append(self.atom_index(atom))
+                        topology_atom_indices.append(self.atom_index(atom))  # type: ignore[arg-type]
 
                     environment_match = Topology._ChemicalEnvironmentMatch(
                         tuple(match), unique_mol, tuple(topology_atom_indices)
@@ -1800,7 +1800,7 @@ class Topology(Serializable):
             [[*vec3.value_in_unit(openmm_unit.angstrom)] for vec3 in pdb.getPositions()]
         )
 
-        topology = toolkit_registry.call(
+        topology: Topology = toolkit_registry.call(
             "_polymer_openmm_pdbfile_to_offtop",
             cls,
             pdb,
@@ -1809,7 +1809,7 @@ class Topology(Serializable):
             _custom_substructures,
         )
 
-        for off_atom, atom in zip([*topology.atoms], pdb.topology.atoms()):
+        for off_atom, atom in zip(topology.atoms, pdb.topology.atoms()):
             off_atom.metadata["residue_name"] = atom.residue.name
             off_atom.metadata["residue_number"] = atom.residue.id
             off_atom.metadata["insertion_code"] = atom.residue.insertionCode
@@ -2135,7 +2135,7 @@ class Topology(Serializable):
         for molecule in self.molecules:
             molecule._conformers = None
 
-    def set_positions(self, array: Quantity):
+    def set_positions(self, array: Quantity) -> None:
         """
         Set the positions in a topology by copying from a single (n, 3) array.
 
@@ -2166,9 +2166,9 @@ class Topology(Serializable):
 
         # Copy the array in nanometers and make it an OpenFF Quantity
         array = Quantity(np.asarray(array.to(unit.nanometer).magnitude), unit.nanometer)
-        if array.shape != (self.n_atoms, 3):  # type: ignore[attr-defined]
+        if array.shape != (self.n_atoms, 3):
             raise WrongShapeError(
-                f"Array has shape {array.shape} but should have shape {self.n_atoms, 3}"  # type: ignore[attr-defined]
+                f"Array has shape {array.shape} but should have shape {self.n_atoms, 3}"
             )
 
         start = 0
@@ -2343,7 +2343,8 @@ class Topology(Serializable):
             if next_molecule_start_index > atom_topology_index:
                 atom_molecule_index = atom_topology_index - this_molecule_start_index
                 # NOTE: the index here should still be in the topology index order, NOT the reference molecule's
-                return molecule.atom(atom_molecule_index)
+                # can Molecule.atom be a _SimpleAtom?
+                return molecule.atom(atom_molecule_index)  # type: ignore[return-value]
             this_molecule_start_index += molecule.n_atoms
 
         raise AtomNotInTopologyError(

@@ -2716,8 +2716,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 res.SetResidueName(atom.metadata["residue_name"])
 
             if "residue_number" in atom.metadata:
-                atom_has_any_metadata = True
-                res.SetResidueNumber(int(atom.metadata["residue_number"]))
+                try:
+                    residue_number_int = int(atom.metadata["residue_number"])
+                except ValueError:
+                    # Residue number is a string that could not be converted to int
+                    pass
+                else:
+                    atom_has_any_metadata = True
+                    res.SetResidueNumber(residue_number_int)
 
             if "insertion_code" in atom.metadata:
                 atom_has_any_metadata = True
@@ -3267,7 +3273,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 atom1, atom2 = bond.GetBeginAtom(), bond.GetEndAtom()
                 msg += (
                     f" - Bond {undefined_bond_idx} (atoms {atom1.GetIdx()}-{atom2.GetIdx()} of element "
-                    "({atom1.GetSymbol()}-{atom2.GetSymbol()})\n"
+                    f"({atom1.GetSymbol()}-{atom2.GetSymbol()})\n"
                 )
 
         raise UndefinedStereochemistryError(err_msg_prefix + msg)

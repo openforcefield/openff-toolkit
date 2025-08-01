@@ -31,7 +31,7 @@ import operator
 import pathlib
 import warnings
 from collections import UserDict, defaultdict
-from collections.abc import Generator, Iterable, Sequence
+from collections.abc import Generator, Iterable, Iterator, Mapping, MutableMapping, Sequence
 from copy import deepcopy
 from functools import cmp_to_key
 from typing import (
@@ -92,6 +92,7 @@ if TYPE_CHECKING:
     import IPython.display
     import networkx as nx
     import nglview
+    from openmm.unit import Quantity as OMMQuantity
     from rdkit.Chem import Mol as RDMol
 
     from openff.toolkit.topology._mm_molecule import _SimpleAtom, _SimpleMolecule
@@ -159,7 +160,7 @@ class Particle(Serializable):
         """
         Returns the index of this particle in its molecule
         """
-        return self._molecule.atoms.index(self)
+        return self._molecule.atoms.index(self)  # type:ignore
 
     @property
     def name(self) -> str:
@@ -226,8 +227,8 @@ class Atom(Particle):
         is_aromatic: bool,
         name: Optional[str] = None,
         molecule=None,
-        stereochemistry: Optional[str] = None,
-        metadata: Optional[dict[str, Union[int, str]]] = None,
+        stereochemistry: Literal["R", "S", None] = None,
+        metadata: Mapping[str, int | str] | None = None,
     ):
         """
         Create an immutable Atom object.
@@ -272,7 +273,7 @@ class Atom(Particle):
 
         # Use the setter here, since it will handle either ints or Quantities
         # and it is designed to quickly process ints
-        self.formal_charge = formal_charge
+        self.formal_charge = formal_charge  # type: ignore[assignment]
         self._is_aromatic = is_aromatic
         self._stereochemistry = stereochemistry
         if name is None:
@@ -312,9 +313,13 @@ class Atom(Particle):
         """
         # TODO: Should this be implicit in the atom ordering when saved?
         # atom_dict['molecule_atom_index'] = self._molecule_atom_index
+
+        # trust that the unit is e
+        formal_charge: int = self._formal_charge.m  # type: ignore
+
         return {
             "atomic_number": self._atomic_number,
-            "formal_charge": self._formal_charge.m,  # Trust that the unit is e
+            "formal_charge": formal_charge,
             "is_aromatic": self._is_aromatic,
             "stereochemistry": self._stereochemistry,
             "name": self._name,
@@ -331,21 +336,21 @@ class Atom(Particle):
         return cls(**atom_dict)
 
     @property
-    def metadata(self):
+    def metadata(self) -> MutableMapping[str, int | str]:
         """
         The atom's metadata dictionary
         """
         return self._metadata
 
     @property
-    def formal_charge(self):
+    def formal_charge(self) -> Quantity:
         """
         The atom's formal charge
         """
         return self._formal_charge
 
     @formal_charge.setter
-    def formal_charge(self, other):
+    def formal_charge(self, other: "int | Quantity | OMMQuantity"):
         """
         Set the atom's formal charge. Accepts either ints or unit-wrapped ints with units of charge.
         """
@@ -432,19 +437,20 @@ class Atom(Particle):
         return self._is_aromatic
 
     @property
-    def stereochemistry(self):
+    def stereochemistry(self) -> Literal["R", "S", None]:
         """
         The atom's stereochemistry (if defined, otherwise None)
         """
         return self._stereochemistry
 
     @stereochemistry.setter
-    def stereochemistry(self, value: Literal["CW", "CCW", None]):
+    def stereochemistry(self, value: Literal["R", "S", None]):
         """Set the atoms stereochemistry
         Parameters
         ----------
         value
-            The stereochemistry around this atom, allowed values are "CW", "CCW", or None,
+            The stereochemistry around this atom, suggested values are ``"R"``,
+            ``"S"``, or ``None``.
         """
 
         # if (value != 'CW') and (value != 'CCW') and not(value is None):
@@ -762,11 +768,11 @@ class Bond(Serializable):
         return (self._atom1, self._atom2)
 
     @property
-    def bond_order(self):
+    def bond_order(self) -> int:
         return self._bond_order
 
     @bond_order.setter
-    def bond_order(self, value):
+    def bond_order(self, value: int):
         if isinstance(value, int):
             self._bond_order = value
         else:
@@ -787,7 +793,7 @@ class Bond(Serializable):
         self._fractional_bond_order = value
 
     @property
-    def stereochemistry(self):
+    def stereochemistry(self) -> Literal["E", "Z", None]:
         return self._stereochemistry
 
     @property
@@ -1208,6 +1214,7 @@ class FrozenMolecule(Serializable):
                 list[str],
                 list[bytes],
                 list[HierarchyElement],
+                list[dict[str, Any]],
             ],
         ] = dict()
         molecule_dict["name"] = self._name
@@ -1385,9 +1392,9 @@ class FrozenMolecule(Serializable):
         """
         Clear the contents of the current molecule.
         """
-        self._name = ""
-        self._atoms = list()
-        self._bonds = list()  # list of bonds between Atom objects
+        self._name: str = ""
+        self._atoms: list[Atom] = list()
+        self._bonds: list[Bond] = list()  # list of bonds between Atom objects
         self._properties = {}  # Attached properties to be preserved
         # self._cached_properties = None # Cached properties (such as partial charges) can be recomputed as needed
         self._partial_charges = None
@@ -2002,8 +2009,8 @@ class FrozenMolecule(Serializable):
 
     @staticmethod
     def are_isomorphic(
-        mol1: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"],
-        mol2: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"],
+        mol1: "FrozenMolecule | _SimpleMolecule | nx.Graph[int]",
+        mol2: "FrozenMolecule | _SimpleMolecule | nx.Graph[int]",
         return_atom_map: bool = False,
         aromatic_matching: bool = True,
         formal_charge_matching: bool = True,
@@ -2012,7 +2019,7 @@ class FrozenMolecule(Serializable):
         bond_stereochemistry_matching: bool = True,
         strip_pyrimidal_n_atom_stereo: bool = True,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
-    ) -> tuple[bool, Optional[dict[int, int]]]:
+    ) -> tuple[bool, None | dict[int, int]]:
         """
         Determine if ``mol1`` is isomorphic to ``mol2``.
 
@@ -2230,8 +2237,15 @@ class FrozenMolecule(Serializable):
 
     def is_isomorphic_with(
         self,
-        other: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"],
-        **kwargs,
+        other: "FrozenMolecule | _SimpleMolecule | nx.Graph[int]",
+        aromatic_matching: bool = True,
+        formal_charge_matching: bool = True,
+        bond_order_matching: bool = True,
+        atom_stereochemistry_matching: bool = True,
+        bond_stereochemistry_matching: bool = True,
+        strip_pyrimidal_n_atom_stereo: bool = True,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
+        **kwargs: dict[str, Any],
     ) -> bool:
         """
         Check if the molecule is isomorphic with the other molecule which can be an openff.toolkit.topology.Molecule
@@ -2244,13 +2258,13 @@ class FrozenMolecule(Serializable):
         other
 
         aromatic_matching
-        compare the aromatic attributes of bonds and atoms.
+            compare the aromatic attributes of bonds and atoms.
 
         formal_charge_matching
-        compare the formal charges attributes of the atoms.
+            compare the formal charges attributes of the atoms.
 
         bond_order_matching
-        compare the bond order on attributes of the bonds.
+            compare the bond order on attributes of the bonds.
 
         atom_stereochemistry_matching
             If ``False``, atoms' stereochemistry is ignored for the
@@ -2269,6 +2283,9 @@ class FrozenMolecule(Serializable):
             :class:`ToolkitRegistry` or :class:`ToolkitWrapper` to use for
             removing stereochemistry from pyrimidal nitrogens.
 
+        **kwargs
+            Ignored. This will be removed in an upcoming release.
+
         Returns
         -------
         isomorphic
@@ -2278,29 +2295,23 @@ class FrozenMolecule(Serializable):
             self,
             other,
             return_atom_map=False,
-            aromatic_matching=kwargs.get("aromatic_matching", True),
-            formal_charge_matching=kwargs.get("formal_charge_matching", True),
-            bond_order_matching=kwargs.get("bond_order_matching", True),
-            atom_stereochemistry_matching=kwargs.get(
-                "atom_stereochemistry_matching", True
-            ),
-            bond_stereochemistry_matching=kwargs.get(
-                "bond_stereochemistry_matching", True
-            ),
-            strip_pyrimidal_n_atom_stereo=kwargs.get(
-                "strip_pyrimidal_n_atom_stereo", True
-            ),
-            toolkit_registry=kwargs.get("toolkit_registry", GLOBAL_TOOLKIT_REGISTRY),
+            aromatic_matching=aromatic_matching,
+            formal_charge_matching=formal_charge_matching,
+            bond_order_matching=bond_order_matching,
+            atom_stereochemistry_matching=atom_stereochemistry_matching,
+            bond_stereochemistry_matching=bond_stereochemistry_matching,
+            strip_pyrimidal_n_atom_stereo=strip_pyrimidal_n_atom_stereo,
+            toolkit_registry=toolkit_registry,
         )[0]
 
     def generate_conformers(
         self,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         n_conformers: int = 10,
-        rms_cutoff: Optional[Quantity] = None,
+        rms_cutoff: Quantity | None = None,
         clear_existing: bool = True,
         make_carboxylic_acids_cis: bool = True,
-    ):
+    ) -> None:
         """
         Generate conformers for this molecule using an underlying toolkit.
 
@@ -2474,9 +2485,7 @@ class FrozenMolecule(Serializable):
         dihedrals.shape = (n_conformers, n_cooh_groups, 1, 1)
 
         # Get indices of trans COOH groups
-        trans_indices = np.logical_not(
-            np.logical_and((-np.pi / 2) < dihedrals, dihedrals < (np.pi / 2))
-        )
+        trans_indices = np.logical_not(np.logical_and((-np.pi / 2) < dihedrals, dihedrals < (np.pi / 2)))
         # Expand array so it can be used to index cooh_xyz
         trans_indices = np.repeat(trans_indices, repeats=4, axis=2)
         trans_indices = np.repeat(trans_indices, repeats=3, axis=3)
@@ -2517,9 +2526,7 @@ class FrozenMolecule(Serializable):
         self,
         percentage: float = 2.0,
         limit: int = 10,
-        toolkit_registry: Optional[
-            Union[ToolkitRegistry, ToolkitWrapper]
-        ] = GLOBAL_TOOLKIT_REGISTRY,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         **kwargs,
     ):
         """Select a set of diverse conformers from the molecule's conformers with ELF.
@@ -2879,7 +2886,7 @@ class FrozenMolecule(Serializable):
         """
         import networkx as nx
 
-        G: nx.classes.graph.Graph = nx.Graph()
+        G: nx.classes.graph.Graph[int] = nx.Graph()
         for atom in self.atoms:
             G.add_node(
                 atom.molecule_atom_index,
@@ -2984,9 +2991,9 @@ class FrozenMolecule(Serializable):
         atomic_number: int,
         formal_charge: int,
         is_aromatic: bool,
-        stereochemistry: Optional[str] = None,
-        name: Optional[str] = None,
-        metadata=None,
+        stereochemistry: Literal["R", "S", None] = None,
+        name: str | None = None,
+        metadata: dict[str, int | str] | None = None,
         invalidate_cache: bool = True,
     ) -> int:
         """
@@ -3054,12 +3061,12 @@ class FrozenMolecule(Serializable):
 
     def _add_bond(
         self,
-        atom1,
-        atom2,
-        bond_order,
-        is_aromatic,
-        stereochemistry=None,
-        fractional_bond_order=None,
+        atom1: int | Atom,
+        atom2: int | Atom,
+        bond_order: int,
+        is_aromatic: bool,
+        stereochemistry: Literal["E", "Z", None] = None,
+        fractional_bond_order: float | None = None,
         invalidate_cache: bool = True,
     ):
         """
@@ -3155,7 +3162,7 @@ class FrozenMolecule(Serializable):
             if not isinstance(coordinates, openmm_unit.Quantity):
                 raise IncompatibleUnitError(
                     "Unsupported type passed to Molecule._add_conformer setter. "
-                    "Found object of type {type(other)}."
+                    f"Found object of type {type(coordinates)}."
                 )
 
             if not coordinates.unit.is_compatible(openmm_unit.meter):
@@ -3299,7 +3306,7 @@ class FrozenMolecule(Serializable):
         return len(self._impropers)
 
     @property
-    def atoms(self):
+    def atoms(self) -> list[Atom]:
         """
         Iterate over all Atom objects in the molecule.
         """
@@ -3604,7 +3611,7 @@ class FrozenMolecule(Serializable):
         return self._hill_formula
 
     @staticmethod
-    def _object_to_hill_formula(obj: Union["FrozenMolecule", "nx.Graph"]) -> str:
+    def _object_to_hill_formula(obj: Union["FrozenMolecule", "nx.Graph[int]"]) -> str:
         """Take a Molecule or NetworkX graph and generate its Hill formula.
         This provides a backdoor to the old functionality of Molecule.to_hill_formula, which
         was a static method that duck-typed inputs of Molecule or graph objects."""
@@ -3836,11 +3843,11 @@ class FrozenMolecule(Serializable):
     @classmethod
     def from_file(
         cls: type[FM],
-        file_path: Union[str, pathlib.Path, TextIO],
-        file_format=None,
-        toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
+        file_path: str | pathlib.Path | TextIO,
+        file_format: str | None = None,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         allow_undefined_stereo: bool = False,
-    ) -> Union[FM, list[FM]]:
+    ) -> FM | list[FM]:
         """
         Create one or more molecules from a file
 
@@ -4240,8 +4247,8 @@ class FrozenMolecule(Serializable):
             supported_formats = {}
             for _toolkit in toolkit_registry.registered_toolkits:
                 supported_formats[_toolkit.toolkit_name] = (
-                    _toolkit.toolkit_file_write_formats
-                )
+                _toolkit.toolkit_file_write_formats
+            )
             raise ValueError(
                 f"The requested file format ({file_format}) is not available from any of the installed toolkits "
                 f"(supported formats: {supported_formats})"
@@ -4565,8 +4572,8 @@ class FrozenMolecule(Serializable):
         symbols = [SYMBOLS[atom.atomic_number] for atom in self.atoms]
         if extras is not None:
             extras["canonical_isomeric_explicit_hydrogen_mapped_smiles"] = (
-                self.to_smiles(mapped=True)
-            )
+            self.to_smiles(mapped=True)
+        )
         else:
             extras = {
                 "canonical_isomeric_explicit_hydrogen_mapped_smiles": self.to_smiles(
@@ -5072,7 +5079,7 @@ class FrozenMolecule(Serializable):
             for i in range(self.n_atoms):
                 # get the old atom info
                 old_atom = self._atoms[new_to_cur[i]]
-                new_molecule._add_atom(**old_atom.to_dict())
+                new_molecule._add_atom(**old_atom.to_dict())  # type:ignore
         # this is the first time we access the mapping; catch an index error
         # here corresponding to mapping that starts from 0 or higher
         except (KeyError, IndexError):
@@ -5086,7 +5093,7 @@ class FrozenMolecule(Serializable):
             bond_dict = bond.to_dict()
             bond_dict["atom1"] = atoms[0]
             bond_dict["atom2"] = atoms[1]
-            new_molecule._add_bond(**bond_dict)
+            new_molecule._add_bond(**bond_dict)  # type:ignore
 
         # we can now resort the bonds
         sorted_bonds = sorted(
@@ -5288,8 +5295,7 @@ class FrozenMolecule(Serializable):
         else:
             raise TypeError(
                 "Invalid input passed to get_bond_between(). Expected ints or Atoms, "
-                f"got {j} and {j}."
-            )
+                f"got {j} and {j}.")
 
         for bond in atom_i.bonds:
             for atom in bond.atoms:
@@ -5371,7 +5377,7 @@ class Molecule(FrozenMolecule):
         atomic_number: int,
         formal_charge: int,
         is_aromatic: bool,
-        stereochemistry: Optional[str] = None,
+        stereochemistry: Literal["R", "S", None] = None,
         name: Optional[str] = None,
         metadata: Optional[dict[str, Union[int, str]]] = None,
     ) -> int:
@@ -5437,7 +5443,7 @@ class Molecule(FrozenMolecule):
         atom2: Union[int, "Atom"],
         bond_order: int,
         is_aromatic: bool,
-        stereochemistry: Optional[str] = None,
+        stereochemistry: Literal["E", "Z", None] = None,
         fractional_bond_order: Optional[float] = None,
     ) -> int:
         """
@@ -5719,7 +5725,7 @@ class Molecule(FrozenMolecule):
                         smarts_no_chirality
                     ] = substructure_dictionary_no_chirality[res_name].pop(
                         smarts
-                    )  # update key
+                    ) # update key
             # replace with the new substructure dictionary
             substructure_dictionary = substructure_dictionary_no_chirality
 
@@ -5768,14 +5774,10 @@ class Molecule(FrozenMolecule):
         # Now the matches have been deduplicated and de-subsetted
         for residue_num, match_dict in enumerate(all_matches):
             for smarts_idx, atom_idx in enumerate(match_dict["atom_idxs"]):
-                self.atoms[atom_idx].metadata["residue_name"] = match_dict[
-                    "residue_name"
-                ]
+                self.atoms[atom_idx].metadata["residue_name"] = match_dict["residue_name"]
                 self.atoms[atom_idx].metadata["residue_number"] = str(residue_num + 1)
                 self.atoms[atom_idx].metadata["insertion_code"] = " "
-                self.atoms[atom_idx].metadata["atom_name"] = match_dict["atom_names"][
-                    smarts_idx
-                ]
+                self.atoms[atom_idx].metadata["atom_name"] = match_dict["atom_names"][smarts_idx]
 
         # Now add the residue hierarchy scheme
         self._add_residue_hierarchy_scheme()
@@ -5799,7 +5801,7 @@ class Molecule(FrozenMolecule):
             pass
 
 
-def _networkx_graph_to_hill_formula(graph: "nx.Graph") -> str:
+def _networkx_graph_to_hill_formula(graph: "nx.Graph[int]") -> str:
     """
     Convert a NetworkX graph to a Hill formula.
 
@@ -5820,7 +5822,7 @@ def _networkx_graph_to_hill_formula(graph: "nx.Graph") -> str:
         raise ValueError("The graph must be a NetworkX graph.")
 
     atom_nums = list(dict(graph.nodes(data="atomic_number", default=1)).values())
-    return _atom_nums_to_hill_formula(atom_nums)
+    return _atom_nums_to_hill_formula(atom_nums)  # type:ignore[arg-type]
 
 
 def _atom_nums_to_hill_formula(atom_nums: list[int]) -> str:
@@ -5856,9 +5858,7 @@ def _atom_nums_to_hill_formula(atom_nums: list[int]) -> str:
 def _nth_degree_neighbors_from_graphlike(
     graphlike: MoleculeLike,
     n_degrees: int,
-) -> Generator[
-    Union[tuple[Atom, Atom], tuple["_SimpleAtom", "_SimpleAtom"]], None, None
-]:
+) -> Iterator[tuple[Atom, Atom] | tuple["_SimpleAtom", "_SimpleAtom"]]:
     """
     Given a graph-like object, return a tuple of the nth degree neighbors of each atom.
 
@@ -6007,11 +6007,9 @@ class HierarchyScheme:
 
         self.hierarchy_elements = list()
         # Determine which atoms should get added to which HierarchyElements
-        hier_eles_to_add: defaultdict[tuple[Union[int, str]], list[Atom]] = (
-            defaultdict(list)
-        )
+        hier_eles_to_add: defaultdict[tuple[int | str, ...], list[Atom]] = defaultdict(list)
         for atom in self.parent.atoms:
-            _atom_key = list()
+            _atom_key: list[int | str] = list()
             for field_key in self.uniqueness_criteria:
                 if field_key in atom.metadata:
                     _atom_key.append(atom.metadata[field_key])
@@ -6029,7 +6027,7 @@ class HierarchyScheme:
 
     def add_hierarchy_element(
         self,
-        identifier: tuple[Union[str, int]],
+        identifier: tuple[str | int, ...],
         atom_indices: Sequence[int],
     ) -> "HierarchyElement":
         """
@@ -6116,7 +6114,7 @@ class HierarchyElement:
     def __init__(
         self,
         scheme: HierarchyScheme,
-        identifier: tuple[Union[str, int]],
+        identifier: tuple[str | int, ...],
         atom_indices: Sequence[int],
     ):
         """
@@ -6141,7 +6139,7 @@ class HierarchyElement:
         ):
             setattr(self, uniqueness_component, id_component)
 
-    def to_dict(self) -> dict[str, Union[tuple[Union[str, int]], Sequence[int]]]:
+    def to_dict(self) -> dict[str, tuple[str | int, ...] | Sequence[int]]:
         """Serialize this object to a basic dict of strings and lists of ints.
 
         Keys and values align with parameters used to initialize the :class:`HierarchyElement` class.
@@ -6159,7 +6157,7 @@ class HierarchyElement:
         return len(self.atom_indices)
 
     @property
-    def atoms(self) -> Generator["Atom", None, None]:
+    def atoms(self) -> Iterator["Atom"]:
         """
         Iterator over the atoms in this hierarchy element.
         """
@@ -6213,7 +6211,7 @@ class HierarchyElement:
 
 
 def _has_unique_atom_names(
-    obj: Union[FrozenMolecule, "_SimpleMolecule", HierarchyElement]
+    obj: "FrozenMolecule | _SimpleMolecule | HierarchyElement",
 ) -> bool:
     """``True`` if the object has unique atom names, ``False`` otherwise."""
     unique_atom_names = set([atom.name for atom in obj.atoms])
@@ -6223,8 +6221,9 @@ def _has_unique_atom_names(
 
 
 def _generate_unique_atom_names(
-    obj: Union[FrozenMolecule, HierarchyElement], suffix: str = "x"
-):
+    obj: FrozenMolecule | HierarchyElement,
+    suffix: str = "x",
+) -> None:
     """
     Generate unique atom names from the element symbol and count.
 
