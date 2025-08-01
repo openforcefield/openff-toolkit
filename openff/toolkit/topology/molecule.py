@@ -449,7 +449,8 @@ class Atom(Particle):
         Parameters
         ----------
         value
-            The stereochemistry around this atom, allowed values are "R", "S", or None,
+            The stereochemistry around this atom, suggested values are ``"R"``,
+            ``"S"``, or ``None``.
         """
 
         # if (value != 'CW') and (value != 'CCW') and not(value is None):
