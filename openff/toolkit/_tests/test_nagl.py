@@ -128,7 +128,7 @@ class TestNAGLToolkitWrapper:
     def test_unsupported_charge_method(self):
         with pytest.raises(
             BadFileSuffixError,
-            match="NAGLToolkitWrapper does not recognize file path extension on filename='hartree_fock'",
+            match="Found an unrecognized file path extension on filename='hartree_fock'",
         ):
             create_ethanol().assign_partial_charges(
                 partial_charge_method="hartree_fock",
