@@ -20,7 +20,7 @@ jobs:
       PYVER: ${{ matrix.python-version }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Install conda environment
       uses: mamba-org/setup-micromamba@v1
