@@ -51,5 +51,3 @@ dependencies:
     - types-xmltodict
     - types-cachetools
     - mongo-types
-    #- git+https://github.com/openforcefield/openff-interchange.git@naglcharges-handler
-    - git+https://github.com/openforcefield/openff-nagl-models.git@main
