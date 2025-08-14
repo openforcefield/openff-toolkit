@@ -6,7 +6,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-## Current development
+## 0.17.0
 
 ### API-breaking changes
 
@@ -15,6 +15,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Bugfixes
 
 ### New features
+- [PR #2048](https://github.com/openforcefield/openff-toolkit/pull/2048): Adds NAGLChargesHandler. See [SMIRNOFF EP 11](https://github.com/openforcefield/standards/pull/71) for the new SMIRNOFF specification section and discussion.
+
 
 ### Improved documentation and warnings
 
