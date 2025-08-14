@@ -29,6 +29,7 @@ __all__ = [
     "LibraryChargeHandler",
     "LibraryChargeType",
     "MappedParameterAttribute",
+    "NAGLChargesHandler",
     "NotEnoughPointsForInterpolationError",
     "ParameterAttribute",
     "ParameterHandler",
@@ -3253,6 +3254,115 @@ class LibraryChargeHandler(_NonbondedHandler):
             unique=unique,
         )
 
+class NAGLChargesHandler(_NonbondedHandler):
+    """ParameterHandler for applying partial charges from a pretrained NAGL model.
+
+    This handler processes the NAGLCharges section of SMIRNOFF force fields, which
+    specifies a pre-trained NAGL model for computing
+    partial charges on molecules.
+
+    Parameters
+    ----------
+    model_file : str
+        Path to the PyTorch model file (e.g., "openff-gnn-am1bcc-0.1.0-rc.3.pt").
+        This is the model that will be used for charge assignment.
+    model_file_hash : str, optional
+        SHA-256 hash of the model file for integrity verification. When provided,
+        the hash will be validated against the actual model file.
+    digital_object_identifier : str, optional
+        Zenodo DOI that can be used to retrieve the model file if it's not found
+        locally. Must point to a Zenodo record with an attached file matching
+        the model_file name.
+    version : str, optional
+        The version of the NAGLCharges section specification.
+    skip_version_check : bool, optional, default=False
+        If True, skips validation of the version parameter and sets it to the highest
+        supported version.
+    allow_cosmetic_attributes : bool, optional, default=False
+        If True, allows non-specification attributes to be present.
+
+    Examples
+    --------
+    Create a handler with just the model file:
+
+    >>> handler = NAGLChargesHandler(
+    ...     model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+    ...     skip_version_check=True
+    ... )
+
+    Create a handler with hash verification:
+
+    >>> handler = NAGLChargesHandler(
+    ...     model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+    ...     model_file_hash="144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0",
+    ...     skip_version_check=True
+    ... )
+
+    Create a handler with DOI for model retrieval:
+
+    >>> handler = NAGLChargesHandler(
+    ...     model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+    ...     digital_object_identifier="10.5072/zenodo.203601",
+    ...     skip_version_check=True
+    ... )
+
+    Notes
+    -----
+    NAGLChargesHandler compatibility is determined solely by the model_file parameter. Two
+    handlers are compatible if and only if they specify the same model_file,
+    regardless of the values of model_file_hash or digital_object_identifier.
+
+    The actual model loading, hash verification, and DOI-based retrieval are
+    handled by the openff-nagl-models package, not by this handler directly.
+    """
+
+    _TAGNAME = "NAGLCharges"
+    _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler, LibraryChargeHandler]
+    _INFOTYPE = None  # No separate parameter types; just a model path
+    _MAX_SUPPORTED_SECTION_VERSION = Version("0.3")
+    model_file = ParameterAttribute(converter=str)
+    model_file_hash = ParameterAttribute(default=None, converter=str)
+    digital_object_identifier = ParameterAttribute(default=None, converter=str)
+
+    def check_handler_compatibility(
+        self,
+        other_handler: "NAGLChargesHandler",
+        assume_missing_is_default: bool = True,
+    ):
+        """
+        Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
+        called if a second handler is attempted to be initialized for the same tag.
+
+        Parameters
+        ----------
+        other_handler
+            The handler to compare to.
+        assume_missing_is_default
+
+        Raises
+        ------
+        IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
+        """
+        if self.model_file != other_handler.model_file:
+            raise IncompatibleParameterError("Attempted to initialize two NAGLCharges sections with different "
+                                             "model_files: "
+                                             f"{self.model_file=} is not identical to {other_handler.model_file=}")
+
+        # If both handlers have model_file_hashes defined, ensure they're identical
+        if self.model_file_hash and other_handler.model_file_hash and \
+                self.model_file_hash != other_handler.model_file_hash:
+            raise IncompatibleParameterError("Attempted to initialize two NAGLCharges sections with different "
+                                             "model_file_hash values: "
+                                             f"{self.model_file_hash=} is not identical to "
+                                             f"{other_handler.model_file_hash=}")
+
+        # If both handlers have digital_object_identifiers defined, ensure they're identical
+        if self.digital_object_identifier and other_handler.digital_object_identifier and \
+                self.digital_object_identifier != other_handler.digital_object_identifier:
+            raise IncompatibleParameterError("Attempted to initialize two NAGLCharges sections with different "
+                                             "digital_object_identifier values: "
+                                             f"{self.digital_object_identifier=} is not identical to "
+                                             f"{other_handler.digital_object_identifier=}")
 
 class ToolkitAM1BCCHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<ToolkitAM1BCC>`` tags
@@ -3261,7 +3371,7 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
     """
 
     _TAGNAME = "ToolkitAM1BCC"  # SMIRNOFF tag name to process
-    _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler, LibraryChargeHandler]
+    _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler, LibraryChargeHandler, NAGLChargesHandler]
     _KWARGS = ["toolkit_registry"]  # Kwargs to catch when create_force is called
 
     def check_handler_compatibility(
@@ -3380,6 +3490,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             entity, transformed_dict_cls=TagSortedDict, unique=unique
         )
         return matches
+
 
 
 class GBSAHandler(ParameterHandler):

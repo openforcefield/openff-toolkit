@@ -18,6 +18,7 @@ from openff.toolkit.typing.engines.smirnoff.parameters import (
     IndexedParameterAttribute,
     LibraryChargeHandler,
     MappedParameterAttribute,
+    NAGLChargesHandler,
     ParameterAttribute,
     ParameterHandler,
     ParameterList,
