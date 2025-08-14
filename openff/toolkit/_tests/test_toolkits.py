@@ -3239,6 +3239,26 @@ class TestRDKitToolkitWrapper:
         for offatom, rdatom in zip(mol.atoms, rdmol.GetAtoms()):
             assert offatom.is_aromatic is rdatom.GetIsAromatic()
 
+    def test_to_rdkit_str_resnum(self):
+        smiles = "O"
+
+        mol = Molecule.from_smiles(smiles)
+
+        # Test an int, a string that can convert to an int, and a non-intable str
+        atom_resnums = [9998, "9999", "A000"]
+        # RDKit's default residue number is 0
+        expected_atom_resnums = [9998, 9999, 0]
+
+        for atom, resnum in zip(mol.atoms, atom_resnums):
+            atom.metadata["residue_number"] = resnum
+            atom.metadata["residue_name"] = "HOH"
+
+        rdmol = mol.to_rdkit()
+
+        # now make sure the residue number matches for each atom
+        for resnum, rdatom in zip(expected_atom_resnums, rdmol.GetAtoms()):
+            assert rdatom.GetPDBResidueInfo().GetResidueNumber() == resnum
+
     @pytest.mark.slow
     def test_max_substructure_matches_can_handle_large_molecule(self):
         """Test RDKitToolkitWrapper substructure search handles more than the default of maxMatches = 1000
