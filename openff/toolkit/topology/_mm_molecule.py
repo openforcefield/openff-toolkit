@@ -82,13 +82,13 @@ class _SimpleMolecule:
     def n_conformers(self) -> int:
         return 0 if self._conformers is None else len(self._conformers)
 
-    def atom(self, index):
+    def atom(self, index: int) -> "_SimpleAtom":
         return self.atoms[index]
 
     def atom_index(self, atom) -> int:
         return self.atoms.index(atom)
 
-    def bond(self, index):
+    def bond(self, index: int) -> "_SimpleBond":
         return self.bonds[index]
 
     def get_bond_between(self, atom1_index, atom2_index):
@@ -369,7 +369,8 @@ class _SimpleMolecule:
             atom1_index = bond_dict["atom1_index"]
             atom2_index = bond_dict["atom2_index"]
             molecule.add_bond(
-                atom1=molecule.atom(atom1_index), atom2=molecule.atom(atom2_index)
+                atom1=molecule.atom(atom1_index),
+                atom2=molecule.atom(atom2_index)
             )
 
         conformers = molecule_dict.pop("conformers")
