@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Optional
 from openff.toolkit import Quantity, unit
 from openff.toolkit.utils.base_wrapper import ToolkitWrapper
 from openff.toolkit.utils.exceptions import (
-    ChargeMethodUnavailableError,
     ToolkitUnavailableException,
 )
 
@@ -66,6 +65,8 @@ class NAGLToolkitWrapper(ToolkitWrapper):
         use_conformers: Optional[list["Quantity"]] = None,
         strict_n_conformers: bool = False,
         normalize_partial_charges: bool = True,
+        doi: Optional[str] = None,
+        file_hash: Optional[str] = None,
         _cls: Optional[type["FrozenMolecule"]] = None,
     ):
         """
@@ -91,6 +92,14 @@ class NAGLToolkitWrapper(ToolkitWrapper):
             formal charge of the molecule. This is used to prevent accumulation
             of rounding errors when the partial charge generation method has
             low precision.
+        doi
+            Zenodo DOI to check if NAGL model file needs to be fetched. Passed
+            directly to openff.nagl_models._dynamic_fetch.get_model, see docs
+            on that method for more details.
+        file_hash
+            sha256 hash to check against NAGL model file. Passed
+            directly to openff.nagl_models._dynamic_fetch.get_model, see docs
+            on that method for more details.
         _cls : class
             Molecule constructor
 
@@ -103,7 +112,14 @@ class NAGLToolkitWrapper(ToolkitWrapper):
             if the charge method is supported by this toolkit, but fails
         """
         from openff.nagl import GNNModel
-        from openff.nagl_models import validate_nagl_model_path
+        from openff.nagl_models._dynamic_fetch import get_model
+
+        if partial_charge_method == "" or partial_charge_method == "None":
+            raise FileNotFoundError(
+                "NAGLToolkitWrapper.assign_partial_charges can not accept "
+                "a blank model file name. There is no default model, one must be "
+                "explicitly defined when being called."
+            )
 
         if _cls is None:
             from openff.toolkit.topology.molecule import Molecule
@@ -128,12 +144,7 @@ class NAGLToolkitWrapper(ToolkitWrapper):
                 stacklevel=2,
             )
 
-        try:
-            model_path = validate_nagl_model_path(model=partial_charge_method)
-        except FileNotFoundError as error:
-            raise ChargeMethodUnavailableError(
-                f"Charge model {partial_charge_method} not supported by {self.__class__.__name__}."
-            ) from error
+        model_path = get_model(filename=partial_charge_method, doi=doi, file_hash=file_hash)
 
         model = GNNModel.load(model_path, eval_mode=True)
         charges = model.compute_property(

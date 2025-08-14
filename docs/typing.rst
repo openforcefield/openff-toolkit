@@ -75,6 +75,7 @@ During ``System`` creation, each ``ParameterHandler`` registered to a ``ForceFie
     ElectrostaticsHandler
     LibraryChargeHandler
     ToolkitAM1BCCHandler
+    NAGLChargesHandler
     GBSAHandler
     ChargeIncrementModelHandler
     VirtualSiteHandler
