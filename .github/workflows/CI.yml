@@ -154,7 +154,7 @@ jobs:
           # TODO: Flip back to schedule condition before merge
           PYTEST_ARGS+=" --runslow"
 
-          python -m pytest -x --durations=20 $PYTEST_ARGS $COV openff/toolkit/_tests
+          python -m pytest --durations=20 $PYTEST_ARGS $COV openff/toolkit/_tests
 
       - name: Run code snippets in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}

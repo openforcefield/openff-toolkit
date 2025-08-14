@@ -345,7 +345,7 @@ class ParameterAttribute:
         converter: Optional[Callable] = None,
         docstring: str = "",
     ):
-        if isinstance(unit, str):
+        if type(unit) is str:
             # be careful with module & variable names
             unit = Unit(unit)
 
@@ -1086,37 +1086,38 @@ class _ParameterAttributeHandler:
     def __getattr__(self, item):
         """Take care of mapping indexed attributes to their respective list elements."""
 
-        # Try matching the case where there are two indices
-        # this indicates a index_mapped parameter
-        attr_name, index, key = self._split_attribute_index_mapping(item)
+        if not item.isalpha():
+            # Try matching the case where there are two indices
+            # this indicates a index_mapped parameter
+            attr_name, index, key = self._split_attribute_index_mapping(item)
 
-        # Check if this is an indexed_mapped attribute.
-        if (
-            key is not None
-            and index is not None
-            and attr_name in self._get_indexed_mapped_parameter_attributes()
-        ):
-            indexed_mapped_attr_value = getattr(self, attr_name)
-            try:
-                return indexed_mapped_attr_value[index][key]
-            except (IndexError, KeyError) as err:
-                raise MissingIndexedAttributeError(
-                    f"{err!s} '{item}' is out of bounds for indexed attribute '{attr_name}'"
-                )
+            # Check if this is an indexed_mapped attribute.
+            if (
+                key is not None
+                and index is not None
+                and attr_name in self._get_indexed_mapped_parameter_attributes()
+            ):
+                indexed_mapped_attr_value = getattr(self, attr_name)
+                try:
+                    return indexed_mapped_attr_value[index][key]
+                except (IndexError, KeyError) as err:
+                    raise MissingIndexedAttributeError(
+                        f"{err!s} '{item}' is out of bounds for indexed attribute '{attr_name}'"
+                    )
 
-        # Otherwise, try indexed attribute
-        # Separate the indexed attribute name from the list index.
-        attr_name, index = self._split_attribute_index(item)
+            # Otherwise, try indexed attribute
+            # Separate the indexed attribute name from the list index.
+            attr_name, index = self._split_attribute_index(item)
 
-        # Check if this is an indexed attribute.
-        if index is not None and attr_name in self._get_indexed_parameter_attributes():
-            indexed_attr_value = getattr(self, attr_name)
-            try:
-                return indexed_attr_value[index]
-            except IndexError:
-                raise MissingIndexedAttributeError(
-                    f"'{item}' is out of bounds for indexed attribute '{attr_name}'"
-                )
+            # Check if this is an indexed attribute.
+            if index is not None and attr_name in self._get_indexed_parameter_attributes():
+                indexed_attr_value = getattr(self, attr_name)
+                try:
+                    return indexed_attr_value[index]
+                except IndexError:
+                    raise MissingIndexedAttributeError(
+                        f"'{item}' is out of bounds for indexed attribute '{attr_name}'"
+                    )
 
         # Otherwise, forward the search to the next class in the MRO.
         try:
@@ -1355,33 +1356,33 @@ class _ParameterAttributeHandler:
         # sorts the attribute alphabetically by name. Here we want the order
         # to be the same as the declaration order, which is guaranteed by PEP 520,
         # starting from the parent class.
-        parameter_attributes = dict(
-            (name, descriptor)
+        return {
+            name: descriptor
             for c in reversed(inspect.getmro(cls))
             for name, descriptor in c.__dict__.items()
             if isinstance(descriptor, ParameterAttribute) and filter(descriptor)
-        )
-        return parameter_attributes
+        }
+
 
     @classmethod
     def _get_indexed_mapped_parameter_attributes(cls):
         """Shortcut to retrieve only IndexedMappedParameterAttributes."""
         return cls._get_parameter_attributes(
-            filter=lambda x: isinstance(x, IndexedMappedParameterAttribute)
+            filter=lambda x: type(x) is IndexedMappedParameterAttribute
         )
 
     @classmethod
     def _get_indexed_parameter_attributes(cls):
         """Shortcut to retrieve only IndexedParameterAttributes."""
         return cls._get_parameter_attributes(
-            filter=lambda x: isinstance(x, IndexedParameterAttribute)
+            filter=lambda x: type(x) is  IndexedParameterAttribute
         )
 
     @classmethod
     def _get_mapped_parameter_attributes(cls):
         """Shortcut to retrieve only IndexedParameterAttributes."""
         return cls._get_parameter_attributes(
-            filter=lambda x: isinstance(x, MappedParameterAttribute)
+            filter=lambda x: type(x) is MappedParameterAttribute
         )
 
     @classmethod
@@ -1588,14 +1589,14 @@ class ParameterList(list):
         item
             SMIRKS of item in this ParameterList
         """
-        if isinstance(item, str):
+        if type(item) is str:
             # Special case for SMIRKS strings
             if item in [result.smirks for result in self]:
                 return True
         # Fall back to traditional access
         return list.__contains__(self, item)
 
-    def to_list(self, discard_cosmetic_attributes=True):
+    def to_list(self, discard_cosmetic_attributes: bool =True) -> list[dict]:
         """
         Render this ParameterList to a normal list, serializing each ParameterType object in it to dict.
 
@@ -1610,15 +1611,12 @@ class ParameterList(list):
         parameter_list :list[dict]
             A serialized representation of a ParameterList, with each ParameterType it contains converted to dict.
         """
-        parameter_list = list()
-
-        for parameter in self:
-            parameter_dict = parameter.to_dict(
+        return [
+            parameter.to_dict(
                 discard_cosmetic_attributes=discard_cosmetic_attributes
             )
-            parameter_list.append(parameter_dict)
-
-        return parameter_list
+            for parameter in self
+        ]
 
 
 class VirtualSiteParameterList(ParameterList):
@@ -1905,6 +1903,31 @@ class ParameterHandler(_ParameterAttributeHandler):
         # Initialize ParameterAttributes and cosmetic attributes.
         super().__init__(allow_cosmetic_attributes=allow_cosmetic_attributes, **kwargs)
 
+    def __hash__(self) -> int:
+        """
+        Hash a ParameterHandler and all of its contents (INCLUDING cosmetic attributes).
+
+        This method does not attempt to return the same hash for ParameterHandlers with equivalent
+        physics/chemistry but different cosmetic attributes or units. Instead this is a hash of all
+        of the ParameterHandler's contents, even if they don't affect system creation in any way.
+        """
+        import xmltodict
+
+        from openff.toolkit.utils.utils import convert_all_quantities_to_string
+
+        return hash(
+            xmltodict.unparse(
+                {
+                    'ROOT': convert_all_quantities_to_string(
+                        self.to_dict(
+                            discard_cosmetic_attributes=False,
+                        )
+                    )
+                }
+            )
+        )
+
+
     def _add_parameters(self, section_dict, allow_cosmetic_attributes=False):
         """
         Extend the ParameterList in this ParameterHandler using a SMIRNOFF data source.
@@ -1925,7 +1948,7 @@ class ParameterHandler(_ParameterAttributeHandler):
                 if key != element_name:
                     break
             # If there are multiple parameters, this will be a list. If there's just one, make it a list
-            if not (isinstance(val, list)):
+            if type(val) is not list:
                 val = [val]
 
             # If we're reading the parameter list, iterate through and attach units to
@@ -3854,13 +3877,12 @@ class VirtualSiteHandler(_NonbondedHandler):
         assigned_matches_by_parent = self._find_matches_by_parent(entity)
         return_dict = {}
         for parent_index, assigned_parameters in assigned_matches_by_parent.items():
-            assigned_matches = []
-            for assigned_parameter, match_orientations in assigned_parameters:
-                for match in match_orientations:
-                    assigned_matches.append(
-                        ParameterHandler._Match(assigned_parameter, match)
-                    )
-            return_dict[(parent_index,)] = assigned_matches
+
+            return_dict[(parent_index,)] = [
+                ParameterHandler._Match(assigned_parameter, match)
+                for assigned_parameter, match_orientations in assigned_parameters
+                for match in match_orientations
+            ]
 
         return return_dict
 

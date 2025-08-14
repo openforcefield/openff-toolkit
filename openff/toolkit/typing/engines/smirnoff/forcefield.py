@@ -841,8 +841,7 @@ class ForceField:
         for parameter_handler in self._parameter_handlers.values():
             # If _TAGNAME is None, the default value, an error should have been
             # thrown upon registering it, so assume it is str here
-            handler_tag: str = parameter_handler._TAGNAME  # type: ignore[assignment]
-            l1_dict[handler_tag] = parameter_handler.to_dict(
+            l1_dict[parameter_handler._TAGNAME] = parameter_handler.to_dict(
                 discard_cosmetic_attributes=discard_cosmetic_attributes
             )
 
@@ -1099,8 +1098,8 @@ class ForceField:
         smirnoff_data = self._to_smirnoff_data(
             discard_cosmetic_attributes=discard_cosmetic_attributes
         )
-        string_data = io_handler.to_string(smirnoff_data)
-        return string_data
+
+        return io_handler.to_string(smirnoff_data)
 
     def to_file(
         self,
@@ -1432,13 +1431,13 @@ class ForceField:
         Syntax sugar for lookikng up a ParameterHandler. Note that only
         string-based lookups are currently supported.
         """
-        if isinstance(val, str):
+        if type(val) is str:
             if val in self._parameter_handlers:
                 return self.get_parameter_handler(val)
             else:
                 raise KeyError(f"Parameter handler with name '{val}' not found.")
-        elif isinstance(val, ParameterHandler) or issubclass(val, ParameterHandler):
-            raise NotImplementedError
+        else:
+            raise NotImplementedError(f"Lookup by {type(val)=} is not supported.")
 
     def __hash__(self) -> int:
         """Deterministically hash a ForceField object

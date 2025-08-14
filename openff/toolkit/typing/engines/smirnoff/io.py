@@ -205,18 +205,18 @@ class XMLParameterIOHandler(ParameterIOHandler):
                 A set or list of strings, indicating keys not to prepend in the data structure
 
             """
-            if isinstance(d, dict):
+            if type(d) is dict:
                 for key in list(d.keys()):
                     if key in ignore_keys:
                         continue
-                    if isinstance(d[key], list) or isinstance(d[key], dict):
+                    if type(d[key]) in (list, dict):
                         prepend_all_keys(d[key], char=char, ignore_keys=ignore_keys)
                     else:
                         new_key = char + key
                         d[new_key] = d[key]
                         del d[key]
                         prepend_all_keys(d[new_key], char=char, ignore_keys=ignore_keys)
-            elif isinstance(d, list):
+            elif type(d) is list:
                 for item in d:
                     prepend_all_keys(item, char=char, ignore_keys=ignore_keys)
 
@@ -224,12 +224,15 @@ class XMLParameterIOHandler(ParameterIOHandler):
         # unless they're prepended by "@"
         prepend_all_keys(smirnoff_data["SMIRNOFF"], ignore_keys=["Author", "Date"])
 
-        # Reorder parameter sections to put Author and Date at the top (this is the only
-        # way to change the order of items in a dict, as far as I can tell)
-        for key, value in list(smirnoff_data["SMIRNOFF"].items()):
-            if key in ["Author", "Date"]:
-                continue
-            del smirnoff_data["SMIRNOFF"][key]
-            smirnoff_data["SMIRNOFF"][key] = value
+        # Ensure Author and Date are listed first, necessitates creating a new dict
+        return_dict = {
+            "SMIRNOFF": {
+            "Author": smirnoff_data['SMIRNOFF'].pop("Author", "Author Unknown"),
+            "Date": smirnoff_data['SMIRNOFF'].pop("Date", "Date Unknown"),
+        }}
 
-        return xmltodict.unparse(smirnoff_data, pretty=True, indent=" " * 4)
+        return_dict['SMIRNOFF'].update(smirnoff_data['SMIRNOFF'])
+
+        del smirnoff_data
+
+        return xmltodict.unparse(return_dict, pretty=True, indent=" " * 4)
