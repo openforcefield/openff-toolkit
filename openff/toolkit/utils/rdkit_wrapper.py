@@ -65,9 +65,7 @@ def _require_text_file_obj(file_obj):
     except TypeError:
         # Switch to a ValueError and use a more informative exception
         # message to match RDKit's toolkit writer.
-        raise ValueError(
-            "Need a text mode file object like StringIO or a file opened with mode 't'"
-        ) from None
+        raise ValueError("Need a text mode file object like StringIO or a file opened with mode 't'") from None
 
 
 class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
@@ -174,9 +172,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 obj,
                 allow_undefined_stereo=allow_undefined_stereo,
             )
-        raise NotImplementedError(
-            f"Cannot create Molecule from {type(obj)} object"
-        )
+        raise NotImplementedError(f"Cannot create Molecule from {type(obj)} object")
 
     def from_pdb_and_smiles(
         self,
@@ -282,12 +278,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         new_mol.name = name
         return new_mol
 
-    def _polymer_openmm_topology_to_offmol(
-        self, molecule_class, omm_top, substructure_dictionary
-    ):
-        rdkit_mol = self._polymer_openmm_topology_to_rdmol(
-            omm_top, substructure_dictionary
-        )
+    def _polymer_openmm_topology_to_offmol(self, molecule_class, omm_top, substructure_dictionary):
+        rdkit_mol = self._polymer_openmm_topology_to_rdmol(omm_top, substructure_dictionary)
         offmol = molecule_class.from_rdkit(rdkit_mol, allow_undefined_stereo=True)
         return offmol
 
@@ -316,16 +308,12 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         self._validate_custom_substructures(  # errors if any errors found
             _custom_substructures, forbidden_keys=substructure_dictionary.keys()
         )
-        custom_substructure_dictionary = self._prepare_custom_substructures(
-            _custom_substructures
-        )
+        custom_substructure_dictionary = self._prepare_custom_substructures(_custom_substructures)
         substructure_dictionary.update(
             custom_substructure_dictionary
         )  # concats both dicts, unique keys are enforced in previous function
 
-        rdkit_mol = self._polymer_openmm_topology_to_rdmol(
-            omm_top, substructure_dictionary
-        )
+        rdkit_mol = self._polymer_openmm_topology_to_rdmol(omm_top, substructure_dictionary)
 
         rdmol_conformer = Chem.Conformer()
         for atom_idx in range(rdkit_mol.GetNumAtoms()):
@@ -370,23 +358,17 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         dtype=np.uint64,
                     )
                     query_nums = np.frombuffer(
-                        BitVectToBinaryText(
-                            rdatom.GetExplicitBitVectProp("query_nums")
-                        ),
+                        BitVectToBinaryText(rdatom.GetExplicitBitVectProp("query_nums")),
                         dtype=np.uint64,
                     )
                     query_ids = np.frombuffer(
                         BitVectToBinaryText(rdatom.GetExplicitBitVectProp("query_ids")),
                         dtype=np.uint64,
                     )
-                    residues = [
-                        list(substructure_dictionary.keys())[i] for i in res_ids
-                    ]
+                    residues = [list(substructure_dictionary.keys())[i] for i in res_ids]
                     # query_ids = [int(idx) for idx in list(query_ids)]
                     match_info = dict()
-                    for res_name, query_idx, query_num in zip(
-                        residues, query_ids, query_nums
-                    ):
+                    for res_name, query_idx, query_num in zip(residues, query_ids, query_nums):
                         match_info[int(query_num)] = (res_name, int(query_idx))
                     offatom.metadata["match_info"] = json.dumps(match_info)
                 smiles2offmol[mapped_smi] = copy.deepcopy(offmol)
@@ -397,9 +379,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return top
 
-    def _validate_custom_substructures(
-        self, custom_substructures: dict[str, list[str]], forbidden_keys
-    ):
+    def _validate_custom_substructures(self, custom_substructures: dict[str, list[str]], forbidden_keys):
         """Validates custom substructures to adhere to monomer specifications
         Parameters
         ----------
@@ -432,9 +412,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             raise NonUniqueSubstructureName(list(same_keys))
         for name, smarts_list in custom_substructures.items():
             for smarts in smarts_list:
-                self._is_valid_substructure_smarts(
-                    name, smarts
-                )  # raises error if invalid
+                self._is_valid_substructure_smarts(name, smarts)  # raises error if invalid
 
         return  # all tests passed without raised exception
 
@@ -454,25 +432,17 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             found_ops = [op in atom_smarts for op in operators]
             if any(found_ops):
                 operator_chars = [op for op, b in zip(operators, found_ops) if b]
-                error_reason = (
-                    f"found unsupported logical operator(s): {operator_chars}"
-                )
+                error_reason = f"found unsupported logical operator(s): {operator_chars}"
                 mol_smarts = Chem.MolToSmarts(qmol)
-                raise SubstructureAtomSmartsInvalid(
-                    name, atom.GetSmarts(), mol_smarts, error_reason
-                )
+                raise SubstructureAtomSmartsInvalid(name, atom.GetSmarts(), mol_smarts, error_reason)
             # ensure that no other unsupported atomic primitives are accepted
             unsupported_prims = r"@xXvrRhH*"
             found_prims = [prim in atom_smarts for prim in unsupported_prims]
             if any(found_prims):
-                operator_chars = [
-                    prim for prim, b in zip(unsupported_prims, found_prims) if b
-                ]
+                operator_chars = [prim for prim, b in zip(unsupported_prims, found_prims) if b]
                 error_reason = f"found unsupported primitive(s): {operator_chars}"
                 mol_smarts = Chem.MolToSmarts(qmol)
-                raise SubstructureAtomSmartsInvalid(
-                    name, atom.GetSmarts(), mol_smarts, error_reason
-                )
+                raise SubstructureAtomSmartsInvalid(name, atom.GetSmarts(), mol_smarts, error_reason)
             # require that all elements are specified in #<n> format. Because the H primitive can act as either
             # hydrogen atom or the number of implicit hydrogens, it is cleaner to specify atoms by atomic number
             # rather than atomic symbol.
@@ -480,30 +450,22 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             required_prims = r"[]#D:"
             missing_prims = [prim not in atom_smarts for prim in required_prims]
             if any(missing_prims):
-                operator_chars = [
-                    prim for prim, b in zip(required_prims, missing_prims) if b
-                ]
+                operator_chars = [prim for prim, b in zip(required_prims, missing_prims) if b]
                 error_reason = f"required primitive(s) not included: {operator_chars}"
                 mol_smarts = Chem.MolToSmarts(qmol)
-                raise SubstructureAtomSmartsInvalid(
-                    name, atom.GetSmarts(), mol_smarts, error_reason
-                )
+                raise SubstructureAtomSmartsInvalid(name, atom.GetSmarts(), mol_smarts, error_reason)
             charge_prims = r"-+"
             if not any(prim in atom_smarts for prim in charge_prims):
                 error_reason = f"{atom_smarts}: no charge primitive (+ or -) on atom"
                 mol_smarts = Chem.MolToSmarts(qmol)
-                raise SubstructureAtomSmartsInvalid(
-                    name, atom.GetSmarts(), mol_smarts, error_reason
-                )
+                raise SubstructureAtomSmartsInvalid(name, atom.GetSmarts(), mol_smarts, error_reason)
             if not atom.Match(atom):
                 error_reason = (
                     "query does not match rdchem.Mol reading of the molecule (likely due to incorrect"
                     "/ambiguous connectivity)"
                 )
                 mol_smarts = Chem.MolToSmarts(qmol)
-                raise SubstructureAtomSmartsInvalid(
-                    name, atom.GetSmarts(), mol_smarts, error_reason
-                )
+                raise SubstructureAtomSmartsInvalid(name, atom.GetSmarts(), mol_smarts, error_reason)
             return
 
         def check_neighbor_atom(atom, qmol):
@@ -513,37 +475,25 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             found_ops = [op in atom_smarts for op in operators]
             if any(found_ops):
                 operator_chars = [op for op, b in zip(operators, found_ops) if b]
-                error_reason = (
-                    f"found unsupported logical operator(s): {operator_chars}"
-                )
+                error_reason = f"found unsupported logical operator(s): {operator_chars}"
                 mol_smarts = Chem.MolToSmarts(qmol)
-                raise SubstructureAtomSmartsInvalid(
-                    name, atom.GetSmarts(), mol_smarts, error_reason
-                )
+                raise SubstructureAtomSmartsInvalid(name, atom.GetSmarts(), mol_smarts, error_reason)
             # ensure that no other unsupported atomic primitives are accepted
             unsupported_prims = r"@xXDvrRhH"
             found_prims = [prim in atom_smarts for prim in unsupported_prims]
             if any(found_prims):
-                operator_chars = [
-                    prim for prim, b in zip(unsupported_prims, found_prims) if b
-                ]
+                operator_chars = [prim for prim, b in zip(unsupported_prims, found_prims) if b]
                 error_reason = f"found unsupported primitive(s): {operator_chars}"
                 mol_smarts = Chem.MolToSmarts(qmol)
-                raise SubstructureAtomSmartsInvalid(
-                    name, atom.GetSmarts(), mol_smarts, error_reason
-                )
+                raise SubstructureAtomSmartsInvalid(name, atom.GetSmarts(), mol_smarts, error_reason)
             # require that atoms have a wildtype atom and label
             required_prims = r"[]*:"
             missing_prims = [prim not in atom_smarts for prim in required_prims]
             if any(missing_prims):
-                operator_chars = [
-                    prim for prim, b in zip(required_prims, missing_prims) if b
-                ]
+                operator_chars = [prim for prim, b in zip(required_prims, missing_prims) if b]
                 error_reason = f"required primitive(s) not included: {operator_chars}"
                 mol_smarts = Chem.MolToSmarts(qmol)
-                raise SubstructureAtomSmartsInvalid(
-                    name, atom.GetSmarts(), mol_smarts, error_reason
-                )
+                raise SubstructureAtomSmartsInvalid(name, atom.GetSmarts(), mol_smarts, error_reason)
             return
 
         def check_bond(bond):
@@ -553,9 +503,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 Chem.BondType.TRIPLE,
             ]
             if bond.GetBondType() not in valid_bond_types:
-                raise SubstructureBondSmartsInvalid(
-                    name, bond, [str(b) for b in valid_bond_types]
-                )
+                raise SubstructureBondSmartsInvalid(name, bond, [str(b) for b in valid_bond_types])
             return
 
         qmol = Chem.MolFromSmarts(smarts)
@@ -572,9 +520,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             else:
                 mol_smarts = Chem.MolToSmarts(qmol)
                 error_reason = "atomic num = 0 but smarts contains # primitive (likely due to conditionals)"
-                raise SubstructureAtomSmartsInvalid(
-                    name, atom.GetSmarts(), mol_smarts, error_reason
-                )
+                raise SubstructureAtomSmartsInvalid(name, atom.GetSmarts(), mol_smarts, error_reason)
         for bond in qmol.GetBonds():
             check_bond(bond)
 
@@ -603,9 +549,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         from rdkit import Chem
 
-        prepared_dict = defaultdict[str, dict[str, list[str]]](
-            lambda: defaultdict(list)
-        )
+        prepared_dict = defaultdict[str, dict[str, list[str]]](lambda: defaultdict(list))
         for name, smarts_list in custom_substructures.items():
             for smarts in smarts_list:
                 rdmol = Chem.MolFromSmarts(smarts)
@@ -663,9 +607,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes
             # so it just does the biggest substructures first
             # NOTE: If this changes, MissingChemistryFromPolymerError needs to be updated too
-            sorted_substructure_smarts = sorted(
-                substructure_library[res_name], key=len, reverse=True
-            )
+            sorted_substructure_smarts = sorted(substructure_library[res_name], key=len, reverse=True)
 
             for substructure_smarts in sorted_substructure_smarts:
                 # this is the molecule as defined in template.
@@ -704,9 +646,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         for query_id, mol_id in enumerate(full_match)
                         if query_id not in neighbor_idxs
                     ]
-                    match = list(zip(*match_ids))[
-                        1
-                    ]  # get the molecule ids without the corresponding query ids.
+                    match = list(zip(*match_ids))[1]  # get the molecule ids without the corresponding query ids.
                     # ^^ matches return match ids in the order that they appear in the query.
                     # The code above filters neighboring (*) atoms.
 
@@ -724,9 +664,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         atom_j = mol.GetAtomWithIdx(j)
                         # error checking for overlapping substructures with priority. Enforce that no ambiguous
                         # chemical assignments are made.
-                        if (
-                            j in already_assigned_nodes
-                        ):  # if overlapping with previous match
+                        if j in already_assigned_nodes:  # if overlapping with previous match
                             if (
                                 atom_i.GetFormalCharge() != atom_j.GetFormalCharge()
                                 and atom_i.GetIdx() not in sym_atoms
@@ -748,9 +686,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     already_assigned_nodes.update(match)
 
                     for b in ref_info.GetBonds():
-                        ref_bond_ids = tuple(
-                            sorted([b.GetBeginAtomIdx(), b.GetEndAtomIdx()])
-                        )
+                        ref_bond_ids = tuple(sorted([b.GetBeginAtomIdx(), b.GetEndAtomIdx()]))
                         x = full_match[b.GetBeginAtomIdx()]
                         y = full_match[b.GetEndAtomIdx()]
                         b2 = mol.GetBondBetweenAtoms(x, y)
@@ -758,23 +694,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
                         # error checking of overlapping bonds. If substructures with priority disagree on the
                         # bond order, raise exception
-                        if (
-                            bond_ids in already_assigned_edges
-                        ):  # if overlapping with previous match
-                            if (
-                                b.GetBondType() != b2.GetBondType()
-                                and ref_bond_ids not in sym_bonds
-                            ):
+                        if bond_ids in already_assigned_edges:  # if overlapping with previous match
+                            if b.GetBondType() != b2.GetBondType() and ref_bond_ids not in sym_bonds:
                                 error_reason = (
                                     f"Bond order of new query ({b.GetBondType()}) does not match the "
                                     f"bond order of previous query ({b2.GetBondType()})"
                                 )
-                                query_bond = tuple(
-                                    sorted([b.GetBeginAtomIdx(), b.GetEndAtomIdx()])
-                                )
-                                raise AmbiguousBondChemicalAssignment(
-                                    res_name, bond_ids, query_bond, error_reason
-                                )
+                                query_bond = tuple(sorted([b.GetBeginAtomIdx(), b.GetEndAtomIdx()]))
+                                raise AmbiguousBondChemicalAssignment(res_name, bond_ids, query_bond, error_reason)
                         b2.SetBondType(b.GetBondType())
                         already_assigned_edges.add(bond_ids)
 
@@ -789,14 +716,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                         )  # that may allow someone to reproduce or fully investigate the matches
                     query_number += 1
 
-        unassigned_atoms = sorted(
-            set(range(rdkit_mol.GetNumAtoms())) - already_assigned_nodes
-        )
+        unassigned_atoms = sorted(set(range(rdkit_mol.GetNumAtoms())) - already_assigned_nodes)
         all_bonds = set(
-            [
-                tuple(sorted([bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()]))
-                for bond in rdkit_mol.GetBonds()
-            ]
+            [tuple(sorted([bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()])) for bond in rdkit_mol.GetBonds()]
         )
         unassigned_bonds = sorted(all_bonds - already_assigned_edges)
 
@@ -810,15 +732,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 for smarts, atom_names in smarts_to_atom_names.items():
                     ref = Chem.MolFromSmarts(smarts)
                     symbols = sorted(
-                        [
-                            SYMBOLS[atom.GetAtomicNum()]
-                            for atom in ref.GetAtoms()
-                            if atom.GetAtomicNum() > 0
-                        ]
+                        [SYMBOLS[atom.GetAtomicNum()] for atom in ref.GetAtoms() if atom.GetAtomicNum() > 0]
                     )
-                    resname_to_symbols_and_atomnames[resname].append(
-                        (symbols, atom_names)
-                    )
+                    resname_to_symbols_and_atomnames[resname].append((symbols, atom_names))
 
             raise UnassignedChemistryInPDBError(
                 substructure_library=resname_to_symbols_and_atomnames,
@@ -882,25 +798,17 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         qmol = deepcopy(fuzzy_query)
         for atom in qmol.GetAtoms():  # reset queries and map numbers
-            atom.SetAtomMapNum(
-                atom.GetIdx()
-            )  # reorder atom map nums to later recover ids
+            atom.SetAtomMapNum(atom.GetIdx())  # reorder atom map nums to later recover ids
 
         qmol = Chem.RemoveAllHs(qmol, sanitize=False)
-        idx_to_map_num = dict(
-            [(a.GetIdx(), a.GetAtomMapNum()) for a in qmol.GetAtoms()]
-        )
+        idx_to_map_num = dict([(a.GetIdx(), a.GetAtomMapNum()) for a in qmol.GetAtoms()])
         automorphs = fuzzy_query.GetSubstructMatches(qmol, uniquify=0)
         ambiguous_bonds = []
         ambiguous_atoms = []
         for automorph in automorphs:
             # check for conflicting chemical information
             automorph = dict(
-                [
-                    (idx_to_map_num[idx], a)
-                    for idx, a in enumerate(list(automorph))
-                    if idx_to_map_num[idx] != a
-                ]
+                [(idx_to_map_num[idx], a) for idx, a in enumerate(list(automorph)) if idx_to_map_num[idx] != a]
             )  # only care about cases of different matching
 
             for atom_iso, new_atom_iso in automorph.items():
@@ -913,39 +821,19 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
             for bond in substruct.GetBonds():
                 if (
-                    bond.GetBeginAtom().GetAtomicNum() == 1
-                    or bond.GetEndAtom().GetAtomicNum() == 1
+                    bond.GetBeginAtom().GetAtomicNum() == 1 or bond.GetEndAtom().GetAtomicNum() == 1
                 ):  # we remove Hs for matching so must remove here as well
                     continue
-                if (
-                    bond.GetBeginAtomIdx() in automorph
-                    or bond.GetEndAtomIdx() in automorph
-                ):
-                    new_bond_begin_idx = automorph.get(
-                        bond.GetBeginAtomIdx(), bond.GetBeginAtomIdx()
-                    )
-                    new_bond_end_idx = automorph.get(
-                        bond.GetEndAtomIdx(), bond.GetEndAtomIdx()
-                    )
-                    new_bond = substruct.GetBondBetweenAtoms(
-                        new_bond_begin_idx, new_bond_end_idx
-                    )
+                if bond.GetBeginAtomIdx() in automorph or bond.GetEndAtomIdx() in automorph:
+                    new_bond_begin_idx = automorph.get(bond.GetBeginAtomIdx(), bond.GetBeginAtomIdx())
+                    new_bond_end_idx = automorph.get(bond.GetEndAtomIdx(), bond.GetEndAtomIdx())
+                    new_bond = substruct.GetBondBetweenAtoms(new_bond_begin_idx, new_bond_end_idx)
                     if bond.GetBondType() != new_bond.GetBondType():
-                        sym_bond_entry = tuple(
-                            sorted([bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()])
-                        )
+                        sym_bond_entry = tuple(sorted([bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()]))
                         if sym_bond_entry not in ambiguous_bonds:
-                            ambiguous_bonds.append(
-                                tuple(
-                                    sorted(
-                                        [bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()]
-                                    )
-                                )
-                            )
+                            ambiguous_bonds.append(tuple(sorted([bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()])))
         if not ambiguous_bonds:
-            ambiguous_atoms = (
-                []
-            )  # if no ambiguous bonds, there cannot be physically valid sets of ambiguous atoms
+            ambiguous_atoms = []  # if no ambiguous bonds, there cannot be physically valid sets of ambiguous atoms
             # this is because that would imply that two different simple/graph connectivites can give different
             # formal charges, which is not supported in this implementation and likely not possible outside of
             # exotic transition metal groups
@@ -970,9 +858,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         for idx, a in enumerate(fuzzy.GetAtoms()):
             a.SetFormalCharge(0)
             if a.GetAtomicNum() > 0:
-                a.SetQuery(
-                    Chem.AtomFromSmarts(f"[#{a.GetAtomicNum()}D{a.GetDegree()}]")
-                )
+                a.SetQuery(Chem.AtomFromSmarts(f"[#{a.GetAtomicNum()}D{a.GetDegree()}]"))
             else:
                 a.SetQuery(generic.GetAtomWithIdx(0))
             a.SetNoImplicit(True)
@@ -990,8 +876,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         rdmol = offmol.to_rdkit()
         Chem.SanitizeMol(
             rdmol,
-            Chem.SANITIZE_ALL
-            ^ Chem.SANITIZE_ADJUSTHS,  # ^ Chem.SANITIZE_SETAROMATICITY,
+            Chem.SANITIZE_ALL ^ Chem.SANITIZE_ADJUSTHS,  # ^ Chem.SANITIZE_SETAROMATICITY,
         )
         Chem.AssignStereochemistryFrom3D(rdmol)
         Chem.Kekulize(rdmol, clearAromaticFlags=True)
@@ -999,9 +884,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # To get HIS//TRP to get recognized as aromatic, we can use a different aromaticity model
         # Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_DEFAULT)
 
-        offmol_w_stereo_and_aro = offmol.from_rdkit(
-            rdmol, allow_undefined_stereo=True, hydrogens_are_explicit=True
-        )
+        offmol_w_stereo_and_aro = offmol.from_rdkit(rdmol, allow_undefined_stereo=True, hydrogens_are_explicit=True)
         return offmol_w_stereo_and_aro
 
     def _process_sdf_supplier(self, sdf_supplier, allow_undefined_stereo, _cls):
@@ -1016,18 +899,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             try:
                 Chem.SanitizeMol(
                     rdmol,
-                    Chem.SANITIZE_ALL
-                    ^ Chem.SANITIZE_SETAROMATICITY
-                    ^ Chem.SANITIZE_ADJUSTHS,
+                    Chem.SANITIZE_ALL ^ Chem.SANITIZE_SETAROMATICITY ^ Chem.SANITIZE_ADJUSTHS,
                 )
                 Chem.AssignStereochemistryFrom3D(rdmol)
             except ValueError as e:
                 logger.warning(rdmol.GetProp("_Name") + " " + str(e))
                 continue
             Chem.SetAromaticity(rdmol, Chem.AromaticityModel.AROMATICITY_MDL)
-            mol = self.from_rdkit(
-                rdmol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
-            )
+            mol = self.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls)
             yield mol
 
     def from_file(
@@ -1069,9 +948,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         mols = list()
         if (file_format == "MOL") or (file_format == "SDF"):
-            sdf_supplier = Chem.ForwardSDMolSupplier(
-                file_path, removeHs=False, sanitize=False, strictParsing=True
-            )
+            sdf_supplier = Chem.ForwardSDMolSupplier(file_path, removeHs=False, sanitize=False, strictParsing=True)
             mols.extend(
                 self._process_sdf_supplier(
                     sdf_supplier,
@@ -1092,9 +969,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     # the OpenEye toolkit wrapper.
                     continue
                 rdmol = Chem.AddHs(rdmol)
-                mol = self.from_rdkit(
-                    rdmol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
-                )
+                mol = self.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls)
                 mols.append(mol)
 
         elif file_format == "PDB":
@@ -1157,9 +1032,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         if (file_format == "MOL") or (file_format == "SDF"):
             # TODO: Iterate over all mols in file_data
-            sdf_supplier = Chem.ForwardSDMolSupplier(
-                file_obj, removeHs=False, sanitize=False, strictParsing=True
-            )
+            sdf_supplier = Chem.ForwardSDMolSupplier(file_obj, removeHs=False, sanitize=False, strictParsing=True)
             mols.extend(
                 self._process_sdf_supplier(
                     sdf_supplier,
@@ -1276,9 +1149,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # open a file object and pass to the object writer
         with open(file_path, "w") as file_obj:
-            self.to_file_obj(
-                molecule=molecule, file_obj=file_obj, file_format=file_format
-            )
+            self.to_file_obj(molecule=molecule, file_obj=file_obj, file_format=file_format)
 
     def enumerate_stereoisomers(
         self,
@@ -1320,9 +1191,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         rdmol = self.to_rdkit(molecule=molecule)
 
         # in case any bonds/centers are missing stereo chem flag it here
-        Chem.AssignStereochemistry(
-            rdmol, cleanIt=True, force=True, flagPossibleStereoCenters=True
-        )
+        Chem.AssignStereochemistry(rdmol, cleanIt=True, force=True, flagPossibleStereoCenters=True)
         Chem.FindPotentialStereoBonds(rdmol)
 
         # set up the options
@@ -1345,9 +1214,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return molecules
 
-    def enumerate_tautomers(
-        self, molecule: "Molecule", max_states: int = 20
-    ) -> list["Molecule"]:
+    def enumerate_tautomers(self, molecule: "Molecule", max_states: int = 20) -> list["Molecule"]:
         """
         Enumerate the possible tautomers of the current molecule.
 
@@ -1380,9 +1247,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         molecules = []
         for taut in tautomers:
             taut_hs = Chem.AddHs(taut)
-            mol = self.from_smiles(
-                Chem.MolToSmiles(taut_hs), allow_undefined_stereo=True
-            )
+            mol = self.from_smiles(Chem.MolToSmiles(taut_hs), allow_undefined_stereo=True)
             if mol != molecule:
                 molecules.append(mol)
 
@@ -1469,8 +1334,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         if mapped:
             assert explicit_hydrogens is True, (
-                "Mapped smiles require all hydrogens and "
-                "stereochemistry to be defined to retain order"
+                "Mapped smiles require all hydrogens and stereochemistry to be defined to retain order"
             )
 
             # if we only want to map specific atoms check for an atom map
@@ -1499,9 +1363,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     except KeyError:
                         continue
 
-        return Chem.MolToSmiles(
-            rdmol, isomericSmiles=isomeric, allHsExplicit=explicit_hydrogens
-        )
+        return Chem.MolToSmiles(rdmol, isomericSmiles=isomeric, allHsExplicit=explicit_hydrogens)
 
     def from_smiles(
         self,
@@ -1667,9 +1529,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # add hydrogens back here
         rdmol = Chem.AddHs(rdmol)
 
-        molecule = self.from_rdkit(
-            rdmol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls
-        )
+        molecule = self.from_rdkit(rdmol, allow_undefined_stereo=allow_undefined_stereo, _cls=_cls)
         molecule.name = name
 
         return molecule
@@ -1742,9 +1602,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             if not fallback_conformer_generation_status:
                 raise ConformerGenerationError("RDKit conformer generation failed.")
 
-        molecule2 = self.from_rdkit(
-            rdmol, allow_undefined_stereo=True, _cls=molecule.__class__
-        )
+        molecule2 = self.from_rdkit(rdmol, allow_undefined_stereo=True, _cls=molecule.__class__)
 
         if clear_existing:
             molecule._conformers = list()
@@ -1821,18 +1679,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         charges = None
 
         if partial_charge_method == "mmff94":
-            mmff_properties = AllChem.MMFFGetMoleculeProperties(
-                rdkit_molecule, "MMFF94"
-            )
-            charges = [
-                mmff_properties.GetMMFFPartialCharge(i) for i in range(molecule.n_atoms)
-            ]
+            mmff_properties = AllChem.MMFFGetMoleculeProperties(rdkit_molecule, "MMFF94")
+            charges = [mmff_properties.GetMMFFPartialCharge(i) for i in range(molecule.n_atoms)]
         elif partial_charge_method == "gasteiger":
             AllChem.ComputeGasteigerCharges(rdkit_molecule)
-            charges = [
-                float(rdatom.GetProp("_GasteigerCharge"))
-                for rdatom in rdkit_molecule.GetAtoms()
-            ]
+            charges = [float(rdatom.GetProp("_GasteigerCharge")) for rdatom in rdkit_molecule.GetAtoms()]
 
         molecule.partial_charges = Quantity(np.asarray(charges), unit.elementary_charge)
 
@@ -1873,9 +1724,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         rdkit_molecule = molecule_copy.to_rdkit()
 
         # Check for trans-COOH configurations
-        carboxylic_acid_matches = cls._find_smarts_matches(
-            rdkit_molecule, "[#6X3:2](=[#8:1])(-[#8X2H1:3]-[#1:4])"
-        )
+        carboxylic_acid_matches = cls._find_smarts_matches(rdkit_molecule, "[#6X3:2](=[#8:1])(-[#8X2H1:3]-[#1:4])")
 
         for match in carboxylic_acid_matches:
             dihedral_angle = GetDihedralRad(rdkit_molecule.GetConformer(0), *match)
@@ -1912,9 +1761,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         valid_conformers = []
 
         for i, conformer in enumerate(molecule.conformers):
-            is_problematic, reason = cls._elf_is_problematic_conformer(
-                molecule, conformer
-            )
+            is_problematic, reason = cls._elf_is_problematic_conformer(molecule, conformer)
 
             if is_problematic:
                 logger.warning(f"Discarding conformer {i}: {reason}")
@@ -1956,18 +1803,13 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         if molecule.partial_charges is None:
             raise ValueError("The molecule has no partial charges assigned.")
 
-        partial_charges = np.abs(
-            molecule.partial_charges.m_as(unit.elementary_charge)
-        ).reshape(-1, 1)
+        partial_charges = np.abs(molecule.partial_charges.m_as(unit.elementary_charge)).reshape(-1, 1)
 
         # Build an exclusion list for 1-2 and 1-3 interactions.
         excluded_x, excluded_y = zip(
             *{
                 *[(bond.atom1_index, bond.atom2_index) for bond in molecule.bonds],
-                *[
-                    (angle[0].molecule_atom_index, angle[-1].molecule_atom_index)
-                    for angle in molecule.angles
-                ],
+                *[(angle[0].molecule_atom_index, angle[-1].molecule_atom_index) for angle in molecule.angles],
             }
         )
 
@@ -1989,9 +1831,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         diag[:] = -0.0  # this is somewhat faster than np.fill_diagonal
         distances = np.sqrt(-distances_squared)
 
-        inverse_distances = np.reciprocal(
-            distances, out=np.zeros_like(distances), where=~np.isclose(distances, 0.0)
-        )
+        inverse_distances = np.reciprocal(distances, out=np.zeros_like(distances), where=~np.isclose(distances, 0.0))
 
         # Multiply by the charge products.
         charge_products = partial_charges @ partial_charges.T
@@ -2198,9 +2038,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         conformer_energies = sorted(conformer_energies, key=lambda x: x[0])
         cutoff_index = max(1, int(len(conformer_energies) * percentage / 100.0))
 
-        low_energy_conformers = [
-            conformer for _, conformer in conformer_energies[:cutoff_index]
-        ]
+        low_energy_conformers = [conformer for _, conformer in conformer_energies[:cutoff_index]]
 
         # Attempt to greedily select `limit` conformers which are maximally diverse.
         diverse_conformers = self._elf_select_diverse_conformers(
@@ -2265,16 +2103,17 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         frags = AllChem.GetMolFrags(rdmol)
         if len(frags) > 1:
-            warnings.warn("RDKit Molecule passed to from_rdkit consists of more than one molecule, consider running "
-                          "rdkit.Chem.AllChem.GetMolFrags(rdmol, asMols=True) or splitting input SMILES at '.' to get "
-                          "separate molecules and pass them to from_rdkit one at a time. While this is supported for "
-                          "legacy reasons, OpenFF Molecule objects are not supposed to contain disconnected chemical "
-                          "graphs and this may result in undefined behavior later on. The OpenFF ecosystem is built "
-                          "to handle multiple molecules, but they should be in a Topology object, ex: "
-                          "top = Topology.from_molecules([mol1, mol2])",
-                          MultipleComponentsInMoleculeWarning,
-                          stacklevel=2
-                          )
+            warnings.warn(
+                "RDKit Molecule passed to from_rdkit consists of more than one molecule, consider running "
+                "rdkit.Chem.AllChem.GetMolFrags(rdmol, asMols=True) or splitting input SMILES at '.' to get "
+                "separate molecules and pass them to from_rdkit one at a time. While this is supported for "
+                "legacy reasons, OpenFF Molecule objects are not supposed to contain disconnected chemical "
+                "graphs and this may result in undefined behavior later on. The OpenFF ecosystem is built "
+                "to handle multiple molecules, but they should be in a Topology object, ex: "
+                "top = Topology.from_molecules([mol1, mol2])",
+                MultipleComponentsInMoleculeWarning,
+                stacklevel=2,
+            )
 
         if not hydrogens_are_explicit:
             rdmol = Chem.AddHs(rdmol, addCoords=True)
@@ -2337,10 +2176,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         }
         for rda in rdmol.GetAtoms():
             # See issues #1075 for some discussion on radicals
-            if (
-                rda.GetAtomicNum() not in d_and_f_block_elements
-                and rda.GetNumRadicalElectrons() != 0
-            ):
+            if rda.GetAtomicNum() not in d_and_f_block_elements and rda.GetNumRadicalElectrons() != 0:
                 raise RadicalsNotSupportedError(
                     "The OpenFF Toolkit does not currently support parsing molecules with S- and P-block radicals. "
                     f"Found {rda.GetNumRadicalElectrons()} radical electrons on molecule {Chem.MolToSmiles(rdmol)}."
@@ -2381,8 +2217,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     stereochemistry = "S"
                 else:
                     raise UndefinedStereochemistryError(
-                        "In from_rdkit: Expected atom stereochemistry of R or S. "
-                        f"Got {stereo_code} instead."
+                        f"In from_rdkit: Expected atom stereochemistry of R or S. Got {stereo_code} instead."
                     )
 
             res = rda.GetPDBResidueInfo()
@@ -2410,9 +2245,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # If we have a full / partial atom map add it to the molecule. Zeroes 0
         # indicates no mapping
         if {*atom_mapping.values()} != {0}:
-            offmol._properties["atom_map"] = {
-                idx: map_idx for idx, map_idx in atom_mapping.items() if map_idx != 0
-            }
+            offmol._properties["atom_map"] = {idx: map_idx for idx, map_idx in atom_mapping.items() if map_idx != 0}
 
         # Similar to chirality, stereochemistry of bonds in OE is set relative to their neighbors
         for rdb in rdmol.GetBonds():
@@ -2455,9 +2288,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             elif tag == Chem.BondStereo.STEREOE:
                 stereochemistry = "E"
             elif tag == Chem.BondStereo.STEREOTRANS or tag == Chem.BondStereo.STEREOCIS:
-                raise ValueError(
-                    f"Expected RDKit bond stereochemistry of E or Z, got {tag} instead"
-                )
+                raise ValueError(f"Expected RDKit bond stereochemistry of E or Z, got {tag} instead")
             offb._stereochemistry = stereochemistry
             fractional_bond_order = None
             if rdb.HasProp("fractional_bond_order"):
@@ -2488,9 +2319,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             else:
                 # If some other atoms had partial charges but this one doesn't, raise an Exception
                 if any_atom_has_partial_charge:
-                    raise ValueError(
-                        "Some atoms in rdmol have partial charges, but others do not."
-                    )
+                    raise ValueError("Some atoms in rdmol have partial charges, but others do not.")
         if any_atom_has_partial_charge:
             offmol.partial_charges = Quantity(partial_charges, unit.elementary_charge)
         else:
@@ -2498,9 +2327,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return offmol
 
     @cached(LRUCache(maxsize=4096), key=base_wrapper._mol_to_ctab_and_aro_key)
-    def _connection_table_to_rdkit(
-        self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL
-    ):
+    def _connection_table_to_rdkit(self, molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL):
         from rdkit import Chem
 
         if aromaticity_model not in ALLOWED_AROMATICITY_MODELS:
@@ -2590,10 +2417,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # We need to do force and cleanIt to recalculate CIP stereo.
             Chem.AssignStereochemistry(rdmol, force=True, cleanIt=True)
             # If our random initial assignment worked, then we're set.
-            if (
-                rdatom.HasProp("_CIPCode")
-                and rdatom.GetProp("_CIPCode") == atom.stereochemistry
-            ):
+            if rdatom.HasProp("_CIPCode") and rdatom.GetProp("_CIPCode") == atom.stereochemistry:
                 continue
 
             # Otherwise, set it to CCW.
@@ -2601,10 +2425,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # We need to do force and cleanIt to recalculate CIP stereo.
             Chem.AssignStereochemistry(rdmol, force=True, cleanIt=True)
             # Hopefully this worked, otherwise something's wrong
-            if (
-                rdatom.HasProp("_CIPCode")
-                and rdatom.GetProp("_CIPCode") == atom.stereochemistry
-            ):
+            if rdatom.HasProp("_CIPCode") and rdatom.GetProp("_CIPCode") == atom.stereochemistry:
                 continue
 
             # Keep track of undefined stereo atoms. We'll force stereochemistry
@@ -2636,9 +2457,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return rdmol
 
-    def to_rdkit(
-        self, molecule: "Molecule", aromaticity_model: str = DEFAULT_AROMATICITY_MODEL
-    ):
+    def to_rdkit(self, molecule: "Molecule", aromaticity_model: str = DEFAULT_AROMATICITY_MODEL):
         """
         Create an RDKit molecule
         Requires the RDKit to be installed.
@@ -2674,9 +2493,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             )
 
         # Convert the OFF molecule's connectivity table to RDKit, returning a cached rdmol if possible
-        rdmol = self._connection_table_to_rdkit(
-            molecule, aromaticity_model=aromaticity_model
-        )
+        rdmol = self._connection_table_to_rdkit(molecule, aromaticity_model=aromaticity_model)
         # In case a cached rdmol was returned, make a copy of it
         rdmol = Chem.RWMol(rdmol)
         # Set name
@@ -2743,9 +2560,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             )
             rdbond = rdmol.GetBondBetweenAtoms(*atom_indices)
             if bond.fractional_bond_order is not None:
-                rdbond.SetDoubleProp(
-                    "fractional_bond_order", bond.fractional_bond_order
-                )
+                rdbond.SetDoubleProp("fractional_bond_order", bond.fractional_bond_order)
 
         # Set coordinates if we have them
         if molecule._conformers:
@@ -2897,9 +2712,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         if ss is None:
             # This is a SMIRKS or SMARTS parsing error? The argument and exception disagree
-            raise SMIRKSParsingError(
-                f"RDKit was unable to parse SMIRKS/SMARTS {smarts}"
-            )
+            raise SMIRKSParsingError(f"RDKit was unable to parse SMIRKS/SMARTS {smarts}")
 
         _unique_tags = set()
         _connections = set()
@@ -2967,9 +2780,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             remove_params = Chem.rdmolops.RemoveHsParameters()
             remove_params.removeWithQuery = True
             heavy_query = Chem.RemoveHs(qmol, remove_params, sanitize=False)
-            heavy_to_qmol = [
-                atom.GetIntProp("index") for atom in heavy_query.GetAtoms()
-            ]
+            heavy_to_qmol = [atom.GetIntProp("index") for atom in heavy_query.GetAtoms()]
             query_atoms = [Chem.Atom(i + 2) for i in range(len(heavy_to_qmol))]
 
             full_matches = set()
@@ -2993,9 +2804,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Set up query.
         qmol = Chem.MolFromSmarts(smarts)  # cannot catch the error
         if qmol is None:
-            raise ChemicalEnvironmentParsingError(
-                f'RDKit could not parse the SMARTS/SMIRKS string "{smarts}"'
-            )
+            raise ChemicalEnvironmentParsingError(f'RDKit could not parse the SMARTS/SMIRKS string "{smarts}"')
 
         # Create atom mapping for query molecule
         idx_map = dict()
@@ -3046,9 +2855,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         .. note :: Currently, the only supported ``aromaticity_model`` is ``OEAroModel_MDL``
 
         """
-        rdmol = self._connection_table_to_rdkit(
-            molecule, aromaticity_model=aromaticity_model
-        )
+        rdmol = self._connection_table_to_rdkit(molecule, aromaticity_model=aromaticity_model)
         return self._find_smarts_matches(
             rdmol,
             smarts,
@@ -3076,9 +2883,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         NotAttachedToMoleculeError
         """
         if atom.molecule is None:
-            raise NotAttachedToMoleculeError(
-                "This Atom does not belong to a Molecule object"
-            )
+            raise NotAttachedToMoleculeError("This Atom does not belong to a Molecule object")
 
         molecule = atom.molecule
         atom_index = atom.molecule_atom_index
@@ -3110,9 +2915,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         NotAttachedToMoleculeError
         """
         if bond.molecule is None:
-            raise NotAttachedToMoleculeError(
-                "This Bond does not belong to a Molecule object"
-            )
+            raise NotAttachedToMoleculeError("This Bond does not belong to a Molecule object")
 
         molecule = bond.molecule
         rdmol = molecule.to_rdkit()
@@ -3160,9 +2963,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Find all atoms with undefined stereo.
         undefined_atom_indices = []
         for atom_idx, atom in enumerate(rdmol.GetAtoms()):
-            if atom.GetChiralTag() == Chem.ChiralType.CHI_UNSPECIFIED and atom.HasProp(
-                "_ChiralityPossible"
-            ):
+            if atom.GetChiralTag() == Chem.ChiralType.CHI_UNSPECIFIED and atom.HasProp("_ChiralityPossible"):
                 undefined_atom_indices.append(atom_idx)
         return undefined_atom_indices
 
@@ -3215,9 +3016,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # ensure that they are cis/trans/E/Z (tested here be ensuring that they're NOT either
         # # of the other possible types (NONE or ANY))
         undefined_bond_indices = []
-        for bond_idx, (orig_bond, repercieved_bond) in enumerate(
-            zip(rdmol.GetBonds(), rdmol_copy.GetBonds())
-        ):
+        for bond_idx, (orig_bond, repercieved_bond) in enumerate(zip(rdmol.GetBonds(), rdmol_copy.GetBonds())):
             # print(repercieved_bond.GetStereo(), orig_bond.GetStereo())
             if (repercieved_bond.GetStereo() == Chem.BondStereo.STEREOANY) and (
                 (orig_bond.GetStereo() == Chem.BondStereo.STEREOANY)
@@ -3279,19 +3078,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         raise UndefinedStereochemistryError(err_msg_prefix + msg)
 
     @staticmethod
-    def _constrain_end_directions(
-        *values: int, bond_indices: list[int], flip_direction: dict[int, bool]
-    ) -> bool:
+    def _constrain_end_directions(*values: int, bond_indices: list[int], flip_direction: dict[int, bool]) -> bool:
         """A constraint applied when mapping global E/Z stereochemistry into local RDKit
         bond directions that ensures that the 'left' bonds point in opposite directions
         (i.e. one has to be up and one has to be down) and likewise for the 'right' bonds
         """
         # Account for bond "direction" using flip_directions dict, see more thorough comment
         # in _constrain_rank for details.
-        bond_directions = [
-            (value if not flip_direction[i] else 1 - value)
-            for i, value in zip(bond_indices, values)
-        ]
+        bond_directions = [(value if not flip_direction[i] else 1 - value) for i, value in zip(bond_indices, values)]
         unique_bond_directions = set(bond_directions)
         return len(unique_bond_directions) == len(values)
 
@@ -3314,10 +3108,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # "normal" case is when the neighboring bonds are coming FROM the double bond,
         # and where that's not true, the following line switches the
         # meaning of "down" and "up" to give us the desired meaning.
-        bond_directions = [
-            (value if not flip_direction[i] else 1 - value)
-            for i, value in zip(bond_indices, values)
-        ]
+        bond_directions = [(value if not flip_direction[i] else 1 - value) for i, value in zip(bond_indices, values)]
 
         # Test for equality of items in flipped_values by turning it into a set and
         # counting how many values remain.
@@ -3347,18 +3138,14 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             Chem.BondStereo.STEREOZ: "Z",
         }
 
-        stereogenic_bonds = [
-            bond for bond in off_molecule.bonds if bond.stereochemistry
-        ]
+        stereogenic_bonds = [bond for bond in off_molecule.bonds if bond.stereochemistry]
 
         if len(stereogenic_bonds) == 0:
             return
 
         # Needed to ensure the _CIPRank is present. Note that, despite the kwargs that look like
         # they could mangle existing stereo, it is actually preserved.
-        Chem.AssignStereochemistry(
-            rd_molecule, cleanIt=True, force=True, flagPossibleStereoCenters=True
-        )
+        Chem.AssignStereochemistry(rd_molecule, cleanIt=True, force=True, flagPossibleStereoCenters=True)
 
         csp_problem = Problem()
         csp_variables = set()
@@ -3370,12 +3157,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             atom_b, atom_c = bond.atom1, bond.atom2
             index_b, index_c = atom_b.molecule_atom_index, atom_c.molecule_atom_index
 
-            indices_a = [
-                n.molecule_atom_index for n in atom_b.bonded_atoms if n != atom_c
-            ]
-            indices_d = [
-                n.molecule_atom_index for n in atom_c.bonded_atoms if n != atom_b
-            ]
+            indices_a = [n.molecule_atom_index for n in atom_b.bonded_atoms if n != atom_c]
+            indices_d = [n.molecule_atom_index for n in atom_c.bonded_atoms if n != atom_b]
             # A stereogenic double bond should either involve atoms with degree 3
             # (e.g. carbon) or degree 2 (e.g. divalent nitrogen).
             assert 1 <= len(indices_a) <= 2 and 1 <= len(indices_d) <= 2
@@ -3383,15 +3166,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # Identify the highest CIP-ranked bond coming off each side of the double
             # bond. This lets us later add a constraint to ensure that we have the
             # correct E/Z stereochemistry
-            ranks_a = [
-                int(rd_molecule.GetAtomWithIdx(i).GetProp("_CIPRank"))
-                for i in indices_a
-            ]
+            ranks_a = [int(rd_molecule.GetAtomWithIdx(i).GetProp("_CIPRank")) for i in indices_a]
             index_a = indices_a[np.argmax(ranks_a)]
-            ranks_d = [
-                int(rd_molecule.GetAtomWithIdx(i).GetProp("_CIPRank"))
-                for i in indices_d
-            ]
+            ranks_d = [int(rd_molecule.GetAtomWithIdx(i).GetProp("_CIPRank")) for i in indices_d]
             index_d = indices_d[np.argmax(ranks_d)]
 
             index_ab = rd_molecule.GetBondBetweenAtoms(index_a, index_b).GetIdx()
@@ -3405,9 +3182,9 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             constraints_ab: list[int] = []
             constraints_cd: list[int] = []
 
-            for index_pair, constraints_list in [
-                ((index_a, index_b), constraints_ab) for index_a in indices_a
-            ] + [((index_d, index_c), constraints_cd) for index_d in indices_d]:
+            for index_pair, constraints_list in [((index_a, index_b), constraints_ab) for index_a in indices_a] + [
+                ((index_d, index_c), constraints_cd) for index_d in indices_d
+            ]:
                 # Each single bond neighboring a double bond needs to be defined as a
                 # "variable" in the CSP problem. Here, each bond is identified by its
                 # bond index in the RDMol (note: this is not guaranteed to be the same
@@ -3425,9 +3202,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 # bond instead, we need to flip the direction of the bond. See
                 # rdkit/Code/GraphMol/Chirality.cpp:findAtomNeighborDirHelper for more
                 # details.
-                flip_direction[rd_bond_index] = (
-                    rd_bond.GetBeginAtomIdx() != index_pair[1]
-                )
+                flip_direction[rd_bond_index] = rd_bond.GetBeginAtomIdx() != index_pair[1]
                 constraints_list.append(rd_bond_index)
 
             # Add one constraint corresponding to the highest-ranked bond on OPPOSITE
@@ -3483,9 +3258,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             # OFFMol and the newly-assigned RDMol
             stereo_mismatch = False
             for off_bond in stereogenic_bonds:
-                rd_bond = rd_molecule.GetBondBetweenAtoms(
-                    off_bond.atom1_index, off_bond.atom2_index
-                )
+                rd_bond = rd_molecule.GetBondBetweenAtoms(off_bond.atom1_index, off_bond.atom2_index)
                 rd_stereo_string = _RD_STEREO_TO_STR.get(rd_bond.GetStereo(), None)
                 if off_bond.stereochemistry != rd_stereo_string:
                     stereo_mismatch = True

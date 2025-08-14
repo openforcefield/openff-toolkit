@@ -68,9 +68,7 @@ class TestCallbackable:
         def event_method2(self, *args, **kwargs):
             CallHistory.add_history_entry("event_method2", *args, **kwargs)
 
-    def check_method_call_order(
-        self, callbackable, event_name, event_sequence, *args, **kwargs
-    ):
+    def check_method_call_order(self, callbackable, event_name, event_sequence, *args, **kwargs):
         """Check that callback and methods/attributes are invoked in the correct order.
 
         This also formats the history correctly if args and kwargs are given.
@@ -101,27 +99,21 @@ class TestCallbackable:
             CallHistory.static_callback,
         ],
     )
-    @pytest.mark.parametrize(
-        "args,kwargs", [([], {}), ([1, 2.0], {"kwarg1": 0, "kwarg2": None})]
-    )
+    @pytest.mark.parametrize("args,kwargs", [([], {}), ([1, 2.0], {"kwarg1": 0, "kwarg2": None})])
     def test_register_method_callback(self, event_name, callback, args, kwargs):
         """Methods' callbacks are invoked in the correct order and with the correct arguments."""
         callbackable = TestCallbackable.MyCallbackable()
 
         # No callback is called before registration.
         event_sequence = [event_name]
-        self.check_method_call_order(
-            callbackable, event_name, event_sequence, *args, **kwargs
-        )
+        self.check_method_call_order(callbackable, event_name, event_sequence, *args, **kwargs)
 
         # Register the callback.
         callbackable.register_callback(event_name, callback)
 
         # After the registration, the callback is invoked correctly.
         event_sequence = [event_name, "callback_" + event_name]
-        self.check_method_call_order(
-            callbackable, event_name, event_sequence, *args, **kwargs
-        )
+        self.check_method_call_order(callbackable, event_name, event_sequence, *args, **kwargs)
 
     def test_register_magic_method_callback(self):
         """Callbacks registered to magic methods are invoked correctly."""
@@ -174,9 +166,7 @@ class TestCallbackable:
             CallbackRegistrationError,
             match="is not tagged with the @callback_method decorator",
         ):
-            callbackable.register_callback(
-                "not_callback_method", call_history.instance_callback
-            )
+            callbackable.register_callback("not_callback_method", call_history.instance_callback)
 
     def test_unknown_event_raise_exception(self):
         """An exception is raised if a callback is registered for an unknown callback event."""

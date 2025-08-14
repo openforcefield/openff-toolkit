@@ -30,9 +30,7 @@ class NAGLToolkitWrapper(ToolkitWrapper):
     try:
         from openff.nagl_models import list_available_nagl_models
 
-        _supported_charge_methods = {
-            pathlib.Path(path).name: dict() for path in list_available_nagl_models()
-        }
+        _supported_charge_methods = {pathlib.Path(path).name: dict() for path in list_available_nagl_models()}
     except ImportError:
         _supported_charge_methods = dict()
 
@@ -117,9 +115,11 @@ class NAGLToolkitWrapper(ToolkitWrapper):
         from openff.nagl_models._dynamic_fetch import get_model
 
         if partial_charge_method == "" or partial_charge_method == "None":
-            raise FileNotFoundError("NAGLToolkitWrapper.assign_partial_charges can not accept "
-                                    "a blank model file name. There is no default model, one must be "
-                                    "explicitly defined when being called.")
+            raise FileNotFoundError(
+                "NAGLToolkitWrapper.assign_partial_charges can not accept "
+                "a blank model file name. There is no default model, one must be "
+                "explicitly defined when being called."
+            )
 
         if _cls is None:
             from openff.toolkit.topology.molecule import Molecule
@@ -144,9 +144,7 @@ class NAGLToolkitWrapper(ToolkitWrapper):
                 stacklevel=2,
             )
 
-        model_path = get_model(filename=partial_charge_method,
-                               doi=doi,
-                               file_hash=file_hash)
+        model_path = get_model(filename=partial_charge_method, doi=doi, file_hash=file_hash)
 
         model = GNNModel.load(model_path, eval_mode=True)
         charges = model.compute_property(

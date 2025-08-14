@@ -593,9 +593,7 @@ TWO_MOLS_SDF = CAFFEINE_2D_SDF + ASPIRIN_2D_SDF
 TWO_MOLS_SMI = CAFFEINE_SMI + ASPIRIN_SMI
 
 # Force invalid records to ensure the invalid one is skipped
-THREE_MOLS_SDF = (
-    CAFFEINE_2D_SDF + CAFFEINE_3D_SDF.replace("24 25", "20 29") + ASPIRIN_2D_SDF
-)
+THREE_MOLS_SDF = CAFFEINE_2D_SDF + CAFFEINE_3D_SDF.replace("24 25", "20 29") + ASPIRIN_2D_SDF
 THREE_MOLS_SMI = CAFFEINE_SMI + "Q" + CAFFEINE_SMI + ASPIRIN_SMI
 
 
@@ -713,9 +711,7 @@ class BaseFromFileIO:
 
     @pytest.mark.parametrize("file_format", ("SDF", "sdf", "sdF", "MOL", "mol"))
     def test_from_file_obj_sdf_ignores_file_format_case(self, file_format):
-        mols = self.toolkit_wrapper.from_file_obj(
-            file_obj_manager.caffeine_2d_sdf, file_format
-        )
+        mols = self.toolkit_wrapper.from_file_obj(file_obj_manager.caffeine_2d_sdf, file_format)
         self._test_from_sdf_ignores_file_format_case(mols)
 
     def _test_from_sdf_ignores_file_format_case(self, mols):
@@ -741,9 +737,7 @@ class BaseFromFileIO:
         self._test_from_sdf_two_molecules(mols)
 
     def test_from_file_obj_sdf_three_molecules(self):
-        mols = self.toolkit_wrapper.from_file_obj(
-            file_obj_manager.three_mols_sdf, "SDF"
-        )
+        mols = self.toolkit_wrapper.from_file_obj(file_obj_manager.three_mols_sdf, "SDF")
         self._test_from_sdf_two_molecules(mols)
 
     @pytest.mark.parametrize("file_format", ("SMI", "smi", "sMi"))
@@ -753,9 +747,7 @@ class BaseFromFileIO:
 
     @pytest.mark.parametrize("file_format", ("SMI", "smi", "sMi"))
     def test_from_fileobj_smi_ignores_file_format_case(self, file_format):
-        mols = self.toolkit_wrapper.from_file_obj(
-            file_obj_manager.caffeine_smi, file_format
-        )
+        mols = self.toolkit_wrapper.from_file_obj(file_obj_manager.caffeine_smi, file_format)
         self._test_from_smi_ignores_file_format_case(mols)
 
     def _test_from_smi_ignores_file_format_case(self, mols):
@@ -784,9 +776,7 @@ class BaseFromFileIO:
         self._test_from_smi_two_molecules(mols)
 
     def test_from_file_obj_smi_three_molecules(self):
-        mols = self.toolkit_wrapper.from_file_obj(
-            file_obj_manager.three_mols_smi, "SMI"
-        )
+        mols = self.toolkit_wrapper.from_file_obj(file_obj_manager.three_mols_smi, "SMI")
         self._test_from_smi_two_molecules(mols)
 
     def test_from_file_sdf_ignores_filename_extension(self):
@@ -799,15 +789,11 @@ class BaseFromFileIO:
 
     def test_from_file_qwe_format_raises_exception(self):
         with pytest.raises(ValueError, match="Unsupported file format: QWE"):
-            self.toolkit_wrapper.from_file(
-                file_manager.caffeine_2d_sdf, file_format="qwe"
-            )
+            self.toolkit_wrapper.from_file(file_manager.caffeine_2d_sdf, file_format="qwe")
 
     def test_from_file_obj_qwe_format_raises_exception(self):
         with pytest.raises(ValueError, match="Unsupported file format: QWE"):
-            self.toolkit_wrapper.from_file_obj(
-                file_obj_manager.caffeine_2d_sdf, file_format="qwe"
-            )
+            self.toolkit_wrapper.from_file_obj(file_obj_manager.caffeine_2d_sdf, file_format="qwe")
 
     @pytest.mark.parametrize("file_format", ["smi", "sdf", "mol"])
     def test_from_file_when_the_filename_does_not_exist(self, file_format):
@@ -820,9 +806,7 @@ class BaseFromFileIO:
         self._test_2D_sdf_coords(mol)
 
     def test_from_file_obj_2D_sdf_coords(self):
-        mol = self.toolkit_wrapper.from_file_obj(
-            file_obj_manager.caffeine_2d_sdf, "sdf"
-        )[0]
+        mol = self.toolkit_wrapper.from_file_obj(file_obj_manager.caffeine_2d_sdf, "sdf")[0]
         self._test_2D_sdf_coords(mol)
 
     def _test_2D_sdf_coords(self, mol):
@@ -834,18 +818,14 @@ class BaseFromFileIO:
         assert conformer.units == unit.angstrom
 
         # Beyond this are the hydrogens, which are added by algorithm.
-        assert_allclose(
-            conformer[: CAFFEINE_2D_COORDS.shape[0]].m, CAFFEINE_2D_COORDS.m
-        )
+        assert_allclose(conformer[: CAFFEINE_2D_COORDS.shape[0]].m, CAFFEINE_2D_COORDS.m)
 
     def test_from_file_3D_sdf_keeps_hydrogens(self):
         mol = self.toolkit_wrapper.from_file(file_manager.caffeine_3d_sdf, "sdf")[0]
         self._test_3D_sdf_keeps_hydrogens(mol)
 
     def test_from_file_obj_3D_sdf_keeps_hydrogens(self):
-        mol = self.toolkit_wrapper.from_file_obj(
-            file_obj_manager.caffeine_3d_sdf, "sdf"
-        )[0]
+        mol = self.toolkit_wrapper.from_file_obj(file_obj_manager.caffeine_3d_sdf, "sdf")[0]
         self._test_3D_sdf_keeps_hydrogens(mol)
 
     def _test_3D_sdf_keeps_hydrogens(self, mol):
@@ -874,33 +854,21 @@ class BaseFromFileIO:
             self.toolkit_wrapper.from_file_obj(file_obj_manager.chebi_1148_sdf, "sdf")
 
     def test_from_file_with_undefined_stereo_allowed(self):
-        self.toolkit_wrapper.from_file(
-            file_manager.chebi_1148_sdf, "sdf", allow_undefined_stereo=True
-        )[0]
+        self.toolkit_wrapper.from_file(file_manager.chebi_1148_sdf, "sdf", allow_undefined_stereo=True)[0]
 
     def test_from_file_obj_with_undefined_stereo_allowed(self):
-        self.toolkit_wrapper.from_file_obj(
-            file_obj_manager.chebi_1148_sdf, "sdf", allow_undefined_stereo=True
-        )[0]
+        self.toolkit_wrapper.from_file_obj(file_obj_manager.chebi_1148_sdf, "sdf", allow_undefined_stereo=True)[0]
 
-    @pytest.mark.parametrize(
-        "name,file_format", [("caffeine_2d_sdf", "SDF"), ("caffeine_smi", "SMI")]
-    )
+    @pytest.mark.parametrize("name,file_format", [("caffeine_2d_sdf", "SDF"), ("caffeine_smi", "SMI")])
     def test_from_file_handles_cls(self, name, file_format):
         filename = getattr(file_manager, name)
-        mol = self.toolkit_wrapper.from_file(
-            filename, file_format, _cls=SingingMolecule
-        )[0]
+        mol = self.toolkit_wrapper.from_file(filename, file_format, _cls=SingingMolecule)[0]
         mol.sing()
 
-    @pytest.mark.parametrize(
-        "name,file_format", [("caffeine_2d_sdf", "SDF"), ("caffeine_smi", "SMI")]
-    )
+    @pytest.mark.parametrize("name,file_format", [("caffeine_2d_sdf", "SDF"), ("caffeine_smi", "SMI")])
     def test_from_file_obj_handles_cls(self, name, file_format):
         file_obj = getattr(file_obj_manager, name)
-        mol = self.toolkit_wrapper.from_file_obj(
-            file_obj, file_format, _cls=SingingMolecule
-        )[0]
+        mol = self.toolkit_wrapper.from_file_obj(file_obj, file_format, _cls=SingingMolecule)[0]
         mol.sing()
 
 
@@ -1059,9 +1027,7 @@ class BaseSmiles:
         assert mol.partial_charges is None
 
     def test_parse_methane_with_explicit_Hs_and_say_they_are_explicit(self):
-        mol = self.toolkit_wrapper.from_smiles(
-            "[C]([H])([H])([H])([H])", hydrogens_are_explicit=True
-        )
+        mol = self.toolkit_wrapper.from_smiles("[C]([H])([H])([H])([H])", hydrogens_are_explicit=True)
         # add hydrogens
         assert mol.n_atoms == 5
         assert mol.n_bonds == 4
@@ -1089,9 +1055,7 @@ class BaseSmiles:
             mol = self.toolkit_wrapper.from_smiles(smiles)
         assert mol.n_atoms == 18
 
-    @pytest.mark.parametrize(
-        "smiles, expected_map", [("[Cl:1][H]", {0: 1}), ("[Cl:1][H:2]", {0: 1, 1: 2})]
-    )
+    @pytest.mark.parametrize("smiles, expected_map", [("[Cl:1][H]", {0: 1}), ("[Cl:1][H:2]", {0: 1, 1: 2})])
     def test_from_smiles_with_atom_map(self, smiles, expected_map):
         mol = self.toolkit_wrapper.from_smiles(smiles)
         assert mol.properties["atom_map"] == expected_map

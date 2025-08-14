@@ -322,9 +322,7 @@ class ToolkitRegistry:
                 return
             except ToolkitUnavailableException:
                 if exception_if_unavailable:
-                    raise ToolkitUnavailableException(
-                        f"Unable to load toolkit '{toolkit_wrapper}'. "
-                    )
+                    raise ToolkitUnavailableException(f"Unable to load toolkit '{toolkit_wrapper}'. ")
                 return
 
             self._toolkits.append(_toolkit_wrapper)
@@ -368,10 +366,7 @@ class ToolkitRegistry:
                 toolkits_to_remove.append(toolkit)
 
         if not toolkits_to_remove:
-            msg = (
-                f"Did not find {toolkit_wrapper} in registry. "
-                f"Currently registered toolkits are {self._toolkits}"
-            )
+            msg = f"Did not find {toolkit_wrapper} in registry. Currently registered toolkits are {self._toolkits}"
             raise ToolkitUnavailableException(msg)
 
         for toolkit_to_remove in toolkits_to_remove:
@@ -492,9 +487,7 @@ def toolkit_registry_manager(toolkit_registry: Union[ToolkitRegistry, ToolkitWra
     elif isinstance(toolkit_registry, ToolkitWrapper):
         context_toolkits = [toolkit_registry]
     else:
-        raise NotImplementedError(
-            "Only ``ToolkitRegistry`` and ``ToolkitWrapper`` are supported."
-        )
+        raise NotImplementedError("Only ``ToolkitRegistry`` and ``ToolkitWrapper`` are supported.")
 
     original_toolkits = GLOBAL_TOOLKIT_REGISTRY.registered_toolkits
 

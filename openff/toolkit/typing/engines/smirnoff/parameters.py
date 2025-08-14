@@ -154,24 +154,19 @@ def _linear_inter_or_extrapolate(points_dict, x_query):
 
     # handle case where we can clearly interpolate
     if (above is not None) and (below is not None):
-        return points_dict[below] + (points_dict[above] - points_dict[below]) * (
-            (x_query - below) / (above - below)
-        )
+        return points_dict[below] + (points_dict[above] - points_dict[below]) * ((x_query - below) / (above - below))
 
     # error if we can't hope to interpolate at all
     elif (above is None) and (below is None):
         raise NotImplementedError(
-            f"Failed to find interpolation references for "
-            f"`x_query` '{x_query}', "
-            f"with `points_dict` '{points_dict}'"
+            f"Failed to find interpolation references for `x_query` '{x_query}', with `points_dict` '{points_dict}'"
         )
 
     # extrapolate for fractional bond orders below our lowest defined bond order
     elif below is None:
         bond_orders = sorted(points_dict)
         k = points_dict[bond_orders[0]] - (
-            (points_dict[bond_orders[1]] - points_dict[bond_orders[0]])
-            / (bond_orders[1] - bond_orders[0])
+            (points_dict[bond_orders[1]] - points_dict[bond_orders[0]]) / (bond_orders[1] - bond_orders[0])
         ) * (bond_orders[0] - x_query)
         return k
 
@@ -179,8 +174,7 @@ def _linear_inter_or_extrapolate(points_dict, x_query):
     elif above is None:
         bond_orders = sorted(points_dict)
         k = points_dict[bond_orders[-1]] + (
-            (points_dict[bond_orders[-1]] - points_dict[bond_orders[-2]])
-            / (bond_orders[-1] - bond_orders[-2])
+            (points_dict[bond_orders[-1]] - points_dict[bond_orders[-2]]) / (bond_orders[-1] - bond_orders[-2])
         ) * (x_query - bond_orders[-1])
         return k
 
@@ -215,9 +209,7 @@ def _validate_units(attr, value: Union[str, Quantity], units: Unit):
 
     try:
         if not units.is_compatible_with(value.units):  # type: ignore
-            raise IncompatibleUnitError(
-                f"{attr.name}={value} should have units of {units}"
-            )
+            raise IncompatibleUnitError(f"{attr.name}={value} should have units of {units}")
     except AttributeError:
         raise IncompatibleUnitError(f"{attr.name}={value} should have units of {units}")
     return value
@@ -401,9 +393,7 @@ class ParameterAttribute:
 
     def _is_valid_default(self, value):
         """Return True if this is a defined default value."""
-        return (
-            self.default is not ParameterAttribute.UNDEFINED and value == self.default
-        )
+        return self.default is not ParameterAttribute.UNDEFINED and value == self.default
 
     def _validate_units(self, value):
         """Convert strings expressions to Quantity and validate the units if requested."""
@@ -414,14 +404,10 @@ class ParameterAttribute:
             # Check if units are compatible.
             try:
                 if not self._unit.is_compatible_with(value.units):
-                    raise IncompatibleUnitError(
-                        f"{self.name}={value} should have units of {self._unit}"
-                    )
+                    raise IncompatibleUnitError(f"{self.name}={value} should have units of {self._unit}")
             except AttributeError:
                 # This is not a Quantity object.
-                raise IncompatibleUnitError(
-                    f"{self.name}={value} should have units of {self._unit}"
-                )
+                raise IncompatibleUnitError(f"{self.name}={value} should have units of {self._unit}")
         return value
 
     def _call_converter(self, value, instance):
@@ -670,12 +656,7 @@ class IndexedMappedParameterAttribute(ParameterAttribute):
         static_converter = functools.partial(self._call_converter, instance=instance)
 
         value = ValidatedList(
-            [
-                ValidatedDict(
-                    element, converter=[self._validate_units, static_converter]
-                )
-                for element in value
-            ],
+            [ValidatedDict(element, converter=[self._validate_units, static_converter]) for element in value],
             converter=self._index_converter,
         )
 
@@ -835,9 +816,7 @@ class _ParameterAttributeHandler:
             smirnoff_data,
             indexed_mapped_attr_lengths,
         ) = self._process_indexed_mapped_attributes(smirnoff_data)
-        smirnoff_data = self._process_indexed_attributes(
-            smirnoff_data, indexed_mapped_attr_lengths
-        )
+        smirnoff_data = self._process_indexed_attributes(smirnoff_data, indexed_mapped_attr_lengths)
 
         smirnoff_data = self._process_mapped_attributes(smirnoff_data)
 
@@ -949,7 +928,7 @@ class _ParameterAttributeHandler:
 
         return smirnoff_data, indexed_mapped_attr_lengths
 
-    def _process_indexed_attributes(self, smirnoff_data: dict, indexed_attr_lengths: Optional[dict]=None) -> dict:
+    def _process_indexed_attributes(self, smirnoff_data: dict, indexed_attr_lengths: Optional[dict] = None) -> dict:
         # Check for indexed attributes and stack them into a list.
         # Keep track of how many indexed attribute we find to make sure they all have the same length.
 
@@ -994,17 +973,12 @@ class _ParameterAttributeHandler:
 
             # Update the lengths with this attribute (if it was found).
             if index > 1:
-                indexed_attr_lengths[attrib_basename] = len(
-                    smirnoff_data[attrib_basename]
-                )
+                indexed_attr_lengths[attrib_basename] = len(smirnoff_data[attrib_basename])
 
         # Raise an error if we there are different indexed
         # attributes with a different number of terms.
         if len(set(indexed_attr_lengths.values())) > 1:
-            raise TypeError(
-                "The following indexed attributes have "
-                f"different lengths: {indexed_attr_lengths}"
-            )
+            raise TypeError(f"The following indexed attributes have different lengths: {indexed_attr_lengths}")
 
         return smirnoff_data
 
@@ -1050,9 +1024,7 @@ class _ParameterAttributeHandler:
         # Start populating a dict of the attribs.
         indexed_attribs = set(self._get_indexed_parameter_attributes().keys())
         mapped_attribs = set(self._get_mapped_parameter_attributes().keys())
-        indexed_mapped_attribs = set(
-            self._get_indexed_mapped_parameter_attributes().keys()
-        )
+        indexed_mapped_attribs = set(self._get_indexed_mapped_parameter_attributes().keys())
         smirnoff_dict = dict()
 
         # If attribs_to_return is ordered here, that will effectively be an informal output ordering
@@ -1063,9 +1035,7 @@ class _ParameterAttributeHandler:
                 for idx, mapping in enumerate(attrib_value):
                     for key, val in mapping.items():
                         attrib_name_indexed, attrib_name_mapped = attrib_name.split("_")
-                        smirnoff_dict[
-                            f"{attrib_name_indexed}{idx + 1!s}_{attrib_name_mapped}{key}"
-                        ] = val
+                        smirnoff_dict[f"{attrib_name_indexed}{idx + 1!s}_{attrib_name_mapped}{key}"] = val
             elif attrib_name in indexed_attribs:
                 for idx, val in enumerate(attrib_value):
                     smirnoff_dict[attrib_name + str(idx + 1)] = val
@@ -1092,11 +1062,7 @@ class _ParameterAttributeHandler:
         attr_name, index, key = self._split_attribute_index_mapping(item)
 
         # Check if this is an indexed_mapped attribute.
-        if (
-            key is not None
-            and index is not None
-            and attr_name in self._get_indexed_mapped_parameter_attributes()
-        ):
+        if key is not None and index is not None and attr_name in self._get_indexed_mapped_parameter_attributes():
             indexed_mapped_attr_value = getattr(self, attr_name)
             try:
                 return indexed_mapped_attr_value[index][key]
@@ -1115,9 +1081,7 @@ class _ParameterAttributeHandler:
             try:
                 return indexed_attr_value[index]
             except IndexError:
-                raise MissingIndexedAttributeError(
-                    f"'{item}' is out of bounds for indexed attribute '{attr_name}'"
-                )
+                raise MissingIndexedAttributeError(f"'{item}' is out of bounds for indexed attribute '{attr_name}'")
 
         # Otherwise, forward the search to the next class in the MRO.
         try:
@@ -1126,9 +1090,7 @@ class _ParameterAttributeHandler:
             # If this fails because the next classes in the MRO do not
             # implement __getattr__(), then raise the standard Attribute error.
             if "__getattr__" in str(e):
-                raise AttributeError(
-                    f"{self.__class__} object has no attribute '{item}'"
-                )
+                raise AttributeError(f"{self.__class__} object has no attribute '{item}'")
             # Otherwise, re-raise the error from the class in the MRO.
             raise
 
@@ -1161,17 +1123,13 @@ class _ParameterAttributeHandler:
 
         # Check if this is an indexed attribute. avoiding an infinite
         # recursion by calling getattr() with non-existing keys.
-        if (index is not None) and (
-            attr_name in self._get_indexed_parameter_attributes()
-        ):
+        if (index is not None) and (attr_name in self._get_indexed_parameter_attributes()):
             indexed_attr_value = getattr(self, attr_name)
             try:
                 indexed_attr_value[index] = value
                 return
             except IndexError:
-                raise MissingIndexedAttributeError(
-                    f"'{key}' is out of bounds for indexed attribute '{attr_name}'"
-                )
+                raise MissingIndexedAttributeError(f"'{key}' is out of bounds for indexed attribute '{attr_name}'")
 
         # Forward the request to the next class in the MRO.
         super().__setattr__(key, value)
@@ -1283,7 +1241,7 @@ class _ParameterAttributeHandler:
         match_mapping = re.search(i_match, mapped)
         assert match_mapping is not None
         _key: str = match_mapping.group()
-        attr_name = f"{attr_name}_{mapped[:-len(_key)]}"
+        attr_name = f"{attr_name}_{mapped[: -len(_key)]}"
         # we don't subtract 1 here, because these are keys, not indices
         key = int(_key)
 
@@ -1367,23 +1325,17 @@ class _ParameterAttributeHandler:
     @classmethod
     def _get_indexed_mapped_parameter_attributes(cls):
         """Shortcut to retrieve only IndexedMappedParameterAttributes."""
-        return cls._get_parameter_attributes(
-            filter=lambda x: isinstance(x, IndexedMappedParameterAttribute)
-        )
+        return cls._get_parameter_attributes(filter=lambda x: isinstance(x, IndexedMappedParameterAttribute))
 
     @classmethod
     def _get_indexed_parameter_attributes(cls):
         """Shortcut to retrieve only IndexedParameterAttributes."""
-        return cls._get_parameter_attributes(
-            filter=lambda x: isinstance(x, IndexedParameterAttribute)
-        )
+        return cls._get_parameter_attributes(filter=lambda x: isinstance(x, IndexedParameterAttribute))
 
     @classmethod
     def _get_mapped_parameter_attributes(cls):
         """Shortcut to retrieve only IndexedParameterAttributes."""
-        return cls._get_parameter_attributes(
-            filter=lambda x: isinstance(x, MappedParameterAttribute)
-        )
+        return cls._get_parameter_attributes(filter=lambda x: isinstance(x, MappedParameterAttribute))
 
     @classmethod
     def _get_required_parameter_attributes(cls):
@@ -1393,9 +1345,7 @@ class _ParameterAttributeHandler:
     @classmethod
     def _get_optional_parameter_attributes(cls):
         """Shortcut to retrieve only required ParameterAttributes."""
-        return cls._get_parameter_attributes(
-            filter=lambda x: x.default is not x.UNDEFINED
-        )
+        return cls._get_parameter_attributes(filter=lambda x: x.default is not x.UNDEFINED)
 
     def _get_defined_parameter_attributes(self):
         """Returns all the attributes except for the optional attributes that have None default value.
@@ -1409,9 +1359,7 @@ class _ParameterAttributeHandler:
         optional = dict(
             (name, descriptor)
             for name, descriptor in optional.items()
-            if not (
-                descriptor.default is None and getattr(self, name) == descriptor.default
-            )
+            if not (descriptor.default is None and getattr(self, name) == descriptor.default)
         )
         required.update(optional)
         return required
@@ -1510,13 +1458,9 @@ class ParameterList(list):
 
         """
         if start is not None:
-            raise TypeError(
-                "ParameterList.index does not support non-None values for start."
-            )
+            raise TypeError("ParameterList.index does not support non-None values for start.")
         if stop is not None:
-            raise TypeError(
-                "ParameterList.index does not support non-None values for stop."
-            )
+            raise TypeError("ParameterList.index does not support non-None values for stop.")
         if isinstance(item, ParameterType):
             return super().index(item)
         else:
@@ -1614,9 +1558,7 @@ class ParameterList(list):
         parameter_list = list()
 
         for parameter in self:
-            parameter_dict = parameter.to_dict(
-                discard_cosmetic_attributes=discard_cosmetic_attributes
-            )
+            parameter_dict = parameter.to_dict(discard_cosmetic_attributes=discard_cosmetic_attributes)
             parameter_list.append(parameter_dict)
 
         return parameter_list
@@ -1629,9 +1571,7 @@ class VirtualSiteParameterList(ParameterList):
         if isinstance(val, int):
             indexable_item = val
         elif isinstance(val, slice):
-            assert (
-                type(val.start) is int and type(val.stop) is int
-            ), "slices must be based on ints"
+            assert type(val.start) is int and type(val.stop) is int, "slices must be based on ints"
             indexable_item = val
         else:
             raise NotImplementedError(
@@ -1862,9 +1802,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             raise ValueError(f"Could not convert type {type(new_version)}")
 
         # Use PEP-440 compliant version number comparison, if requested
-        if (new_version > self._MAX_SUPPORTED_SECTION_VERSION) or (
-            new_version < self._MIN_SUPPORTED_SECTION_VERSION
-        ):
+        if (new_version > self._MAX_SUPPORTED_SECTION_VERSION) or (new_version < self._MIN_SUPPORTED_SECTION_VERSION):
             raise SMIRNOFFVersionError(
                 f"SMIRNOFF offxml file was written with version {new_version}, but this version "
                 f"of ForceField only supports version {self._MIN_SUPPORTED_SECTION_VERSION} "
@@ -1872,9 +1810,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             )
         return new_version
 
-    def __init__(
-        self, allow_cosmetic_attributes=False, skip_version_check=False, **kwargs
-    ):
+    def __init__(self, allow_cosmetic_attributes=False, skip_version_check=False, **kwargs):
         """
         Initialize a ParameterHandler, optionally with a list of parameters and other kwargs.
 
@@ -1932,9 +1868,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             # If we're reading the parameter list, iterate through and attach units to
             # each parameter_dict, then use it to initialize a ParameterType
             for param_dict in val:
-                new_parameter = self._INFOTYPE(
-                    **param_dict, allow_cosmetic_attributes=allow_cosmetic_attributes
-                )
+                new_parameter = self._INFOTYPE(**param_dict, allow_cosmetic_attributes=allow_cosmetic_attributes)
                 self._parameters.append(new_parameter)
 
     @property
@@ -2000,9 +1934,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             The index of the parameter if found, otherwise ``None``.
         """
 
-        if (key is None and parameter is None) or (
-            key is not None and parameter is not None
-        ):
+        if (key is None and parameter is None) or (key is not None and parameter is not None):
             raise ValueError("`key` and `parameter` are mutually exclusive arguments")
 
         key = key if parameter is None else parameter.smirks
@@ -2093,9 +2025,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         if not allow_duplicate_smirks:
             if self._index_of_parameter(new_parameter) is not None:
-                msg = (
-                    f"A parameter SMIRKS pattern {new_parameter.smirks} already exists."
-                )
+                msg = f"A parameter SMIRKS pattern {new_parameter.smirks} already exists."
                 raise DuplicateParameterError(msg)
 
         before_index, after_index = None, None
@@ -2264,16 +2194,12 @@ class ParameterHandler(_ParameterAttributeHandler):
             ):
                 # Update the matches for this parameter type.
                 handler_match = self._Match(parameter_type, environment_match)
-                matches_for_this_type[environment_match.topology_atom_indices] = (
-                    handler_match
-                )
+                matches_for_this_type[environment_match.topology_atom_indices] = handler_match
 
             # Update matches of all parameter types.
             matches.update(matches_for_this_type)
 
-            logger.debug(
-                f"{parameter_type.smirks:64} : {len(matches_for_this_type):8} matches"
-            )
+            logger.debug(f"{parameter_type.smirks:64} : {len(matches_for_this_type):8} matches")
 
         logger.debug(f"{len(matches)} matches identified")
         return matches
@@ -2323,9 +2249,11 @@ class ParameterHandler(_ParameterAttributeHandler):
             "`ParameterHandler`s no longer create OpenMM forces. Use `openff-interchange` instead."
         )
 
-    def to_dict(self, discard_cosmetic_attributes: bool = False,
-                duplciate_attributes: Optional[list[str]] = None,
-            ) -> dict[str, dict | list | str]:
+    def to_dict(
+        self,
+        discard_cosmetic_attributes: bool = False,
+        duplciate_attributes: Optional[list[str]] = None,
+    ) -> dict[str, dict | list | str]:
         """
         Convert this ParameterHandler to a dict, compliant with the SMIRNOFF data spec.
 
@@ -2340,12 +2268,10 @@ class ParameterHandler(_ParameterAttributeHandler):
             SMIRNOFF-spec compliant representation of this ParameterHandler and its internal ParameterList.
 
         """
-        parameter_dict: dict[str, dict | list | str]= dict()
+        parameter_dict: dict[str, dict | list | str] = dict()
 
         # Populate parameter list
-        parameter_list = self._parameters.to_list(
-            discard_cosmetic_attributes=discard_cosmetic_attributes
-        )
+        parameter_list = self._parameters.to_list(discard_cosmetic_attributes=discard_cosmetic_attributes)
 
         # NOTE: This assumes that a ParameterHandler will have just one homogenous ParameterList under it
         if self._INFOTYPE is not None:
@@ -2416,10 +2342,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             try:
                 this_val, other_val = get_unitless_values(attr)
             except AttributeError:
-                raise AttributeError(
-                    f"Mismatch found with attr={attr}, this_val={this_val}, "
-                    f"other_val={other_val}"
-                )
+                raise AttributeError(f"Mismatch found with attr={attr}, this_val={this_val}, other_val={other_val}")
             if abs(this_val - other_val) > tolerance:
                 raise IncompatibleParameterError(
                     f"Difference between '{attr}' values is beyond allowed tolerance {tolerance}. "
@@ -2472,46 +2395,32 @@ class BondHandler(ParameterHandler):
         _ELEMENT_NAME = "Bond"
 
         length = ParameterAttribute(default=None, unit=unit.angstrom)
-        k = ParameterAttribute(
-            default=None, unit=unit.kilocalorie / unit.mole / unit.angstrom**2
-        )
+        k = ParameterAttribute(default=None, unit=unit.kilocalorie / unit.mole / unit.angstrom**2)
 
         # fractional bond order params
         length_bondorder = MappedParameterAttribute(default=None, unit=unit.angstrom)
-        k_bondorder = MappedParameterAttribute(
-            default=None, unit=unit.kilocalorie / unit.mole / unit.angstrom**2
-        )
+        k_bondorder = MappedParameterAttribute(default=None, unit=unit.kilocalorie / unit.mole / unit.angstrom**2)
 
         def __init__(self, **kwargs):
             # these checks enforce mutually-exclusive parameterattribute specifications
             has_k = "k" in kwargs.keys()
             has_k_bondorder = any(["k_bondorder" in key for key in kwargs.keys()])
             has_length = "length" in kwargs.keys()
-            has_length_bondorder = any(
-                ["length_bondorder" in key for key in kwargs.keys()]
-            )
+            has_length_bondorder = any(["length_bondorder" in key for key in kwargs.keys()])
 
             # Are these errors too general? What about ParametersMissingError/ParametersOverspecifiedError?
             if has_k:
                 if has_k_bondorder:
-                    raise SMIRNOFFSpecError(
-                        "BOTH k and k_bondorder* cannot be specified simultaneously."
-                    )
+                    raise SMIRNOFFSpecError("BOTH k and k_bondorder* cannot be specified simultaneously.")
             else:
                 if not has_k_bondorder:
-                    raise SMIRNOFFSpecError(
-                        "Either k or k_bondorder* must be specified."
-                    )
+                    raise SMIRNOFFSpecError("Either k or k_bondorder* must be specified.")
             if has_length:
                 if has_length_bondorder:
-                    raise SMIRNOFFSpecError(
-                        "BOTH length and length_bondorder* cannot be specified simultaneously."
-                    )
+                    raise SMIRNOFFSpecError("BOTH length and length_bondorder* cannot be specified simultaneously.")
             else:
                 if not has_length_bondorder:
-                    raise SMIRNOFFSpecError(
-                        "Either length or length_bondorder* must be specified."
-                    )
+                    raise SMIRNOFFSpecError("Either length or length_bondorder* must be specified.")
 
             super().__init__(**kwargs)
 
@@ -2532,22 +2441,14 @@ class BondHandler(ParameterHandler):
     fractional_bondorder_method = ParameterAttribute(default="overridden in init")
     # Use the _allow_only filter here because this class's implementation contains all the information about supported
     # interpolation types.
-    fractional_bondorder_interpolation = ParameterAttribute(
-        default="linear", converter=_allow_only(["linear"])
-    )
+    fractional_bondorder_interpolation = ParameterAttribute(default="linear", converter=_allow_only(["linear"]))
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # Default value for fractional_bondorder_interpolation depends on section version
-        if (
-            self.version == Version("0.3")
-            and "fractional_bondorder_method" not in kwargs
-        ):
+        if self.version == Version("0.3") and "fractional_bondorder_method" not in kwargs:
             self.fractional_bondorder_method = "none"
-        elif (
-            self.version == Version("0.4")
-            and "fractional_bondorder_method" not in kwargs
-        ):
+        elif self.version == Version("0.4") and "fractional_bondorder_method" not in kwargs:
             self.fractional_bondorder_method = "AM1-Wiberg"
 
         # Default value for potential depends on section version
@@ -2574,17 +2475,12 @@ class BondHandler(ParameterHandler):
             "fractional_bondorder_method",
             "fractional_bondorder_interpolation",
         )
-        self._check_attributes_are_equal(
-            other_handler, identical_attrs=string_attrs_to_compare
-        )
+        self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare)
 
         # potential="harmonic" and potential="(k/2)*(r-length)^2" should be considered identical
-        self_has_harmonic_potential = (
-            self.potential == "harmonic" or self.potential == "(k/2)*(r-length)^2"
-        )
+        self_has_harmonic_potential = self.potential == "harmonic" or self.potential == "(k/2)*(r-length)^2"
         other_has_harmonic_potential = (
-            other_handler.potential == "harmonic"
-            or other_handler.potential == "(k/2)*(r-length)^2"
+            other_handler.potential == "harmonic" or other_handler.potential == "(k/2)*(r-length)^2"
         )
         if not (self_has_harmonic_potential and other_has_harmonic_potential):
             if self.potential != other_handler.potential:
@@ -2632,9 +2528,7 @@ class AngleHandler(ParameterHandler):
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
         string_attrs_to_compare = ("potential",)
-        self._check_attributes_are_equal(
-            other_handler, identical_attrs=string_attrs_to_compare
-        )
+        self._check_attributes_are_equal(other_handler, identical_attrs=string_attrs_to_compare)
 
 
 # TODO: There's a lot of duplicated code in ProperTorsionHandler and ImproperTorsionHandler
@@ -2658,9 +2552,7 @@ class ProperTorsionHandler(ParameterHandler):
         idivf = IndexedParameterAttribute(default=None, converter=float)
 
         # fractional bond order params
-        k_bondorder = IndexedMappedParameterAttribute(
-            default=None, unit=unit.kilocalorie / unit.mole
-        )
+        k_bondorder = IndexedMappedParameterAttribute(default=None, unit=unit.kilocalorie / unit.mole)
 
     _TAGNAME = "ProperTorsions"  # SMIRNOFF tag name to process
     _KWARGS = ["partial_bond_orders_from_molecules"]
@@ -2673,9 +2565,7 @@ class ProperTorsionHandler(ParameterHandler):
     )
     default_idivf = ParameterAttribute(default="auto")
     fractional_bondorder_method = ParameterAttribute(default="AM1-Wiberg")
-    fractional_bondorder_interpolation = ParameterAttribute(
-        default="linear", converter=_allow_only(["linear"])
-    )
+    fractional_bondorder_interpolation = ParameterAttribute(default="linear", converter=_allow_only(["linear"]))
 
     def check_handler_compatibility(self, other_handler: "ProperTorsionHandler"):
         """
@@ -2782,9 +2672,7 @@ class ImproperTorsionHandler(ParameterHandler):
             matching the 4-tuple of atom indices in ``entity``.
 
         """
-        return self._find_matches(
-            entity, transformed_dict_cls=ImproperDict, unique=unique
-        )
+        return self._find_matches(entity, transformed_dict_cls=ImproperDict, unique=unique)
 
 
 class _NonbondedHandler(ParameterHandler):
@@ -2815,9 +2703,7 @@ class vdWHandler(_NonbondedHandler):
             if (sigma is None) and (rmin_half is None):
                 raise SMIRNOFFSpecError("Either sigma or rmin_half must be specified.")
             if (sigma is not None) and (rmin_half is not None):
-                raise SMIRNOFFSpecError(
-                    "BOTH sigma and rmin_half cannot be specified simultaneously."
-                )
+                raise SMIRNOFFSpecError("BOTH sigma and rmin_half cannot be specified simultaneously.")
 
             super().__init__(**kwargs)
 
@@ -2857,12 +2743,8 @@ class vdWHandler(_NonbondedHandler):
     _INFOTYPE = vdWType  # info type to store
     _MAX_SUPPORTED_SECTION_VERSION = Version("0.5")
 
-    potential = ParameterAttribute(
-        default="Lennard-Jones-12-6", converter=_allow_only(["Lennard-Jones-12-6"])
-    )
-    combining_rules = ParameterAttribute(
-        default="Lorentz-Berthelot", converter=_allow_only(["Lorentz-Berthelot"])
-    )
+    potential = ParameterAttribute(default="Lennard-Jones-12-6", converter=_allow_only(["Lennard-Jones-12-6"]))
+    combining_rules = ParameterAttribute(default="Lorentz-Berthelot", converter=_allow_only(["Lorentz-Berthelot"]))
 
     scale12 = ParameterAttribute(default=0.0, converter=float)
     scale13 = ParameterAttribute(default=0.0, converter=float)
@@ -2871,12 +2753,8 @@ class vdWHandler(_NonbondedHandler):
 
     cutoff = ParameterAttribute(default=9.0 * unit.angstroms, unit=unit.angstrom)
     switch_width = ParameterAttribute(default=1.0 * unit.angstroms, unit=unit.angstrom)
-    periodic_method = ParameterAttribute(
-        default="cutoff", converter=_allow_only(["cutoff", "no-cutoff", "Ewald3D"])
-    )
-    nonperiodic_method = ParameterAttribute(
-        default="no-cutoff", converter=_allow_only(["cutoff", "no-cutoff"])
-    )
+    periodic_method = ParameterAttribute(default="cutoff", converter=_allow_only(["cutoff", "no-cutoff", "Ewald3D"]))
+    nonperiodic_method = ParameterAttribute(default="no-cutoff", converter=_allow_only(["cutoff", "no-cutoff"]))
 
     def __init__(self, **kwargs):
         if kwargs.get("version") is None:
@@ -3013,12 +2891,8 @@ class ElectrostaticsHandler(_NonbondedHandler):
             ]
         ),
     )
-    nonperiodic_potential = ParameterAttribute(
-        default="Coulomb", converter=_allow_only(["Coulomb"])
-    )
-    exception_potential = ParameterAttribute(
-        default="Coulomb", converter=_allow_only(["Coulomb"])
-    )
+    nonperiodic_potential = ParameterAttribute(default="Coulomb", converter=_allow_only(["Coulomb"]))
+    exception_potential = ParameterAttribute(default="Coulomb", converter=_allow_only(["Coulomb"]))
 
     # TODO: Use _allow_only when ParameterAttribute will support multiple converters
     #       (it'll be easy when we switch to use the attrs library)
@@ -3068,9 +2942,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
         elif new_value.lower() == "coulomb":
             return "Coulomb"
         else:
-            raise NotImplementedError(
-                "Failed to process unexpected periodic potential value: {new_value}"
-            )
+            raise NotImplementedError("Failed to process unexpected periodic potential value: {new_value}")
 
     @solvent_dielectric.converter  # type: ignore[no-redef]
     def solvent_dielectric(self, attr, new_value):
@@ -3090,9 +2962,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                     "See https://openforcefield.github.io/standards/standards/smirnoff/#electrostatics"
                 )
         if kwargs.get("version") == 0.3:
-            logger.info(
-                "Attempting to up-convert Electrostatics section from 0.3 to 0.4"
-            )
+            logger.info("Attempting to up-convert Electrostatics section from 0.3 to 0.4")
             # Default value in 0.3 is "PME", so we have to handle these cases identically
             if kwargs.get("method") in ["PME", None]:
                 kwargs["periodic_potential"] = "Ewald3D-ConductingBoundary"
@@ -3188,13 +3058,10 @@ class LibraryChargeHandler(_NonbondedHandler):
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
-            unique_tags, connectivity = GLOBAL_TOOLKIT_REGISTRY.call(
-                "get_tagged_smarts_connectivity", self.smirks
-            )
+            unique_tags, connectivity = GLOBAL_TOOLKIT_REGISTRY.call("get_tagged_smarts_connectivity", self.smirks)
             if len(self.charge) != len(unique_tags):
                 raise SMIRNOFFSpecError(
-                    f"LibraryCharge {self} was initialized with unequal number of "
-                    f"tagged atoms and charges"
+                    f"LibraryCharge {self} was initialized with unequal number of tagged atoms and charges"
                 )
 
         @classmethod
@@ -3218,9 +3085,7 @@ class LibraryChargeHandler(_NonbondedHandler):
             MissingPartialChargesError
             """
             if molecule.partial_charges is None:
-                raise MissingPartialChargesError(
-                    "Input molecule is missing partial charges."
-                )
+                raise MissingPartialChargesError("Input molecule is missing partial charges.")
 
             smirks = molecule.to_smiles(mapped=True)
             charges = molecule.partial_charges
@@ -3253,6 +3118,7 @@ class LibraryChargeHandler(_NonbondedHandler):
             transformed_dict_cls=dict,
             unique=unique,
         )
+
 
 class NAGLChargesHandler(_NonbondedHandler):
     """ParameterHandler for applying partial charges from a pretrained NAGL model.
@@ -3344,25 +3210,38 @@ class NAGLChargesHandler(_NonbondedHandler):
         IncompatibleParameterError if handler_kwargs are incompatible with existing parameters.
         """
         if self.model_file != other_handler.model_file:
-            raise IncompatibleParameterError("Attempted to initialize two NAGLCharges sections with different "
-                                             "model_files: "
-                                             f"{self.model_file=} is not identical to {other_handler.model_file=}")
+            raise IncompatibleParameterError(
+                "Attempted to initialize two NAGLCharges sections with different "
+                "model_files: "
+                f"{self.model_file=} is not identical to {other_handler.model_file=}"
+            )
 
         # If both handlers have model_file_hashes defined, ensure they're identical
-        if self.model_file_hash and other_handler.model_file_hash and \
-                self.model_file_hash != other_handler.model_file_hash:
-            raise IncompatibleParameterError("Attempted to initialize two NAGLCharges sections with different "
-                                             "model_file_hash values: "
-                                             f"{self.model_file_hash=} is not identical to "
-                                             f"{other_handler.model_file_hash=}")
+        if (
+            self.model_file_hash
+            and other_handler.model_file_hash
+            and self.model_file_hash != other_handler.model_file_hash
+        ):
+            raise IncompatibleParameterError(
+                "Attempted to initialize two NAGLCharges sections with different "
+                "model_file_hash values: "
+                f"{self.model_file_hash=} is not identical to "
+                f"{other_handler.model_file_hash=}"
+            )
 
         # If both handlers have digital_object_identifiers defined, ensure they're identical
-        if self.digital_object_identifier and other_handler.digital_object_identifier and \
-                self.digital_object_identifier != other_handler.digital_object_identifier:
-            raise IncompatibleParameterError("Attempted to initialize two NAGLCharges sections with different "
-                                             "digital_object_identifier values: "
-                                             f"{self.digital_object_identifier=} is not identical to "
-                                             f"{other_handler.digital_object_identifier=}")
+        if (
+            self.digital_object_identifier
+            and other_handler.digital_object_identifier
+            and self.digital_object_identifier != other_handler.digital_object_identifier
+        ):
+            raise IncompatibleParameterError(
+                "Attempted to initialize two NAGLCharges sections with different "
+                "digital_object_identifier values: "
+                f"{self.digital_object_identifier=} is not identical to "
+                f"{other_handler.digital_object_identifier=}"
+            )
+
 
 class ToolkitAM1BCCHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<ToolkitAM1BCC>`` tags
@@ -3414,9 +3293,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
-            unique_tags, connectivity = GLOBAL_TOOLKIT_REGISTRY.call(
-                "get_tagged_smarts_connectivity", self.smirks
-            )
+            unique_tags, connectivity = GLOBAL_TOOLKIT_REGISTRY.call("get_tagged_smarts_connectivity", self.smirks)
 
             n_tags = len(unique_tags)
             n_increments = len(self.charge_increment)
@@ -3486,11 +3363,8 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
             ``matches[atom_indices]`` is the ``ParameterType`` object
             matching the tuple of atom indices in ``entity``.
         """
-        matches = self._find_matches(
-            entity, transformed_dict_cls=TagSortedDict, unique=unique
-        )
+        matches = self._find_matches(entity, transformed_dict_cls=TagSortedDict, unique=unique)
         return matches
-
 
 
 class GBSAHandler(ParameterHandler):
@@ -3522,9 +3396,7 @@ class GBSAHandler(ParameterHandler):
         LibraryChargeHandler,
     ]
 
-    gb_model = ParameterAttribute(
-        default="OBC1", converter=_allow_only(["HCT", "OBC1", "OBC2"])
-    )
+    gb_model = ParameterAttribute(default="OBC1", converter=_allow_only(["HCT", "OBC1", "OBC2"]))
     solvent_dielectric = ParameterAttribute(default=78.5, converter=float)
     solute_dielectric = ParameterAttribute(default=1, converter=float)
     sa_model = ParameterAttribute(default="ACE", converter=_allow_only(["ACE", None]))
@@ -3621,9 +3493,7 @@ class _BaseVirtualSiteType(ParameterType):
         supports_out_of_plane_angle = self._supports_out_of_plane_angle(self.type)
 
         if not supports_out_of_plane_angle and value is not None:
-            raise SMIRNOFFSpecError(
-                f"'{self.type}' sites do not support `outOfPlaneAngle`"
-            )
+            raise SMIRNOFFSpecError(f"'{self.type}' sites do not support `outOfPlaneAngle`")
         elif supports_out_of_plane_angle:
             return _validate_units(attr, value, unit.degrees)
 
@@ -3637,9 +3507,7 @@ class _BaseVirtualSiteType(ParameterType):
         supports_in_plane_angle = self._supports_in_plane_angle(self.type)
 
         if not supports_in_plane_angle and value is not None:
-            raise SMIRNOFFSpecError(
-                f"'{self.type}' sites do not support `inPlaneAngle`"
-            )
+            raise SMIRNOFFSpecError(f"'{self.type}' sites do not support `inPlaneAngle`")
         elif supports_in_plane_angle:
             return _validate_units(attr, value, unit.degrees)
 
@@ -3688,9 +3556,7 @@ class _BaseVirtualSiteType(ParameterType):
 
         out_of_plane_angle = kwargs.get("outOfPlaneAngle", 0.0 * unit.degree)
         is_in_plane = (
-            None
-            if not supports_out_of_plane_angle
-            else numpy.isclose(out_of_plane_angle.m_as(unit.degree), 0.0)
+            None if not supports_out_of_plane_angle else numpy.isclose(out_of_plane_angle.m_as(unit.degree), 0.0)
         )
 
         if not cls._supports_match(type_, match, is_in_plane):
@@ -3718,15 +3584,11 @@ class _BaseVirtualSiteType(ParameterType):
         raise NotImplementedError()
 
     @classmethod
-    def _supports_match(
-        cls, type_: _VirtualSiteType, match: str, is_in_plane: Optional[bool] = None
-    ) -> bool:
+    def _supports_match(cls, type_: _VirtualSiteType, match: str, is_in_plane: Optional[bool] = None) -> bool:
         is_in_plane = True if is_in_plane is None else is_in_plane
 
         if match == "once":
-            return type_ == "TrivalentLonePair" or (
-                type_ == "DivalentLonePair" and is_in_plane
-            )
+            return type_ == "TrivalentLonePair" or (type_ == "DivalentLonePair" and is_in_plane)
         elif match == "all_permutations":
             return type_ in {"BondCharge", "MonovalentLonePair", "DivalentLonePair"}
 
@@ -3742,9 +3604,7 @@ class VirtualSiteHandler(_NonbondedHandler):
     class VirtualSiteType(_BaseVirtualSiteType, vdWHandler.vdWType):
         """Store virtual site parameters (geometry and electrostatics) and vdW interactions."""
 
-        epsilon = ParameterAttribute(
-            default=0.0 * unit.kilocalorie_per_mole, unit=unit.kilocalorie_per_mole
-        )
+        epsilon = ParameterAttribute(default=0.0 * unit.kilocalorie_per_mole, unit=unit.kilocalorie_per_mole)
         sigma = ParameterAttribute(default=1.0 * unit.angstrom, unit=unit.angstrom)
         rmin_half = ParameterAttribute(default=None, unit=unit.angstrom)
 
@@ -3816,9 +3676,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
             matched_atom = atoms_by_index[atom_index]
             connectivity = len(matched_atom.bonds)
-            expected_connectivity = supported_connectivity[
-                (parameter.type, smirks_index)
-            ]
+            expected_connectivity = supported_connectivity[(parameter.type, smirks_index)]
             if expected_connectivity == connectivity:
                 continue
 
@@ -3861,18 +3719,12 @@ class VirtualSiteHandler(_NonbondedHandler):
             The index of the parameter if found, otherwise ``None``.
         """
 
-        if (key is None and parameter is None) or (
-            key is not None and parameter is not None
-        ):
+        if (key is None and parameter is None) or (key is not None and parameter is not None):
             raise ValueError("`key` and `parameter` are mutually exclusive arguments")
 
         key = cast(
             tuple[str, str, str],
-            (
-                key
-                if parameter is None
-                else (parameter.type, parameter.smirks, parameter.name)
-            ),
+            (key if parameter is None else (parameter.type, parameter.smirks, parameter.name)),
         )
         expected_type, expected_smirks, expected_name = key
 
@@ -3891,9 +3743,7 @@ class VirtualSiteHandler(_NonbondedHandler):
     def _find_matches_by_parent(self, entity: Topology) -> dict[int, list]:
         from collections import defaultdict
 
-        topology_atoms = {
-            i: topology_atom for i, topology_atom in enumerate(entity.atoms)
-        }
+        topology_atoms = {i: topology_atom for i, topology_atom in enumerate(entity.atoms)}
 
         # We need to find all the parameters that would lead to a v-site being placed
         # onto a given 'parent atom'. We only allow each parent atom to be assigned one
@@ -3912,9 +3762,7 @@ class VirtualSiteHandler(_NonbondedHandler):
 
                 parent_index = match.topology_atom_indices[parameter.parent_index]
 
-                matches_by_parent[parent_index][parameter.name].append(
-                    (parameter, match)
-                )
+                matches_by_parent[parent_index][parameter.name].append((parameter, match))
 
         # we then need to find which parameter was the last one to be assigned to each
         # given 'parent' atom, and all the ways that that parameter matches the atoms
@@ -3927,9 +3775,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                 assigned_parameter, _ = matches[-1]  # last match wins
 
                 match_orientations = [
-                    match
-                    for parameter_index, match in matches
-                    if parameter_index == assigned_parameter
+                    match for parameter_index, match in matches if parameter_index == assigned_parameter
                 ]
 
                 if assigned_parameter.match == "once":
@@ -3939,20 +3785,14 @@ class VirtualSiteHandler(_NonbondedHandler):
                 elif assigned_parameter.match == "all_permutations":
                     pass
                 else:
-                    raise SMIRNOFFSpecError(
-                        f"{assigned_parameter.match} match keyword is not supported"
-                    )
+                    raise SMIRNOFFSpecError(f"{assigned_parameter.match} match keyword is not supported")
 
-                assigned_matches_by_parent[parent_index].append(
-                    (assigned_parameter, match_orientations)
-                )
+                assigned_matches_by_parent[parent_index].append((assigned_parameter, match_orientations))
 
                 for match in match_orientations:
                     # make sure the match does not look like a weird edge case that we
                     # haven't tested to ensure 'sensible' behaviour in most cases.
-                    self._validate_found_match(
-                        topology_atoms, match.topology_atom_indices, assigned_parameter
-                    )
+                    self._validate_found_match(topology_atoms, match.topology_atom_indices, assigned_parameter)
 
         return assigned_matches_by_parent
 
@@ -3968,9 +3808,7 @@ class VirtualSiteHandler(_NonbondedHandler):
             assigned_matches = []
             for assigned_parameter, match_orientations in assigned_parameters:
                 for match in match_orientations:
-                    assigned_matches.append(
-                        ParameterHandler._Match(assigned_parameter, match)
-                    )
+                    assigned_matches.append(ParameterHandler._Match(assigned_parameter, match))
             return_dict[(parent_index,)] = assigned_matches
 
         return return_dict

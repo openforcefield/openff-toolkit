@@ -66,9 +66,7 @@ def compute_conformer_energies_from_file(filename):
         simulation.context.setPositions(conformer.to_openmm())
 
         # Keep a record of the initial energy
-        initial_energies.append(
-            simulation.context.getState(getEnergy=True).getPotentialEnergy()
-        )
+        initial_energies.append(simulation.context.getState(getEnergy=True).getPotentialEnergy())
 
         # Perform the minimization
         simulation.minimizeEnergy()
@@ -109,7 +107,7 @@ def compute_conformer_energies_from_file(filename):
         # Save the minimized conformer to file
         working_mol.add_conformer(min_coords)
         working_mol.to_file(
-            f"{molecule.name}_conf{i+1}_minimized.sdf",
+            f"{molecule.name}_conf{i + 1}_minimized.sdf",
             file_format="sdf",
         )
 
@@ -129,11 +127,7 @@ def compute_conformer_energies_from_file(filename):
                 minimization_rms,
             ]
         )
-        print(
-            f"{{:5d}} / {n_confs:5d} :  {{:8.3f}} kcal/mol {{:8.3f}} kcal/mol {{:8.3f}} Å".format(
-                *output[-1]
-            )
-        )
+        print(f"{{:5d}} / {n_confs:5d} :  {{:8.3f}} kcal/mol {{:8.3f}} kcal/mol {{:8.3f}} Å".format(*output[-1]))
 
     # Write the results out to CSV
     with open(f"{molecule.name}.csv", "w") as of:
@@ -150,9 +144,7 @@ if __name__ == "__main__":
             "structure (both as STDOUT and a csv file). The minimized conformers will be written out to SDF."
         ),
     )
-    parser.add_argument(
-        "-f", "--filename", help="Name of an input file containing conformers"
-    )
+    parser.add_argument("-f", "--filename", help="Name of an input file containing conformers")
     args = parser.parse_args()
 
     compute_conformer_energies_from_file(args.filename)

@@ -388,14 +388,9 @@ class TestOpenEyeToolkitWrapper:
 
         # Replacing with a simple molecule with stereochemistry
         input_smiles = r"C\C(F)=C(/F)C[C@@](C)(Cl)Br"
-        expected_output_smiles = (
-            r"[H]C([H])([H])/C(=C(/C([H])([H])[C@@](C([H])([H])[H])(Cl)Br)\F)/F"
-        )
+        expected_output_smiles = r"[H]C([H])([H])/C(=C(/C([H])([H])[C@@](C([H])([H])[H])(Cl)Br)\F)/F"
         molecule = Molecule.from_smiles(input_smiles, toolkit_registry=toolkit_wrapper)
-        assert (
-            molecule.to_smiles(toolkit_registry=toolkit_wrapper)
-            == expected_output_smiles
-        )
+        assert molecule.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
         # Populate core molecule property fields
         molecule.name = "Alice"
@@ -498,10 +493,7 @@ class TestOpenEyeToolkitWrapper:
             pc1_ul = pc1.m_as(unit.elementary_charge)
             pc2_ul = pc2.m_as(unit.elementary_charge)
             assert_almost_equal(pc1_ul, pc2_ul, decimal=6)
-        assert (
-            molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
-            == expected_output_smiles
-        )
+        assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
     def test_to_from_openeye_core_props_unset(self):
         """Test OpenEyeToolkitWrapper to_openeye() and from_openeye() when given empty core property fields"""
@@ -510,14 +502,9 @@ class TestOpenEyeToolkitWrapper:
         # Using a simple molecule with tetrahedral and bond stereochemistry
         input_smiles = r"C\C(F)=C(/F)C[C@](C)(Cl)Br"
 
-        expected_output_smiles = (
-            r"[H]C([H])([H])/C(=C(/C([H])([H])[C@](C([H])([H])[H])(Cl)Br)\F)/F"
-        )
+        expected_output_smiles = r"[H]C([H])([H])/C(=C(/C([H])([H])[C@](C([H])([H])[H])(Cl)Br)\F)/F"
         molecule = Molecule.from_smiles(input_smiles, toolkit_registry=toolkit_wrapper)
-        assert (
-            molecule.to_smiles(toolkit_registry=toolkit_wrapper)
-            == expected_output_smiles
-        )
+        assert molecule.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
         # Ensure one atom has its stereochemistry specified
         central_carbon_stereo_specified = False
@@ -560,10 +547,7 @@ class TestOpenEyeToolkitWrapper:
         assert molecule.partial_charges is None
         assert molecule2.partial_charges is None
 
-        assert (
-            molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
-            == expected_output_smiles
-        )
+        assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
     def test_sd_tags_in_graph_mol_preserved(self):
         from openeye import oechem
@@ -612,9 +596,7 @@ class TestOpenEyeToolkitWrapper:
 
     def test_to_openeye_typed_partial_charges(self):
         ethanol = create_ethanol()
-        ethanol.partial_charges = Quantity(
-            np.zeros(ethanol.n_atoms, dtype=int), unit.elementary_charge
-        )
+        ethanol.partial_charges = Quantity(np.zeros(ethanol.n_atoms, dtype=int), unit.elementary_charge)
         oemol = ethanol.to_openeye()
         for oeatom in oemol.GetAtoms():
             assert np.isclose(oeatom.GetPartialCharge(), 0)
@@ -632,28 +614,16 @@ class TestOpenEyeToolkitWrapper:
             # Check OEMol
             for orig_atom, oe_atom in zip(molecule.atoms, oemol.GetAtoms()):
                 if "residue_name" in orig_atom.metadata:
-                    assert (
-                        orig_atom.metadata["residue_name"]
-                        == oechem.OEAtomGetResidue(oe_atom).GetName()
-                    )
+                    assert orig_atom.metadata["residue_name"] == oechem.OEAtomGetResidue(oe_atom).GetName()
 
                 if "residue_number" in orig_atom.metadata:
-                    assert (
-                        orig_atom.metadata["residue_number"]
-                        == oechem.OEAtomGetResidue(oe_atom).GetResidueNumber()
-                    )
+                    assert orig_atom.metadata["residue_number"] == oechem.OEAtomGetResidue(oe_atom).GetResidueNumber()
 
                 if "insertion_code" in orig_atom.metadata:
-                    assert (
-                        orig_atom.metadata["insertion_code"]
-                        == oechem.OEAtomGetResidue(oe_atom).GetInsertCode()
-                    )
+                    assert orig_atom.metadata["insertion_code"] == oechem.OEAtomGetResidue(oe_atom).GetInsertCode()
 
                 if "chain_id" in orig_atom.metadata:
-                    assert (
-                        orig_atom.metadata["chain_id"]
-                        == oechem.OEAtomGetResidue(oe_atom).GetChainID()
-                    )
+                    assert orig_atom.metadata["chain_id"] == oechem.OEAtomGetResidue(oe_atom).GetChainID()
 
             # Check roundtripped OFFMol
             for orig_atom, roundtrip_atom in zip(molecule.atoms, roundtrip_mol.atoms):
@@ -661,28 +631,16 @@ class TestOpenEyeToolkitWrapper:
                 # to have metadata. Anything that wasn't set defaults to ("UNK", 1, " ").
                 if oechem.OEHasResidues(oemol):
                     if "residue_name" in orig_atom.metadata:
-                        assert (
-                            orig_atom.metadata["residue_name"]
-                            == roundtrip_atom.metadata["residue_name"]
-                        )
+                        assert orig_atom.metadata["residue_name"] == roundtrip_atom.metadata["residue_name"]
 
                     if "residue_number" in orig_atom.metadata:
-                        assert (
-                            orig_atom.metadata["residue_number"]
-                            == roundtrip_atom.metadata["residue_number"]
-                        )
+                        assert orig_atom.metadata["residue_number"] == roundtrip_atom.metadata["residue_number"]
 
                     if "insertion_code" in orig_atom.metadata:
-                        assert (
-                            orig_atom.metadata["insertion_code"]
-                            == roundtrip_atom.metadata["insertion_code"]
-                        )
+                        assert orig_atom.metadata["insertion_code"] == roundtrip_atom.metadata["insertion_code"]
 
                     if "chain_id" in orig_atom.metadata:
-                        assert (
-                            orig_atom.metadata["chain_id"]
-                            == roundtrip_atom.metadata["chain_id"]
-                        )
+                        assert orig_atom.metadata["chain_id"] == roundtrip_atom.metadata["chain_id"]
 
                 else:
                     assert "residue_name" not in roundtrip_atom.metadata
@@ -727,9 +685,13 @@ class TestOpenEyeToolkitWrapper:
     def test_from_openeye_multiple_molecule(self):
         """Test that parsing a OEMol that is actually multiple disconnected molecules raises a warning"""
         from openeye import oechem
+
         oemol = oechem.OEMol()
         oechem.OESmilesToMol(oemol, "C.N")
-        with pytest.warns(MultipleComponentsInMoleculeWarning, match="more than one molecule", ):
+        with pytest.warns(
+            MultipleComponentsInMoleculeWarning,
+            match="more than one molecule",
+        ):
             OpenEyeToolkitWrapper().from_openeye(oemol)
 
     def test_from_openeye_implicit_hydrogen(self):
@@ -778,28 +740,20 @@ class TestOpenEyeToolkitWrapper:
                 toolkit_registry=toolkit_wrapper,
                 hydrogens_are_explicit=True,
             )
-        offmol = Molecule.from_smiles(
-            smiles_impl, toolkit_registry=toolkit_wrapper, hydrogens_are_explicit=False
-        )
+        offmol = Molecule.from_smiles(smiles_impl, toolkit_registry=toolkit_wrapper, hydrogens_are_explicit=False)
         assert offmol.n_atoms == 4
 
         smiles_expl = "HC#CH"
-        offmol = Molecule.from_smiles(
-            smiles_expl, toolkit_registry=toolkit_wrapper, hydrogens_are_explicit=True
-        )
+        offmol = Molecule.from_smiles(smiles_expl, toolkit_registry=toolkit_wrapper, hydrogens_are_explicit=True)
         assert offmol.n_atoms == 4
         # It's debatable whether this next function should pass. Strictly speaking, the hydrogens in this SMILES
         # _are_ explicit, so allowing "hydrogens_are_explicit=False" through here is allowing a contradiction.
         # We might rethink the name of this kwarg.
 
-        offmol = Molecule.from_smiles(
-            smiles_expl, toolkit_registry=toolkit_wrapper, hydrogens_are_explicit=False
-        )
+        offmol = Molecule.from_smiles(smiles_expl, toolkit_registry=toolkit_wrapper, hydrogens_are_explicit=False)
         assert offmol.n_atoms == 4
 
-    @pytest.mark.parametrize(
-        "smiles, expected_map", [("[Cl:1][H]", {0: 1}), ("[Cl:1][H:2]", {0: 1, 1: 2})]
-    )
+    @pytest.mark.parametrize("smiles, expected_map", [("[Cl:1][H]", {0: 1}), ("[Cl:1][H:2]", {0: 1, 1: 2})])
     def test_from_openeye_atom_map(self, smiles, expected_map):
         """
         Test OpenEyeToolkitWrapper for loading a molecule with implicit
@@ -836,9 +790,7 @@ class TestOpenEyeToolkitWrapper:
         toolkit_wrapper = OpenEyeToolkitWrapper()
         mol = toolkit_wrapper.from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3")
         assert mol.name == ""
-        mol = toolkit_wrapper.from_inchi(
-            "InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3", name="bob"
-        )
+        mol = toolkit_wrapper.from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3", name="bob")
         assert mol.name == "bob"
 
     def test_from_bad_inchi(self):
@@ -900,13 +852,9 @@ class TestOpenEyeToolkitWrapper:
                 # Some molecules graphs change during the round trip testing
                 # we test quite strict isomorphism here
                 with pytest.raises(AssertionError):
-                    assert molecule.is_isomorphic_with(
-                        mol2, bond_order_matching=False, toolkit_registry=toolkit
-                    )
+                    assert molecule.is_isomorphic_with(mol2, bond_order_matching=False, toolkit_registry=toolkit)
             else:
-                assert molecule.is_isomorphic_with(
-                    mol2, bond_order_matching=False, toolkit_registry=toolkit
-                )
+                assert molecule.is_isomorphic_with(mol2, bond_order_matching=False, toolkit_registry=toolkit)
 
     @pytest.mark.parametrize(
         "molecule",
@@ -944,13 +892,9 @@ class TestOpenEyeToolkitWrapper:
             with pytest.raises(UndefinedStereochemistryError):
                 Molecule.from_iupac(iupac)
 
-        molecule_copy = Molecule.from_iupac(
-            iupac, allow_undefined_stereo=undefined_stereo
-        )
+        molecule_copy = Molecule.from_iupac(iupac, allow_undefined_stereo=undefined_stereo)
         if not undefined_stereo:
-            assert molecule.is_isomorphic_with(
-                molecule_copy, atom_stereochemistry_matching=not undefined_stereo
-            )
+            assert molecule.is_isomorphic_with(molecule_copy, atom_stereochemistry_matching=not undefined_stereo)
 
     def test_from_iupac_failure(self):
         """Test that invalid IUPAC names are handled properly"""
@@ -995,9 +939,7 @@ class TestOpenEyeToolkitWrapper:
 
         toolkit = OpenEyeToolkitWrapper()
         # load up a multiconformer sdf file and condense down the conformers
-        molecules = Molecule.from_file(
-            get_data_file_path("molecules/butane_multi.sdf"), toolkit_registry=toolkit
-        )
+        molecules = Molecule.from_file(get_data_file_path("molecules/butane_multi.sdf"), toolkit_registry=toolkit)
         butane = molecules.pop(0)
         for mol in molecules:
             butane.add_conformer(mol.conformers[0])
@@ -1061,12 +1003,11 @@ class TestOpenEyeToolkitWrapper:
         )
         water.atoms[0].metadata["insertion_code"] = ""
         water.atoms[1].metadata["chain_id"] = ""
-        with NamedTemporaryFile(suffix='.pdb') as of:
+        with NamedTemporaryFile(suffix=".pdb") as of:
             water.to_file(of.name, "pdb", toolkit_registry=toolkit)
-            roundtripped = toolkit.from_file(of.name, file_format='pdb')
+            roundtripped = toolkit.from_file(of.name, file_format="pdb")
             np.testing.assert_allclose(
-                water.conformers[0].m_as(unit.angstrom),
-                roundtripped[0].conformers[0].m_as(unit.angstrom)
+                water.conformers[0].m_as(unit.angstrom), roundtripped[0].conformers[0].m_as(unit.angstrom)
             )
 
     def test_get_sdf_coordinates(self):
@@ -1112,10 +1053,7 @@ class TestOpenEyeToolkitWrapper:
         )
         # The second molecule in the SDF has the following properties and charges:
         assert molecules[1].properties["test_property_key"] == "test_property_value2"
-        assert (
-            molecules[1].properties["another_test_property_key"]
-            == "another_test_property_value"
-        )
+        assert molecules[1].properties["another_test_property_key"] == "another_test_property_value"
         np.testing.assert_allclose(
             molecules[1].partial_charges.m_as(unit.elementary_charge),
             [0.027170, 0.027170, 0.027170, 0.027170, -0.108680],
@@ -1165,9 +1103,7 @@ class TestOpenEyeToolkitWrapper:
         assert charge_line_found
 
         # Make sure that the charges found were correct
-        assert_almost_equal(
-            charges, [-0.4, -0.3, -0.2, -0.1, 0.00001, 0.1, 0.2, 0.3, 0.4]
-        )
+        assert_almost_equal(charges, [-0.4, -0.3, -0.2, -0.1, 0.00001, 0.1, 0.2, 0.3, 0.4])
 
     def test_write_sdf_no_charges(self):
         """Test OpenEyeToolkitWrapper for writing an SDF file without charges"""
@@ -1192,12 +1128,8 @@ class TestOpenEyeToolkitWrapper:
         ethanol.properties["test_property"] = "test_value"
         # Write ethanol to a temporary file, and then immediately read it.
         with NamedTemporaryFile(suffix=".sdf") as iofile:
-            ethanol.to_file(
-                iofile.name, file_format="SDF", toolkit_registry=toolkit_wrapper
-            )
-            ethanol2 = Molecule.from_file(
-                iofile.name, file_format="SDF", toolkit_registry=toolkit_wrapper
-            )
+            ethanol.to_file(iofile.name, file_format="SDF", toolkit_registry=toolkit_wrapper)
+            ethanol2 = Molecule.from_file(iofile.name, file_format="SDF", toolkit_registry=toolkit_wrapper)
         np.testing.assert_allclose(
             ethanol.partial_charges.m_as(unit.elementary_charge),
             ethanol2.partial_charges.m_as(unit.elementary_charge),
@@ -1209,12 +1141,8 @@ class TestOpenEyeToolkitWrapper:
         ethanol.partial_charges = None
         # Write ethanol to a temporary file, and then immediately read it.
         with NamedTemporaryFile(suffix=".sdf") as iofile:
-            ethanol.to_file(
-                iofile.name, file_format="SDF", toolkit_registry=toolkit_wrapper
-            )
-            ethanol2 = Molecule.from_file(
-                iofile.name, file_format="SDF", toolkit_registry=toolkit_wrapper
-            )
+            ethanol.to_file(iofile.name, file_format="SDF", toolkit_registry=toolkit_wrapper)
+            ethanol2 = Molecule.from_file(iofile.name, file_format="SDF", toolkit_registry=toolkit_wrapper)
         assert ethanol2.partial_charges is None
         assert ethanol2.properties == {}
 
@@ -1233,9 +1161,7 @@ class TestOpenEyeToolkitWrapper:
             unit.elementary_charge,
         )
         ethanol.properties["test_prop"] = "test_value"
-        new_conf = ethanol.conformers[0] + (
-            np.ones(ethanol.conformers[0].shape) * unit.angstrom
-        )
+        new_conf = ethanol.conformers[0] + (np.ones(ethanol.conformers[0].shape) * unit.angstrom)
         ethanol.add_conformer(new_conf)
         sio = StringIO()
         ethanol.to_file(sio, "sdf", toolkit_registry=toolkit_wrapper)
@@ -1258,35 +1184,25 @@ class TestOpenEyeToolkitWrapper:
         molecule1 = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule1.conformers) == 1
         assert molecule1.conformers[0].shape == (15, 3)
-        assert_almost_equal(
-            molecule1.conformers[0][5][1].m_as(unit.angstrom), 22.98, decimal=2
-        )
+        assert_almost_equal(molecule1.conformers[0][5][1].m_as(unit.angstrom), 22.98, decimal=2)
 
         # Test loading from file-like object
         with open(filename) as infile:
-            molecule2 = Molecule(
-                infile, file_format="MOL2", toolkit_registry=toolkit_wrapper
-            )
+            molecule2 = Molecule(infile, file_format="MOL2", toolkit_registry=toolkit_wrapper)
         assert molecule1.is_isomorphic_with(molecule2)
         assert len(molecule2.conformers) == 1
         assert molecule2.conformers[0].shape == (15, 3)
-        assert_almost_equal(
-            molecule2.conformers[0][5][1].m_as(unit.angstrom), 22.98, decimal=2
-        )
+        assert_almost_equal(molecule2.conformers[0][5][1].m_as(unit.angstrom), 22.98, decimal=2)
 
         # Test loading from gzipped mol2
         import gzip
 
         with gzip.GzipFile(filename + ".gz", "r") as infile:
-            molecule3 = Molecule(
-                infile, file_format="MOL2", toolkit_registry=toolkit_wrapper
-            )
+            molecule3 = Molecule(infile, file_format="MOL2", toolkit_registry=toolkit_wrapper)
         assert molecule1.is_isomorphic_with(molecule3)
         assert len(molecule3.conformers) == 1
         assert molecule3.conformers[0].shape == (15, 3)
-        assert_almost_equal(
-            molecule3.conformers[0][5][1].m_as(unit.angstrom), 22.98, decimal=2
-        )
+        assert_almost_equal(molecule3.conformers[0][5][1].m_as(unit.angstrom), 22.98, decimal=2)
 
     def test_get_mol2_charges(self):
         """Test OpenEyeToolkitWrapper for importing a mol2 file specifying partial charges"""
@@ -1332,12 +1248,8 @@ class TestOpenEyeToolkitWrapper:
         ethanol.partial_charges *= 100
         # Write ethanol to a temporary file, and then immediately read it.
         with NamedTemporaryFile(suffix=".mol2") as iofile:
-            ethanol.to_file(
-                iofile.name, file_format="mol2", toolkit_registry=toolkit_wrapper
-            )
-            ethanol2 = Molecule.from_file(
-                iofile.name, file_format="mol2", toolkit_registry=toolkit_wrapper
-            )
+            ethanol.to_file(iofile.name, file_format="mol2", toolkit_registry=toolkit_wrapper)
+            ethanol2 = Molecule.from_file(iofile.name, file_format="mol2", toolkit_registry=toolkit_wrapper)
         np.testing.assert_allclose(
             ethanol.partial_charges.m_as(unit.elementary_charge),
             ethanol2.partial_charges.m_as(unit.elementary_charge),
@@ -1348,12 +1260,8 @@ class TestOpenEyeToolkitWrapper:
         ethanol.partial_charges = None
         # Write ethanol to a temporary file, and then immediately read it.
         with NamedTemporaryFile(suffix=".mol2") as iofile:
-            ethanol.to_file(
-                iofile.name, file_format="mol2", toolkit_registry=toolkit_wrapper
-            )
-            ethanol2 = Molecule.from_file(
-                iofile.name, file_format="mol2", toolkit_registry=toolkit_wrapper
-            )
+            ethanol.to_file(iofile.name, file_format="mol2", toolkit_registry=toolkit_wrapper)
+            ethanol2 = Molecule.from_file(iofile.name, file_format="mol2", toolkit_registry=toolkit_wrapper)
         assert ethanol2.partial_charges is None
         assert ethanol2.properties == {}
 
@@ -1479,9 +1387,7 @@ class TestOpenEyeToolkitWrapper:
         """Test OpenEyeToolkitWrapper assign_partial_charges() with am1bcc"""
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
         molecule = create_ethanol()
-        molecule.assign_partial_charges(
-            partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
-        )
+        molecule.assign_partial_charges(partial_charge_method="am1bcc", toolkit_registry=toolkit_registry)
         charge_sum = np.sum(molecule.partial_charges)
         abs_charge_sum = np.sum(abs(molecule.partial_charges))
 
@@ -1511,13 +1417,9 @@ class TestOpenEyeToolkitWrapper:
         """Test OpenEyeToolkitWrapper assign_partial_charges() on a molecule with a net +1 charge"""
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper])
         molecule = create_acetate()
-        molecule.assign_partial_charges(
-            partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
-        )
+        molecule.assign_partial_charges(partial_charge_method="am1bcc", toolkit_registry=toolkit_registry)
         charge_sum = np.sum(molecule.partial_charges)
-        assert 1e-10 > abs(
-            (charge_sum - molecule.total_charge).m_as(unit.elementary_charge)
-        )
+        assert 1e-10 > abs((charge_sum - molecule.total_charge).m_as(unit.elementary_charge))
 
     def test_assign_partial_charges_am1bcc_wrong_n_confs(self):
         """
@@ -1542,9 +1444,7 @@ class TestOpenEyeToolkitWrapper:
             strict_n_conformers=True,
         )
 
-    @pytest.mark.parametrize(
-        "partial_charge_method", ["am1bcc", "am1elf10", "am1-mulliken", "gasteiger"]
-    )
+    @pytest.mark.parametrize("partial_charge_method", ["am1bcc", "am1elf10", "am1-mulliken", "gasteiger"])
     def test_assign_partial_charges_neutral(self, partial_charge_method):
         """Test OpenEyeToolkitWrapper assign_partial_charges()"""
 
@@ -1558,9 +1458,7 @@ class TestOpenEyeToolkitWrapper:
         assert 1.0e-10 > abs(charge_sum.m_as(unit.elementary_charge))
 
         # Atoms 6 and 7 are hydrogens on the central C. If we don't symmetrize charges they'll have slight differences
-        assert 1.0e-10 > abs(
-            molecule.partial_charges[6] - molecule.partial_charges[7]
-        ).m_as(unit.elementary_charge)
+        assert 1.0e-10 > abs(molecule.partial_charges[6] - molecule.partial_charges[7]).m_as(unit.elementary_charge)
 
     @pytest.mark.parametrize("partial_charge_method", ["am1bcc", "am1-mulliken"])
     def test_assign_partial_charges_conformer_dependence(self, partial_charge_method):
@@ -1589,9 +1487,7 @@ class TestOpenEyeToolkitWrapper:
         for pc1, pc2 in zip(pcs1, molecule.partial_charges):
             assert abs(pc1 - pc2) > 1.0e-5 * unit.elementary_charge
 
-    @pytest.mark.parametrize(
-        "partial_charge_method", ["am1bcc", "am1elf10", "am1-mulliken", "gasteiger"]
-    )
+    @pytest.mark.parametrize("partial_charge_method", ["am1bcc", "am1elf10", "am1-mulliken", "gasteiger"])
     def test_assign_partial_charges_net_charge(self, partial_charge_method):
         """
         Test OpenEyeToolkitWrapper assign_partial_charges() on a molecule with net charge.
@@ -1612,9 +1508,7 @@ class TestOpenEyeToolkitWrapper:
 
         # Molecule.assign_partial_charges calls the ToolkitRegistry with raise_exception_types = [],
         # which means it will only ever return ValueError
-        with pytest.raises(
-            ValueError, match="is not available from OpenEyeToolkitWrapper"
-        ):
+        with pytest.raises(ValueError, match="is not available from OpenEyeToolkitWrapper"):
             molecule.assign_partial_charges(
                 toolkit_registry=toolkit_registry,
                 partial_charge_method="NotARealChargeMethod",
@@ -1626,17 +1520,13 @@ class TestOpenEyeToolkitWrapper:
             match="is not available from OpenEyeToolkitWrapper",
         ):
             OETKW = OpenEyeToolkitWrapper()
-            OETKW.assign_partial_charges(
-                molecule=molecule, partial_charge_method="NotARealChargeMethod"
-            )
+            OETKW.assign_partial_charges(molecule=molecule, partial_charge_method="NotARealChargeMethod")
 
     @pytest.mark.parametrize(
         "partial_charge_method,expected_n_confs",
         [("am1bcc", 1), ("am1-mulliken", 1), ("gasteiger", 0)],
     )
-    def test_assign_partial_charges_wrong_n_confs(
-        self, partial_charge_method, expected_n_confs
-    ):
+    def test_assign_partial_charges_wrong_n_confs(self, partial_charge_method, expected_n_confs):
         """
         Test OpenEyeToolkitWrapper assign_partial_charges() when requesting to use an incorrect number of
         conformers
@@ -1649,8 +1539,7 @@ class TestOpenEyeToolkitWrapper:
         # which should produce a warning
         with pytest.warns(
             IncorrectNumConformersWarning,
-            match=f"has 2 conformers, but charge method '{partial_charge_method}' "
-            f"expects exactly {expected_n_confs}.",
+            match=f"has 2 conformers, but charge method '{partial_charge_method}' expects exactly {expected_n_confs}.",
         ):
             molecule.assign_partial_charges(
                 toolkit_registry=toolkit_registry,
@@ -1672,8 +1561,7 @@ class TestOpenEyeToolkitWrapper:
         # in a failed task together in a single ValueError.
         with pytest.raises(
             ValueError,
-            match=f"has 2 conformers, but charge method '{partial_charge_method}' "
-            f"expects exactly {expected_n_confs}.",
+            match=f"has 2 conformers, but charge method '{partial_charge_method}' expects exactly {expected_n_confs}.",
         ):
             molecule.assign_partial_charges(
                 toolkit_registry=toolkit_registry,
@@ -1686,8 +1574,7 @@ class TestOpenEyeToolkitWrapper:
         # confs, and specify strict_n_conformers, which should produce an IncorrectNumConformersError
         with pytest.raises(
             IncorrectNumConformersError,
-            match=f"has 2 conformers, but charge method '{partial_charge_method}' "
-            f"expects exactly {expected_n_confs}.",
+            match=f"has 2 conformers, but charge method '{partial_charge_method}' expects exactly {expected_n_confs}.",
         ):
             OETKW = OpenEyeToolkitWrapper()
             OETKW.assign_partial_charges(
@@ -1707,9 +1594,7 @@ class TestOpenEyeToolkitWrapper:
 
         # For now, I'm just testing AM1-BCC (will test more when the SMIRNOFF spec for other charges is finalized)
         with pytest.raises(Exception) as excinfo:
-            molecule.assign_partial_charges(
-                partial_charge_method="am1-bcc", toolkit_registry=toolkit_wrapper
-            )
+            molecule.assign_partial_charges(partial_charge_method="am1-bcc", toolkit_registry=toolkit_wrapper)
             assert "Unable to assign charges" in str(excinfo)
             assert "OE Error: " in str(excinfo)
 
@@ -1720,9 +1605,7 @@ class TestOpenEyeToolkitWrapper:
         lysine = Molecule.from_smiles("C(CC[NH3+])C[C@@H](C(=O)O)N")
         toolkit_wrapper = OpenEyeToolkitWrapper()
         lysine.generate_conformers(toolkit_registry=toolkit_wrapper)
-        lysine.assign_partial_charges(
-            partial_charge_method="am1bcc", toolkit_registry=toolkit_wrapper
-        )
+        lysine.assign_partial_charges(partial_charge_method="am1bcc", toolkit_registry=toolkit_wrapper)
 
     @pytest.mark.parametrize(
         "bond_order_model",
@@ -1741,27 +1624,15 @@ class TestOpenEyeToolkitWrapper:
 
         toolkit_wrapper = OpenEyeToolkitWrapper()
         molecule = toolkit_wrapper.from_smiles(smiles)
-        molecule.assign_fractional_bond_orders(
-            toolkit_registry=toolkit_wrapper, bond_order_model=bond_order_model
-        )
+        molecule.assign_fractional_bond_orders(toolkit_registry=toolkit_wrapper, bond_order_model=bond_order_model)
         # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
         # Sanity check single bonds.
-        assert all(
-            0.75 < bond.fractional_bond_order < 1.25
-            for bond in molecule.bonds
-            if bond.bond_order == 1
-        )
+        assert all(0.75 < bond.fractional_bond_order < 1.25 for bond in molecule.bonds if bond.bond_order == 1)
         # Sanity check double bonds.
-        assert all(
-            1.75 < bond.fractional_bond_order < 2.25
-            for bond in molecule.bonds
-            if bond.bond_order == 2
-        )
+        assert all(1.75 < bond.fractional_bond_order < 2.25 for bond in molecule.bonds if bond.bond_order == 2)
 
-    def test_assign_fractional_bond_orders_multi_conf(
-        self, formic_acid_molecule, formic_acid_conformers
-    ):
+    def test_assign_fractional_bond_orders_multi_conf(self, formic_acid_molecule, formic_acid_conformers):
         """Test that the OpenEyeToolkitWrapper assign_fractional_bond_orders()
         function correctly averages over all conformers."""
 
@@ -1773,17 +1644,13 @@ class TestOpenEyeToolkitWrapper:
             bond_order_model="am1-wiberg",
             use_conformers=[formic_acid_conformers["cis"]],
         )
-        cis_bond_orders = [
-            bond.fractional_bond_order for bond in formic_acid_molecule.bonds
-        ]
+        cis_bond_orders = [bond.fractional_bond_order for bond in formic_acid_molecule.bonds]
         formic_acid_molecule.assign_fractional_bond_orders(
             toolkit_registry=toolkit_wrapper,
             bond_order_model="am1-wiberg",
             use_conformers=[formic_acid_conformers["trans"]],
         )
-        trans_bond_orders = [
-            bond.fractional_bond_order for bond in formic_acid_molecule.bonds
-        ]
+        trans_bond_orders = [bond.fractional_bond_order for bond in formic_acid_molecule.bonds]
 
         # Use the method to average the conformers.
         formic_acid_molecule.assign_fractional_bond_orders(
@@ -1794,17 +1661,13 @@ class TestOpenEyeToolkitWrapper:
                 formic_acid_conformers["trans"],
             ],
         )
-        avg_bond_orders = [
-            bond.fractional_bond_order for bond in formic_acid_molecule.bonds
-        ]
+        avg_bond_orders = [bond.fractional_bond_order for bond in formic_acid_molecule.bonds]
 
         # The average should be distinct from the WBO from either conformer.
         assert not np.allclose(cis_bond_orders, avg_bond_orders)
         assert not np.allclose(trans_bond_orders, avg_bond_orders)
 
-        assert np.allclose(
-            np.mean([trans_bond_orders, cis_bond_orders], axis=0), avg_bond_orders
-        )
+        assert np.allclose(np.mean([trans_bond_orders, cis_bond_orders], axis=0), avg_bond_orders)
 
     def test_assign_fractional_bond_orders_conformer_dependence(self):
         """
@@ -1824,15 +1687,9 @@ class TestOpenEyeToolkitWrapper:
         # Do the same again, but change the conformer to yield a different result
         molecule_diff_coords = create_ethanol()
         molecule_diff_coords.generate_conformers(toolkit_registry=toolkit_wrapper)
-        molecule_diff_coords._conformers[0][0][0] = (
-            molecule_diff_coords._conformers[0][0][0] + 1.0 * unit.angstrom
-        )
-        molecule_diff_coords._conformers[0][1][0] = (
-            molecule_diff_coords._conformers[0][1][0] - 1.0 * unit.angstrom
-        )
-        molecule_diff_coords._conformers[0][2][0] = (
-            molecule_diff_coords._conformers[0][2][0] + 1.0 * unit.angstrom
-        )
+        molecule_diff_coords._conformers[0][0][0] = molecule_diff_coords._conformers[0][0][0] + 1.0 * unit.angstrom
+        molecule_diff_coords._conformers[0][1][0] = molecule_diff_coords._conformers[0][1][0] - 1.0 * unit.angstrom
+        molecule_diff_coords._conformers[0][2][0] = molecule_diff_coords._conformers[0][2][0] + 1.0 * unit.angstrom
         molecule_diff_coords.assign_fractional_bond_orders(
             toolkit_registry=toolkit_wrapper,
             use_conformers=molecule_diff_coords.conformers,
@@ -1880,9 +1737,7 @@ class TestOpenEyeToolkitWrapper:
                 assert 1.0 < wbo_C_O_neutral < 1.5
             else:
                 # Should be C-C single bond
-                assert (i.atom1_index == 4 and i.atom2_index == 6) or (
-                    i.atom1_index == 6 and i.atom2_index == 4
-                )
+                assert (i.atom1_index == 4 and i.atom2_index == 6) or (i.atom1_index == 6 and i.atom2_index == 4)
                 wbo_C_C_neutral = i.fractional_bond_order
                 assert 1.0 < wbo_C_C_neutral < 1.3
 
@@ -1904,9 +1759,7 @@ class TestOpenEyeToolkitWrapper:
                 assert 1.3 < wbo_C_O_anion < 1.8
             else:
                 # Should be C-C single bond
-                assert (i.atom1_index == 4 and i.atom2_index == 6) or (
-                    i.atom1_index == 6 and i.atom2_index == 4
-                )
+                assert (i.atom1_index == 4 and i.atom2_index == 6) or (i.atom1_index == 6 and i.atom2_index == 4)
                 wbo_C_C_anion = i.fractional_bond_order
                 assert 1.0 < wbo_C_C_anion < 1.3
 
@@ -1980,15 +1833,11 @@ class TestOpenEyeToolkitWrapper:
         assert ethanol.atoms[bonds[0].atom2_index].atomic_number == 8
 
         # ignore a list of searches, forward
-        bonds = ethanol.find_rotatable_bonds(
-            ignore_functional_groups=["[#6:1]-[#8:2]", "[#6:1]-[#6:2]"]
-        )
+        bonds = ethanol.find_rotatable_bonds(ignore_functional_groups=["[#6:1]-[#8:2]", "[#6:1]-[#6:2]"])
         assert bonds == []
 
         # ignore a list of searches, backwards
-        bonds = ethanol.find_rotatable_bonds(
-            ignore_functional_groups=["[#6:1]-[#6:2]", "[#8:1]-[#6:2]"]
-        )
+        bonds = ethanol.find_rotatable_bonds(ignore_functional_groups=["[#6:1]-[#6:2]", "[#8:1]-[#6:2]"])
         assert bonds == []
 
         # test  molecules that should have no rotatable bonds
@@ -2018,9 +1867,7 @@ class TestOpenEyeToolkitWrapper:
         assert bonds == []
 
         # find terminal bonds backwards
-        bonds = toluene.find_rotatable_bonds(
-            ignore_functional_groups=terminal_backwards
-        )
+        bonds = toluene.find_rotatable_bonds(ignore_functional_groups=terminal_backwards)
         assert bonds == []
 
         # TODO: Check partial charge invariants (total charge, charge equivalence)
@@ -2042,17 +1889,9 @@ class TestOpenEyeToolkitWrapper:
 
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[OpenEyeToolkitWrapper()])
 
-        atoms_in_ring = [
-            atom
-            for atom in mol.atoms
-            if atom.is_in_ring(toolkit_registry=toolkit_registry)
-        ]
+        atoms_in_ring = [atom for atom in mol.atoms if atom.is_in_ring(toolkit_registry=toolkit_registry)]
 
-        bonds_in_ring = [
-            bond
-            for bond in mol.bonds
-            if bond.is_in_ring(toolkit_registry=toolkit_registry)
-        ]
+        bonds_in_ring = [bond for bond in mol.bonds if bond.is_in_ring(toolkit_registry=toolkit_registry)]
 
         assert len(atoms_in_ring) == n_atom_rings
         assert len(bonds_in_ring) == n_bond_rings
@@ -2072,9 +1911,7 @@ class TestOpenEyeToolkitWrapper:
         this_bond = biphenyl.get_bond_between(3, 6)
         assert this_bond.is_in_ring(toolkit_registry=toolkit_registry) is False
 
-        ring_bonds = [
-            b for b in biphenyl.bonds if b.is_in_ring(toolkit_registry=toolkit_registry)
-        ]
+        ring_bonds = [b for b in biphenyl.bonds if b.is_in_ring(toolkit_registry=toolkit_registry)]
         assert len(ring_bonds) == 12
 
     def test_unattached_is_in_ring(self):
@@ -2178,9 +2015,7 @@ class TestRDKitToolkitWrapper:
         if exception_regex is not None:
             with pytest.raises(UndefinedStereochemistryError, match=exception_regex):
                 Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
-            Molecule.from_smiles(
-                smiles, toolkit_registry=toolkit_wrapper, allow_undefined_stereo=True
-            )
+            Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper, allow_undefined_stereo=True)
         else:
             Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
 
@@ -2231,23 +2066,17 @@ class TestRDKitToolkitWrapper:
                 toolkit_registry=toolkit_wrapper,
                 hydrogens_are_explicit=True,
             )
-        offmol = Molecule.from_smiles(
-            smiles_impl, toolkit_registry=toolkit_wrapper, hydrogens_are_explicit=False
-        )
+        offmol = Molecule.from_smiles(smiles_impl, toolkit_registry=toolkit_wrapper, hydrogens_are_explicit=False)
         assert offmol.n_atoms == 4
 
         smiles_expl = "[H][C]#[C][H]"
-        offmol = Molecule.from_smiles(
-            smiles_expl, toolkit_registry=toolkit_wrapper, hydrogens_are_explicit=True
-        )
+        offmol = Molecule.from_smiles(smiles_expl, toolkit_registry=toolkit_wrapper, hydrogens_are_explicit=True)
         assert offmol.n_atoms == 4
         # It's debatable whether this next function should pass. Strictly speaking, the hydrogens in this SMILES
         # _are_ explicit, so allowing "hydrogens_are_explicit=False" through here is allowing a contradiction.
         # We might rethink the name of this kwarg.
 
-        offmol = Molecule.from_smiles(
-            smiles_expl, toolkit_registry=toolkit_wrapper, hydrogens_are_explicit=False
-        )
+        offmol = Molecule.from_smiles(smiles_expl, toolkit_registry=toolkit_wrapper, hydrogens_are_explicit=False)
         assert offmol.n_atoms == 4
 
     def test_rdkit_from_smiles_hydrogens_are_explicit_and_in_graph(self):
@@ -2327,9 +2156,7 @@ class TestRDKitToolkitWrapper:
 
         ref_mol = data["molecule"]
         # make a molecule from inchi
-        inchi_mol = Molecule.from_inchi(
-            data["standard_inchi"], toolkit_registry=toolkit
-        )
+        inchi_mol = Molecule.from_inchi(data["standard_inchi"], toolkit_registry=toolkit)
         assert inchi_mol.to_inchi(toolkit_registry=toolkit) == data["standard_inchi"]
 
         def compare_mols(ref_mol, inchi_mol):
@@ -2344,9 +2171,7 @@ class TestRDKitToolkitWrapper:
         # now make the molecule from the non-standard inchi and compare
         nonstandard_inchi_mol = Molecule.from_inchi(data["fixed_hydrogen_inchi"])
         assert (
-            nonstandard_inchi_mol.to_inchi(
-                fixed_hydrogens=True, toolkit_registry=toolkit
-            )
+            nonstandard_inchi_mol.to_inchi(fixed_hydrogens=True, toolkit_registry=toolkit)
             == data["fixed_hydrogen_inchi"]
         )
 
@@ -2359,9 +2184,7 @@ class TestRDKitToolkitWrapper:
         toolkit_wrapper = RDKitToolkitWrapper()
         mol = toolkit_wrapper.from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3")
         assert mol.name == ""
-        mol = toolkit_wrapper.from_inchi(
-            "InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3", name="bob"
-        )
+        mol = toolkit_wrapper.from_inchi("InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3", name="bob")
         assert mol.name == "bob"
 
     @pytest.mark.parametrize("molecule", get_mini_drug_bank(RDKitToolkitWrapper))
@@ -2387,9 +2210,7 @@ class TestRDKitToolkitWrapper:
 
             # compare the full molecule excluding the properties dictionary
             # turn of the bond order matching as this could move in the aromatic rings
-            assert molecule.is_isomorphic_with(
-                mol2, bond_order_matching=False, toolkit_registry=toolkit
-            )
+            assert molecule.is_isomorphic_with(mol2, bond_order_matching=False, toolkit_registry=toolkit)
 
     @pytest.mark.parametrize("method", ["to_inchi", "to_inchikey"])
     def test_empty_inchi(self, method):
@@ -2411,7 +2232,6 @@ class TestRDKitToolkitWrapper:
             method,
         )(toolkit_registry=RDKitToolkitWrapper())
 
-
     def test_smiles_charged(self):
         """Test RDKitWrapper functions for reading/writing charged SMILES"""
         toolkit_wrapper = RDKitToolkitWrapper()
@@ -2429,10 +2249,7 @@ class TestRDKitToolkitWrapper:
         input_smiles = r"C\C(F)=C(/F)C[C@@](C)(Cl)Br"
         expected_output_smiles = r"[H][C]([H])([H])/[C]([F])=[C](\[F])[C]([H])([H])[C@@]([Cl])([Br])[C]([H])([H])[H]"
         molecule = Molecule.from_smiles(input_smiles, toolkit_registry=toolkit_wrapper)
-        assert (
-            molecule.to_smiles(toolkit_registry=toolkit_wrapper)
-            == expected_output_smiles
-        )
+        assert molecule.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
         # Populate core molecule property fields
         molecule.name = "Alice"
@@ -2525,10 +2342,7 @@ class TestRDKitToolkitWrapper:
             pc1_ul = pc1.m_as(unit.elementary_charge)
             pc2_ul = pc2.m_as(unit.elementary_charge)
             assert_almost_equal(pc1_ul, pc2_ul, decimal=6)
-        assert (
-            molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
-            == expected_output_smiles
-        )
+        assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
         # TODO: This should be its own test
 
     def test_to_from_rdkit_core_props_unset(self):
@@ -2539,10 +2353,7 @@ class TestRDKitToolkitWrapper:
         input_smiles = r"C\C(F)=C(/F)C[C@](C)(Cl)Br"
         expected_output_smiles = r"[H][C]([H])([H])/[C]([F])=[C](\[F])[C]([H])([H])[C@]([Cl])([Br])[C]([H])([H])[H]"
         molecule = Molecule.from_smiles(input_smiles, toolkit_registry=toolkit_wrapper)
-        assert (
-            molecule.to_smiles(toolkit_registry=toolkit_wrapper)
-            == expected_output_smiles
-        )
+        assert molecule.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
         # Ensure one atom has its stereochemistry specified
         central_carbon_stereo_specified = False
@@ -2575,10 +2386,7 @@ class TestRDKitToolkitWrapper:
         assert molecule.partial_charges is None
         assert molecule2.partial_charges is None
 
-        assert (
-            molecule2.to_smiles(toolkit_registry=toolkit_wrapper)
-            == expected_output_smiles
-        )
+        assert molecule2.to_smiles(toolkit_registry=toolkit_wrapper) == expected_output_smiles
 
     def test_to_from_rdkit_hierarchy_metadata(self):
         """
@@ -2602,34 +2410,22 @@ class TestRDKitToolkitWrapper:
                     continue
 
                 if "residue_name" in orig_atom.metadata:
-                    assert (
-                        orig_atom.metadata["residue_name"]
-                        == rd_atom.GetPDBResidueInfo().GetResidueName()
-                    )
+                    assert orig_atom.metadata["residue_name"] == rd_atom.GetPDBResidueInfo().GetResidueName()
                 else:
                     assert rd_atom.GetPDBResidueInfo().GetResidueName() == ""
 
                 if "residue_number" in orig_atom.metadata:
-                    assert (
-                        orig_atom.metadata["residue_number"]
-                        == rd_atom.GetPDBResidueInfo().GetResidueNumber()
-                    )
+                    assert orig_atom.metadata["residue_number"] == rd_atom.GetPDBResidueInfo().GetResidueNumber()
                 else:
                     assert rd_atom.GetPDBResidueInfo().GetResidueNumber() == 0
 
                 if "insertion_code" in orig_atom.metadata:
-                    assert (
-                        orig_atom.metadata["insertion_code"]
-                        == rd_atom.GetPDBResidueInfo().GetInsertionCode()
-                    )
+                    assert orig_atom.metadata["insertion_code"] == rd_atom.GetPDBResidueInfo().GetInsertionCode()
                 else:
                     assert rd_atom.GetPDBResidueInfo().GetInsertionCode() == " "
 
                 if "chain_id" in orig_atom.metadata:
-                    assert (
-                        orig_atom.metadata["chain_id"]
-                        == rd_atom.GetPDBResidueInfo().GetChainId()
-                    )
+                    assert orig_atom.metadata["chain_id"] == rd_atom.GetPDBResidueInfo().GetChainId()
                 else:
                     assert rd_atom.GetPDBResidueInfo().GetChainId() == ""
 
@@ -2646,34 +2442,22 @@ class TestRDKitToolkitWrapper:
                     continue
 
                 if "residue_name" in orig_atom.metadata:
-                    assert (
-                        orig_atom.metadata["residue_name"]
-                        == roundtrip_atom.metadata["residue_name"]
-                    )
+                    assert orig_atom.metadata["residue_name"] == roundtrip_atom.metadata["residue_name"]
                 else:
                     assert roundtrip_atom.metadata["residue_name"] == ""
 
                 if "residue_number" in orig_atom.metadata:
-                    assert (
-                        orig_atom.metadata["residue_number"]
-                        == roundtrip_atom.metadata["residue_number"]
-                    )
+                    assert orig_atom.metadata["residue_number"] == roundtrip_atom.metadata["residue_number"]
                 else:
                     assert roundtrip_atom.metadata["residue_number"] == 0
 
                 if "insertion_code" in orig_atom.metadata:
-                    assert (
-                        orig_atom.metadata["insertion_code"]
-                        == roundtrip_atom.metadata["insertion_code"]
-                    )
+                    assert orig_atom.metadata["insertion_code"] == roundtrip_atom.metadata["insertion_code"]
                 else:
                     assert roundtrip_atom.metadata["insertion_code"] == 0
 
                 if "chain_id" in orig_atom.metadata:
-                    assert (
-                        orig_atom.metadata["chain_id"]
-                        == roundtrip_atom.metadata["chain_id"]
-                    )
+                    assert orig_atom.metadata["chain_id"] == roundtrip_atom.metadata["chain_id"]
                 else:
                     assert roundtrip_atom.metadata["chain_id"] == ""
 
@@ -2721,13 +2505,12 @@ class TestRDKitToolkitWrapper:
     def test_from_rdkit_multiple_molecule(self):
         """Test that parsing a rdmol that is actually multiple disconnected molecules raises a warning"""
         from rdkit import Chem
+
         rdmol = Chem.MolFromSmiles("C.N")
         with pytest.warns(MultipleComponentsInMoleculeWarning, match="more than one molecule"):
             RDKitToolkitWrapper().from_rdkit(rdmol)
 
-    @pytest.mark.parametrize(
-        "smiles, expected_map", [("[Cl:1][Cl]", {0: 1}), ("[Cl:1][Cl:2]", {0: 1, 1: 2})]
-    )
+    @pytest.mark.parametrize("smiles, expected_map", [("[Cl:1][Cl]", {0: 1}), ("[Cl:1][Cl:2]", {0: 1, 1: 2})])
     def test_from_rdkit_atom_map(self, smiles, expected_map):
         """
         Test OpenEyeToolkitWrapper for loading a molecule with implicit
@@ -2772,9 +2555,7 @@ class TestRDKitToolkitWrapper:
         molecule = Molecule.from_file(filename, toolkit_registry=toolkit_wrapper)
         assert len(molecule.conformers) == 1
         assert molecule.conformers[0].shape == (15, 3)
-        assert_almost_equal(
-            molecule.conformers[0][5][1].m_as(unit.angstrom), 22.9800, decimal=4
-        )
+        assert_almost_equal(molecule.conformers[0][5][1].m_as(unit.angstrom), 22.9800, decimal=4)
 
     def test_read_sdf_charges(self):
         """Test RDKitToolkitWrapper for importing a charges from a sdf file"""
@@ -2812,9 +2593,7 @@ class TestRDKitToolkitWrapper:
         assert charge_line_found
 
         # Make sure that the charges found were correct
-        assert_almost_equal(
-            charges, [-0.4, -0.3, -0.2, -0.1, 0.00001, 0.1, 0.2, 0.3, 0.4]
-        )
+        assert_almost_equal(charges, [-0.4, -0.3, -0.2, -0.1, 0.00001, 0.1, 0.2, 0.3, 0.4])
 
     def test_sdf_properties_roundtrip(self):
         """Test RDKitToolkitWrapper for performing a round trip of a molecule with defined partial charges
@@ -2823,12 +2602,8 @@ class TestRDKitToolkitWrapper:
         ethanol = create_ethanol()
         # Write ethanol to a temporary file, and then immediately read it.
         with NamedTemporaryFile(suffix=".sdf") as iofile:
-            ethanol.to_file(
-                iofile.name, file_format="SDF", toolkit_registry=toolkit_wrapper
-            )
-            ethanol2 = Molecule.from_file(
-                iofile.name, file_format="SDF", toolkit_registry=toolkit_wrapper
-            )
+            ethanol.to_file(iofile.name, file_format="SDF", toolkit_registry=toolkit_wrapper)
+            ethanol2 = Molecule.from_file(iofile.name, file_format="SDF", toolkit_registry=toolkit_wrapper)
         assert (ethanol.partial_charges == ethanol2.partial_charges).all()
 
         # Now test with no properties or charges
@@ -2836,12 +2611,8 @@ class TestRDKitToolkitWrapper:
         ethanol.partial_charges = None
         # Write ethanol to a temporary file, and then immediately read it.
         with NamedTemporaryFile(suffix=".sdf") as iofile:
-            ethanol.to_file(
-                iofile.name, file_format="SDF", toolkit_registry=toolkit_wrapper
-            )
-            ethanol2 = Molecule.from_file(
-                iofile.name, file_format="SDF", toolkit_registry=toolkit_wrapper
-            )
+            ethanol.to_file(iofile.name, file_format="SDF", toolkit_registry=toolkit_wrapper)
+            ethanol2 = Molecule.from_file(iofile.name, file_format="SDF", toolkit_registry=toolkit_wrapper)
         assert ethanol2.partial_charges is None
         assert ethanol2.properties == {}
 
@@ -2902,10 +2673,7 @@ class TestRDKitToolkitWrapper:
         )
         # The second molecule in the SDF has the following properties and charges:
         assert molecules[1].properties["test_property_key"] == "test_property_value2"
-        assert (
-            molecules[1].properties["another_test_property_key"]
-            == "another_test_property_value"
-        )
+        assert molecules[1].properties["another_test_property_key"] == "another_test_property_value"
         np.testing.assert_allclose(
             molecules[1].partial_charges.m_as(unit.elementary_charge),
             [0.027170, 0.027170, 0.027170, 0.027170, -0.108680],
@@ -2926,9 +2694,7 @@ class TestRDKitToolkitWrapper:
             unit.elementary_charge,
         )
         ethanol.properties["test_prop"] = "test_value"
-        new_conf = ethanol.conformers[0] + (
-            np.ones(ethanol.conformers[0].shape) * unit.angstrom
-        )
+        new_conf = ethanol.conformers[0] + (np.ones(ethanol.conformers[0].shape) * unit.angstrom)
         ethanol.add_conformer(new_conf)
         sio = StringIO()
         ethanol.to_file(sio, "sdf", toolkit_registry=toolkit_wrapper)
@@ -2952,9 +2718,7 @@ class TestRDKitToolkitWrapper:
 
         toolkit = RDKitToolkitWrapper()
         # load up a multiconformer pdb file and condense down the conformers
-        molecules = Molecule.from_file(
-            get_data_file_path("molecules/butane_multi.sdf"), toolkit_registry=toolkit
-        )
+        molecules = Molecule.from_file(get_data_file_path("molecules/butane_multi.sdf"), toolkit_registry=toolkit)
         butane = molecules.pop(0)
         for mol in molecules:
             butane.add_conformer(mol.conformers[0])
@@ -3083,9 +2847,7 @@ class TestRDKitToolkitWrapper:
 
         # Molecule.assign_partial_charges calls the ToolkitRegistry with raise_exception_types = [],
         # which means it will only ever return ValueError
-        with pytest.raises(
-            ValueError, match="is not available from RDKitToolkitWrapper"
-        ):
+        with pytest.raises(ValueError, match="is not available from RDKitToolkitWrapper"):
             molecule.assign_partial_charges(
                 toolkit_registry=toolkit_registry,
                 partial_charge_method="NotARealChargeMethod",
@@ -3097,13 +2859,9 @@ class TestRDKitToolkitWrapper:
             match="is not available from RDKitToolkitWrapper",
         ):
             RDTKW = RDKitToolkitWrapper()
-            RDTKW.assign_partial_charges(
-                molecule=molecule, partial_charge_method="NotARealChargeMethod"
-            )
+            RDTKW.assign_partial_charges(molecule=molecule, partial_charge_method="NotARealChargeMethod")
 
-    def test_elf_is_problematic_conformer_acid(
-        self, formic_acid_molecule, formic_acid_conformers
-    ):
+    def test_elf_is_problematic_conformer_acid(self, formic_acid_molecule, formic_acid_conformers):
         problematic, reason = RDKitToolkitWrapper._elf_is_problematic_conformer(
             formic_acid_molecule, formic_acid_conformers["cis"]
         )
@@ -3116,14 +2874,10 @@ class TestRDKitToolkitWrapper:
         assert problematic
         assert reason is not None
 
-    def test_elf_prune_problematic_conformers_acid(
-        self, formic_acid_molecule, formic_acid_conformers
-    ):
+    def test_elf_prune_problematic_conformers_acid(self, formic_acid_molecule, formic_acid_conformers):
         formic_acid_molecule._conformers = [*formic_acid_conformers.values()]
 
-        pruned_conformers = RDKitToolkitWrapper._elf_prune_problematic_conformers(
-            formic_acid_molecule
-        )
+        pruned_conformers = RDKitToolkitWrapper._elf_prune_problematic_conformers(formic_acid_molecule)
 
         assert len(pruned_conformers) == 1
         assert np.allclose(
@@ -3136,9 +2890,7 @@ class TestRDKitToolkitWrapper:
 
         # Set some partial charges and a dummy conformer with values which make
         # computing the expected energy by hand easier.
-        formic_acid_molecule.partial_charges = (
-            np.ones(formic_acid_molecule.n_atoms) * 1.0 * unit.elementary_charge
-        )
+        formic_acid_molecule.partial_charges = np.ones(formic_acid_molecule.n_atoms) * 1.0 * unit.elementary_charge
 
         formic_acid_molecule.partial_charges[0] *= 2.0
         formic_acid_molecule.partial_charges[4] *= 3.0
@@ -3297,9 +3049,7 @@ class TestRDKitToolkitWrapper:
             initial_conformers[1].m_as(unit.angstrom),
         )
 
-    def test_apply_elf_conformer_selection_acid(
-        self, formic_acid_molecule, formic_acid_conformers, caplog
-    ):
+    def test_apply_elf_conformer_selection_acid(self, formic_acid_molecule, formic_acid_conformers, caplog):
         """Test applying the ELF10 method."""
 
         toolkit = RDKitToolkitWrapper()
@@ -3331,10 +3081,7 @@ class TestRDKitToolkitWrapper:
         with pytest.raises(ValueError) as error_info:
             toolkit.apply_elf_conformer_selection(formic_acid_molecule)
 
-        assert (
-            "There were no conformers to select from after discarding conformers"
-            in str(error_info.value)
-        )
+        assert "There were no conformers to select from after discarding conformers" in str(error_info.value)
 
     def test_find_rotatable_bonds(self):
         """Test finding rotatable bonds while ignoring some groups"""
@@ -3366,15 +3113,11 @@ class TestRDKitToolkitWrapper:
         assert ethanol.atoms[bonds[0].atom2_index].atomic_number == 8
 
         # ignore a list of searches, forward
-        bonds = ethanol.find_rotatable_bonds(
-            ignore_functional_groups=["[#6:1]-[#8:2]", "[#6:1]-[#6:2]"]
-        )
+        bonds = ethanol.find_rotatable_bonds(ignore_functional_groups=["[#6:1]-[#8:2]", "[#6:1]-[#6:2]"])
         assert bonds == []
 
         # ignore a list of searches, backwards
-        bonds = ethanol.find_rotatable_bonds(
-            ignore_functional_groups=["[#6:1]-[#6:2]", "[#8:1]-[#6:2]"]
-        )
+        bonds = ethanol.find_rotatable_bonds(ignore_functional_groups=["[#6:1]-[#6:2]", "[#8:1]-[#6:2]"])
         assert bonds == []
 
         # test  molecules that should have no rotatable bonds
@@ -3404,9 +3147,7 @@ class TestRDKitToolkitWrapper:
         assert bonds == []
 
         # find terminal bonds backwards
-        bonds = toluene.find_rotatable_bonds(
-            ignore_functional_groups=terminal_backwards
-        )
+        bonds = toluene.find_rotatable_bonds(ignore_functional_groups=terminal_backwards)
         assert bonds == []
 
     @pytest.mark.parametrize(
@@ -3423,17 +3164,9 @@ class TestRDKitToolkitWrapper:
 
         toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper()])
 
-        atoms_in_ring = [
-            atom
-            for atom in mol.atoms
-            if atom.is_in_ring(toolkit_registry=toolkit_registry)
-        ]
+        atoms_in_ring = [atom for atom in mol.atoms if atom.is_in_ring(toolkit_registry=toolkit_registry)]
 
-        bonds_in_ring = [
-            bond
-            for bond in mol.bonds
-            if bond.is_in_ring(toolkit_registry=toolkit_registry)
-        ]
+        bonds_in_ring = [bond for bond in mol.bonds if bond.is_in_ring(toolkit_registry=toolkit_registry)]
 
         assert len(atoms_in_ring) == n_atom_rings
         assert len(bonds_in_ring) == n_bond_rings
@@ -3453,9 +3186,7 @@ class TestRDKitToolkitWrapper:
         this_bond = biphenyl.get_bond_between(3, 6)
         assert this_bond.is_in_ring(toolkit_registry=toolkit_registry) is False
 
-        ring_bonds = [
-            b for b in biphenyl.bonds if b.is_in_ring(toolkit_registry=toolkit_registry)
-        ]
+        ring_bonds = [b for b in biphenyl.bonds if b.is_in_ring(toolkit_registry=toolkit_registry)]
         assert len(ring_bonds) == 12
 
     def test_unattached_is_in_ring(self):
@@ -3509,7 +3240,7 @@ class TestRDKitToolkitWrapper:
             assert offatom.is_aromatic is rdatom.GetIsAromatic()
 
     def test_to_rdkit_str_resnum(self):
-        smiles = ("O")
+        smiles = "O"
 
         mol = Molecule.from_smiles(smiles)
 
@@ -3577,13 +3308,9 @@ class TestAmberToolsToolkitWrapper:
 
     def test_assign_partial_charges_am1bcc(self):
         """Test AmberToolsToolkitWrapper assign_partial_charges() with am1bcc"""
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
-        )
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
         molecule = create_ethanol()
-        molecule.assign_partial_charges(
-            partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
-        )
+        molecule.assign_partial_charges(partial_charge_method="am1bcc", toolkit_registry=toolkit_registry)
         charge_sum = np.sum(molecule.partial_charges)
         abs_charge_sum = np.sum(abs(molecule.partial_charges))
 
@@ -3593,9 +3320,7 @@ class TestAmberToolsToolkitWrapper:
     def test_assign_partial_charges_am1bcc_no_normalization(self):
         """Test AmberToolsToolkitWrapper assign_partial_charges() with am1bcc, with
         normalize_partial_charges=False"""
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
-        )
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
         # Use a cyclic N3H3 molecule since this is likely to produce a rounding error
         # Antechamber outputs 6 digits after the decimal in charges.txt, so I (Jeff) don't know
         # why this N3H3 molecule ends up with an error of 1e-3, but it's the smallest reproducing
@@ -3616,13 +3341,9 @@ class TestAmberToolsToolkitWrapper:
 
     def test_assign_partial_charges_am1bcc_net_charge(self):
         """Test AmberToolsToolkitWrapper assign_partial_charges() on a molecule with a net -1 charge"""
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
-        )
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
         molecule = create_acetate()
-        molecule.assign_partial_charges(
-            partial_charge_method="am1bcc", toolkit_registry=toolkit_registry
-        )
+        molecule.assign_partial_charges(partial_charge_method="am1bcc", toolkit_registry=toolkit_registry)
         charge_sum = np.sum(molecule.partial_charges)
         assert 1e-10 > abs(charge_sum.m_as(unit.elementary_charge) + 1)
 
@@ -3636,9 +3357,7 @@ class TestAmberToolsToolkitWrapper:
         def charge_func(run_num=-1):
             from openff.toolkit import AmberToolsToolkitWrapper, Molecule
 
-            AmberToolsToolkitWrapper().assign_partial_charges(
-                Molecule.from_smiles("CCO")
-            )
+            AmberToolsToolkitWrapper().assign_partial_charges(Molecule.from_smiles("CCO"))
 
         futures = list()
         with ThreadPoolExecutor() as executor:
@@ -3653,9 +3372,7 @@ class TestAmberToolsToolkitWrapper:
         of conformers
         """
 
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
-        )
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
         molecule = create_ethanol()
         molecule.generate_conformers(n_conformers=2, rms_cutoff=0.01 * unit.angstrom)
 
@@ -3724,15 +3441,11 @@ class TestAmberToolsToolkitWrapper:
                 strict_n_conformers=True,
             )
 
-    @pytest.mark.parametrize(
-        "partial_charge_method", ["am1bcc", "am1-mulliken", "gasteiger"]
-    )
+    @pytest.mark.parametrize("partial_charge_method", ["am1bcc", "am1-mulliken", "gasteiger"])
     def test_assign_partial_charges_neutral(self, partial_charge_method):
         """Test AmberToolsToolkitWrapper assign_partial_charges()"""
 
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
-        )
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
         molecule = create_ethanol()
         molecule.assign_partial_charges(
             toolkit_registry=toolkit_registry,
@@ -3749,9 +3462,7 @@ class TestAmberToolsToolkitWrapper:
         conformer dependent."""
         import copy
 
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
-        )
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
         molecule = create_ethanol()
         molecule.generate_conformers(n_conformers=1)
         molecule.assign_partial_charges(
@@ -3772,17 +3483,13 @@ class TestAmberToolsToolkitWrapper:
         for pc1, pc2 in zip(pcs1, molecule.partial_charges):
             assert abs(pc1 - pc2) > 1.0e-3 * unit.elementary_charge
 
-    @pytest.mark.parametrize(
-        "partial_charge_method", ["am1bcc", "am1-mulliken", "gasteiger"]
-    )
+    @pytest.mark.parametrize("partial_charge_method", ["am1bcc", "am1-mulliken", "gasteiger"])
     def test_assign_partial_charges_net_charge(self, partial_charge_method):
         """
         Test AmberToolsToolkitWrapper assign_partial_charges().
         """
 
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
-        )
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
         molecule = create_acetate()
         molecule.assign_partial_charges(
             toolkit_registry=toolkit_registry,
@@ -3794,16 +3501,12 @@ class TestAmberToolsToolkitWrapper:
     def test_assign_partial_charges_bad_charge_method(self):
         """Test AmberToolsToolkitWrapper assign_partial_charges() for a nonexistent charge method"""
 
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
-        )
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
         molecule = create_ethanol()
 
         # For now, ToolkitRegistries lose track of what exception type
         # was thrown inside them, so we just check for a ValueError here
-        with pytest.raises(
-            ValueError, match="is not available from AmberToolsToolkitWrapper"
-        ):
+        with pytest.raises(ValueError, match="is not available from AmberToolsToolkitWrapper"):
             molecule.assign_partial_charges(
                 toolkit_registry=toolkit_registry,
                 partial_charge_method="NotARealChargeMethod",
@@ -3815,9 +3518,7 @@ class TestAmberToolsToolkitWrapper:
             match="is not available from AmberToolsToolkitWrapper",
         ):
             ATTKW = AmberToolsToolkitWrapper()
-            ATTKW.assign_partial_charges(
-                molecule=molecule, partial_charge_method="NotARealChargeMethod"
-            )
+            ATTKW.assign_partial_charges(molecule=molecule, partial_charge_method="NotARealChargeMethod")
 
     @pytest.mark.parametrize(
         "partial_charge_method, expected_n_confs, toolkit_wrappers",
@@ -3827,9 +3528,7 @@ class TestAmberToolsToolkitWrapper:
             ("gasteiger", 0, [AmberToolsToolkitWrapper]),
         ],
     )
-    def test_assign_partial_charges_wrong_n_confs(
-        self, partial_charge_method, expected_n_confs, toolkit_wrappers
-    ):
+    def test_assign_partial_charges_wrong_n_confs(self, partial_charge_method, expected_n_confs, toolkit_wrappers):
         """
         Test AmberToolsToolkitWrapper assign_partial_charges() when requesting to use an incorrect number of
         conformers
@@ -3843,8 +3542,7 @@ class TestAmberToolsToolkitWrapper:
         # which should produce a warning
         with pytest.warns(
             IncorrectNumConformersWarning,
-            match=f"has 2 conformers, but charge method '{partial_charge_method}' "
-            f"expects exactly {expected_n_confs}.",
+            match=f"has 2 conformers, but charge method '{partial_charge_method}' expects exactly {expected_n_confs}.",
         ):
             molecule.assign_partial_charges(
                 toolkit_registry=toolkit_registry,
@@ -3866,8 +3564,7 @@ class TestAmberToolsToolkitWrapper:
         # in a failed task together in a single ValueError.
         with pytest.raises(
             ValueError,
-            match=f"has 2 conformers, but charge method '{partial_charge_method}' "
-            f"expects exactly {expected_n_confs}.",
+            match=f"has 2 conformers, but charge method '{partial_charge_method}' expects exactly {expected_n_confs}.",
         ):
             molecule.assign_partial_charges(
                 toolkit_registry=toolkit_registry,
@@ -3880,8 +3577,7 @@ class TestAmberToolsToolkitWrapper:
         # confs, and specify strict_n_conformers, which should produce an IncorrectNumConformersError
         with pytest.raises(
             IncorrectNumConformersError,
-            match=f"has 2 conformers, but charge method '{partial_charge_method}' "
-            f"expects exactly {expected_n_confs}.",
+            match=f"has 2 conformers, but charge method '{partial_charge_method}' expects exactly {expected_n_confs}.",
         ):
             ATTKW = AmberToolsToolkitWrapper()
             ATTKW.assign_partial_charges(
@@ -3903,28 +3599,16 @@ class TestAmberToolsToolkitWrapper:
     def test_assign_fractional_bond_orders(self, bond_order_model, smiles):
         """Test AmbetToolsToolkitWrapper assign_fractional_bond_orders()"""
 
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
-        )
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
 
         molecule = toolkit_registry.call("from_smiles", smiles)
-        molecule.assign_fractional_bond_orders(
-            toolkit_registry=toolkit_registry, bond_order_model=bond_order_model
-        )
+        molecule.assign_fractional_bond_orders(toolkit_registry=toolkit_registry, bond_order_model=bond_order_model)
         # TODO: Add test for equivalent Wiberg orders for equivalent bonds
 
         # Sanity check single bonds.
-        assert all(
-            0.75 < bond.fractional_bond_order < 1.25
-            for bond in molecule.bonds
-            if bond.bond_order == 1
-        )
+        assert all(0.75 < bond.fractional_bond_order < 1.25 for bond in molecule.bonds if bond.bond_order == 1)
         # Sanity check double bonds.
-        assert all(
-            1.75 < bond.fractional_bond_order < 2.25
-            for bond in molecule.bonds
-            if bond.bond_order == 2
-        )
+        assert all(1.75 < bond.fractional_bond_order < 2.25 for bond in molecule.bonds if bond.bond_order == 2)
 
     def test_assign_fractional_bond_orders_conformer_dependence(self):
         """
@@ -3932,9 +3616,7 @@ class TestAmberToolsToolkitWrapper:
         different conformers
         """
 
-        toolkit_wrapper = ToolkitRegistry(
-            [RDKitToolkitWrapper, AmberToolsToolkitWrapper]
-        )
+        toolkit_wrapper = ToolkitRegistry([RDKitToolkitWrapper, AmberToolsToolkitWrapper])
         # Get the WBOs using one conformer
         molecule = create_ethanol()
         molecule.generate_conformers(toolkit_registry=toolkit_wrapper)
@@ -3947,15 +3629,9 @@ class TestAmberToolsToolkitWrapper:
         # Do the same again, but change the conformer to yield a different result
         molecule_diff_coords = create_ethanol()
         molecule_diff_coords.generate_conformers(toolkit_registry=toolkit_wrapper)
-        molecule_diff_coords._conformers[0][0][0] = (
-            molecule_diff_coords._conformers[0][0][0] + 1.0 * unit.angstrom
-        )
-        molecule_diff_coords._conformers[0][1][0] = (
-            molecule_diff_coords._conformers[0][1][0] - 1.0 * unit.angstrom
-        )
-        molecule_diff_coords._conformers[0][2][0] = (
-            molecule_diff_coords._conformers[0][2][0] + 1.0 * unit.angstrom
-        )
+        molecule_diff_coords._conformers[0][0][0] = molecule_diff_coords._conformers[0][0][0] + 1.0 * unit.angstrom
+        molecule_diff_coords._conformers[0][1][0] = molecule_diff_coords._conformers[0][1][0] - 1.0 * unit.angstrom
+        molecule_diff_coords._conformers[0][2][0] = molecule_diff_coords._conformers[0][2][0] + 1.0 * unit.angstrom
         molecule_diff_coords.assign_fractional_bond_orders(
             toolkit_registry=toolkit_wrapper,
             use_conformers=molecule_diff_coords.conformers,
@@ -3970,9 +3646,7 @@ class TestAmberToolsToolkitWrapper:
         """Test AmberToolsToolkitWrapper assign_fractional_bond_orders() for neutral and charged molecule.
         Also tests using existing conformers"""
 
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
-        )
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
         # Reading neutral molecule from file
         filename = get_data_file_path("molecules/CID20742535_neutral.sdf")
         molecule1 = Molecule.from_file(filename)
@@ -4002,9 +3676,7 @@ class TestAmberToolsToolkitWrapper:
                 assert 1.0 < wbo_C_O_neutral < 1.5
             else:
                 # Should be C-C single bond
-                assert (i.atom1_index == 4 and i.atom2_index == 6) or (
-                    i.atom1_index == 6 and i.atom2_index == 4
-                )
+                assert (i.atom1_index == 4 and i.atom2_index == 6) or (i.atom1_index == 6 and i.atom2_index == 4)
                 wbo_C_C_neutral = i.fractional_bond_order
                 assert 1.0 < wbo_C_C_neutral < 1.3
 
@@ -4027,9 +3699,7 @@ class TestAmberToolsToolkitWrapper:
                 assert 1.3 < wbo_C_O_anion < 1.8
             else:
                 # Should be C-C single bond
-                assert (i.atom1_index == 4 and i.atom2_index == 6) or (
-                    i.atom1_index == 6 and i.atom2_index == 4
-                )
+                assert (i.atom1_index == 4 and i.atom2_index == 6) or (i.atom1_index == 6 and i.atom2_index == 4)
                 wbo_C_C_anion = i.fractional_bond_order
                 assert 1.0 < wbo_C_C_anion < 1.3
 
@@ -4044,9 +3714,7 @@ class TestAmberToolsToolkitWrapper:
         correct error if an invalid charge model is provided
         """
 
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
-        )
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
         molecule = toolkit_registry.call("from_smiles", "C")
 
         expected_error = (
@@ -4069,9 +3737,7 @@ class TestAmberToolsToolkitWrapper:
         def charge_func(run_num=-1):
             from openff.toolkit import AmberToolsToolkitWrapper, Molecule
 
-            AmberToolsToolkitWrapper().assign_fractional_bond_orders(
-                Molecule.from_smiles("CCO")
-            )
+            AmberToolsToolkitWrapper().assign_fractional_bond_orders(Molecule.from_smiles("CCO"))
 
         futures = list()
         with ThreadPoolExecutor() as executor:
@@ -4153,9 +3819,7 @@ class TestBuiltInToolkitWrapper:
         # For now, the Molecule API passes raise_exception_types=[] to ToolkitRegistry.call,
         # which loses track of what exception type
         # was thrown inside them, so we just check for a ValueError here
-        with pytest.raises(
-            ValueError, match="is not supported by the Built-in toolkit"
-        ):
+        with pytest.raises(ValueError, match="is not supported by the Built-in toolkit"):
             molecule.assign_partial_charges(
                 toolkit_registry=toolkit_registry,
                 partial_charge_method="NotARealChargeMethod",
@@ -4167,9 +3831,7 @@ class TestBuiltInToolkitWrapper:
             match="is not supported by the Built-in toolkit",
         ):
             BITKW = BuiltInToolkitWrapper()
-            BITKW.assign_partial_charges(
-                molecule=molecule, partial_charge_method="NotARealChargeMethod"
-            )
+            BITKW.assign_partial_charges(molecule=molecule, partial_charge_method="NotARealChargeMethod")
 
     def test_assign_partial_charges_wrong_n_confs(self):
         """
@@ -4265,25 +3927,19 @@ class TestToolkitWrapper:
             IncorrectNumConformersError,
             match="has 0 conformers, but charge method 'nocharge' expects at least 1",
         ):
-            tkw._check_n_conformers(
-                mol, "nocharge", min_confs=1, strict_n_conformers=True
-            )
+            tkw._check_n_conformers(mol, "nocharge", min_confs=1, strict_n_conformers=True)
         # Check with min=1, max=1 and strict_n_conformers should raise an error
         with pytest.raises(
             IncorrectNumConformersError,
             match="has 0 conformers, but charge method 'nocharge' expects exactly 1",
         ):
-            tkw._check_n_conformers(
-                mol, "nocharge", min_confs=1, max_confs=1, strict_n_conformers=True
-            )
+            tkw._check_n_conformers(mol, "nocharge", min_confs=1, max_confs=1, strict_n_conformers=True)
         # Check with min=1, max=2 and strict_n_conformers should raise an error
         with pytest.raises(
             IncorrectNumConformersError,
             match="has 0 conformers, but charge method 'nocharge' expects between 1 and 2",
         ):
-            tkw._check_n_conformers(
-                mol, "nocharge", min_confs=1, max_confs=2, strict_n_conformers=True
-            )
+            tkw._check_n_conformers(mol, "nocharge", min_confs=1, max_confs=2, strict_n_conformers=True)
         # Check with max=1 should pass
         tkw._check_n_conformers(mol, "nocharge", max_confs=1, strict_n_conformers=True)
 
@@ -4312,9 +3968,7 @@ class TestToolkitWrapper:
             IncorrectNumConformersError,
             match="has 10 conformers, but charge method 'nocharge' expects at least 11",
         ):
-            tkw._check_n_conformers(
-                mol, "nocharge", min_confs=11, strict_n_conformers=True
-            )
+            tkw._check_n_conformers(mol, "nocharge", min_confs=11, strict_n_conformers=True)
 
         # max_confs checks
         # Check with max=1 and strict_n_conformers should raise an error
@@ -4322,9 +3976,7 @@ class TestToolkitWrapper:
             IncorrectNumConformersError,
             match="has 10 conformers, but charge method 'nocharge' expects at most 1",
         ):
-            tkw._check_n_conformers(
-                mol, "nocharge", max_confs=1, strict_n_conformers=True
-            )
+            tkw._check_n_conformers(mol, "nocharge", max_confs=1, strict_n_conformers=True)
         # Check with max=10 and strict_n_conformers should be OK
         tkw._check_n_conformers(mol, "nocharge", max_confs=10, strict_n_conformers=True)
         # Check with max=11 and strict_n_conformers should be OK
@@ -4332,45 +3984,31 @@ class TestToolkitWrapper:
 
         # min_confs and max_confs checks
         # Check with max=10 and min=10 and strict_n_conformers should be OK
-        tkw._check_n_conformers(
-            mol, "nocharge", min_confs=10, max_confs=10, strict_n_conformers=True
-        )
+        tkw._check_n_conformers(mol, "nocharge", min_confs=10, max_confs=10, strict_n_conformers=True)
         # Check with max=10 and min=9 and strict_n_conformers should be OK
-        tkw._check_n_conformers(
-            mol, "nocharge", min_confs=9, max_confs=10, strict_n_conformers=True
-        )
+        tkw._check_n_conformers(mol, "nocharge", min_confs=9, max_confs=10, strict_n_conformers=True)
         # Check with max=11 and min=10 and strict_n_conformers should be OK
-        tkw._check_n_conformers(
-            mol, "nocharge", min_confs=10, max_confs=11, strict_n_conformers=True
-        )
+        tkw._check_n_conformers(mol, "nocharge", min_confs=10, max_confs=11, strict_n_conformers=True)
         # Check with max=11 and min=9 and strict_n_conformers should be OK
-        tkw._check_n_conformers(
-            mol, "nocharge", min_confs=9, max_confs=11, strict_n_conformers=True
-        )
+        tkw._check_n_conformers(mol, "nocharge", min_confs=9, max_confs=11, strict_n_conformers=True)
         # Check with min=9 and max=9 and strict_n_conformers should raise an error
         with pytest.raises(
             IncorrectNumConformersError,
             match="has 10 conformers, but charge method 'nocharge' expects exactly 9",
         ):
-            tkw._check_n_conformers(
-                mol, "nocharge", min_confs=9, max_confs=9, strict_n_conformers=True
-            )
+            tkw._check_n_conformers(mol, "nocharge", min_confs=9, max_confs=9, strict_n_conformers=True)
         # Check with min=1 and max=9 and strict_n_conformers should raise an error
         with pytest.raises(
             IncorrectNumConformersError,
             match="has 10 conformers, but charge method 'nocharge' expects between 1 and 9",
         ):
-            tkw._check_n_conformers(
-                mol, "nocharge", min_confs=1, max_confs=9, strict_n_conformers=True
-            )
+            tkw._check_n_conformers(mol, "nocharge", min_confs=1, max_confs=9, strict_n_conformers=True)
         # Check with min=11 and max=12 and strict_n_conformers should raise an error
         with pytest.raises(
             IncorrectNumConformersError,
             match="has 10 conformers, but charge method 'nocharge' expects between 11 and 12",
         ):
-            tkw._check_n_conformers(
-                mol, "nocharge", min_confs=11, max_confs=12, strict_n_conformers=True
-            )
+            tkw._check_n_conformers(mol, "nocharge", min_confs=11, max_confs=12, strict_n_conformers=True)
 
 
 class TestToolkitRegistry:
@@ -4410,9 +4048,7 @@ class TestToolkitRegistry:
             AmberToolsToolkitWrapper,
             BuiltInToolkitWrapper,
         ]
-        for found, expected in zip(
-            default_registry.registered_toolkits, expected_toolkits
-        ):
+        for found, expected in zip(default_registry.registered_toolkits, expected_toolkits):
             assert isinstance(found, expected)
 
         # Test forcing a non-default order
@@ -4424,9 +4060,7 @@ class TestToolkitRegistry:
         assert len(non_default_registry.registered_toolkits) == 2
 
         expected_toolkits = [BuiltInToolkitWrapper, RDKitToolkitWrapper]
-        for found, expected in zip(
-            non_default_registry.registered_toolkits, expected_toolkits
-        ):
+        for found, expected in zip(non_default_registry.registered_toolkits, expected_toolkits):
             assert isinstance(found, expected)
 
     @requires_rdkit
@@ -4443,9 +4077,7 @@ class TestToolkitRegistry:
     def test_register_unavailable_toolkit(self):
         registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper])
         with pytest.raises(ToolkitUnavailableException):
-            registry.register_toolkit(
-                toolkit_wrapper=OpenEyeToolkitWrapper, exception_if_unavailable=True
-            )
+            registry.register_toolkit(toolkit_wrapper=OpenEyeToolkitWrapper, exception_if_unavailable=True)
 
     @pytest.mark.skipif(
         RDKitToolkitWrapper.is_available(),
@@ -4456,9 +4088,7 @@ class TestToolkitRegistry:
         when RDKitToolkitWrapper is unavailable"""
         registry = ToolkitRegistry()
         with pytest.raises(ToolkitUnavailableException):
-            registry.register_toolkit(
-                toolkit_wrapper=RDKitToolkitWrapper, exception_if_unavailable=True
-            )
+            registry.register_toolkit(toolkit_wrapper=RDKitToolkitWrapper, exception_if_unavailable=True)
 
     @requires_openeye
     def test_register_openeye(self):
@@ -4469,14 +4099,10 @@ class TestToolkitRegistry:
             toolkit_precedence=toolkit_precedence,
         )
 
-        assert set(type(c) for c in registry.registered_toolkits) == set(
-            [OpenEyeToolkitWrapper]
-        )
+        assert set(type(c) for c in registry.registered_toolkits) == set([OpenEyeToolkitWrapper])
 
         # Test ToolkitRegistry.resolve()
-        assert (
-            registry.resolve("to_smiles") == registry.registered_toolkits[0].to_smiles
-        )
+        assert registry.resolve("to_smiles") == registry.registered_toolkits[0].to_smiles
 
         # Test ToolkitRegistry.call()
         smiles = "[H]C([H])([H])C([H])([H])[H]"
@@ -4493,14 +4119,10 @@ class TestToolkitRegistry:
             toolkit_precedence=toolkit_precedence,
         )
 
-        assert set([type(c) for c in registry.registered_toolkits]) == set(
-            [RDKitToolkitWrapper]
-        )
+        assert set([type(c) for c in registry.registered_toolkits]) == set([RDKitToolkitWrapper])
 
         # Test ToolkitRegistry.resolve()
-        assert (
-            registry.resolve("to_smiles") == registry.registered_toolkits[0].to_smiles
-        )
+        assert registry.resolve("to_smiles") == registry.registered_toolkits[0].to_smiles
 
         # Test ToolkitRegistry.call()
         smiles = "[H][C]([H])([H])[C]([H])([H])[H]"
@@ -4517,16 +4139,11 @@ class TestToolkitRegistry:
             toolkit_precedence=toolkit_precedence,
         )
 
-        assert set([type(c) for c in registry.registered_toolkits]) == set(
-            [AmberToolsToolkitWrapper]
-        )
+        assert set([type(c) for c in registry.registered_toolkits]) == set([AmberToolsToolkitWrapper])
 
         # Test ToolkitRegistry.resolve()
         registry.resolve("assign_partial_charges")
-        assert (
-            registry.resolve("assign_partial_charges")
-            == registry.registered_toolkits[0].assign_partial_charges
-        )
+        assert registry.resolve("assign_partial_charges") == registry.registered_toolkits[0].assign_partial_charges
 
         # Test ToolkitRegistry.call()
         molecule = RDKitToolkitWrapper().from_file(
@@ -4560,10 +4177,7 @@ class TestToolkitRegistry:
             == registry.registered_toolkits[1].assign_fractional_bond_orders
         )
         # Resolve a method supported by both to the highest-priority wrapper
-        assert (
-            registry.resolve("from_smiles")
-            == registry.registered_toolkits[0].from_smiles
-        )
+        assert registry.resolve("from_smiles") == registry.registered_toolkits[0].from_smiles
 
         # Test ToolkitRegistry.call() for each toolkit
         smiles = "[H][C]([H])([H])[C]([H])([H])[H]"
@@ -4579,87 +4193,39 @@ class TestToolkitRegistry:
     @requires_ambertools
     def test_deregister_toolkit(self):
         """Test removing an instantiated toolkit from the registry"""
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
-        )
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
 
-        assert any(
-            [
-                isinstance(tk, AmberToolsToolkitWrapper)
-                for tk in toolkit_registry._toolkits
-            ]
-        )
-        assert any(
-            [isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits]
-        )
+        assert any([isinstance(tk, AmberToolsToolkitWrapper) for tk in toolkit_registry._toolkits])
+        assert any([isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits])
 
         toolkit_registry.deregister_toolkit(toolkit_registry._toolkits[-1])
-        assert any(
-            [
-                isinstance(tk, AmberToolsToolkitWrapper)
-                for tk in toolkit_registry._toolkits
-            ]
-        )
-        assert not any(
-            [isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits]
-        )
+        assert any([isinstance(tk, AmberToolsToolkitWrapper) for tk in toolkit_registry._toolkits])
+        assert not any([isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits])
 
         toolkit_registry.deregister_toolkit(toolkit_registry._toolkits[-1])
-        assert not any(
-            [
-                isinstance(tk, AmberToolsToolkitWrapper)
-                for tk in toolkit_registry._toolkits
-            ]
-        )
-        assert not any(
-            [isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits]
-        )
+        assert not any([isinstance(tk, AmberToolsToolkitWrapper) for tk in toolkit_registry._toolkits])
+        assert not any([isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits])
 
     @requires_ambertools
     def test_deregister_toolkit_by_class(self):
         """Test removing a toolkit from the registry by matching class types"""
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper]
-        )
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper, RDKitToolkitWrapper])
 
-        assert any(
-            [
-                isinstance(tk, AmberToolsToolkitWrapper)
-                for tk in toolkit_registry._toolkits
-            ]
-        )
-        assert any(
-            [isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits]
-        )
+        assert any([isinstance(tk, AmberToolsToolkitWrapper) for tk in toolkit_registry._toolkits])
+        assert any([isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits])
 
         toolkit_registry.deregister_toolkit(RDKitToolkitWrapper)
-        assert any(
-            [
-                isinstance(tk, AmberToolsToolkitWrapper)
-                for tk in toolkit_registry._toolkits
-            ]
-        )
-        assert not any(
-            [isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits]
-        )
+        assert any([isinstance(tk, AmberToolsToolkitWrapper) for tk in toolkit_registry._toolkits])
+        assert not any([isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits])
 
         toolkit_registry.deregister_toolkit(AmberToolsToolkitWrapper)
-        assert not any(
-            [
-                isinstance(tk, AmberToolsToolkitWrapper)
-                for tk in toolkit_registry._toolkits
-            ]
-        )
-        assert not any(
-            [isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits]
-        )
+        assert not any([isinstance(tk, AmberToolsToolkitWrapper) for tk in toolkit_registry._toolkits])
+        assert not any([isinstance(tk, RDKitToolkitWrapper) for tk in toolkit_registry._toolkits])
 
     @requires_ambertools
     def test_deregister_toolkit_bad_inputs(self):
         """Test bad inputs to deregister_toolkit"""
-        toolkit_registry = ToolkitRegistry(
-            toolkit_precedence=[AmberToolsToolkitWrapper]
-        )
+        toolkit_registry = ToolkitRegistry(toolkit_precedence=[AmberToolsToolkitWrapper])
 
         with pytest.raises(InvalidToolkitError):
             toolkit_registry.deregister_toolkit("rdkit as a string")
@@ -4682,12 +4248,8 @@ class TestToolkitRegistry:
 
         GLOBAL_TOOLKIT_REGISTRY.deregister_toolkit(first_toolkit)
 
-        assert first_toolkit not in [
-            type(tk) for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits
-        ]
-        assert (
-            len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits) == num_toolkits - 1
-        )
+        assert first_toolkit not in [type(tk) for tk in GLOBAL_TOOLKIT_REGISTRY.registered_toolkits]
+        assert len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits) == num_toolkits - 1
 
         GLOBAL_TOOLKIT_REGISTRY = deepcopy(global_registry_copy)  # noqa
 
@@ -4699,9 +4261,7 @@ class TestToolkitRegistry:
             toolkit_precedence=toolkit_precedence,
         )
         # registry.register_toolkit(BuiltInToolkitWrapper)
-        assert set([type(c) for c in registry.registered_toolkits]) == set(
-            [BuiltInToolkitWrapper]
-        )
+        assert set([type(c) for c in registry.registered_toolkits]) == set([BuiltInToolkitWrapper])
 
         # Test ToolkitRegistry.resolve()
         resolved = registry.resolve("assign_partial_charges")
@@ -4725,9 +4285,7 @@ class TestToolkitRegistry:
 
         assert versions["OpenEye Toolkit"] == openeye.__version__
         assert versions["The RDKit"] == rdkit.__version__
-        assert versions["AmberTools"].startswith(
-            "2"
-        )  # TODO: Safer way of checking AmberTools version
+        assert versions["AmberTools"].startswith("2")  # TODO: Safer way of checking AmberTools version
         assert versions["Built-in Toolkit"] is None
 
         toolkit_precedence = [
