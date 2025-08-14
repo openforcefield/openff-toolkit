@@ -12,7 +12,28 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Behavior changes
 
+### Bugfixes
+- [PR #2052](https://github.com/openforcefield/openff-toolkit/pull/2052): Fixes bug where `Topology.from_pdb` couldn't load NH4+ ([Issue #2051](https://github.com/openforcefield/openff-toolkit/issues/2051))
+
+### Miscellaneous
+
+- [PR #2054](https://github.com/openforcefield/openff-toolkit/pull/2054): Removes internal use of `importlib_metadata` where `importlib.metadata` is appropriate.
+- [PR #2067](https://github.com/openforcefield/openff-toolkit/pull/2067): Removes `cached-property` as a listed dependency, which was not used.
+- [PR #2078](https://github.com/openforcefield/openff-toolkit/pull/2078): Updates molecule cookbook molecule.from_qcschema()
+
+### New features
+- [PR #2066](https://github.com/openforcefield/openff-toolkit/pull/2066): Improves runtime in some situations by making AmberToolsToolkitWrapper perform lazy evaluation of AmberTools version. (@vamironov)
+
+
+### Improved documentation and warnings
+
+
+## 0.16.9
+
+### Behavior changes
+
 - [PR #2026](https://github.com/openforcefield/openff-toolkit/pull/2026): Makes `Molecule.__repr__` more succinct for large molecules.
+- [PR #2025](https://github.com/openforcefield/openff-toolkit/pull/2025): Speeds up `Molecule.ordered_connection_table_hash`, but changes the specific hash outputted for a given molecule. The meaning of hash identity within a single OpenFF Toolkit version is unchanged. Updates documentation to state that these this method is only intended for comparing Molecule objects using the same version of the OpenFF Toolkit, and that hashes may not be stable between versions. 
 - [PR #2041](https://github.com/openforcefield/openff-toolkit/pull/2041): Drop testing on Python 3.10
 
 ### Bugfixes

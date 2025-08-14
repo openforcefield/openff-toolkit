@@ -89,7 +89,6 @@ module = [
     "qcelemental",
     "nglview",
     "nglview.base_adaptor",
-    "cached_property",
     "constraint",
 ]
 ignore_missing_imports = true

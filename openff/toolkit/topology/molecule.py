@@ -25,6 +25,7 @@ Molecular chemical entity representation and routines to interface with cheminfo
 
 """
 
+import hashlib
 import json
 import operator
 import pathlib
@@ -750,11 +751,11 @@ class Bond(Serializable):
 
     @property
     def atom1_index(self) -> int:
-        return self.molecule.atoms.index(self._atom1)
+        return self._atom1.molecule_atom_index
 
     @property
     def atom2_index(self) -> int:
-        return self.molecule.atoms.index(self._atom2)
+        return self._atom2.molecule_atom_index
 
     @property
     def atoms(self):
@@ -1255,17 +1256,28 @@ class FrozenMolecule(Serializable):
         return hash(self.to_smiles())
 
     def ordered_connection_table_hash(self) -> int:
-        """Compute an ordered hash of the atoms and bonds in the molecule"""
+        """
+        Compute an ordered hash of the atoms and bonds in the molecule.
+
+        This hash method is intended for comparison of Molecule objects at
+        runtime, and hashes from one version of the software should not be
+        compared with hashes generated using different versions.
+        """
         if self._ordered_connection_table_hash is not None:
             return self._ordered_connection_table_hash
 
+        # Pre-assign molecule atom indices in O(N) time to avoid use of List.index to get index of each one
+        # in O(N^2) time
+        for index, atom in enumerate(self.atoms):
+            atom._molecule_atom_index = index
+
         id = ""
         for atom in self.atoms:
-            id += f"{atom.symbol}_{atom.formal_charge}_{atom.stereochemistry}__"
+            id += f"{atom.atomic_number}_{atom.formal_charge.magnitude}_{atom.stereochemistry}__"
         for bond in self.bonds:
             id += f"{bond.bond_order}_{bond.stereochemistry}_{bond.atom1_index}_{bond.atom2_index}__"
 
-        self._ordered_connection_table_hash = hash(id)
+        self._ordered_connection_table_hash = hashlib.sha3_224(id.encode("utf-8")).hexdigest()
         return self._ordered_connection_table_hash
 
     @classmethod
@@ -1971,23 +1983,22 @@ class FrozenMolecule(Serializable):
         return molecule
 
     def _is_exactly_the_same_as(self, other):
-        for atom1, atom2 in zip(self.atoms, other.atoms):
-            if (
-                (atom1.atomic_number != atom2.atomic_number)
-                or (atom1.formal_charge != atom2.formal_charge)
-                or (atom1.is_aromatic != atom2.is_aromatic)
-                or (atom1.stereochemistry != atom2.stereochemistry)
-            ):
-                return False
-        for bond1, bond2 in zip(self.bonds, other.bonds):
-            if (
-                (bond1.atom1_index != bond2.atom1_index)
-                or (bond1.atom2_index != bond2.atom2_index)
-                or (bond1.is_aromatic != bond2.is_aromatic)
-                or (bond1.stereochemistry != bond2.stereochemistry)
-            ):
-                return False
-        return True
+        # Pre-assign molecule atom indices in O(N) time to avoid use of List.index to get index of each one
+        # in O(N^2) time
+        for index, atom in enumerate(self.atoms):
+            atom._molecule_atom_index = index
+        for index, atom in enumerate(other.atoms):
+            atom._molecule_atom_index = index
+
+        self_id = (
+            tuple((atom.atomic_number, atom.formal_charge.magnitude, atom.stereochemistry) for atom in self.atoms),
+            tuple((bond.bond_order, bond.stereochemistry, bond.atom1_index, bond.atom2_index) for bond in self.bonds),
+        )
+        other_id = (
+            tuple((atom.atomic_number, atom.formal_charge.magnitude, atom.stereochemistry) for atom in other.atoms),
+            tuple((bond.bond_order, bond.stereochemistry, bond.atom1_index, bond.atom2_index) for bond in other.bonds),
+        )
+        return self_id == other_id
 
     @staticmethod
     def are_isomorphic(
