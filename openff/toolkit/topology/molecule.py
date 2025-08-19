@@ -2651,6 +2651,8 @@ class FrozenMolecule(Serializable):
         openff.toolkit.utils.toolkits.AmberToolsToolkitWrapper.assign_partial_charges
         openff.toolkit.utils.toolkits.BuiltInToolkitWrapper.assign_partial_charges
         """
+        if isinstance(partial_charge_method, pathlib.Path):
+            partial_charge_method = partial_charge_method.as_posix()
 
         # Raise a warning when users try to apply these charge methods to "large" molecules
         WARN_LARGE_MOLECULES: set[str] = {
