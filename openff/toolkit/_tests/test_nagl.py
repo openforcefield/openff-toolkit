@@ -54,9 +54,21 @@ class TestNAGLToolkitWrapper:
     )
     @pytest.mark.parametrize(
         "nagl_model",
-        [pathlib.Path(file).name for file in list_available_nagl_models()],
+        list_available_nagl_models(),
     )
-    def test_assign_partial_charges_basic(self, molecule_function, nagl_model):
+    @pytest.mark.parametrize(
+        "input_type",
+        [str, pathlib.Path],
+    )
+    def test_assign_partial_charges_basic(self, molecule_function, nagl_model, input_type):
+        match input_type:
+            case pathlib.Path:
+                nagl_model = pathlib.Path(nagl_model)
+            case str:
+                nagl_model = str(nagl_model)
+
+        assert isinstance(nagl_model, input_type)
+
         molecule = molecule_function()
 
         molecule.assign_partial_charges(
