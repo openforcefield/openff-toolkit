@@ -19,12 +19,11 @@ import tempfile
 import warnings
 from collections import defaultdict
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 import numpy as np
 from cachetools import LRUCache, cached
 from openff.units.elements import SYMBOLS
-from typing_extensions import TypeAlias
 
 from openff.toolkit import Quantity, unit
 from openff.toolkit.utils.base_wrapper import (
@@ -103,10 +102,10 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     )
     # This could belong to ToolkitWrapper, although it seems strange
     # to carry that data for open-source toolkits
-    _is_licensed: Optional[bool] = None
+    _is_licensed: bool | None = None
     # Only for OpenEye is there potentially a difference between
     # being available and installed
-    _is_installed: Optional[bool] = None
+    _is_installed: bool | None = None
     _license_functions: dict[str, str] = {
         "oechem": "OEChemIsLicensed",
         "oequacpac": "OEQuacPacIsLicensed",
@@ -458,7 +457,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     def from_file(
         self,
-        file_path: Union[str, pathlib.Path],
+        file_path: str | pathlib.Path,
         file_format: str,
         allow_undefined_stereo: bool = False,
         _cls=None,
@@ -596,7 +595,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     def to_file(
         self,
         molecule: "Molecule",
-        file_path: Union[str, pathlib.Path],
+        file_path: str | pathlib.Path,
         file_format: str,
     ):
         """
@@ -709,7 +708,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         self,
         oemolistream,
         allow_undefined_stereo: bool,
-        file_path: Optional[str] = None,
+        file_path: str | None = None,
         _cls=None,
     ):
         """
@@ -2094,7 +2093,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         self,
         molecule: "Molecule",
         n_conformers: int = 1,
-        rms_cutoff: Optional[Quantity] = None,
+        rms_cutoff: Quantity | None = None,
         clear_existing: bool = True,
         make_carboxylic_acids_cis: bool = False,
     ):
@@ -2262,8 +2261,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     def assign_partial_charges(
         self,
         molecule: "Molecule",
-        partial_charge_method: Optional[str] = None,
-        use_conformers: Optional[list[Quantity]] = None,
+        partial_charge_method: str | None = None,
+        use_conformers: list[Quantity] | None = None,
         strict_n_conformers: bool = False,
         normalize_partial_charges: bool = True,
         _cls=None,
@@ -2434,8 +2433,8 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     def assign_fractional_bond_orders(
         self,
         molecule: "Molecule",
-        bond_order_model: Optional[str] = None,
-        use_conformers: Optional[list[Quantity]] = None,
+        bond_order_model: str | None = None,
+        use_conformers: list[Quantity] | None = None,
         _cls=None,
     ):
         """

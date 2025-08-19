@@ -39,8 +39,8 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Literal,
-    Optional,
     TextIO,
+    TypeAlias,
     TypeVar,
     Union,
     overload,
@@ -50,7 +50,6 @@ import numpy as np
 from openff.units import Unit
 from openff.units.elements import MASSES, SYMBOLS
 from openff.utilities.exceptions import MissingOptionalDependencyError
-from typing_extensions import TypeAlias
 
 from openff.toolkit import Quantity, unit
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
@@ -105,7 +104,7 @@ if TYPE_CHECKING:
 
 # TODO: These aliases are duplicated in a few places, might make sense to consolidate them
 #       into a single location, but that'd weirdly nudge them towards first-class existence
-TKR: TypeAlias = Union[ToolkitRegistry, ToolkitWrapper]
+TKR: TypeAlias = ToolkitRegistry | ToolkitWrapper
 MoleculeLike: TypeAlias = Union["Molecule", "FrozenMolecule", "_SimpleMolecule"]
 FM = TypeVar("FM", bound="FrozenMolecule")
 P = TypeVar("P", bound="Particle")
@@ -195,7 +194,7 @@ class AtomMetadataDict(UserDict):
     def __setitem__(self, key, value):
         if not isinstance(key, str):
             raise InvalidAtomMetadataError(f"Attempted to set atom metadata with a non-string key. (key: {key}")
-        if not isinstance(value, (str, int)):
+        if not isinstance(value, str | int):
             raise InvalidAtomMetadataError(
                 f"Attempted to set atom metadata with a non-string or integer value. (value: {value})"
             )
@@ -219,9 +218,9 @@ class Atom(Particle):
     def __init__(
         self,
         atomic_number: int,
-        formal_charge: Union[int, Quantity],
+        formal_charge: int | Quantity,
         is_aromatic: bool,
-        name: Optional[str] = None,
+        name: str | None = None,
         molecule=None,
         stereochemistry: Literal["R", "S", None] = None,
         metadata: Mapping[str, int | str] | None = None,
@@ -301,7 +300,7 @@ class Atom(Particle):
 
         self._bonds.append(bond)
 
-    def to_dict(self) -> dict[str, Union[None, str, int, bool, dict[Any, Any]]]:
+    def to_dict(self) -> dict[str, None | str | int | bool | dict[Any, Any]]:
         """Return a dict representation of the :class:`Atom` class instance.
 
         Output dictionary keys and values align with parameters used to initialize
@@ -400,7 +399,7 @@ class Atom(Particle):
                 "please raise an issue describing your use case."
             )
 
-        if not isinstance(charge, (Quantity, float)):
+        if not isinstance(charge, Quantity | float):
             raise ValueError(
                 "Cannot set partial charge with an object that is not a openff.unit.Quantity or float. "
                 f"Found object of type {type(charge)}."
@@ -693,7 +692,7 @@ class Bond(Serializable):
         self._is_aromatic = is_aromatic
         self._stereochemistry = stereochemistry
 
-    def to_dict(self) -> dict[str, Union[int, bool, str, float]]:
+    def to_dict(self) -> dict[str, int | bool | str | float]:
         """Return a ``dict`` representation of the bond.
 
         The output dictionary keys and values align with parameters used to initialize
@@ -895,15 +894,15 @@ class FrozenMolecule(Serializable):
 
     """
 
-    _partial_charges: Optional[Quantity]
-    _conformers: Optional[list[Quantity]]
+    _partial_charges: Quantity | None
+    _conformers: list[Quantity] | None
     _properties: dict
     _hierarchy_schemes: dict
 
     def __init__(
         self,
         other=None,
-        file_format: Optional[str] = None,
+        file_format: str | None = None,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         allow_undefined_stereo: bool = False,
     ):
@@ -990,7 +989,7 @@ class FrozenMolecule(Serializable):
         """
 
         self._cached_smiles: dict[str, str] = dict()
-        self._ordered_connection_table_hash: Optional[int] = None
+        self._ordered_connection_table_hash: int | None = None
 
         # Figure out if toolkit_registry is a whole registry, or just a single wrapper
         if isinstance(toolkit_registry, ToolkitRegistry):
@@ -1051,7 +1050,7 @@ class FrozenMolecule(Serializable):
                     loaded = True
             # TODO: Make this compatible with file-like objects (I couldn't figure out how to make an oemolistream
             # from a fileIO object)
-            if isinstance(other, (str, pathlib.Path)) or (hasattr(other, "read") and not loaded):
+            if isinstance(other, str | pathlib.Path) or (hasattr(other, "read") and not loaded):
                 try:
                     mol = Molecule.from_file(
                         other,
@@ -1180,16 +1179,14 @@ class FrozenMolecule(Serializable):
         # https://mypy.readthedocs.io/en/latest/typed_dict.html#typeddict
         molecule_dict: dict[
             str,
-            Union[
-                None,
-                str,
-                bytes,
-                dict[str, Any],
-                list[str],
-                list[bytes],
-                list[HierarchyElement],
-                list[dict[str, Any]],
-            ],
+            None
+            | str
+            | bytes
+            | dict[str, Any]
+            | list[str]
+            | list[bytes]
+            | list[HierarchyElement]
+            | list[dict[str, Any]],
         ] = dict()
         molecule_dict["name"] = self._name
 
@@ -1310,7 +1307,7 @@ class FrozenMolecule(Serializable):
             )
 
         if molecule_dict["conformers"] is None:
-            self._conformers: Optional[list[Quantity]] = None
+            self._conformers: list[Quantity] | None = None
         else:
             from openff.toolkit.utils.utils import deserialize_numpy
 
@@ -1572,7 +1569,7 @@ class FrozenMolecule(Serializable):
             )
         self._hierarchy_schemes.pop(iter_name)
 
-    def update_hierarchy_schemes(self, iter_names: Optional[list[str]] = None):
+    def update_hierarchy_schemes(self, iter_names: list[str] | None = None):
         """
         Infer a hierarchy from atom metadata according to the existing hierarchy
         schemes.
@@ -2134,7 +2131,7 @@ class FrozenMolecule(Serializable):
             edge_match_func = None  # type: ignore
 
         # Here we should work out what data type we have, also deal with lists?
-        def to_networkx(data: Union[FrozenMolecule, nx.Graph]) -> nx.Graph:
+        def to_networkx(data: FrozenMolecule | nx.Graph) -> nx.Graph:
             """For the given data type, return the networkx graph"""
             if strip_pyrimidal_n_atom_stereo:
                 SMARTS = "[N+0X3:1](-[*])(-[*])(-[*])"
@@ -2552,7 +2549,7 @@ class FrozenMolecule(Serializable):
         self,
         partial_charge_method: str,
         strict_n_conformers: bool = False,
-        use_conformers: Optional[Iterable[Quantity]] = None,
+        use_conformers: Iterable[Quantity] | None = None,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
         normalize_partial_charges: bool = True,
     ):
@@ -2720,9 +2717,9 @@ class FrozenMolecule(Serializable):
 
     def assign_fractional_bond_orders(
         self,
-        bond_order_model: Optional[str] = None,
+        bond_order_model: str | None = None,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
-        use_conformers: Optional[Iterable[Quantity]] = None,
+        use_conformers: Iterable[Quantity] | None = None,
     ):
         """
         Update and store list of bond orders this molecule.
@@ -2849,7 +2846,7 @@ class FrozenMolecule(Serializable):
 
     def find_rotatable_bonds(
         self,
-        ignore_functional_groups: Optional[list[str]] = None,
+        ignore_functional_groups: list[str] | None = None,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
     ) -> list[Bond]:
         """
@@ -3805,7 +3802,7 @@ class FrozenMolecule(Serializable):
         >>> molecule = Molecule.from_file(sdf_file_path)
 
         """
-        toolkit: Optional[ToolkitWrapper]
+        toolkit: ToolkitWrapper | None
 
         if file_format is None:
             if isinstance(file_path, pathlib.Path):
@@ -3884,7 +3881,7 @@ class FrozenMolecule(Serializable):
 
         mols = list()
 
-        if isinstance(file_path, (str, pathlib.Path)):
+        if isinstance(file_path, str | pathlib.Path):
             if isinstance(file_path, pathlib.Path):
                 file_path = file_path.as_posix()
             mols = toolkit.from_file(  # type: ignore[call-arg]
@@ -3913,7 +3910,7 @@ class FrozenMolecule(Serializable):
     @requires_package("openmm")
     def from_polymer_pdb(
         cls: type[FM],
-        file_path: Union[str, pathlib.Path, TextIO],
+        file_path: str | pathlib.Path | TextIO,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
         name: str = "",
     ) -> FM:
@@ -3982,7 +3979,7 @@ class FrozenMolecule(Serializable):
         if isinstance(toolkit_registry, ToolkitWrapper):
             toolkit_registry = ToolkitRegistry([type(toolkit_registry)])
 
-        if isinstance(file_path, (str, io.TextIOWrapper)):
+        if isinstance(file_path, str | io.TextIOWrapper):
             pass
         elif isinstance(file_path, pathlib.Path):
             file_path = file_path.as_posix()
@@ -4047,7 +4044,7 @@ class FrozenMolecule(Serializable):
         num_disconnected_subgraphs = sum(1 for _ in nx.connected_components(graph))
         return num_disconnected_subgraphs > 1
 
-    def _to_xyz_file(self, file_path: Union[str, IO[str]]):
+    def _to_xyz_file(self, file_path: str | IO[str]):
         """
         Write the current molecule and its conformers to a multiframe xyz file, if the molecule
         has no current coordinates all atoms will be set to 0,0,0 in keeping with the behaviour of the
@@ -4069,7 +4066,7 @@ class FrozenMolecule(Serializable):
             conformers = self._conformers
 
         if len(conformers) == 1:
-            end: Union[str, int] = ""
+            end: str | int = ""
 
             def title(frame):
                 return f"{self.name if self.name != '' else self.hill_formula}{frame}\n"
@@ -4126,7 +4123,7 @@ class FrozenMolecule(Serializable):
         >>> molecule.to_file('imatinib.pdb', file_format='pdb')  # doctest: +SKIP
 
         """
-        toolkit: Optional[ToolkitRegistry]
+        toolkit: ToolkitRegistry | None
 
         if isinstance(toolkit_registry, ToolkitRegistry):
             pass
@@ -4161,7 +4158,7 @@ class FrozenMolecule(Serializable):
                 f"(supported formats: {supported_formats})"
             )
 
-        if isinstance(file_path, (str, pathlib.Path)):
+        if isinstance(file_path, str, pathlib.Path):
             toolkit.to_file(self, file_path, file_format)
         else:
             toolkit.to_file_obj(self, file_path, file_format)
@@ -5122,7 +5119,7 @@ class FrozenMolecule(Serializable):
         atom2 = self._atoms[atom_index_2]
         return atom2 in self._bonded_atoms[atom1]
 
-    def get_bond_between(self, i: Union[int, Atom], j: Union[int, Atom]) -> Bond:
+    def get_bond_between(self, i: int | Atom, j: int | Atom) -> Bond:
         """Returns the bond between two atoms
 
         Parameters
@@ -5226,8 +5223,8 @@ class Molecule(FrozenMolecule):
         formal_charge: int,
         is_aromatic: bool,
         stereochemistry: Literal["R", "S", None] = None,
-        name: Optional[str] = None,
-        metadata: Optional[dict[str, Union[int, str]]] = None,
+        name: str | None = None,
+        metadata: dict[str, int | str] | None = None,
     ) -> int:
         """
         Add an atom to the molecule.
@@ -5292,7 +5289,7 @@ class Molecule(FrozenMolecule):
         bond_order: int,
         is_aromatic: bool,
         stereochemistry: Literal["E", "Z", None] = None,
-        fractional_bond_order: Optional[float] = None,
+        fractional_bond_order: float | None = None,
     ) -> int:
         """
         Add a bond between two specified atom indices
@@ -5525,7 +5522,7 @@ class Molecule(FrozenMolecule):
 
     def perceive_residues(
         self,
-        substructure_file_path: Optional[str] = None,
+        substructure_file_path: str | None = None,
         strict_chirality: bool = True,
     ):
         """
@@ -5812,7 +5809,7 @@ class HierarchyScheme:
 
         Keys and values align with parameters used to initialize the :class:`HierarchyScheme` class.
         """
-        return_dict: dict[str, Union[str, Sequence[Union[str, int, dict]]]] = dict()
+        return_dict: dict[str, str | Sequence[str | int | dict]] = dict()
         return_dict["uniqueness_criteria"] = self.uniqueness_criteria
         return_dict["iterator_name"] = self.iterator_name
         return_dict["hierarchy_elements"] = [e.to_dict() for e in self.hierarchy_elements]

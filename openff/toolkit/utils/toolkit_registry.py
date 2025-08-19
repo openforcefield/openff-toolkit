@@ -4,8 +4,8 @@ __all__ = ("ToolkitRegistry", "toolkit_registry_manager")
 
 import inspect
 import logging
+from collections.abc import Callable
 from contextlib import contextmanager
-from typing import Callable, Optional, Union
 
 from openff.toolkit.utils.ambertools_wrapper import AmberToolsToolkitWrapper
 from openff.toolkit.utils.base_wrapper import ToolkitWrapper
@@ -79,7 +79,7 @@ class ToolkitRegistry:
 
     def __init__(
         self,
-        toolkit_precedence: Optional[list[type[ToolkitWrapper]]] = None,
+        toolkit_precedence: list[type[ToolkitWrapper]] | None = None,
         exception_if_unavailable: bool = True,
         _register_imported_toolkit_wrappers: bool = False,
     ):
@@ -165,7 +165,7 @@ class ToolkitRegistry:
         self,
         method_name: str,
         *args,
-        raise_exception_types: Optional[list[type[Exception]]] = None,
+        raise_exception_types: list[type[Exception]] | None = None,
         **kwargs,
     ):
         """
@@ -284,7 +284,7 @@ class ToolkitRegistry:
 
     def register_toolkit(
         self,
-        toolkit_wrapper: Union[ToolkitWrapper, type[ToolkitWrapper]],
+        toolkit_wrapper: ToolkitWrapper | type[ToolkitWrapper],
         exception_if_unavailable: bool = True,
     ):
         """
@@ -458,7 +458,7 @@ class ToolkitRegistry:
 # Copied from https://github.com/openforcefield/openff-fragmenter/blob/4a290b866a8ed43eabcbd3231c62b01f0c6d7df6
 # /openff/fragmenter/utils.py#L97-L123
 @contextmanager
-def toolkit_registry_manager(toolkit_registry: Union[ToolkitRegistry, ToolkitWrapper]):
+def toolkit_registry_manager(toolkit_registry: ToolkitRegistry | ToolkitWrapper):
     """
     A context manager that temporarily changes the :py:data:`GLOBAL_TOOLKIT_REGISTRY`.
 
