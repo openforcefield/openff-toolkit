@@ -2550,7 +2550,7 @@ class FrozenMolecule(Serializable):
 
     def assign_partial_charges(
         self,
-        partial_charge_method: str,
+        partial_charge_method: str | pathlib.Path,
         strict_n_conformers: bool = False,
         use_conformers: Optional[Iterable[Quantity]] = None,
         toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
@@ -2651,8 +2651,9 @@ class FrozenMolecule(Serializable):
         openff.toolkit.utils.toolkits.AmberToolsToolkitWrapper.assign_partial_charges
         openff.toolkit.utils.toolkits.BuiltInToolkitWrapper.assign_partial_charges
         """
+        # https://github.com/openforcefield/openff-nagl-models/issues/69
         if isinstance(partial_charge_method, pathlib.Path):
-            partial_charge_method = partial_charge_method.as_posix()
+            partial_charge_method = partial_charge_method.name
 
         # Raise a warning when users try to apply these charge methods to "large" molecules
         WARN_LARGE_MOLECULES: set[str] = {

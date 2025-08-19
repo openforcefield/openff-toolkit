@@ -112,7 +112,9 @@ class NAGLToolkitWrapper(ToolkitWrapper):
             if the charge method is supported by this toolkit, but fails
         """
         from openff.nagl import GNNModel
-        from openff.nagl_models._dynamic_fetch import get_model
+        from openff.nagl_models._dynamic_fetch import HashComparisonFailedException, get_model
+
+        assert type(partial_charge_method) is str, "partial_charge_method must be a string"
 
         if partial_charge_method == "" or partial_charge_method == "None":
             raise FileNotFoundError(
@@ -144,7 +146,23 @@ class NAGLToolkitWrapper(ToolkitWrapper):
                 stacklevel=2,
             )
 
-        model_path = get_model(filename=partial_charge_method, doi=doi, file_hash=file_hash)
+        try:
+            model_path = get_model(
+                filename=partial_charge_method,
+                doi=doi,
+                file_hash=file_hash,
+            )
+        except HashComparisonFailedException as hash_error:
+            # https://github.com/openforcefield/openff-nagl-models/issues/68
+            if "/" in partial_charge_method:
+                try:
+                    model_path = get_model(
+                        filename=pathlib.Path(partial_charge_method).name,
+                        doi=doi,
+                        file_hash=file_hash,
+                    )
+                except Exception as inner_error:
+                    raise inner_error from hash_error
 
         model = GNNModel.load(model_path, eval_mode=True)
         charges = model.compute_property(

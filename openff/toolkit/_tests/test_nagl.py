@@ -5,6 +5,7 @@ import numpy
 import pytest
 from openff.utilities import has_package, skip_if_missing
 
+from openff.nagl_models import get_models_by_type
 from openff.nagl_models._dynamic_fetch import BadFileSuffixError
 from openff.toolkit import Molecule, unit
 from openff.toolkit._tests.create_molecules import (
@@ -67,7 +68,7 @@ class TestNAGLToolkitWrapper:
             case str:
                 nagl_model = str(nagl_model)
 
-        assert isinstance(nagl_model, input_type)
+        assert isinstance(nagl_model, input_type), (nagl_model, input_type)
 
         molecule = molecule_function()
 
@@ -95,6 +96,22 @@ class TestNAGLToolkitWrapper:
             nagl_charges,
             atol=0.07,
         )
+
+    def assign_am1bcc_from_get_model(self):
+        ethanol = create_ethanol()
+        ethanol.assign_partial_charges(
+            partial_charge_method=get_models_by_type("am1bcc")[-1],
+        )
+
+        NAGLToolkitWrapper().assign_partial_charges(
+            ethanol,
+            partial_charge_method=get_models_by_type("am1bcc")[-1],
+        )
+
+    @pytest.mark.parametrize("partial_charge_method", get_models_by_type("am1bcc"))
+    def assign_from_molecule_with_helper(self, partial_charge_method):
+        ethanol = create_ethanol()
+        ethanol.assign_partial_charges(partial_charge_method)
 
     def test_atom_order_dependence(self):
         """Regression test against atom order dependence."""
