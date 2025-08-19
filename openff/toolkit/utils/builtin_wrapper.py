@@ -4,7 +4,7 @@ Built-in ToolkitWrapper for very basic functionality. Intended for testing and n
 
 __all__ = ("BuiltInToolkitWrapper",)
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from openff.toolkit import Quantity, unit
 from openff.toolkit.utils import base_wrapper
@@ -40,11 +40,11 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
     def assign_partial_charges(
         self,
         molecule: "FrozenMolecule",
-        partial_charge_method: Optional[str] = None,
-        use_conformers: Optional[Quantity] = None,
+        partial_charge_method: str | None = None,
+        use_conformers: Quantity | None = None,
         strict_n_conformers: bool = False,
         normalize_partial_charges: bool = True,
-        _cls: Optional[type] = None,
+        _cls: type | None = None,
     ):
         """
 

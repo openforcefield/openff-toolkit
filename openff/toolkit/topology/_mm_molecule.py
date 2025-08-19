@@ -12,7 +12,7 @@ TypedMolecule TODOs
 
 import functools
 from collections.abc import Generator, Iterable
-from typing import TYPE_CHECKING, NoReturn, Optional, Union
+from typing import TYPE_CHECKING, NoReturn, Union
 
 from openff.units.elements import MASSES, SYMBOLS
 
@@ -62,7 +62,7 @@ class _SimpleMolecule:
         self.bonds.append(bond)
 
     @property
-    def conformers(self) -> Optional[list["Quantity"]]:
+    def conformers(self) -> list["Quantity"] | None:
         return self._conformers
 
     def add_conformer(self, conformer):
@@ -457,7 +457,7 @@ class _SimpleMolecule:
         mol1: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"],
         mol2: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"],
         return_atom_map: bool = False,
-    ) -> tuple[bool, Optional[dict[int, int]]]:
+    ) -> tuple[bool, dict[int, int] | None]:
         import networkx
 
         _cls = _SimpleMolecule
@@ -540,8 +540,8 @@ class _SimpleAtom:
     def __init__(
         self,
         atomic_number: int,
-        molecule: Optional[_SimpleMolecule] = None,
-        metadata: Optional[AtomMetadataDict] = None,
+        molecule: _SimpleMolecule | None = None,
+        metadata: AtomMetadataDict | None = None,
         name: str = "",
         **kwargs,
     ):
@@ -609,8 +609,8 @@ class _SimpleAtom:
     def molecule_atom_index(self) -> int:
         return self.molecule.atoms.index(self)
 
-    def to_dict(self) -> dict[str, Union[dict, str, int]]:
-        atom_dict: dict[str, Union[dict, str, int]] = dict()
+    def to_dict(self) -> dict[str, dict | str | int]:
+        atom_dict: dict[str, dict | str | int] = dict()
         atom_dict["metadata"] = dict(self.metadata)
         atom_dict["atomic_number"] = self._atomic_number
         atom_dict["name"] = self._name

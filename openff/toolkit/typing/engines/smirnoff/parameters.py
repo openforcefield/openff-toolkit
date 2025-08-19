@@ -59,7 +59,8 @@ import inspect
 import logging
 import re
 from collections import defaultdict
-from typing import Any, Callable, Literal, Optional, Union, cast, get_args
+from collections.abc import Callable
+from typing import Any, Literal, Union, cast, get_args
 
 import numpy
 from openff.units.units import Unit
@@ -204,7 +205,7 @@ def _allow_only(allowed_values):
     return _value_checker
 
 
-def _validate_units(attr, value: Union[str, Quantity], units: Unit):
+def _validate_units(attr, value: str | Quantity, units: Unit):
     value = object_to_quantity(value)
 
     try:
@@ -334,8 +335,8 @@ class ParameterAttribute:
     def __init__(
         self,
         default: Any = UNDEFINED,
-        unit: Union[Unit, str, None] = None,
-        converter: Optional[Callable] = None,
+        unit: Unit | str | None = None,
+        converter: Callable | None = None,
         docstring: str = "",
     ):
         if isinstance(unit, str):
@@ -928,7 +929,7 @@ class _ParameterAttributeHandler:
 
         return smirnoff_data, indexed_mapped_attr_lengths
 
-    def _process_indexed_attributes(self, smirnoff_data: dict, indexed_attr_lengths: Optional[dict] = None) -> dict:
+    def _process_indexed_attributes(self, smirnoff_data: dict, indexed_attr_lengths: dict | None = None) -> dict:
         # Check for indexed attributes and stack them into a list.
         # Keep track of how many indexed attribute we find to make sure they all have the same length.
 
@@ -985,7 +986,7 @@ class _ParameterAttributeHandler:
     def to_dict(
         self,
         discard_cosmetic_attributes: bool = False,
-        duplicate_attributes: Optional[list[str]] = None,
+        duplicate_attributes: list[str] | None = None,
     ) -> dict[str, dict | list | str]:
         """
         Convert this object to dict format.
@@ -1193,7 +1194,7 @@ class _ParameterAttributeHandler:
         return attr_name in self._cosmetic_attribs
 
     @staticmethod
-    def _split_attribute_index(item: str) -> tuple[str, Optional[int]]:
+    def _split_attribute_index(item: str) -> tuple[str, int | None]:
         """Split the attribute name from the final index.
 
         For example, the method takes 'k2' and returns the tuple ('k', 1).
@@ -1213,7 +1214,7 @@ class _ParameterAttributeHandler:
     @staticmethod
     def _split_attribute_index_mapping(
         item: str,
-    ) -> tuple[str, Optional[int], Optional[int]]:
+    ) -> tuple[str, int | None, int | None]:
         """Split the attribute name from the final index.
 
         For example, the method takes 'k1_bondorder2' and returns the tuple ('k_bondorder', 0, 2).
@@ -1248,7 +1249,7 @@ class _ParameterAttributeHandler:
         return attr_name, index, key
 
     @staticmethod
-    def _split_attribute_mapping(item: str) -> tuple[str, Optional[int]]:
+    def _split_attribute_mapping(item: str) -> tuple[str, int | None]:
         """Split the attribute name from the and its mapping.
 
         For example, the method takes 'k_foo2' and returns the tuple ('k_foo', 2).
@@ -1384,7 +1385,7 @@ class ParameterList(list):
 
     def __init__(
         self,
-        input_parameter_list: Optional[list["ParameterType"]] = None,
+        input_parameter_list: list["ParameterType"] | None = None,
     ):
         """
         Initialize a new ParameterList, optionally providing a list of ParameterType objects
@@ -1510,7 +1511,7 @@ class ParameterList(list):
             SMIRKS or numerical index of item in this ParameterList
         """
         if type(item) in (int, slice):
-            indexable_item: Union[int, slice] = item  # type: ignore[assignment]
+            indexable_item: int | slice = item  # type: ignore[assignment]
         elif isinstance(item, str):
             indexable_item = self.index(item)
         elif isinstance(item, ParameterType) or issubclass(type(item), ParameterType):
@@ -1566,7 +1567,7 @@ class ParameterList(list):
 
 class VirtualSiteParameterList(ParameterList):
     def __getitem__(self, val: Union[int, slice, str, "ParameterType"]):  # type: ignore[override]
-        indexable_item: Union[int, slice]
+        indexable_item: int | slice
 
         if isinstance(val, int):
             indexable_item = val
@@ -1708,7 +1709,7 @@ class ParameterType(_ParameterAttributeHandler):
     """  # noqa: E501
 
     # The string mapping to this ParameterType in a SMIRNOFF data source
-    _ELEMENT_NAME: Optional[str] = None
+    _ELEMENT_NAME: str | None = None
 
     # Parameter attributes shared among all parameter types.
     smirks = ParameterAttribute()
@@ -1763,11 +1764,11 @@ class ParameterHandler(_ParameterAttributeHandler):
     """
 
     # str of section type handled by this ParameterHandler (XML element name for SMIRNOFF XML representation)
-    _TAGNAME: Optional[str] = None
+    _TAGNAME: str | None = None
     # container class with type information that will be stored in self._parameters
-    _INFOTYPE: Optional[Any] = None
+    _INFOTYPE: Any | None = None
     # list of ParameterHandler classes that must precede this, or None
-    _DEPENDENCIES: Optional[Any] = None
+    _DEPENDENCIES: Any | None = None
 
     # Kwargs to catch when create_force is called
     _KWARGS: list[str] = []
@@ -1796,7 +1797,7 @@ class ParameterHandler(_ParameterAttributeHandler):
             pass
         elif isinstance(new_version, str):
             new_version = Version(new_version)
-        elif isinstance(new_version, (float, int)):
+        elif isinstance(new_version, float | int):
             new_version = Version(str(new_version))
         else:
             raise ValueError(f"Could not convert type {type(new_version)}")
@@ -1912,9 +1913,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         """
         pass
 
-    def _index_of_parameter(
-        self, parameter: Optional[ParameterType] = None, key: Optional[Any] = None
-    ) -> Optional[int]:
+    def _index_of_parameter(self, parameter: ParameterType | None = None, key: Any | None = None) -> int | None:
         """Attempts to find the index of a parameter in the parameters list.
 
         By default, two parameters are considered 'the same' if they have the same
@@ -1950,10 +1949,10 @@ class ParameterHandler(_ParameterAttributeHandler):
     # TODO: Can we ensure SMIRKS and other parameters remain valid after manipulation?
     def add_parameter(
         self,
-        parameter_kwargs: Optional[dict] = None,
-        parameter: Optional[ParameterType] = None,
-        after: Union[int, str, None] = None,
-        before: Union[int, str, None] = None,
+        parameter_kwargs: dict | None = None,
+        parameter: ParameterType | None = None,
+        after: int | str | None = None,
+        before: int | str | None = None,
         allow_duplicate_smirks: bool = False,
     ):
         """Add a parameter to the force field, ensuring all parameters are valid.
@@ -2010,7 +2009,7 @@ class ParameterHandler(_ParameterAttributeHandler):
         ['b1', 'b2', 'b4', 'b3']
         """
         for val in [before, after]:
-            if val and not isinstance(val, (str, int)):
+            if val and not isinstance(val, str | int):
                 raise TypeError
 
         # If a dict was passed, construct it; if a ParameterType was passed, do nothing
@@ -2252,7 +2251,7 @@ class ParameterHandler(_ParameterAttributeHandler):
     def to_dict(
         self,
         discard_cosmetic_attributes: bool = False,
-        duplciate_attributes: Optional[list[str]] = None,
+        duplciate_attributes: list[str] | None = None,
     ) -> dict[str, dict | list | str]:
         """
         Convert this ParameterHandler to a dict, compliant with the SMIRNOFF data spec.
@@ -3584,7 +3583,7 @@ class _BaseVirtualSiteType(ParameterType):
         raise NotImplementedError()
 
     @classmethod
-    def _supports_match(cls, type_: _VirtualSiteType, match: str, is_in_plane: Optional[bool] = None) -> bool:
+    def _supports_match(cls, type_: _VirtualSiteType, match: str, is_in_plane: bool | None = None) -> bool:
         is_in_plane = True if is_in_plane is None else is_in_plane
 
         if match == "once":
@@ -3700,9 +3699,9 @@ class VirtualSiteHandler(_NonbondedHandler):
 
     def _index_of_parameter(
         self,
-        parameter: Optional[ParameterType] = None,
-        key: Optional[Any] = None,
-    ) -> Optional[int]:
+        parameter: ParameterType | None = None,
+        key: Any | None = None,
+    ) -> int | None:
         """Attempts to find the index of a parameter in the parameters list.
         By default, two parameters are considered 'the same' if they have the same
         SMIRKS pattern, type, and name.

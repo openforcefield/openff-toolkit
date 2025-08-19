@@ -5,7 +5,7 @@ Base class for toolkit wrappers. Defines the public API and some shared methods
 __all__ = ("ToolkitWrapper",)
 
 from functools import wraps
-from typing import TYPE_CHECKING, Optional, TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
@@ -44,10 +44,10 @@ class ToolkitWrapper:
 
     """
 
-    _is_available: Optional[bool] = None  # True if toolkit is available
-    _toolkit_version: Optional[str] = None
-    _toolkit_name: Optional[str] = None  # Name of the toolkit
-    _toolkit_installation_instructions: Optional[str] = None  # Installation instructions for the toolkit
+    _is_available: bool | None = None  # True if toolkit is available
+    _toolkit_version: str | None = None
+    _toolkit_name: str | None = None  # Name of the toolkit
+    _toolkit_installation_instructions: str | None = None  # Installation instructions for the toolkit
     _supported_charge_methods: dict[str, _ChargeSettings] = dict()
     _toolkit_file_read_formats: list[str] = list()
     _toolkit_file_write_formats: list[str] = list()
@@ -193,9 +193,9 @@ class ToolkitWrapper:
     def _check_n_conformers(
         self,
         molecule: "Molecule",
-        partial_charge_method: Optional[str] = None,
-        min_confs: Optional[int] = None,
-        max_confs: Optional[int] = None,
+        partial_charge_method: str | None = None,
+        min_confs: int | None = None,
+        max_confs: int | None = None,
         strict_n_conformers: bool = False,
     ):
         """

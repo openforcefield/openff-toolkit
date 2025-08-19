@@ -13,7 +13,6 @@ __all__ = [
 ]
 import logging
 from collections.abc import Iterable
-from typing import Optional
 
 import xmltodict
 
@@ -188,7 +187,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
         def prepend_all_keys(
             d: dict,
-            char: Optional[str] = "@",
+            char: str | None = "@",
             ignore_keys: Iterable[str] = frozenset(),
         ):
             """

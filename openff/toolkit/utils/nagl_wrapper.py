@@ -1,7 +1,7 @@
 import importlib
 import pathlib
 import warnings
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from openff.toolkit import Quantity, unit
 from openff.toolkit.utils.base_wrapper import ToolkitWrapper
@@ -62,12 +62,12 @@ class NAGLToolkitWrapper(ToolkitWrapper):
         self,
         molecule: "Molecule",
         partial_charge_method: str,
-        use_conformers: Optional[list["Quantity"]] = None,
+        use_conformers: list["Quantity"] | None = None,
         strict_n_conformers: bool = False,
         normalize_partial_charges: bool = True,
-        doi: Optional[str] = None,
-        file_hash: Optional[str] = None,
-        _cls: Optional[type["FrozenMolecule"]] = None,
+        doi: str | None = None,
+        file_hash: str | None = None,
+        _cls: type["FrozenMolecule"] | None = None,
     ):
         """
         Compute partial charges with NAGL and store in ``self.partial_charges``

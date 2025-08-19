@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 from collections import defaultdict
 from shutil import which
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -102,8 +102,8 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
     def assign_partial_charges(
         self,
         molecule: "Molecule",
-        partial_charge_method: Optional[str] = None,
-        use_conformers: Optional[list[Quantity]] = None,
+        partial_charge_method: str | None = None,
+        use_conformers: list[Quantity] | None = None,
         strict_n_conformers: bool = False,
         normalize_partial_charges: bool = True,
         _cls=None,
@@ -384,8 +384,8 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
     def assign_fractional_bond_orders(
         self,
         molecule: "Molecule",
-        bond_order_model: Optional[str] = None,
-        use_conformers: Optional[list[str]] = None,
+        bond_order_model: str | None = None,
+        use_conformers: list[str] | None = None,
         _cls=None,
     ):
         """

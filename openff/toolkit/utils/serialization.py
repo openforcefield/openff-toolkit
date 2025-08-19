@@ -432,9 +432,9 @@ def _contains_bytes(val) -> bool:
         return False
     elif isinstance(val, bytes):
         return True
-    elif isinstance(val, (int, float, str, bool)):
+    elif isinstance(val, int | float | str | bool):
         return False
-    elif isinstance(val, (list, tuple)):
+    elif isinstance(val, list | tuple):
         return any([_contains_bytes(x) for x in val])
     elif isinstance(val, dict):
         return any([_contains_bytes(x) for x in val.values()])
@@ -455,7 +455,7 @@ def _prep_numpy_data_for_json(data: dict) -> dict:
             data[key] = _prep_numpy_data_for_json(val)
         if isinstance(val, bytes):
             data[key] = np.frombuffer(val, dtype=big_endian_float).tolist()
-        if isinstance(val, (list, tuple)):
+        if isinstance(val, list | tuple):
             for i, element in enumerate(val):
                 if isinstance(element, bytes):
                     # Handles case of list[np.array], like Molecule.conformers
