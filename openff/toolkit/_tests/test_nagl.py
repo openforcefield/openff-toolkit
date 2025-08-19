@@ -97,7 +97,7 @@ class TestNAGLToolkitWrapper:
             atol=0.07,
         )
 
-    def assign_am1bcc_from_get_model(self):
+    def test_assign_am1bcc_from_full_path(self):
         ethanol = create_ethanol()
         ethanol.assign_partial_charges(
             partial_charge_method=get_models_by_type("am1bcc")[-1],

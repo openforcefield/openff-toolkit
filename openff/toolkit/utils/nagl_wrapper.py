@@ -61,7 +61,7 @@ class NAGLToolkitWrapper(ToolkitWrapper):
     def assign_partial_charges(
         self,
         molecule: "Molecule",
-        partial_charge_method: str,
+        partial_charge_method: pathlib.Path | str,
         use_conformers: Optional[list["Quantity"]] = None,
         strict_n_conformers: bool = False,
         normalize_partial_charges: bool = True,
@@ -114,7 +114,8 @@ class NAGLToolkitWrapper(ToolkitWrapper):
         from openff.nagl import GNNModel
         from openff.nagl_models._dynamic_fetch import HashComparisonFailedException, get_model
 
-        assert type(partial_charge_method) is str, "partial_charge_method must be a string"
+        if isinstance(partial_charge_method, pathlib.Path):
+            partial_charge_method = partial_charge_method.as_posix()
 
         if partial_charge_method == "" or partial_charge_method == "None":
             raise FileNotFoundError(
