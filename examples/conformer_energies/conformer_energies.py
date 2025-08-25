@@ -8,23 +8,19 @@ from openff.toolkit.utils import get_data_file_path
 
 
 def compute_conformer_energies_from_file(filename):
-    # Load in the molecule and its conformers.
-    # Note that all conformers of the same molecule are loaded as separate Molecule objects
-    # If using a OFF Toolkit version before 0.7.0, loading SDFs through RDKit and OpenEye may provide
-    # different behavior in some cases. So, here we force loading through RDKit to ensure the correct behavior
+    # First, load conformers from an SDF file.
     loaded_molecules = Molecule.from_file(
         get_data_file_path("molecules/ruxolitinib_conformers.sdf"),
     )
-    # The logic below only works for lists of molecules, so if a
-    # single molecule was loaded, cast it to list
+
+    # Normalize to list
     try:
         loaded_molecules = [*loaded_molecules]
     except TypeError:
         loaded_molecules = [loaded_molecules]
 
-    # Collatate all conformers of the same molecule
-    # NOTE: This isn't necessary if you have already loaded or created multi-conformer molecules;
-    # it is just needed because our SDF reader does not automatically collapse conformers.
+    # from_file loads each entry in the SDF into its own molecule,
+    # so collapse conformers into the same molecule
     molecule = loaded_molecules.pop(0)
     for next_molecule in loaded_molecules:
         if next_molecule == molecule:
