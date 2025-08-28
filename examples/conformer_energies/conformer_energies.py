@@ -1,30 +1,26 @@
 import argparse
 
-import openmm
-from openff.interchange import Interchange
-from openff.units.openmm import from_openmm
+from openff.interchange.drivers.openmm import get_openmm_energies
 from rdkit.Chem import rdMolAlign
 
-from openff.toolkit import ForceField, Molecule, RDKitToolkitWrapper
+from openff.toolkit import ForceField, Molecule
+from openff.toolkit.utils import get_data_file_path
 
 
 def compute_conformer_energies_from_file(filename):
-    # Load in the molecule and its conformers.
-    # Note that all conformers of the same molecule are loaded as separate Molecule objects
-    # If using a OFF Toolkit version before 0.7.0, loading SDFs through RDKit and OpenEye may provide
-    # different behavior in some cases. So, here we force loading through RDKit to ensure the correct behavior
-    rdktkw = RDKitToolkitWrapper()
-    loaded_molecules = Molecule.from_file(filename, toolkit_registry=rdktkw)
-    # The logic below only works for lists of molecules, so if a
-    # single molecule was loaded, cast it to list
+    # First, load conformers from an SDF file.
+    loaded_molecules = Molecule.from_file(
+        get_data_file_path("molecules/ruxolitinib_conformers.sdf"),
+    )
+
+    # Normalize to list
     try:
         loaded_molecules = [*loaded_molecules]
     except TypeError:
         loaded_molecules = [loaded_molecules]
 
-    # Collatate all conformers of the same molecule
-    # NOTE: This isn't necessary if you have already loaded or created multi-conformer molecules;
-    # it is just needed because our SDF reader does not automatically collapse conformers.
+    # from_file loads each entry in the SDF into its own molecule,
+    # so collapse conformers into the same molecule
     molecule = loaded_molecules.pop(0)
     for next_molecule in loaded_molecules:
         if next_molecule == molecule:
@@ -45,13 +41,12 @@ def compute_conformer_energies_from_file(filename):
         + f" ({molecule.name})"
     )
 
-    # Load the openff-2.1.0 force field appropriate for vacuum calculations (without constraints)
-    forcefield = ForceField("openff_unconstrained-2.1.0.offxml")
+    # Load the openff-2.2.1 force field appropriate for vacuum calculations (without constraints)
+    forcefield = ForceField("openff_unconstrained-2.2.1.offxml")
+    # Create an Interchange object, which stores the result of parametrizing with this force field
     print(f"Parametrizing {molecule.name} (may take a moment to calculate charges)...")
-    interchange = Interchange.from_smirnoff(forcefield, [molecule])
+    interchange = forcefield.create_interchange(molecule.to_topology())
     print("Done.")
-    integrator = openmm.VerletIntegrator(1 * openmm.unit.femtoseconds)
-    simulation = interchange.to_openmm_simulation(integrator)
 
     # We'll store energies in two lists
     initial_energies = []
@@ -62,20 +57,18 @@ def compute_conformer_energies_from_file(filename):
     minimized_molecule.conformers.clear()
 
     for conformer in molecule.conformers:
-        # Tell the OpenMM Simulation the positions of this conformer
-        simulation.context.setPositions(conformer.to_openmm())
+        # Use this conformer to update the positions of the Interchange object
+        interchange.positions = conformer
 
-        # Keep a record of the initial energy
-        initial_energies.append(simulation.context.getState(getEnergy=True).getPotentialEnergy())
+        # Get the (total) initial energy from this conformer and store it
+        initial_energies.append(get_openmm_energies(interchange).total_energy)
 
-        # Perform the minimization
-        simulation.minimizeEnergy()
+        # Minimize using Interchange.minimize, which wraps OpenMM
+        interchange.minimize(engine="openmm")
 
         # Record minimized energy and positions
-        min_state = simulation.context.getState(getEnergy=True, getPositions=True)
-
-        minimized_energies.append(min_state.getPotentialEnergy())
-        minimized_molecule.add_conformer(from_openmm(min_state.getPositions()))
+        minimized_energies.append(get_openmm_energies(interchange).total_energy)
+        minimized_molecule.add_conformer(interchange.positions.to("angstrom"))
 
     n_confs = molecule.n_conformers
     print(f"{molecule.name}: {n_confs} conformers")
@@ -122,8 +115,8 @@ def compute_conformer_energies_from_file(filename):
         output.append(
             [
                 i + 1,
-                init_energy.value_in_unit(openmm.unit.kilocalories_per_mole),
-                min_energy.value_in_unit(openmm.unit.kilocalories_per_mole),
+                init_energy.m_as("kilocalories_per_mole"),
+                min_energy.m_as("kilocalories_per_mole"),
                 minimization_rms,
             ]
         )
