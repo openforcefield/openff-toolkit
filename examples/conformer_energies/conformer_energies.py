@@ -58,7 +58,7 @@ def compute_conformer_energies_from_file(filename):
 
     for conformer in molecule.conformers:
         # Use this conformer to update the positions of the Interchange object
-        interchange.positions = conformer.to("nanometer")
+        interchange.positions = conformer
 
         # Get the (total) initial energy from this conformer and store it
         initial_energies.append(get_openmm_energies(interchange).total_energy)
