@@ -14,7 +14,7 @@ import pathlib
 import tempfile
 import warnings
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from cachetools import LRUCache, cached
@@ -289,7 +289,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         pdbfile,
         substructure_dictionary,
         coords_angstrom,
-        _custom_substructures: Optional[dict[str, list[str]]] = None,
+        _custom_substructures: dict[str, list[str]] | None = None,
     ):
         import json
 
@@ -1538,7 +1538,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         self,
         molecule: "Molecule",
         n_conformers: int = 1,
-        rms_cutoff: Optional[Quantity] = None,
+        rms_cutoff: Quantity | None = None,
         clear_existing: bool = True,
         _cls=None,
         make_carboxylic_acids_cis: bool = False,
@@ -1616,8 +1616,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     def assign_partial_charges(
         self,
         molecule: "Molecule",
-        partial_charge_method: Optional[str] = None,
-        use_conformers: Optional[list[Quantity]] = None,
+        partial_charge_method: str | None = None,
+        use_conformers: list[Quantity] | None = None,
         strict_n_conformers: bool = False,
         normalize_partial_charges: bool = True,
         _cls=None,
@@ -1695,7 +1695,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         cls,
         molecule: "Molecule",
         conformer: Quantity,
-    ) -> tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """A function which checks if a particular conformer is known to be problematic
         when computing ELF partial charges.
 
