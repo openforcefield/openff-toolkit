@@ -14,6 +14,7 @@ from packaging.version import Version
 from openff.toolkit import ForceField, Molecule, Quantity, Topology, unit
 from openff.toolkit._tests.mocking import VirtualSiteMocking
 from openff.toolkit._tests.utils import does_not_raise
+from openff.toolkit.typing.engines.smirnoff import NAGLChargesHandler
 from openff.toolkit.typing.engines.smirnoff.parameters import (
     AngleHandler,
     BondHandler,
@@ -84,9 +85,7 @@ class TestParameterAttribute:
         """ParameterAttributes attached to a unit are validated correctly."""
 
         class MyParameter:
-            attr_unit = ParameterAttribute(
-                unit=unit.kilocalorie / unit.mole / unit.angstrom**2
-            )
+            attr_unit = ParameterAttribute(unit=unit.kilocalorie / unit.mole / unit.angstrom**2)
 
         my_par = MyParameter()
 
@@ -140,32 +139,21 @@ class TestParameterAttribute:
 
         # Both strings and integers are converted to floats when casted with float().
         my_par.attr_all_to_float = "1.0"
-        assert (
-            isinstance(my_par.attr_all_to_float, float)
-            and my_par.attr_all_to_float == 1.0
-        )
+        assert isinstance(my_par.attr_all_to_float, float) and my_par.attr_all_to_float == 1.0
         my_par.attr_all_to_float = 2
-        assert (
-            isinstance(my_par.attr_all_to_float, float)
-            and my_par.attr_all_to_float == 2.0
-        )
+        assert isinstance(my_par.attr_all_to_float, float) and my_par.attr_all_to_float == 2.0
 
         # Only integers are converted with the custom converter function.
         with pytest.raises(TypeError):
             my_par.attr_int_to_float = "1.0"
         my_par.attr_int_to_float = 2
-        assert (
-            isinstance(my_par.attr_int_to_float, float)
-            and my_par.attr_int_to_float == 2.0
-        )
+        assert isinstance(my_par.attr_int_to_float, float) and my_par.attr_int_to_float == 2.0
 
     def test_default_pass_validation(self):
         """The default value of ParameterAttribute is always allowed regardless of the validator/converter."""
 
         class MyParameter:
-            attr = ParameterAttribute(
-                default=None, unit=unit.angstrom, converter=unit.Quantity
-            )
+            attr = ParameterAttribute(default=None, unit=unit.angstrom, converter=unit.Quantity)
 
         my_par = MyParameter()
         my_par.attr = 3.0 * unit.nanometer
@@ -295,9 +283,7 @@ class TestInterpolation:
         ("fractional_bond_order", "k_interpolated"),
         [(1.6, 1.48), (0.7, 0.76), (2.3, 2.01), (3.1, 2.57)],
     )
-    def test_linear_inter_or_extrapolate_3_terms(
-        self, fractional_bond_order, k_interpolated
-    ):
+    def test_linear_inter_or_extrapolate_3_terms(self, fractional_bond_order, k_interpolated):
         """Test that linear interpolation works as expected for three terms"""
         k_bondorder = {
             1: 1 * unit.kilocalorie / unit.mole,
@@ -343,13 +329,9 @@ class TestParameterAttributeHandler:
         assert my_parameter.k == [1, 5, 3]
 
         # Accessing k4 raises an index error.
-        with pytest.raises(
-            IndexError, match="'k4' is out of bounds for indexed attribute 'k'"
-        ):
+        with pytest.raises(IndexError, match="'k4' is out of bounds for indexed attribute 'k'"):
             my_parameter.k4
-        with pytest.raises(
-            IndexError, match="'k4' is out of bounds for indexed attribute 'k'"
-        ):
+        with pytest.raises(IndexError, match="'k4' is out of bounds for indexed attribute 'k'"):
             my_parameter.k4 = 2
 
         # For other attributes, the behavior is normal.
@@ -543,9 +525,7 @@ class TestParameterHandler:
         # impossible to add a new parameter after '=' *and* before '-'
         with pytest.raises(ValueError):
             # Test invalid parameter order by SMIRKS
-            bh.add_parameter(
-                dict_to_add_by_smirks, after="[*:1]=[*:2]", before="[*:1]-[*:2]"
-            )
+            bh.add_parameter(dict_to_add_by_smirks, after="[*:1]=[*:2]", before="[*:1]-[*:2]")
 
         with pytest.raises(ValueError):
             # Test invalid parameter order by index
@@ -624,12 +604,8 @@ class TestParameterHandler:
             }
         )
         bh_dict = bh.to_dict()
-        assert bh_dict["Bond"][0]["length"] == unit.Quantity(
-            value=1, units=unit.angstrom
-        )
-        assert bh_dict["Bond"][1]["length"] == unit.Quantity(
-            value=2, units=unit.angstrom
-        )
+        assert bh_dict["Bond"][0]["length"] == unit.Quantity(value=1, units=unit.angstrom)
+        assert bh_dict["Bond"][1]["length"] == unit.Quantity(value=2, units=unit.angstrom)
 
     def test_to_dict_maintain_units(self):
         """Test ParameterHandler.to_dict() function when parameters were provided in different units"""
@@ -657,9 +633,7 @@ class TestParameterHandler:
     def test_missing_section_version(self):
         """Test that exceptions are raised if invalid or improper section versions are provided during intialization"""
         # Generate a SMIRNOFFSpecError by not providing a section version
-        with pytest.raises(
-            SMIRNOFFSpecError, match="Missing version while trying to construct"
-        ):
+        with pytest.raises(SMIRNOFFSpecError, match="Missing version while trying to construct"):
             ParameterHandler()
 
         # Successfully create ParameterHandler by skipping version check
@@ -774,9 +748,7 @@ class TestParameterHandler:
         params = bh.get_parameter({"smirks": "[*:1]-[*:2]"})
 
         assert params[0].length == unit.Quantity(1.0, unit.angstrom)
-        assert params[0].k == unit.Quantity(
-            10.0, unit.kilocalorie / unit.mole / unit.angstrom**2
-        )
+        assert params[0].k == unit.Quantity(10.0, unit.kilocalorie / unit.mole / unit.angstrom**2)
 
         # Ensure a query with no matches returns an empty list
         assert not bh.get_parameter({"smirks": "xyz"})
@@ -817,9 +789,7 @@ class TestParameterHandler:
 
         handler = MyParameterHandler(version=0.3)
 
-        with pytest.raises(
-            NotImplementedError, match="no longer create OpenMM forces."
-        ):
+        with pytest.raises(NotImplementedError, match="no longer create OpenMM forces."):
             handler.create_force()
 
 
@@ -847,9 +817,7 @@ class TestParameterList:
         assert parameters.index("[*:1]") == 0
         assert parameters.index("[#1:1]") == 1
         assert parameters.index("[#7:1]") == 2
-        with pytest.raises(
-            ParameterLookupError, match=r"SMIRKS \[#2:1\] not found in ParameterList"
-        ):
+        with pytest.raises(ParameterLookupError, match=r"SMIRKS \[#2:1\] not found in ParameterList"):
             parameters.index("[#2:1]")
 
         p4 = ParameterType(smirks="[#2:1]")
@@ -1033,10 +1001,7 @@ class TestParameterType:
         expected_names = ["indexed", "indexed2"]
         parameter_attributes = MyParameter._get_indexed_parameter_attributes()
         assert list(parameter_attributes.keys()) == expected_names
-        assert all(
-            isinstance(parameter_attributes[name], IndexedParameterAttribute)
-            for name in expected_names
-        )
+        assert all(isinstance(parameter_attributes[name], IndexedParameterAttribute) for name in expected_names)
 
     def test_find_all_required_and_optional_parameter_attrs(self):
         """ParameterType distinguish between required and optional ParameterAttributes."""
@@ -1062,9 +1027,7 @@ class TestParameterType:
             required = ParameterAttribute()
             optional = ParameterAttribute(default=None)
 
-        with pytest.raises(
-            SMIRNOFFSpecError, match="require the following missing parameters"
-        ):
+        with pytest.raises(SMIRNOFFSpecError, match="require the following missing parameters"):
             MyParameter(smirks="[*:1]", optional=1)
 
     def test_add_delete_cosmetic_attributes(self):
@@ -1122,9 +1085,7 @@ class TestParameterType:
             a = IndexedParameterAttribute()
             b = IndexedParameterAttribute()
 
-        with pytest.raises(
-            TypeError, match="indexed attributes have different lengths"
-        ):
+        with pytest.raises(TypeError, match="indexed attributes have different lengths"):
             MyParameter(smirks="[*:1]", a1=1, a2=2, a3=3, b1=1, b2=2)
 
     def test_error_single_value_plus_index(self):
@@ -1133,9 +1094,7 @@ class TestParameterType:
         class MyParameter(ParameterType):
             a = IndexedParameterAttribute()
 
-        with pytest.raises(
-            TypeError, match="'a' has been specified with and without index"
-        ):
+        with pytest.raises(TypeError, match="'a' has been specified with and without index"):
             MyParameter(smirks="[*:1]", a=[1], a1=2)
 
     def test_find_all_defined_parameter_attrs(self):
@@ -1265,9 +1224,7 @@ class TestBondType:
                 k_bondorder2=k2,
             )
 
-        with pytest.raises(
-            SMIRNOFFSpecError, match="Either length or length_bondorder"
-        ):
+        with pytest.raises(SMIRNOFFSpecError, match="Either length or length_bondorder"):
             BondHandler.BondType(
                 smirks="[*:1]-[*:2]",
                 k=k,
@@ -1384,9 +1341,7 @@ class TestBondHandler:
             (2.1, 125.2, 1.29),
         ],
     )
-    def test_linear_interpolate(
-        self, fractional_bond_order, k_interpolated, length_interpolated
-    ):
+    def test_linear_interpolate(self, fractional_bond_order, k_interpolated, length_interpolated):
         """Test that linear interpolation works as expected"""
         k_bondorder = {
             1: 101 * unit.kilocalorie / unit.mole / unit.angstrom**2,
@@ -1531,9 +1486,7 @@ class TestProperTorsionType:
         Test creation and serialization of a multi-term proper torsion where
         the indices are not consecutive and a SMIRNOFFSpecError is raised
         """
-        with pytest.raises(
-            SMIRNOFFSpecError, match=r"Unexpected kwarg \(phase3: 31 deg\)*."
-        ):
+        with pytest.raises(SMIRNOFFSpecError, match=r"Unexpected kwarg \(phase3: 31 deg\)*."):
             ProperTorsionHandler.ProperTorsionType(
                 smirks="[*:1]-[*:2]-[*:3]-[*:4]",
                 phase1=30 * unit.degree,
@@ -1666,9 +1619,7 @@ class TestProperTorsionType:
         the indices are not consecutive and a SMIRNOFFSpecError is raised
         AND we are doing bond order interpolation
         """
-        with pytest.raises(
-            SMIRNOFFSpecError, match=r"Unexpected kwarg \(k3_bondorder1*."
-        ):
+        with pytest.raises(SMIRNOFFSpecError, match=r"Unexpected kwarg \(k3_bondorder1*."):
             ProperTorsionHandler.ProperTorsionType(
                 smirks="[*:1]-[*:2]-[*:3]-[*:4]",
                 phase1=30 * unit.degree,
@@ -1723,9 +1674,7 @@ class TestProperTorsionHandler:
         )
         with pytest.raises(SMIRNOFFSpecError, match=err_msg):
             ProperTorsionHandler(potential="charmm", skip_version_check=True)
-        ProperTorsionHandler(
-            potential="k*(1+cos(periodicity*theta-phase))", skip_version_check=True
-        )
+        ProperTorsionHandler(potential="k*(1+cos(periodicity*theta-phase))", skip_version_check=True)
 
         # Same test, but with ImproperTorsionHandler
         err_msg = re.escape(
@@ -1734,9 +1683,7 @@ class TestProperTorsionHandler:
         )
         with pytest.raises(SMIRNOFFSpecError, match=err_msg):
             ImproperTorsionHandler(potential="charmm", skip_version_check=True)
-        ImproperTorsionHandler(
-            potential="k*(1+cos(periodicity*theta-phase))", skip_version_check=True
-        )
+        ImproperTorsionHandler(potential="k*(1+cos(periodicity*theta-phase))", skip_version_check=True)
 
 
 class TestvdWHandler:
@@ -2012,10 +1959,7 @@ class TestVirtualSiteHandler:
     )
     def test_parent_index(self, parameter, expected_index):
         assert parameter.parent_index == expected_index
-        assert (
-            VirtualSiteHandler.VirtualSiteType.type_to_parent_index(parameter.type)
-            == expected_index
-        )
+        assert VirtualSiteHandler.VirtualSiteType.type_to_parent_index(parameter.type) == expected_index
 
     @pytest.mark.parametrize(
         "kwargs, expected_raises",
@@ -2043,9 +1987,7 @@ class TestVirtualSiteHandler:
                 does_not_raise(),
             ),
             (
-                VirtualSiteMocking.trivalent_parameter(
-                    "[*:1][*:2][*:3][*:4]"
-                ).to_dict(),
+                VirtualSiteMocking.trivalent_parameter("[*:1][*:2][*:3][*:4]").to_dict(),
                 does_not_raise(),
             ),
             # Validate `type`
@@ -2063,9 +2005,7 @@ class TestVirtualSiteHandler:
             # Validate `match`
             (
                 {"type": "BondCharge"},
-                pytest.raises(
-                    SMIRNOFFSpecError, match="the `match` keyword is missing"
-                ),
+                pytest.raises(SMIRNOFFSpecError, match="the `match` keyword is missing"),
             ),
             (
                 {"type": "BondCharge", "match": "once"},
@@ -2096,16 +2036,14 @@ class TestVirtualSiteHandler:
                 },
                 pytest.raises(
                     SMIRNOFFSpecError,
-                    match="match='once' not supported with "
-                    "type='DivalentLonePair' and is_in_plane=False",
+                    match="match='once' not supported with type='DivalentLonePair' and is_in_plane=False",
                 ),
             ),
             (
                 {"type": "TrivalentLonePair", "match": "all_permutations"},
                 pytest.raises(
                     SMIRNOFFSpecError,
-                    match="match='all_permutations' not supported with "
-                    "type='TrivalentLonePair'",
+                    match="match='all_permutations' not supported with type='TrivalentLonePair'",
                 ),
             ),
         ],
@@ -2209,9 +2147,7 @@ class TestVirtualSiteHandler:
             ),
         ],
     )
-    def test_out_of_plane_angle_converter(
-        self, parameter, out_of_plane_angle, expected_raises
-    ):
+    def test_out_of_plane_angle_converter(self, parameter, out_of_plane_angle, expected_raises):
         parameter_dict = parameter.to_dict()
         parameter_dict["outOfPlaneAngle"] = out_of_plane_angle
 
@@ -2223,18 +2159,10 @@ class TestVirtualSiteHandler:
         force_field = ForceField()
 
         handler = force_field.get_parameter_handler("VirtualSites")
-        handler.add_parameter(
-            parameter=VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]")
-        )
-        handler.add_parameter(
-            parameter=VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]")
-        )
-        handler.add_parameter(
-            parameter=VirtualSiteMocking.divalent_parameter("[*:2][*:1][*:3]", "once")
-        )
-        handler.add_parameter(
-            parameter=VirtualSiteMocking.trivalent_parameter("[*:1][*:2][*:3][*:4]")
-        )
+        handler.add_parameter(parameter=VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]"))
+        handler.add_parameter(parameter=VirtualSiteMocking.monovalent_parameter("[*:1][*:2][*:3]"))
+        handler.add_parameter(parameter=VirtualSiteMocking.divalent_parameter("[*:2][*:1][*:3]", "once"))
+        handler.add_parameter(parameter=VirtualSiteMocking.trivalent_parameter("[*:1][*:2][*:3][*:4]"))
         offxml_string = force_field.to_string()
         roundtripped_force_field = ForceField(offxml_string)
         assert offxml_string == roundtripped_force_field.to_string()
@@ -2253,9 +2181,7 @@ class TestVirtualSiteHandler:
                 "[N:1]([H:2])([H:3])[H:4]",
                 (1, 2, 3),
                 VirtualSiteMocking.monovalent_parameter("[*:2][N:1][*:3]"),
-                pytest.raises(
-                    NotImplementedError, match="currently unsupported by virtual sites"
-                ),
+                pytest.raises(NotImplementedError, match="currently unsupported by virtual sites"),
                 False,
             ),
             (
@@ -2347,11 +2273,7 @@ class TestVirtualSiteHandler:
             # Check that a single-particle in-plane divalent lone pair vsite
             # can be applied
             (
-                [
-                    VirtualSiteMocking.divalent_parameter(
-                        "[H:2][O:1][H:3]", match="once", angle=0.0 * unit.degree
-                    )
-                ],
+                [VirtualSiteMocking.divalent_parameter("[H:2][O:1][H:3]", match="once", angle=0.0 * unit.degree)],
                 "[H:1][O:2][H:3]",
                 {(1, 0, 2): {("[H:2][O:1][H:3]", "EP")}},
             ),
@@ -2373,11 +2295,7 @@ class TestVirtualSiteHandler:
             # Check that a single-particle in-plane divalent lone pair site can
             # be applied to a symmetric molecule
             (
-                [
-                    VirtualSiteMocking.divalent_parameter(
-                        "[*:2]-[N:1]~[*:3]", match="once", angle=0.0 * unit.degree
-                    )
-                ],
+                [VirtualSiteMocking.divalent_parameter("[*:2]-[N:1]~[*:3]", match="once", angle=0.0 * unit.degree)],
                 "[H:1][N:2]=[N:3][H:4]",
                 {
                     (1, 0, 2): {("[*:2]-[N:1]~[*:3]", "EP")},
@@ -2445,12 +2363,8 @@ class TestVirtualSiteHandler:
 
         handler = VirtualSiteHandler(version="0.3")
 
-        handler.add_parameter(
-            parameter=VirtualSiteMocking.bond_charge_parameter("[Cl:1]-[C:2]")
-        )
-        handler.add_parameter(
-            parameter=VirtualSiteMocking.monovalent_parameter("[O:1]=[C:2]-[*:3]")
-        )
+        handler.add_parameter(parameter=VirtualSiteMocking.bond_charge_parameter("[Cl:1]-[C:2]"))
+        handler.add_parameter(parameter=VirtualSiteMocking.monovalent_parameter("[O:1]=[C:2]-[*:3]"))
 
         matches = handler.find_matches(topology, unique=False)
 
@@ -2583,9 +2497,7 @@ class TestLibraryChargeHandler:
             SMIRNOFFSpecError,
             match="initialized with unequal number of tagged atoms and charges",
         ):
-            LibraryChargeHandler.LibraryChargeType(
-                smirks="[#6:1]-[#7:2]-[#6]", charge1=0.05 * unit.elementary_charge
-            )
+            LibraryChargeHandler.LibraryChargeType(smirks="[#6:1]-[#7:2]-[#6]", charge1=0.05 * unit.elementary_charge)
 
     def test_library_charge_type_from_molecule(self):
         mol = Molecule.from_smiles("CCO")
@@ -2608,38 +2520,18 @@ class TestChargeIncrementModelHandler:
         handler = ChargeIncrementModelHandler(skip_version_check=True)
         assert handler.number_of_conformers == 1
         assert handler.partial_charge_method == "AM1-Mulliken"
-        handler = ChargeIncrementModelHandler(
-            skip_version_check=True, number_of_conformers=10
-        )
-        handler = ChargeIncrementModelHandler(
-            skip_version_check=True, number_of_conformers=1
-        )
-        handler = ChargeIncrementModelHandler(
-            skip_version_check=True, number_of_conformers="10"
-        )
-        handler = ChargeIncrementModelHandler(
-            skip_version_check=True, number_of_conformers=0
-        )
-        handler = ChargeIncrementModelHandler(
-            skip_version_check=True, number_of_conformers="0"
-        )
+        handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers=10)
+        handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers=1)
+        handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers="10")
+        handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers=0)
+        handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers="0")
         with pytest.raises(TypeError):
-            handler = ChargeIncrementModelHandler(
-                skip_version_check=True, number_of_conformers=None
-            )
+            handler = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers=None)
         with pytest.raises(SMIRNOFFSpecError):
-            handler = ChargeIncrementModelHandler(
-                skip_version_check=True, n_conformers=[10]
-            )
-        handler = ChargeIncrementModelHandler(
-            skip_version_check=True, partial_charge_method="AM1-Mulliken"
-        )
-        handler = ChargeIncrementModelHandler(
-            skip_version_check=True, partial_charge_method="Gasteiger"
-        )
-        handler = ChargeIncrementModelHandler(
-            skip_version_check=True, partial_charge_method=None
-        )
+            handler = ChargeIncrementModelHandler(skip_version_check=True, n_conformers=[10])
+        handler = ChargeIncrementModelHandler(skip_version_check=True, partial_charge_method="AM1-Mulliken")
+        handler = ChargeIncrementModelHandler(skip_version_check=True, partial_charge_method="Gasteiger")
+        handler = ChargeIncrementModelHandler(skip_version_check=True, partial_charge_method=None)
 
     def test_charge_increment_model_handler_getters_setters(self):
         """Test ChargeIncrementModelHandler getters and setters"""
@@ -2659,9 +2551,7 @@ class TestChargeIncrementModelHandler:
         handler2 = ChargeIncrementModelHandler(skip_version_check=True)
         handler1.check_handler_compatibility(handler2)
 
-        handler3 = ChargeIncrementModelHandler(
-            skip_version_check=True, number_of_conformers="9"
-        )
+        handler3 = ChargeIncrementModelHandler(skip_version_check=True, number_of_conformers="9")
         with pytest.raises(IncompatibleParameterError):
             handler1.check_handler_compatibility(handler3)
 
@@ -2723,6 +2613,187 @@ class TestChargeIncrementModelHandler:
         )
 
 
+class TestNAGLChargesHandler:
+    def test_nagl_charges_handler_serialization(self):
+        handler = NAGLChargesHandler(model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt", skip_version_check=True)
+        assert handler.model_file == "openff-gnn-am1bcc-0.1.0-rc.3.pt"
+        handler_dict = handler.to_dict()
+        assert handler_dict["model_file"] == "openff-gnn-am1bcc-0.1.0-rc.3.pt"
+
+    def test_nagl_charges_handler_with_optional_fields(self):
+        # Test with model_file_hash
+        handler = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0",
+            skip_version_check=True,
+        )
+        assert handler.model_file == "openff-gnn-am1bcc-0.1.0-rc.3.pt"
+        assert handler.model_file_hash == "144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0"
+        assert handler.digital_object_identifier is None
+
+        # Test with digital_object_identifier
+        handler = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            digital_object_identifier="10.5072/zenodo.203601",
+            skip_version_check=True,
+        )
+        assert handler.model_file == "openff-gnn-am1bcc-0.1.0-rc.3.pt"
+        assert handler.model_file_hash is None
+        assert handler.digital_object_identifier == "10.5072/zenodo.203601"
+
+        # Test with both optional fields
+        handler = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0",
+            digital_object_identifier="10.5072/zenodo.203601",
+            skip_version_check=True,
+        )
+        assert handler.model_file == "openff-gnn-am1bcc-0.1.0-rc.3.pt"
+        assert handler.model_file_hash == "144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0"
+        assert handler.digital_object_identifier == "10.5072/zenodo.203601"
+
+    def test_nagl_charges_handler_serialization_with_optional_fields(self):
+        # Test serialization with all fields
+        handler = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0",
+            digital_object_identifier="10.5072/zenodo.203601",
+            skip_version_check=True,
+        )
+        handler_dict = handler.to_dict()
+        assert handler_dict["model_file"] == "openff-gnn-am1bcc-0.1.0-rc.3.pt"
+        assert handler_dict["model_file_hash"] == "144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0"
+        assert handler_dict["digital_object_identifier"] == "10.5072/zenodo.203601"
+
+        # Test deserialization via constructor
+        handler_from_dict = NAGLChargesHandler(**handler_dict)
+        assert handler_from_dict.model_file == "openff-gnn-am1bcc-0.1.0-rc.3.pt"
+        assert handler_from_dict.model_file_hash == "144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0"
+        assert handler_from_dict.digital_object_identifier == "10.5072/zenodo.203601"
+
+    def test_nagl_charges_handler_compatibility(self):
+        # Test compatible handlers (same model_file)
+        handler1 = NAGLChargesHandler(model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt", skip_version_check=True)
+        handler2 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0",
+            skip_version_check=True,
+        )
+        # Should not raise exception
+        handler1.check_handler_compatibility(handler2)
+
+        # Test incompatible handlers (different model_file)
+        handler3 = NAGLChargesHandler(model_file="different-model-file.pt", skip_version_check=True)
+        with pytest.raises(IncompatibleParameterError, match="different model_files"):
+            handler1.check_handler_compatibility(handler3)
+
+    def test_nagl_charges_handler_defaults(self):
+        # Test that optional fields default to None
+        handler = NAGLChargesHandler(model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt", skip_version_check=True)
+        assert handler.model_file_hash is None
+        assert handler.digital_object_identifier is None
+
+    def test_nagl_charges_handler_hash_compatibility(self):
+        """Test compatibility checks for model_file_hash"""
+        # Test compatible handlers with same hash
+        handler1 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0",
+            skip_version_check=True,
+        )
+        handler2 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0",
+            skip_version_check=True,
+        )
+        # Should not raise exception
+        handler1.check_handler_compatibility(handler2)
+
+        # Test incompatible handlers with different hashes
+        handler3 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="different_hash_value",
+            skip_version_check=True,
+        )
+        with pytest.raises(IncompatibleParameterError, match="different model_file_hash values"):
+            handler1.check_handler_compatibility(handler3)
+
+        # Test compatibility when only one handler has hash (should be compatible)
+        handler4 = NAGLChargesHandler(model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt", skip_version_check=True)
+        # Should not raise exception
+        handler1.check_handler_compatibility(handler4)
+        handler4.check_handler_compatibility(handler1)
+
+    def test_nagl_charges_handler_doi_compatibility(self):
+        """Test compatibility checks for digital_object_identifier"""
+        # Test compatible handlers with same DOI
+        handler1 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            digital_object_identifier="10.5072/zenodo.203601",
+            skip_version_check=True,
+        )
+        handler2 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            digital_object_identifier="10.5072/zenodo.203601",
+            skip_version_check=True,
+        )
+        # Should not raise exception
+        handler1.check_handler_compatibility(handler2)
+
+        # Test incompatible handlers with different DOIs
+        handler3 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            digital_object_identifier="10.5072/zenodo.999999",
+            skip_version_check=True,
+        )
+        with pytest.raises(IncompatibleParameterError, match="different digital_object_identifier values"):
+            handler1.check_handler_compatibility(handler3)
+
+        # Test compatibility when only one handler has DOI (should be compatible)
+        handler4 = NAGLChargesHandler(model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt", skip_version_check=True)
+        # Should not raise exception
+        handler1.check_handler_compatibility(handler4)
+        handler4.check_handler_compatibility(handler1)
+
+    def test_nagl_charges_handler_combined_compatibility(self):
+        """Test compatibility checks with both hash and DOI"""
+        # Test compatible handlers with same hash and DOI
+        handler1 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0",
+            digital_object_identifier="10.5072/zenodo.203601",
+            skip_version_check=True,
+        )
+        handler2 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0",
+            digital_object_identifier="10.5072/zenodo.203601",
+            skip_version_check=True,
+        )
+        # Should not raise exception
+        handler1.check_handler_compatibility(handler2)
+
+        # Test incompatible with same hash but different DOI
+        handler3 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="144ed56e46c5b3ad80157b342c8c0f8f7340e4d382a678e30dd300c811646bd0",
+            digital_object_identifier="10.5072/zenodo.999999",
+            skip_version_check=True,
+        )
+        with pytest.raises(IncompatibleParameterError, match="different digital_object_identifier values"):
+            handler1.check_handler_compatibility(handler3)
+
+        # Test incompatible with different hash but same DOI
+        handler4 = NAGLChargesHandler(
+            model_file="openff-gnn-am1bcc-0.1.0-rc.3.pt",
+            model_file_hash="different_hash_value",
+            digital_object_identifier="10.5072/zenodo.203601",
+            skip_version_check=True,
+        )
+        with pytest.raises(IncompatibleParameterError, match="different model_file_hash values"):
+            handler1.check_handler_compatibility(handler4)
+
+
 class TestGBSAHandler:
     def test_create_default_gbsahandler(self):
         """Test creation of an empty GBSAHandler, with all default attributes"""
@@ -2763,13 +2834,9 @@ class TestGBSAHandler:
         with pytest.raises(TypeError):
             gbsa_handler.sa_model = "Invalid SA option"
 
-        gbsa_handler.surface_area_penalty = (
-            1.23 * unit.kilocalorie / unit.mole / unit.nanometer**2
-        )
+        gbsa_handler.surface_area_penalty = 1.23 * unit.kilocalorie / unit.mole / unit.nanometer**2
         with pytest.raises(IncompatibleUnitError):
-            gbsa_handler.surface_area_penalty = (
-                1.23 * unit.degree / unit.mole / unit.nanometer**2
-            )
+            gbsa_handler.surface_area_penalty = 1.23 * unit.degree / unit.mole / unit.nanometer**2
 
         gbsa_handler.solvent_radius = 300 * unit.femtometer
         with pytest.raises(IncompatibleUnitError):
@@ -2786,12 +2853,8 @@ class TestGBSAHandler:
         gbsa_handler_1.check_handler_compatibility(gbsa_handler_2)
 
         # Perform a check which should fail
-        gbsa_handler_3 = GBSAHandler(
-            skip_version_check=True, solvent_radius=1.3 * unit.angstrom
-        )
-        with pytest.raises(
-            IncompatibleParameterError, match="Difference between 'solvent_radius' "
-        ):
+        gbsa_handler_3 = GBSAHandler(skip_version_check=True, solvent_radius=1.3 * unit.angstrom)
+        with pytest.raises(IncompatibleParameterError, match="Difference between 'solvent_radius' "):
             gbsa_handler_1.check_handler_compatibility(gbsa_handler_3)
 
 
@@ -2814,20 +2877,15 @@ class TestParameterTypeReExports:
             )
 
         for _, paramhandler in subclass_attrs(params_module, ParameterHandler):
-            for paramtype_name, paramtype in subclass_attrs(
-                paramhandler, ParameterType
-            ):
+            for paramtype_name, paramtype in subclass_attrs(paramhandler, ParameterType):
                 assert paramtype_name in vars(params_module), (
-                    f"ParameterType {paramtype_name!r} is "
-                    f"not re-exported from parameters module"
+                    f"ParameterType {paramtype_name!r} is not re-exported from parameters module"
                 )
                 assert vars(params_module)[paramtype_name] is paramtype, (
-                    f"Exported attribute parameters.{paramtype_name} "
-                    f"does not match ParameterType {paramtype_name!r}"
+                    f"Exported attribute parameters.{paramtype_name} does not match ParameterType {paramtype_name!r}"
                 )
                 assert paramtype_name in params_module.__all__, (
-                    f"ParameterType {paramtype_name!r} "
-                    f"missing from parameters.__all__"
+                    f"ParameterType {paramtype_name!r} missing from parameters.__all__"
                 )
 
 

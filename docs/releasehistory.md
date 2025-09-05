@@ -13,7 +13,33 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Behavior changes
 
 ### Bugfixes
+
+### New features
+
+### Improved documentation and warnings
+
+
+## 0.17.0
+
+### API-breaking changes
+
+### Behavior changes
+
+### Bugfixes
+
+### New features
+- [PR #2048](https://github.com/openforcefield/openff-toolkit/pull/2048): Adds NAGLChargesHandler. See [SMIRNOFF EP 11](https://github.com/openforcefield/standards/pull/71) for the new SMIRNOFF specification section and discussion.
+
+
+### Improved documentation and warnings
+
+## 0.16.10
+
+### Bugfixes
+
 - [PR #2052](https://github.com/openforcefield/openff-toolkit/pull/2052): Fixes bug where `Topology.from_pdb` couldn't load NH4+ ([Issue #2051](https://github.com/openforcefield/openff-toolkit/issues/2051))
+- [PR #2000](https://github.com/openforcefield/openff-toolkit/pull/2000): Assorted type annotation fixes
+- [PR #2000](https://github.com/openforcefield/openff-toolkit/pull/2000): `Molecule.to_rdkit()` no longer raises an exception when converting a molecule with non-decimal residue numbers to RDKit; instead, the RDKit residue number is simply silently left unset.
 
 ### Miscellaneous
 
@@ -22,10 +48,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #2078](https://github.com/openforcefield/openff-toolkit/pull/2078): Updates molecule cookbook molecule.from_qcschema()
 
 ### New features
+
 - [PR #2066](https://github.com/openforcefield/openff-toolkit/pull/2066): Improves runtime in some situations by making AmberToolsToolkitWrapper perform lazy evaluation of AmberTools version. (@vamironov)
-
-
-### Improved documentation and warnings
+- [PR #2090](https://github.com/openforcefield/openff-toolkit/pull/2090): Improves runtime of force field serialization via faster `Quantity` stringification.
 
 
 ## 0.16.9

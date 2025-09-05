@@ -44,6 +44,7 @@ logger = logging.getLogger(__name__)
 # Pre-create an instance of the dimensionless unit to speed up comparisons later
 _DIMENSIONLESS = Unit("dimensionless")
 
+
 def inherit_docstrings(cls):
     """Inherit docstrings from parent class"""
     from inspect import getmembers, isfunction
@@ -62,9 +63,7 @@ T = TypeVar("T")
 
 def all_subclasses(cls: type[T]) -> list[type[T]]:
     """Recursively retrieve all subclasses of the specified class"""
-    return cls.__subclasses__() + [
-        g for s in cls.__subclasses__() for g in all_subclasses(s)
-    ]
+    return cls.__subclasses__() + [g for s in cls.__subclasses__() for g in all_subclasses(s)]
 
 
 @contextlib.contextmanager
@@ -115,9 +114,7 @@ def get_data_file_path(relative_path: str) -> str:
     file_path = _DATA_ROOT / relative_path
 
     if not file_path.exists():  # type: ignore[attr-defined]
-        raise ValueError(
-            f"Sorry! {file_path} does not exist. If you just added it, you'll have to re-install"
-        )
+        raise ValueError(f"Sorry! {file_path} does not exist. If you just added it, you'll have to re-install")
 
     return str(file_path)
 
@@ -163,7 +160,7 @@ def quantity_to_string(input_quantity: Quantity) -> str:
         The serialized quantity
 
     """
-    unitless_value: float | int | NDArray | list = input_quantity.m_as(input_quantity.units)  # type: ignore
+    unitless_value: float | int | NDArray | list = input_quantity.m
     # The string representation of a numpy array doesn't have commas and breaks the
     # parser, thus we convert any arrays to list here
     if isinstance(unitless_value, np.ndarray):
@@ -222,6 +219,7 @@ def string_to_quantity(quantity_string: str) -> Union[int, float, Quantity]:
         return quantity.m
     else:
         return quantity
+
 
 def convert_all_strings_to_quantity(
     smirnoff_data: dict,
@@ -305,7 +303,7 @@ def convert_all_quantities_to_string(
 
 
 def convert_all_quantities_to_string(
-    smirnoff_data: Union[dict, str, Quantity, list]
+    smirnoff_data: Union[dict, str, Quantity, list],
 ) -> Union[str, dict[str, Any], list[str]]:
     """
     Traverses a SMIRNOFF data structure, attempting to convert all
@@ -486,15 +484,11 @@ def convert_0_2_smirnoff_to_0_3(smirnoff_data_0_2):
     if "ProperTorsions" in smirnoff_data["SMIRNOFF"]:
         if "potential" in smirnoff_data["SMIRNOFF"]["ProperTorsions"]:
             if smirnoff_data["SMIRNOFF"]["ProperTorsions"]["potential"] == "charmm":
-                smirnoff_data["SMIRNOFF"]["ProperTorsions"][
-                    "potential"
-                ] = "k*(1+cos(periodicity*theta-phase))"
+                smirnoff_data["SMIRNOFF"]["ProperTorsions"]["potential"] = "k*(1+cos(periodicity*theta-phase))"
     if "ImproperTorsions" in smirnoff_data["SMIRNOFF"]:
         if "potential" in smirnoff_data["SMIRNOFF"]["ImproperTorsions"]:
             if smirnoff_data["SMIRNOFF"]["ImproperTorsions"]["potential"] == "charmm":
-                smirnoff_data["SMIRNOFF"]["ImproperTorsions"][
-                    "potential"
-                ] = "k*(1+cos(periodicity*theta-phase))"
+                smirnoff_data["SMIRNOFF"]["ImproperTorsions"]["potential"] = "k*(1+cos(periodicity*theta-phase))"
 
     # Add per-section tag
     sections_not_to_version_0_3 = ["Author", "Date", "version", "aromaticity_model"]
@@ -548,9 +542,7 @@ def convert_0_1_smirnoff_to_0_2(smirnoff_data_0_1):
     # Convert second-level tags here
     for old_l1_tag, new_l1_tag in l1_replacement_dict.items():
         if old_l1_tag in smirnoff_data["SMIRNOFF"].keys():
-            smirnoff_data["SMIRNOFF"][new_l1_tag] = smirnoff_data["SMIRNOFF"][
-                old_l1_tag
-            ]
+            smirnoff_data["SMIRNOFF"][new_l1_tag] = smirnoff_data["SMIRNOFF"][old_l1_tag]
             del smirnoff_data["SMIRNOFF"][old_l1_tag]
 
     # Add 'potential' field to each l1 tag
@@ -609,9 +601,7 @@ def convert_0_1_smirnoff_to_0_2(smirnoff_data_0_1):
         logger.warning(f"\t{key}: {val}")
 
     # Take electrostatics 1-4 scaling term from 0.1 spec's NonBondedForce tag
-    electrostatics_section["scale14"] = smirnoff_data["SMIRNOFF"]["vdW"][
-        "coulomb14scale"
-    ]
+    electrostatics_section["scale14"] = smirnoff_data["SMIRNOFF"]["vdW"]["coulomb14scale"]
     del smirnoff_data["SMIRNOFF"]["vdW"]["coulomb14scale"]
     smirnoff_data["SMIRNOFF"]["Electrostatics"] = electrostatics_section
 
@@ -636,9 +626,7 @@ def convert_0_1_smirnoff_to_0_2(smirnoff_data_0_1):
             smirnoff_data["SMIRNOFF"]["vdW"][key] = val
 
     # Rename L-J 1-4 scaling term from 0.1 spec's NonBondedForce tag to vdW's scale14
-    smirnoff_data["SMIRNOFF"]["vdW"]["scale14"] = smirnoff_data["SMIRNOFF"]["vdW"][
-        "lj14scale"
-    ]
+    smirnoff_data["SMIRNOFF"]["vdW"]["scale14"] = smirnoff_data["SMIRNOFF"]["vdW"]["lj14scale"]
     del smirnoff_data["SMIRNOFF"]["vdW"]["lj14scale"]
 
     # Add <ToolkitAM1BCC/> tag
@@ -699,9 +687,7 @@ def recursive_attach_unit_strings(smirnoff_data, units_to_attach):
                 smirnoff_data[key] = str(smirnoff_data[key]) + " * " + attach_unit
 
             # And recursively act on value, in case it's a deeper level of hierarchy
-            smirnoff_data[key] = recursive_attach_unit_strings(
-                smirnoff_data[key], units_to_attach
-            )
+            smirnoff_data[key] = recursive_attach_unit_strings(smirnoff_data[key], units_to_attach)
 
     # If it's a list, operate on each member of the list
     elif isinstance(smirnoff_data, list):
@@ -715,9 +701,7 @@ def recursive_attach_unit_strings(smirnoff_data, units_to_attach):
     return smirnoff_data
 
 
-def get_molecule_parameterIDs(
-    molecules: list["Molecule"], forcefield: "ForceField"
-) -> tuple[dict, dict]:
+def get_molecule_parameterIDs(molecules: list["Molecule"], forcefield: "ForceField") -> tuple[dict, dict]:
     """Process a list of molecules with a specified SMIRNOFF ffxml file and determine which parameters are used by
     which molecules, returning collated results.
 

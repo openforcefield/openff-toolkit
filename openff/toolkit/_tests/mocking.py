@@ -72,9 +72,7 @@ class VirtualSiteMocking:
         )
 
     @staticmethod
-    def monovalent_parameter(
-        smirks: str, name: str = "EP"
-    ) -> VirtualSiteHandler.VirtualSiteType:
+    def monovalent_parameter(smirks: str, name: str = "EP") -> VirtualSiteHandler.VirtualSiteType:
         return VirtualSiteHandler.VirtualSiteType(
             type="MonovalentLonePair",
             smirks=smirks,
@@ -108,9 +106,7 @@ class VirtualSiteMocking:
         )
 
     @staticmethod
-    def trivalent_parameter(
-        smirks: str, name: str = "EP"
-    ) -> VirtualSiteHandler.VirtualSiteType:
+    def trivalent_parameter(smirks: str, name: str = "EP") -> VirtualSiteHandler.VirtualSiteType:
         return VirtualSiteHandler.VirtualSiteType(
             type="TrivalentLonePair",
             smirks=smirks,
@@ -134,15 +130,11 @@ class VirtualSiteMocking:
 
     @staticmethod
     def chloromethane(reverse: bool = False) -> Molecule:
-        return VirtualSiteMocking.molecule_from_smiles(
-            "[Cl:1][C:2]([H:3])([H:4])[H:5]", reverse
-        )
+        return VirtualSiteMocking.molecule_from_smiles("[Cl:1][C:2]([H:3])([H:4])[H:5]", reverse)
 
     @staticmethod
     def formaldehyde(reverse: bool = False) -> Molecule:
-        return VirtualSiteMocking.molecule_from_smiles(
-            "[O:1]=[C:2]([H:3])[H:4]", reverse
-        )
+        return VirtualSiteMocking.molecule_from_smiles("[O:1]=[C:2]([H:3])[H:4]", reverse)
 
     @staticmethod
     def hypochlorous_acid(reverse: bool = False) -> Molecule:
@@ -150,6 +142,4 @@ class VirtualSiteMocking:
 
     @staticmethod
     def fake_ammonia(reverse: bool = False) -> Molecule:
-        return VirtualSiteMocking.molecule_from_smiles(
-            "[N:1]([Cl:2])([Br:3])[H:4]", reverse
-        )
+        return VirtualSiteMocking.molecule_from_smiles("[N:1]([Cl:2])([Br:3])[H:4]", reverse)

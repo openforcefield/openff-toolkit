@@ -87,9 +87,7 @@ class TestUtilsSerialization:
     def test_messagepack(self):
         """Test MessagePack serialization"""
         messagepack_thing = self.thing.to_messagepack()
-        thing_from_messagepack = self.thing.__class__.from_messagepack(
-            messagepack_thing
-        )
+        thing_from_messagepack = self.thing.__class__.from_messagepack(messagepack_thing)
         assert self.thing == thing_from_messagepack
 
     @pytest.mark.wip(

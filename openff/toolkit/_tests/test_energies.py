@@ -25,9 +25,7 @@ def test_reference(constrained, mol):
     """Minimal regression test comparing molecule energies to energies computed
     by version 0.8.0 of the toolkit"""
     # TODO: Also test periodic vs. vacuum
-    with open(
-        get_data_file_path("reference_energies/reference_after_1007.json")
-    ) as fi:
+    with open(get_data_file_path("reference_energies/reference_after_1007.json")) as fi:
         reference = json.loads(fi.read())
 
     name = mol + "_"
@@ -73,9 +71,7 @@ def generate_reference():
             if not constrained:
                 name += "un"
             name += "constrained"
-            reference.update(
-                {name: energy.value_in_unit(openmm_unit.kilojoule_per_mole)}
-            )
+            reference.update({name: energy.value_in_unit(openmm_unit.kilojoule_per_mole)})
 
     import openff.toolkit
 
@@ -109,9 +105,7 @@ def _build_system(mol, constrained):
         ToolkitRegistry,
     )
 
-    toolkit_registry = ToolkitRegistry(
-        toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper]
-    )
+    toolkit_registry = ToolkitRegistry(toolkit_precedence=[RDKitToolkitWrapper, AmberToolsToolkitWrapper])
 
     omm_sys = parsley.create_openmm_system(off_top, toolkit_registry=toolkit_registry)
 

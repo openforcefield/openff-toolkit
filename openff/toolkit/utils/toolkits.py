@@ -101,6 +101,7 @@ logger = logging.getLogger(__name__)
 # Create global toolkit registry, where all available toolkits are registered
 GLOBAL_TOOLKIT_REGISTRY = ToolkitRegistry(
     toolkit_precedence=[
+        NAGLToolkitWrapper,
         OpenEyeToolkitWrapper,
         RDKitToolkitWrapper,
         AmberToolsToolkitWrapper,

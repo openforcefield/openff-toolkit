@@ -25,8 +25,7 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     _toolkit_name = "Built-in Toolkit"
     _toolkit_installation_instructions = (
-        "This toolkit is installed with the Open Force Field Toolkit and does "
-        "not require additional dependencies."
+        "This toolkit is installed with the Open Force Field Toolkit and does not require additional dependencies."
     )
     _supported_charge_methods = {
         "zeros": {"rec_confs": 0, "min_confs": 0, "max_confs": 0},
@@ -111,9 +110,7 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
             # Note that this refers back to the GLOBAL_TOOLKIT_REGISTRY by default, since
             # BuiltInToolkitWrapper can't generate conformers
             mol_copy.generate_conformers(
-                n_conformers=self._supported_charge_methods[partial_charge_method][
-                    "rec_confs"
-                ]
+                n_conformers=self._supported_charge_methods[partial_charge_method]["rec_confs"]
             )
         else:
             mol_copy._conformers = None
@@ -131,7 +128,7 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
             partial_charges = [0.0] * molecule.n_atoms
 
         elif partial_charge_method == "formal_charge":
-            partial_charges = [float(atom.formal_charge.m) for atom in molecule.atoms]
+            partial_charges = [float(atom.formal_charge.m) for atom in molecule.atoms]  # type: ignore
 
         molecule.partial_charges = Quantity(partial_charges, unit.elementary_charge)
 

@@ -79,14 +79,14 @@ MoleculeLike: TypeAlias = Union["Molecule", "FrozenMolecule", "_SimpleMolecule"]
 
 _DISTANCE_UNITS = set(
     [
-        Unit(val) for val in
-        [
-            'nanometer',
-            'angstrom',
-            'micron',
-            'bohr',
-            'meter',
-            'fermi',
+        Unit(val)
+        for val in [
+            "nanometer",
+            "angstrom",
+            "micron",
+            "bohr",
+            "meter",
+            "fermi",
         ]
     ]
 )
@@ -198,9 +198,7 @@ class ValenceDict(_TransformedDict):
         refkey = cls.key_transform(key)
         permutations = {refkey: 0, refkey[::-1]: 1}
         if possible is not None:
-            return cls._return_possible_index_of(
-                key, possible=possible, permutations=permutations
-            )
+            return cls._return_possible_index_of(key, possible=possible, permutations=permutations)
         else:
             return permutations[tuple(key)]
 
@@ -381,9 +379,7 @@ class ImproperDict(_TransformedDict):
             (refkey[3], refkey[1], refkey[2], refkey[0]): 5,
         }
         if possible is not None:
-            return cls._return_possible_index_of(
-                key, possible=possible, permutations=permutations
-            )
+            return cls._return_possible_index_of(key, possible=possible, permutations=permutations)
         else:
             return permutations[key]
 
@@ -525,7 +521,7 @@ class Topology(Serializable):
     @classmethod
     def from_molecules(
         cls,
-        molecules: Union[MoleculeLike, list[MoleculeLike]],
+        molecules: MoleculeLike | Iterable[MoleculeLike],
     ) -> "Topology":
         """
         Create a new Topology object containing one copy of each of the specified molecule(s).
@@ -568,9 +564,7 @@ class Topology(Serializable):
 
         if not (self.is_bonded(atom1, atom2)):
             # TODO: Raise more specific exception.
-            raise NotBondedError(
-                f"Atoms {atom1} and {atom2} are not bonded in topology"
-            )
+            raise NotBondedError(f"Atoms {atom1} and {atom2} are not bonded in topology")
 
     @property
     def aromaticity_model(self) -> str:
@@ -639,22 +633,16 @@ class Topology(Serializable):
                 raise InvalidBoxVectorsError("Given unitless box vectors")
 
         if box_vectors.units not in _DISTANCE_UNITS:
-            raise InvalidBoxVectorsError(
-                f"Cannot set box vectors with quantities with unit {box_vectors.units}"
-            )
+            raise InvalidBoxVectorsError(f"Cannot set box vectors with quantities with unit {box_vectors.units}")
 
         if hasattr(box_vectors, "shape"):
             if box_vectors.shape == (3,):
                 # Cannot multiply in-place without ufunc support in Pint
                 box_vectors = box_vectors * np.eye(3)
             if box_vectors.shape != (3, 3):
-                raise InvalidBoxVectorsError(
-                    f"Box vectors must be shape (3, 3). Found shape {box_vectors.shape}"
-                )
+                raise InvalidBoxVectorsError(f"Box vectors must be shape (3, 3). Found shape {box_vectors.shape}")
         else:
-            raise InvalidBoxVectorsError(
-                f"Cannot set box vectors with object of type {type(box_vectors)}"
-            )
+            raise InvalidBoxVectorsError(f"Cannot set box vectors with object of type {type(box_vectors)}")
 
         self._box_vectors = box_vectors
 
@@ -677,13 +665,11 @@ class Topology(Serializable):
         """
         if is_periodic is True and self.box_vectors is None:
             raise InvalidPeriodicityError(
-                "Cannot set is_periodic to True without box vectors. Set box "
-                "vectors directly instead."
+                "Cannot set is_periodic to True without box vectors. Set box vectors directly instead."
             )
         if is_periodic is False and self.box_vectors is not None:
             raise InvalidPeriodicityError(
-                "Cannot set is_periodic to False while box vectors are stored. "
-                "First set box_vectors to None."
+                "Cannot set is_periodic to False while box vectors are stored. First set box_vectors to None."
             )
 
     @property
@@ -703,7 +689,7 @@ class Topology(Serializable):
         return len(self._molecules)
 
     @property
-    def molecules(self) -> Generator[MoleculeLike, None, None]:
+    def molecules(self) -> Iterator[MoleculeLike]:
         """Returns an iterator over all the Molecules in this Topology
 
         Returns
@@ -993,9 +979,7 @@ class Topology(Serializable):
             """tuple of int: The matched topology atom indices."""
             return self._topology_atom_indices
 
-        def __init__(
-            self, reference_atom_indices, reference_molecule, topology_atom_indices
-        ):
+        def __init__(self, reference_atom_indices, reference_molecule, topology_atom_indices):
             """Constructs a new _ChemicalEnvironmentMatch object
 
             Parameters
@@ -1049,9 +1033,7 @@ class Topology(Serializable):
         if isinstance(query, str):
             smarts = query
         else:
-            raise ValueError(
-                f"Don't know how to convert query '{query}' into SMARTS string"
-            )
+            raise ValueError(f"Don't know how to convert query '{query}' into SMARTS string")
 
         # Perform matching on each unique molecule, unrolling the matches to all matching copies
         # of that molecule in the Topology object.
@@ -1065,9 +1047,7 @@ class Topology(Serializable):
             # This will automatically attempt to match chemically identical atoms in
             # a canonical order within the Topology
             if isinstance(unique_mol, _SimpleMolecule):
-                raise ValueError(
-                    "Topologies with simple molecules do not support environment matching"
-                )
+                raise ValueError("Topologies with simple molecules do not support environment matching")
             mol_matches = unique_mol.chemical_environment_matches(
                 smarts,
                 unique=unique,
@@ -1085,7 +1065,7 @@ class Topology(Serializable):
                     topology_atom_indices = []
                     for molecule_atom_index in match:
                         atom = mol_instance.atom(atom_map[molecule_atom_index])
-                        topology_atom_indices.append(self.atom_index(atom))
+                        topology_atom_indices.append(self.atom_index(atom))  # type: ignore[arg-type]
 
                     environment_match = Topology._ChemicalEnvironmentMatch(
                         tuple(match), unique_mol, tuple(topology_atom_indices)
@@ -1196,9 +1176,7 @@ class Topology(Serializable):
                     continue
                 mol2 = self.molecule(mol2_idx)
                 if isinstance(mol1, type(mol2)) or isinstance(mol2, type(mol1)):
-                    are_isomorphic, atom_map = mol1.are_isomorphic(
-                        mol1, mol2, return_atom_map=True
-                    )
+                    are_isomorphic, atom_map = mol1.are_isomorphic(mol1, mol2, return_atom_map=True)
                 else:
                     are_isomorphic = False
 
@@ -1215,9 +1193,7 @@ class Topology(Serializable):
         topology_molecule_atom_start_index = 0
         for molecule in self.molecules:
             for at in molecule.atoms:
-                at._topology_atom_index = (
-                    topology_molecule_atom_start_index + at.molecule_atom_index
-                )
+                at._topology_atom_index = topology_molecule_atom_start_index + at.molecule_atom_index
             topology_molecule_atom_start_index += molecule.n_atoms
 
     def _invalidate_cached_properties(self):
@@ -1240,9 +1216,7 @@ class Topology(Serializable):
 
         return_dict: dict[
             str,
-            Union[
-                None, str, bytes, bool, tuple, list[dict], dict[tuple[int, int], str]
-            ],
+            Union[None, str, bytes, bool, tuple, list[dict], dict[tuple[int, int], str]],
         ] = dict()
 
         return_dict["aromaticity_model"] = self._aromaticity_model
@@ -1257,13 +1231,9 @@ class Topology(Serializable):
             return_dict["box_vectors_unit"] = None
         else:
             box_vectors_unitless = self.box_vectors.m_as(unit.nanometer)
-            box_vectors_serialized, box_vectors_shape = serialize_numpy(
-                box_vectors_unitless
-            )
+            box_vectors_serialized, box_vectors_shape = serialize_numpy(box_vectors_unitless)
             if box_vectors_shape != (3, 3):
-                raise RuntimeError(
-                    f"Box vectors are assumed to be (3, 3); found shape {box_vectors_shape}"
-                )
+                raise RuntimeError(f"Box vectors are assumed to be (3, 3); found shape {box_vectors_shape}")
             return_dict["box_vectors"] = box_vectors_serialized
             return_dict["box_vectors_unit"] = "nanometer"
 
@@ -1352,9 +1322,7 @@ class Topology(Serializable):
                 chain_id=atom.residue.chain.id,
             )
         for bond in openmm_topology.bonds():
-            omm_topology_G.add_edge(
-                bond.atom1.index, bond.atom2.index, bond_order=bond.order
-            )
+            omm_topology_G.add_edge(bond.atom1.index, bond.atom2.index, bond_order=bond.order)
         return omm_topology_G
 
     @classmethod
@@ -1456,10 +1424,7 @@ class Topology(Serializable):
         omm_topology_G = cls._openmm_topology_to_networkx(openmm_topology)
         # For each connected subgraph (molecule) in the topology, find its match in unique_molecules
         topology_molecules_to_add = list()
-        for omm_mol_G in (
-            omm_topology_G.subgraph(c).copy()
-            for c in nx.connected_components(omm_topology_G)
-        ):
+        for omm_mol_G in (omm_topology_G.subgraph(c).copy() for c in nx.connected_components(omm_topology_G)):
             match_found = False
             for unq_mol_G in graph_to_unq_mol.keys():
                 isomorphic, mapping = Molecule.are_isomorphic(
@@ -1526,10 +1491,7 @@ class Topology(Serializable):
             omm_mol_G,
         ) in topology_molecules_to_add:
             local_top_to_ref_index = dict(
-                [
-                    (top_index - first_index, ref_index)
-                    for top_index, ref_index in top_to_ref_index
-                ]
+                [(top_index - first_index, ref_index) for top_index, ref_index in top_to_ref_index]
             )
             unq_mol = graph_to_unq_mol[unq_mol_G]
             remapped_mol = unq_mol.remap(local_top_to_ref_index, current_to_new=False)
@@ -1540,17 +1502,11 @@ class Topology(Serializable):
                 omm_atom_idx = off_atom_idx + first_index
 
                 off_atom.name = omm_mol_G.nodes[omm_atom_idx]["atom_name"]
-                off_atom.metadata["residue_name"] = omm_mol_G.nodes[omm_atom_idx][
-                    "residue_name"
-                ]
+                off_atom.metadata["residue_name"] = omm_mol_G.nodes[omm_atom_idx]["residue_name"]
                 off_atom.metadata["residue_number"] = omm_mol_G.nodes[omm_atom_idx]["residue_id"]
-                off_atom.metadata["insertion_code"] = omm_mol_G.nodes[omm_atom_idx][
-                    "insertion_code"
-                ]
+                off_atom.metadata["insertion_code"] = omm_mol_G.nodes[omm_atom_idx]["insertion_code"]
 
-                off_atom.metadata["chain_id"] = omm_mol_G.nodes[omm_atom_idx][
-                    "chain_id"
-                ]
+                off_atom.metadata["chain_id"] = omm_mol_G.nodes[omm_atom_idx]["chain_id"]
 
             remapped_mol.add_default_hierarchy_schemes()
             topology._add_molecule_keep_cache(remapped_mol)
@@ -1572,9 +1528,7 @@ class Topology(Serializable):
         if not ensure_unique_atom_names:
             return
         for molecule in self._molecules:
-            if isinstance(ensure_unique_atom_names, str) and hasattr(
-                molecule, ensure_unique_atom_names
-            ):
+            if isinstance(ensure_unique_atom_names, str) and hasattr(molecule, ensure_unique_atom_names):
                 for hier_elem in getattr(molecule, ensure_unique_atom_names):
                     if not hier_elem.has_unique_atom_names:
                         hier_elem.generate_unique_atom_names()
@@ -1749,9 +1703,7 @@ class Topology(Serializable):
         )
 
         with open(substructure_file_path) as subfile:
-            substructure_dictionary = json.load(
-                subfile
-            )  # preserving order is useful later when saving metadata
+            substructure_dictionary = json.load(subfile)  # preserving order is useful later when saving metadata
         substructure_dictionary["HOH"] = {"[H:1][O:2][H:3]": ["H1", "O", "H2"]}
         substructure_dictionary["Li"] = {"[Li+1:1]": ["Li"]}
         substructure_dictionary["Na"] = {"[Na+1:1]": ["Na"]}
@@ -1770,9 +1722,7 @@ class Topology(Serializable):
 
         for unique_molecule in unique_molecules:
             mapped_smiles = unique_molecule.to_smiles(mapped=True)
-            substructure_dictionary["UNIQUE_MOLECULE"][mapped_smiles] = [
-                a.name for a in unique_molecule.atoms
-            ]
+            substructure_dictionary["UNIQUE_MOLECULE"][mapped_smiles] = [a.name for a in unique_molecule.atoms]
 
         substructure_dictionary["ADDITIONAL_SUBSTRUCTURE"] = {}
 
@@ -1796,11 +1746,9 @@ class Topology(Serializable):
 
         substructure_dictionary["ADDITIONAL_SUBSTRUCTURE_OVERLAP"] = {}
 
-        coords_angstrom = np.array(
-            [[*vec3.value_in_unit(openmm_unit.angstrom)] for vec3 in pdb.getPositions()]
-        )
+        coords_angstrom = np.array([[*vec3.value_in_unit(openmm_unit.angstrom)] for vec3 in pdb.getPositions()])
 
-        topology = toolkit_registry.call(
+        topology: Topology = toolkit_registry.call(
             "_polymer_openmm_pdbfile_to_offtop",
             cls,
             pdb,
@@ -1809,7 +1757,7 @@ class Topology(Serializable):
             _custom_substructures,
         )
 
-        for off_atom, atom in zip([*topology.atoms], pdb.topology.atoms()):
+        for off_atom, atom in zip(topology.atoms, pdb.topology.atoms()):
             off_atom.metadata["residue_name"] = atom.residue.name
             off_atom.metadata["residue_number"] = atom.residue.id
             off_atom.metadata["insertion_code"] = atom.residue.insertionCode
@@ -1956,9 +1904,7 @@ class Topology(Serializable):
             bond_types = {1: app.Single, 2: app.Double, 3: app.Triple}
             for bond in molecule.bonds:
                 atom1, atom2 = bond.atoms
-                atom1_idx, atom2_idx = off_topology.atom_index(
-                    atom1
-                ), off_topology.atom_index(atom2)
+                atom1_idx, atom2_idx = off_topology.atom_index(atom1), off_topology.atom_index(atom2)
                 if isinstance(bond, Bond):
                     if bond.is_aromatic:
                         bond_type = app.Aromatic
@@ -2071,9 +2017,7 @@ class Topology(Serializable):
             import openmm
 
             # Convert the topology to OpenMM
-            openmm_top = self.to_openmm(
-                ensure_unique_atom_names=ensure_unique_atom_names
-            )
+            openmm_top = self.to_openmm(ensure_unique_atom_names=ensure_unique_atom_names)
 
             # Write PDB file
             ctx_manager: Union[nullcontext[TextIO], TextIO]  # MyPy needs some help here
@@ -2135,7 +2079,7 @@ class Topology(Serializable):
         for molecule in self.molecules:
             molecule._conformers = None
 
-    def set_positions(self, array: Quantity):
+    def set_positions(self, array: Quantity) -> None:
         """
         Set the positions in a topology by copying from a single (n, 3) array.
 
@@ -2155,21 +2099,15 @@ class Topology(Serializable):
         clear_positions
         """
         if array is None:
-            raise ValueError(
-                "array argument cannot be None, use clear_positions instead."
-            )
+            raise ValueError("array argument cannot be None, use clear_positions instead.")
 
         if not isinstance(array, Quantity):
-            raise IncompatibleUnitError(
-                "array should be an OpenFF Quantity with dimensions of length"
-            )
+            raise IncompatibleUnitError("array should be an OpenFF Quantity with dimensions of length")
 
         # Copy the array in nanometers and make it an OpenFF Quantity
         array = Quantity(np.asarray(array.to(unit.nanometer).magnitude), unit.nanometer)
-        if array.shape != (self.n_atoms, 3):  # type: ignore[attr-defined]
-            raise WrongShapeError(
-                f"Array has shape {array.shape} but should have shape {self.n_atoms, 3}"  # type: ignore[attr-defined]
-            )
+        if array.shape != (self.n_atoms, 3):
+            raise WrongShapeError(f"Array has shape {array.shape} but should have shape {self.n_atoms, 3}")
 
         start = 0
         for molecule in self.molecules:
@@ -2278,8 +2216,7 @@ class Topology(Serializable):
             atomj = j
         else:
             raise ValueError(
-                "Invalid input passed to is_bonded(). Expected ints or `Atom`s, "
-                f"got {type(i)} and {type(j)}"
+                f"Invalid input passed to is_bonded(). Expected ints or `Atom`s, got {type(i)} and {type(j)}"
             )
 
         for bond in atomi.bonds:
@@ -2343,12 +2280,12 @@ class Topology(Serializable):
             if next_molecule_start_index > atom_topology_index:
                 atom_molecule_index = atom_topology_index - this_molecule_start_index
                 # NOTE: the index here should still be in the topology index order, NOT the reference molecule's
-                return molecule.atom(atom_molecule_index)
+                # can Molecule.atom be a _SimpleAtom?
+                return molecule.atom(atom_molecule_index)  # type: ignore[return-value]
             this_molecule_start_index += molecule.n_atoms
 
         raise AtomNotInTopologyError(
-            f"No atom with index {atom_topology_index} exists in this topology, "
-            f"which contains {self.n_atoms} atoms."
+            f"No atom with index {atom_topology_index} exists in this topology, which contains {self.n_atoms} atoms."
         )
 
         # Potentially more computationally efficient lookup ( O(largest_molecule_natoms)? )
@@ -2406,13 +2343,11 @@ class Topology(Serializable):
         To add multiple molecules, particularly many times, use `add_molecules` for better performance.
         """
         if isinstance(molecule, (Molecule, _SimpleMolecule)):
-
             # Route everything through add_molecules for simplicity; the overhead of
             # making a list and grabbing the first element should be negligible
             return self.add_molecules([molecule])[0]
 
         else:
-
             raise ValueError(f"Invalid type {type(molecule)} for Topology.add_molecule")
 
     def add_molecules(
@@ -2426,20 +2361,14 @@ class Topology(Serializable):
         """
 
         if isinstance(molecules, list):
-
-            indices = [
-                self._add_molecule_keep_cache(molecule) for molecule in molecules
-            ]
+            indices = [self._add_molecule_keep_cache(molecule) for molecule in molecules]
 
             self._invalidate_cached_properties()
 
             return indices
 
         else:
-
-            raise ValueError(
-                f"Invalid type {type(molecules)} for Topology.add_molecules"
-            )
+            raise ValueError(f"Invalid type {type(molecules)} for Topology.add_molecules")
 
     def _add_molecule_keep_cache(self, molecule: MoleculeLike) -> int:
         self._molecules.append(deepcopy(molecule))

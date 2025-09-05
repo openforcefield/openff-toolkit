@@ -151,9 +151,7 @@ def create_acetaldehyde():
     acetaldehyde.add_bond(0, 4, 1, False)  # C0 - H4
     acetaldehyde.add_bond(0, 5, 1, False)  # C0 - H5
     acetaldehyde.add_bond(1, 6, 1, False)  # C1 - H6
-    charges = unit.Quantity(
-        np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]), unit.elementary_charge
-    )
+    charges = unit.Quantity(np.zeros(7), unit.elementary_charge)
     acetaldehyde.partial_charges = charges
     return acetaldehyde
 
@@ -168,7 +166,7 @@ def create_water():
     mol.add_atom(1, 0, False)  # H2
     mol.add_bond(0, 1, 1, False)  # H1 - O
     mol.add_bond(1, 2, 1, False)  # O - H2
-    charges = unit.Quantity(np.array([0.0, 0.0, 0.0]), unit.elementary_charge)
+    charges = unit.Quantity(np.zeros(3), unit.elementary_charge)
     mol.partial_charges = charges
     return mol
 
@@ -185,7 +183,7 @@ def create_ammonia():
     mol.add_bond(0, 1, 1, False)  # H1 - N
     mol.add_bond(1, 2, 1, False)  # N - H2
     mol.add_bond(1, 3, 1, False)  # N - H3
-    charges = unit.Quantity(np.array([0.0, 0.0, 0.0, 0.0]), unit.elementary_charge)
+    charges = unit.Quantity(np.zeros(4), unit.elementary_charge)
     mol.partial_charges = charges
     return mol
 
