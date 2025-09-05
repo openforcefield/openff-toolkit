@@ -118,7 +118,7 @@ jobs:
         run: python -m pytest -v --nbval-lax docs/
 
       - name: Run examples in docstrings
-        if: ${{ matrix.openeye == true }}
+        if: ${{ matrix.openeye == true && matrix.rdkit == true }}
         run: |
           pytest openff \
             -v -x -n logical --doctest-modules \
