@@ -114,7 +114,7 @@ jobs:
         run: pytest -v --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
 
       - name: Run notebooks in docs
-        if: ${{ matrix.openeye == true }}
+        if: ${{ matrix.openeye == true && matrix.rdkit == true }}
         run: python -m pytest -v --nbval-lax docs/
 
       - name: Run examples in docstrings
