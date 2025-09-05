@@ -21,15 +21,14 @@ from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Literal,
-    Optional,
     TextIO,
+    TypeAlias,
     Union,
 )
 
 import numpy as np
 from numpy.typing import NDArray
 from openff.units import Unit
-from typing_extensions import TypeAlias
 
 from openff.toolkit import Quantity, unit
 from openff.toolkit.topology import Molecule
@@ -172,7 +171,7 @@ class ValenceDict(_TransformedDict):
     def index_of(
         cls,
         key: Iterable[int],
-        possible: Optional[Iterable[Iterable[int]]] = None,
+        possible: Iterable[Iterable[int]] | None = None,
     ) -> int:
         """
         Generates a canonical ordering of the equivalent permutations of ``key`` (equivalent rearrangements of indices)
@@ -426,7 +425,7 @@ class Topology(Serializable):
 
     """
 
-    _constrained_atom_pairs: dict[tuple[int, int], Union[Quantity, bool]]
+    _constrained_atom_pairs: dict[tuple[int, int], Quantity | bool]
 
     def __init__(self, other=None):
         """
@@ -502,7 +501,7 @@ class Topology(Serializable):
         return combined
 
     @property
-    def unique_molecules(self) -> Iterator[Union[Molecule, _SimpleMolecule]]:
+    def unique_molecules(self) -> Iterator[Molecule | _SimpleMolecule]:
         """
         Get a list of chemically unique molecules in this Topology.
 
@@ -537,7 +536,7 @@ class Topology(Serializable):
             The Topology created from the specified molecule(s)
         """
         # Ensure that we are working with an iterable
-        if isinstance(molecules, (FrozenMolecule, _SimpleMolecule)):
+        if isinstance(molecules, FrozenMolecule | _SimpleMolecule):
             molecules = [molecules]
 
         # Create Topology and populate it with specified molecules
@@ -673,7 +672,7 @@ class Topology(Serializable):
             )
 
     @property
-    def constrained_atom_pairs(self) -> dict[tuple[int, int], Union[Quantity, bool]]:
+    def constrained_atom_pairs(self) -> dict[tuple[int, int], Quantity | bool]:
         """Returns the constrained atom pairs of the Topology
 
         Returns
@@ -701,7 +700,7 @@ class Topology(Serializable):
         # invalidate themselves during appropriate events.
         yield from self._molecules
 
-    def molecule(self, index: int) -> Union[Molecule, _SimpleMolecule]:
+    def molecule(self, index: int) -> Molecule | _SimpleMolecule:
         """
         Returns the molecule with a given index in this Topology.
 
@@ -1216,7 +1215,7 @@ class Topology(Serializable):
 
         return_dict: dict[
             str,
-            Union[None, str, bytes, bool, tuple, list[dict], dict[tuple[int, int], str]],
+            None | str | bytes | bool | tuple | list[dict] | dict[tuple[int, int], str],
         ] = dict()
 
         return_dict["aromaticity_model"] = self._aromaticity_model
@@ -1330,7 +1329,7 @@ class Topology(Serializable):
     def from_openmm(
         cls,
         openmm_topology: "openmm.app.Topology",
-        unique_molecules: Optional[Iterable[FrozenMolecule]] = None,
+        unique_molecules: Iterable[FrozenMolecule] | None = None,
         positions: Union[None, Quantity, "OMMQuantity"] = None,
     ) -> "Topology":
         """
@@ -1523,7 +1522,7 @@ class Topology(Serializable):
         # TODO: How can we preserve metadata from the openMM topology when creating the OFF topology?
         return topology
 
-    def _ensure_unique_atom_names(self, ensure_unique_atom_names: Union[str, bool]):
+    def _ensure_unique_atom_names(self, ensure_unique_atom_names: str | bool):
         """See `Topology.to_openmm`"""
         if not ensure_unique_atom_names:
             return
@@ -1539,11 +1538,11 @@ class Topology(Serializable):
     @requires_package("openmm")
     def from_pdb(
         cls,
-        file_path: Union[str, Path, TextIO],
-        unique_molecules: Optional[Iterable[Molecule]] = None,
+        file_path: str | Path | TextIO,
+        unique_molecules: Iterable[Molecule] | None = None,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-        _custom_substructures: Optional[dict[str, list[str]]] = None,
-        _additional_substructures: Optional[Iterable[Molecule]] = None,
+        _custom_substructures: dict[str, list[str]] | None = None,
+        _additional_substructures: Iterable[Molecule] | None = None,
     ):
         """
         Loads supported or user-specified molecules from a PDB file.
@@ -1686,7 +1685,7 @@ class Topology(Serializable):
         import openmm.unit as openmm_unit
         from openmm.app import PDBFile
 
-        if isinstance(file_path, (str, io.TextIOBase)):
+        if isinstance(file_path, str | io.TextIOBase):
             pass
         elif isinstance(file_path, Path):
             file_path = file_path.as_posix()
@@ -1772,7 +1771,7 @@ class Topology(Serializable):
     @requires_package("openmm")
     def to_openmm(
         self,
-        ensure_unique_atom_names: Union[str, bool] = "residues",
+        ensure_unique_atom_names: str | bool = "residues",
     ) -> "openmm.app.Topology":
         """
         Create an OpenMM Topology object.
@@ -1936,11 +1935,11 @@ class Topology(Serializable):
     @requires_package("openmm")
     def to_file(
         self,
-        file: Union[Path, str, TextIO],
-        positions: Optional[Union["OMMQuantity", Quantity, NDArray]] = None,
+        file: Path | str | TextIO,
+        positions: Union["OMMQuantity", Quantity, NDArray] | None = None,
         file_format: Literal["PDB"] = "PDB",
         keep_ids: bool = False,
-        ensure_unique_atom_names: Union[str, bool] = "residues",
+        ensure_unique_atom_names: str | bool = "residues",
     ):
         """
         Save coordinates and topology to a PDB file.
@@ -2020,8 +2019,8 @@ class Topology(Serializable):
             openmm_top = self.to_openmm(ensure_unique_atom_names=ensure_unique_atom_names)
 
             # Write PDB file
-            ctx_manager: Union[nullcontext[TextIO], TextIO]  # MyPy needs some help here
-            if isinstance(file, (str, Path)):
+            ctx_manager: nullcontext[TextIO] | TextIO  # MyPy needs some help here
+            if isinstance(file, str | Path):
                 ctx_manager = open(file, "w")
             else:
                 ctx_manager = nullcontext(file)
@@ -2036,7 +2035,7 @@ class Topology(Serializable):
         else:
             raise NotImplementedError("Topology.to_file supports only PDB")
 
-    def get_positions(self) -> Optional[Quantity]:
+    def get_positions(self) -> Quantity | None:
         """
         Copy the positions of the topology into a new array.
 
@@ -2125,7 +2124,7 @@ class Topology(Serializable):
     def from_mdtraj(
         cls,
         mdtraj_topology: "mdtraj.Topology",
-        unique_molecules: Optional[Iterable[MoleculeLike]] = None,
+        unique_molecules: Iterable[MoleculeLike] | None = None,
         positions: Union[None, "OMMQuantity", Quantity] = None,
     ):
         """
@@ -2344,7 +2343,7 @@ class Topology(Serializable):
 
         To add multiple molecules, particularly many times, use `add_molecules` for better performance.
         """
-        if isinstance(molecule, (Molecule, _SimpleMolecule)):
+        if isinstance(molecule, Molecule | _SimpleMolecule):
             # Route everything through add_molecules for simplicity; the overhead of
             # making a list and grabbing the first element should be negligible
             return self.add_molecules([molecule])[0]

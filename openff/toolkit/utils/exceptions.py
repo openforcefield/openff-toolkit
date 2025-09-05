@@ -421,12 +421,12 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
 
     def __init__(
         self,
-        msg: Optional[str] = None,
-        substructure_library: Optional[dict[str, list[tuple]]] = None,
+        msg: str | None = None,
+        substructure_library: dict[str, list[tuple]] | None = None,
         omm_top: Optional["OpenMMTopology"] = None,
-        unassigned_bonds: Optional[list[tuple[int, int]]] = None,
-        unassigned_atoms: Optional[list[int]] = None,
-        matches: Optional[defaultdict[int, list[str]]] = None,
+        unassigned_bonds: list[tuple[int, int]] | None = None,
+        unassigned_atoms: list[int] | None = None,
+        matches: defaultdict[int, list[str]] | None = None,
     ):
         if omm_top is not None:
             self.omm_top = omm_top

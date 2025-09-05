@@ -15,7 +15,7 @@ import logging
 import os
 import pathlib
 from importlib.metadata import entry_points
-from typing import IO, TYPE_CHECKING, Any, Optional, Union
+from typing import IO, TYPE_CHECKING, Any, Union
 
 from packaging.version import Version
 
@@ -222,8 +222,8 @@ class ForceField:
         self,
         *sources,
         aromaticity_model: str = DEFAULT_AROMATICITY_MODEL,
-        parameter_handler_classes: Optional[list[type[ParameterHandler]]] = None,
-        parameter_io_handler_classes: Optional[list[type[ParameterIOHandler]]] = None,
+        parameter_handler_classes: list[type[ParameterHandler]] | None = None,
+        parameter_io_handler_classes: list[type[ParameterIOHandler]] | None = None,
         disable_version_check: bool = False,
         allow_cosmetic_attributes: bool = False,
         load_plugins: bool = False,
@@ -355,8 +355,8 @@ class ForceField:
         # ParameterIO classes to be used for each file type
         self._parameter_io_handlers: dict[str, ParameterIOHandler] = dict()
         # It'd be much more convenient for these to only be str, and just default to the empty string
-        self._author: Optional[str] = None
-        self._date: Optional[str] = None
+        self._author: str | None = None
+        self._date: str | None = None
 
     def _check_smirnoff_version_compatibility(self, version: str):
         """
@@ -460,7 +460,7 @@ class ForceField:
             self._date += " AND " + date
 
     @property
-    def author(self) -> Optional[str]:
+    def author(self) -> str | None:
         """Returns the author data for this ForceField object. If not defined in any loaded files, this will be None.
 
         Returns
@@ -471,7 +471,7 @@ class ForceField:
         return self._author
 
     @author.setter
-    def author(self, author: Optional[str]):
+    def author(self, author: str | None):
         """Set the author data for this ForceField object. If not defined in any loaded files, this will be None.
 
         Parameters
@@ -482,7 +482,7 @@ class ForceField:
         self._author = author
 
     @property
-    def date(self) -> Optional[str]:
+    def date(self) -> str | None:
         """Returns the date data for this ForceField object. If not defined in any loaded files, this will be None.
 
         Returns
@@ -493,7 +493,7 @@ class ForceField:
         return self._date
 
     @date.setter
-    def date(self, date: Optional[str]):
+    def date(self, date: str | None):
         """Set the author data for this ForceField object. If not defined in any loaded files, this will be None.
 
         Parameters
@@ -626,7 +626,7 @@ class ForceField:
     def get_parameter_handler(
         self,
         tagname: str,
-        handler_kwargs: Optional[dict] = None,
+        handler_kwargs: dict | None = None,
         allow_cosmetic_attributes: bool = False,
     ) -> ParameterHandler:
         """Retrieve the parameter handlers associated with the provided tagname.
@@ -732,7 +732,7 @@ class ForceField:
 
     def deregister_parameter_handler(
         self,
-        handler: Union[str, ParameterHandler],
+        handler: str | ParameterHandler,
     ):
         """
         Deregister a parameter handler specified by tag name, class, or instance.
@@ -806,7 +806,7 @@ class ForceField:
             A nested dict representing this ForceField as a SMIRNOFF data object.
 
         """
-        l1_dict: dict[str, Union[str, dict]] = dict()
+        l1_dict: dict[str, str | dict] = dict()
 
         # Assume we will write out SMIRNOFF data in compliance with the max supported spec version
         l1_dict["version"] = str(self._MAX_SUPPORTED_SMIRNOFF_VERSION)
@@ -954,7 +954,7 @@ class ForceField:
             )
             handler._add_parameters(parameter_list_dict, allow_cosmetic_attributes=allow_cosmetic_attributes)
 
-    def parse_smirnoff_from_source(self, source: Union[str, IO]) -> dict:
+    def parse_smirnoff_from_source(self, source: str | IO) -> dict:
         """
         Reads a SMIRNOFF data structure from a source, which can be one of many types.
 
@@ -1046,7 +1046,7 @@ class ForceField:
 
     def to_string(
         self,
-        io_format: Union[str, ParameterIOHandler] = "XML",
+        io_format: str | ParameterIOHandler = "XML",
         discard_cosmetic_attributes: bool = False,
     ) -> str:
         """
@@ -1079,7 +1079,7 @@ class ForceField:
     def to_file(
         self,
         filename: str,
-        io_format: Optional[Union[str, ParameterIOHandler]] = None,
+        io_format: str | ParameterIOHandler | None = None,
         discard_cosmetic_attributes: bool = False,
     ) -> None:
         """
@@ -1140,9 +1140,9 @@ class ForceField:
         self,
         topology: "Topology",
         *,
-        toolkit_registry: Optional[Union["ToolkitRegistry", "ToolkitWrapper"]] = None,
-        charge_from_molecules: Optional[list["Molecule"]] = None,
-        partial_bond_orders_from_molecules: Optional[list["Molecule"]] = None,
+        toolkit_registry: Union["ToolkitRegistry", "ToolkitWrapper"] | None = None,
+        charge_from_molecules: list["Molecule"] | None = None,
+        partial_bond_orders_from_molecules: list["Molecule"] | None = None,
         allow_nonintegral_charges: bool = False,
     ) -> "openmm.System":
         """Create an OpenMM System from this ForceField and a Topology.
@@ -1185,9 +1185,9 @@ class ForceField:
     def create_interchange(
         self,
         topology: "Topology",
-        toolkit_registry: Optional[Union["ToolkitRegistry", "ToolkitWrapper"]] = None,
-        charge_from_molecules: Optional[list["Molecule"]] = None,
-        partial_bond_orders_from_molecules: Optional[list["Molecule"]] = None,
+        toolkit_registry: Union["ToolkitRegistry", "ToolkitWrapper"] | None = None,
+        charge_from_molecules: list["Molecule"] | None = None,
+        partial_bond_orders_from_molecules: list["Molecule"] | None = None,
         allow_nonintegral_charges: bool = False,
     ) -> "Interchange":
         """
@@ -1396,7 +1396,7 @@ class ForceField:
             unit.elementary_charge,
         )
 
-    def __getitem__(self, val: Union[str, ParameterHandler]) -> ParameterHandler:
+    def __getitem__(self, val: str | ParameterHandler) -> ParameterHandler:
         """
         Syntax sugar for lookikng up a ParameterHandler. Note that only
         string-based lookups are currently supported.

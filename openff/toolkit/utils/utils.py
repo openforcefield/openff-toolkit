@@ -27,7 +27,7 @@ import contextlib
 import functools
 import logging
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 import numpy as np
 import pint
@@ -192,7 +192,7 @@ def string_to_unit(unit_string) -> Unit:
 
 
 @functools.lru_cache
-def string_to_quantity(quantity_string: str) -> Union[int, float, Quantity]:
+def string_to_quantity(quantity_string: str) -> int | float | Quantity:
     """Attempt to parse a string into a ``Quantity``.
 
     Note that strings representing dimensionless floats or ints are returned as floats or ints, not
@@ -215,7 +215,7 @@ def string_to_quantity(quantity_string: str) -> Union[int, float, Quantity]:
 
     # TODO: Should intentionally unitless array-likes be Quantity objects
     #       or their raw representation?
-    if quantity.units == _DIMENSIONLESS and isinstance(quantity.m, (int, float)):
+    if quantity.units == _DIMENSIONLESS and isinstance(quantity.m, int | float):
         return quantity.m
     else:
         return quantity
@@ -299,12 +299,12 @@ def convert_all_quantities_to_string(
 @overload
 def convert_all_quantities_to_string(
     smirnoff_data: "Quantity",
-) -> Union[str, list[str], dict[str, Any]]: ...
+) -> str | list[str] | dict[str, Any]: ...
 
 
 def convert_all_quantities_to_string(
-    smirnoff_data: Union[dict, str, Quantity, list],
-) -> Union[str, dict[str, Any], list[str]]:
+    smirnoff_data: dict | str | Quantity | list,
+) -> str | dict[str, Any] | list[str]:
     """
     Traverses a SMIRNOFF data structure, attempting to convert all
     quantities into strings.
@@ -414,7 +414,7 @@ def serialize_numpy(np_array) -> tuple[bytes, tuple[int]]:
 
 
 def deserialize_numpy(
-    serialized_np: Union[bytes, list],
+    serialized_np: bytes | list,
     shape: tuple[int, ...],
 ) -> NDArray:
     """

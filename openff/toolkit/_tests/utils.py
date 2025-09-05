@@ -13,7 +13,6 @@ import pathlib
 import pprint
 import textwrap
 from contextlib import contextmanager
-from typing import Union
 
 import numpy as np
 import openmm
@@ -47,7 +46,7 @@ requires_openeye_mol2 = pytest.mark.skipif(
 )
 
 
-def _get_readme_path() -> Union[pathlib.Path, None]:
+def _get_readme_path() -> pathlib.Path | None:
     """
     Return a path to the README file or None if it cannot be assured to be the toolkit's README.
     """
