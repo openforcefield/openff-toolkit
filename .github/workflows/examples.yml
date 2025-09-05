@@ -111,7 +111,7 @@ jobs:
         run: python -c "from openff.toolkit import *"
 
       - name: Run code snippets in docs
-        if: ${{ matrix.openeye == true }}
+        if: ${{ matrix.openeye == true && matrix.rdkit == true }}
         run: pytest -v --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
 
       - name: Run notebooks in docs
