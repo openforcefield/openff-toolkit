@@ -20,7 +20,6 @@ jobs:
     name: ${{ matrix.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.rdkit }}, OpenEye=${{ matrix.openeye }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
         python-version: ["3.11", "3.12"]
@@ -116,13 +115,13 @@ jobs:
 
       - name: Run notebooks in docs
         if: ${{ matrix.openeye == true }}
-        run: python -m pytest -v --no-cov --nbval-lax docs/
+        run: python -m pytest -v --nbval-lax docs/
 
       - name: Run examples in docstrings
         if: ${{ matrix.openeye == true }}
         run: |
           pytest openff \
-            -v -x -n logical --no-cov --doctest-modules \
+            -v -x -n logical --doctest-modules \
             --ignore-glob='openff/toolkit/_tests*' \
             --ignore=openff/toolkit/data/ \
             --ignore=openff/toolkit/utils/utils.py
