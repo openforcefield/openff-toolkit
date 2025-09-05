@@ -23,9 +23,8 @@ dependencies:
   - typing_extensions
   - nglview
     # Toolkit-specific
-  - ambertools
-    # https://github.com/rdkit/rdkit/issues/7221 and https://github.com/rdkit/rdkit/issues/7583
-  - rdkit =2024
+  - ambertools =24
+  - rdkit =2025
     # Test-only/optional/dev/typing/examples
   - pytest =8
   - pytest-xdist
