@@ -1764,7 +1764,7 @@ class Topology(Serializable):
             off_atom.metadata["chain_id"] = atom.residue.chain.id
             off_atom.name = atom.name
 
-        for offmol in topology.molecules:
+        for offmol in topology.molecules:  # type: ignore[operator]
             offmol.add_default_hierarchy_schemes()
 
         return topology
@@ -2105,8 +2105,8 @@ class Topology(Serializable):
             raise IncompatibleUnitError("array should be an OpenFF Quantity with dimensions of length")
 
         # Copy the array in nanometers and make it an OpenFF Quantity
-        array = Quantity(np.asarray(array.to(unit.nanometer).magnitude), unit.nanometer)
-        if array.shape != (self.n_atoms, 3):
+        array = Quantity(np.asarray(array.to(unit.nanometer).magnitude), unit.nanometer)  # type: ignore[attr-defined]
+        if array.shape != (self.n_atoms, 3):  # type: ignore[attr-defined]
             raise WrongShapeError(f"Array has shape {array.shape} but should have shape {self.n_atoms, 3}")
 
         start = 0
