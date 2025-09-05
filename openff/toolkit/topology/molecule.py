@@ -1353,7 +1353,7 @@ class FrozenMolecule(Serializable):
             hill = self.to_hill_formula()
             return description + f" with bad SMILES and Hill formula '{hill}'"
 
-    def _initialize(self):
+    def _initialize(self) -> None:
         """
         Clear the contents of the current molecule.
         """
@@ -1362,9 +1362,9 @@ class FrozenMolecule(Serializable):
         self._bonds: list[Bond] = list()  # list of bonds between Atom objects
         self._properties = {}  # Attached properties to be preserved
         # self._cached_properties = None # Cached properties (such as partial charges) can be recomputed as needed
-        self._partial_charges = None
-        self._conformers = None  # Optional conformers
-        self._hill_formula = None  # Cached Hill formula
+        self._partial_charges: Quantity | None = None
+        self._conformers: list[Quantity] | None = None  # Optional conformers
+        self._hill_formula: str | None = None  # Cached Hill formula
         self._hierarchy_schemes = dict()
         self._ordered_connection_table_hash = None
         self._invalidate_cached_properties()
@@ -2774,7 +2774,7 @@ class FrozenMolecule(Serializable):
                 f"Expected ToolkitRegistry or ToolkitWrapper. Got {type(toolkit_registry)}."
             )
 
-    def _invalidate_cached_properties(self):
+    def _invalidate_cached_properties(self) -> None:
         """
         Indicate that the chemical entity has been altered.
 
@@ -4098,7 +4098,12 @@ class FrozenMolecule(Serializable):
         # now close the file
         xyz_data.close()
 
-    def to_file(self, file_path, file_format, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
+    def to_file(
+        self,
+        file_path,
+        file_format: str,
+        toolkit_registry: TKR = GLOBAL_TOOLKIT_REGISTRY,
+    ):
         """Write the current molecule to a file or file-like object
 
         Parameters
@@ -4126,14 +4131,11 @@ class FrozenMolecule(Serializable):
         >>> molecule.to_file('imatinib.pdb', file_format='pdb')  # doctest: +SKIP
 
         """
-        toolkit: Optional[ToolkitRegistry]
-
         if isinstance(toolkit_registry, ToolkitRegistry):
             pass
         elif isinstance(toolkit_registry, ToolkitWrapper):
-            toolkit = toolkit_registry
-            toolkit_registry = ToolkitRegistry(toolkit_precedence=[])
-            toolkit_registry.add_toolkit(toolkit)
+            # make the toolkit_registry: ToolkitWrapper actually a ToolkitRegistry
+            toolkit_registry = ToolkitRegistry(toolkit_precedence=[toolkit_registry])  # type: ignore[list-item]
         else:
             raise InvalidToolkitRegistryError(
                 "'toolkit_registry' must be either a ToolkitRegistry or a ToolkitWrapper"
@@ -4145,10 +4147,10 @@ class FrozenMolecule(Serializable):
             return self._to_xyz_file(file_path=file_path)
 
         # Take the first toolkit that can write the desired output format
-        toolkit = None
+        toolkit: ToolkitRegistry | None = None
         for query_toolkit in toolkit_registry.registered_toolkits:
             if file_format in query_toolkit.toolkit_file_write_formats:
-                toolkit = query_toolkit
+                toolkit = query_toolkit  # type: ignore[assignment]
                 break
 
         # Raise an exception if no toolkit was found to provide the requested file_format
@@ -4162,9 +4164,9 @@ class FrozenMolecule(Serializable):
             )
 
         if isinstance(file_path, (str, pathlib.Path)):
-            toolkit.to_file(self, file_path, file_format)
+            toolkit.to_file(self, file_path, file_format)  # type: ignore[attr-defined]
         else:
-            toolkit.to_file_obj(self, file_path, file_format)
+            toolkit.to_file_obj(self, file_path, file_format)  # type: ignore[attr-defined]
 
     def enumerate_tautomers(self, max_states=20, toolkit_registry=GLOBAL_TOOLKIT_REGISTRY):
         """
@@ -5818,7 +5820,7 @@ class HierarchyScheme:
         return_dict["hierarchy_elements"] = [e.to_dict() for e in self.hierarchy_elements]
         return return_dict
 
-    def perceive_hierarchy(self):
+    def perceive_hierarchy(self) -> None:
         """
         Prepare the parent ``Molecule`` for iteration according to this scheme.
 

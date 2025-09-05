@@ -505,7 +505,7 @@ class _SimpleMolecule:
         else:
             return False, None
 
-    def generate_unique_atom_names(self):
+    def generate_unique_atom_names(self) -> None:
         """Generate unique atom names. See `Molecule.generate_unique_atom_names`."""
         from collections import defaultdict
 

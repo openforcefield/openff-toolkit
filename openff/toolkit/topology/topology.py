@@ -1300,7 +1300,7 @@ class Topology(Serializable):
 
     @staticmethod
     @requires_package("openmm")
-    def _openmm_topology_to_networkx(openmm_topology):
+    def _openmm_topology_to_networkx(openmm_topology: "openmm.app.Topology"):
         import networkx as nx
 
         # Convert all openMM mols to graphs
@@ -1765,7 +1765,7 @@ class Topology(Serializable):
             off_atom.name = atom.name
 
         for offmol in topology.molecules:  # type: ignore[operator]
-            offmol.add_default_hierarchy_schemes()
+            offmol.add_default_hierarchy_schemes()  # type: ignore[operator]
 
         return topology
 
@@ -2107,7 +2107,9 @@ class Topology(Serializable):
         # Copy the array in nanometers and make it an OpenFF Quantity
         array = Quantity(np.asarray(array.to(unit.nanometer).magnitude), unit.nanometer)  # type: ignore[attr-defined]
         if array.shape != (self.n_atoms, 3):  # type: ignore[attr-defined]
-            raise WrongShapeError(f"Array has shape {array.shape} but should have shape {self.n_atoms, 3}")
+            raise WrongShapeError(
+                f"Array has shape {array.shape} but should have shape {self.n_atoms, 3}"  # type: ignore[attr-defined]
+            )
 
         start = 0
         for molecule in self.molecules:

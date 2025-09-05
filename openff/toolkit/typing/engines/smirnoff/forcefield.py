@@ -335,7 +335,7 @@ class ForceField:
         # Parse all sources containing SMIRNOFF parameter definitions
         self.parse_sources(sources, allow_cosmetic_attributes=allow_cosmetic_attributes)
 
-    def _initialize(self):
+    def _initialize(self) -> None:
         """
         Initialize all object fields.
         """
