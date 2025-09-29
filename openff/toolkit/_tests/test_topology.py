@@ -66,6 +66,7 @@ from openff.toolkit.utils.exceptions import (
     MissingUniqueMoleculesError,
     MoleculeNotInTopologyError,
     NonUniqueSubstructureName,
+    PDBMoleculeHasNoncontiguousAtomIndicesError,
     SubstructureAtomSmartsInvalid,
     SubstructureBondSmartsInvalid,
     UnassignedChemistryInPDBError,
@@ -905,6 +906,25 @@ class TestTopology:
 
         expected_mol = Molecule.from_file(get_data_file_path("proteins/ace-ZZZ-gly-nme.sdf"))
         assert top.molecule(0).is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
+
+    @requires_rdkit
+    def test_from_pdb_molecule_atom_ordering_noncontiguous(self):
+        """
+        Test that from_pdb correctly raises an error when the PDB atom ordering has atoms
+        in the same molecule on noncontiguous lines.
+        See https://github.com/openforcefield/openff-toolkit/issues/2093
+        """
+        with pytest.raises(PDBMoleculeHasNoncontiguousAtomIndicesError, match="are between roughly 23 and 48."):
+            Topology.from_pdb(get_data_file_path("proteins/split_chain.pdb"))
+
+        # Ensure that following the prior error message's advice and naively reordering the PDB lines works
+        top = Topology.from_pdb(get_data_file_path("proteins/split_chain_reordered.pdb"))
+
+        # Check for sanity by ensuring that no bonds have unreasonable geometry
+        for mol in top.molecules:
+            for bond in mol.bonds:
+                length = np.linalg.norm(mol.conformers[0][bond.atom1_index] - mol.conformers[0][bond.atom2_index])
+                assert 0.4 < length.m_as(unit.angstrom) < 2.5
 
     @requires_pkg("mdtraj")
     def test_from_mdtraj(self):

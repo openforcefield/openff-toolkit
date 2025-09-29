@@ -39,6 +39,7 @@ from openff.toolkit.utils.exceptions import (
     MultipleComponentsInMoleculeWarning,
     NonUniqueSubstructureName,
     NotAttachedToMoleculeError,
+    PDBMoleculeHasNoncontiguousAtomIndicesError,
     RadicalsNotSupportedError,
     SMILESParseError,
     SubstructureAtomSmartsInvalid,
@@ -602,6 +603,29 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Get a tuple of tuples of atom indices belonging to separate molecules in this RDMol
         # (note that this rdmol may actually be a solvated protein-ligand system)
         sorted_mol_frags = [tuple(sorted(i)) for i in Chem.GetMolFrags(mol)]
+
+        # If the PDB file contains a single molecule that doesn't have contiguous atom indices,
+        # we would need to rearrange the atoms away from the order that the user expects. We could
+        # do this with some additional logic, but until a user makes a compelling case for this to
+        # be supported, we'll just raise an error.
+        for mol_idx, frag_idxs in enumerate(sorted_mol_frags):
+            if len(frag_idxs) != (max(frag_idxs) - min(frag_idxs)) + 1:
+                likely_intervening_indices = set(range(min(frag_idxs), max(frag_idxs))).difference(set(frag_idxs))
+                raise PDBMoleculeHasNoncontiguousAtomIndicesError(
+                    "At least one molecule in the PDB file has noncontiguous atom indices. "
+                    "This is not currently supported by Topology.from_pdb.\n\n"
+                    f"Likely intervening atom indices are between roughly {min(likely_intervening_indices) + 1} and "
+                    f"{max(likely_intervening_indices) + 1}.\n\n"
+                    "This can happen when a crosslink is introduced between two molecules, but other "
+                    "molecules are present between them in the PDB atom ordering. "
+                    "You may be able to get around this error by rearranging the atom order in your PDB file to "
+                    "ensure that all the atoms in a single covalently bonded molecule are listed on a contiguous "
+                    "series of lines (you won't need to change atom/residue/chain naming or numbering, just the "
+                    "order of the lines and and relevant CONECT records). "
+                    "For more information see https://github.com/openforcefield/openff-toolkit/issues/2093"
+                )
+        # 1/0
+        # Put contiguity check here?
         query_number = 0
         for res_idx, res_name in enumerate(substructure_library):
             # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes
