@@ -332,7 +332,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                 raise PDBMoleculeHasNoncontiguousAtomIndicesError(
                     "At least one molecule in the PDB file has noncontiguous atom indices. "
                     "This is not currently supported by Topology.from_pdb.\n\n"
-                    f"Atom indices {min(missing_idxs) - 1} and {max(missing_idxs) + 1} "
+                    f"Atom indices {min(missing_idxs) + 1} and {max(missing_idxs) + 1} "
                     f"are in molecule {mol_idx}, but some or all of the intervening indices are not.\n\n"
                     "This can happen when a crosslink is introduced between two molecules, but other "
                     "molecules are present between them in the PDB atom ordering. "

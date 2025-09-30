@@ -914,7 +914,9 @@ class TestTopology:
         in the same molecule on noncontiguous lines.
         See https://github.com/openforcefield/openff-toolkit/issues/2093
         """
-        with pytest.raises(PDBMoleculeHasNoncontiguousAtomIndicesError, match="are between roughly 23 and 48."):
+        with pytest.raises(
+            PDBMoleculeHasNoncontiguousAtomIndicesError, match="Atom indices 23 and 48 are in molecule 0"
+        ):
             Topology.from_pdb(get_data_file_path("proteins/split_chain.pdb"))
 
         # Ensure that following the prior error message's advice and naively reordering the PDB lines works
