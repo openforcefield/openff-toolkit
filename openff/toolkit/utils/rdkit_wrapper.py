@@ -322,14 +322,18 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # be supported, we'll just raise an error.
         sorted_mol_frags = [tuple(sorted(i)) for i in Chem.GetMolFrags(rdkit_mol)]
 
-        for frag_idxs in sorted_mol_frags:
-            if len(frag_idxs) != (max(frag_idxs) - min(frag_idxs)) + 1:
-                likely_intervening_indices = set(range(min(frag_idxs), max(frag_idxs))).difference(set(frag_idxs))
+        for mol_idx, frag_idxs in enumerate(sorted_mol_frags):
+            # frag_idxs is sorted
+            min_frag_idx = frag_idxs[0]
+            max_frag_idx = frag_idxs[-1]
+            if len(frag_idxs) != (max_frag_idx - min_frag_idx) + 1:
+                expected_idxs = set(range(min_frag_idx, max_frag_idx+1))
+                missing_idxs = expected_idxs.difference(set(frag_idxs))
                 raise PDBMoleculeHasNoncontiguousAtomIndicesError(
                     "At least one molecule in the PDB file has noncontiguous atom indices. "
                     "This is not currently supported by Topology.from_pdb.\n\n"
-                    f"Likely intervening atom indices are between roughly {min(likely_intervening_indices) + 1} and "
-                    f"{max(likely_intervening_indices) + 1}.\n\n"
+                    f"Atom indices {min(missing_idxs) - 1} and {max(missing_idxs) + 1} "
+                    f"are in molecule {mol_idx}, but some or all of the intervening indices are not.\n\n"
                     "This can happen when a crosslink is introduced between two molecules, but other "
                     "molecules are present between them in the PDB atom ordering. "
                     "You may be able to get around this error by rearranging the atom order in your PDB file to "
