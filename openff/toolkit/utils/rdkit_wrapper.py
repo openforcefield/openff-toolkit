@@ -338,8 +338,8 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
                     "molecules are present between them in the PDB atom ordering. "
                     "You may be able to get around this error by rearranging the atom order in your PDB file to "
                     "ensure that all the atoms in a single covalently bonded molecule are listed on a contiguous "
-                    "series of lines (you won't need to change atom/residue/chain naming or numbering, just the "
-                    "order of the lines and and relevant CONECT records). "
+                    "series of lines (don't change atom/residue/chain naming or numbering or any "
+                    "CONECT records, just the order of the ATOM/HETATM records). "
                     "For more information see https://github.com/openforcefield/openff-toolkit/issues/2093"
                 )
 
