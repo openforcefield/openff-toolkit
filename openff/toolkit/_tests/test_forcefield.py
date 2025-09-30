@@ -782,8 +782,6 @@ class TestForceField(_ForceFieldFixtures):
 
         # Incomplete list of some expected force fields
         expected_force_fields = [
-            "smirnoff99Frosst-1.0.0.offxml",
-            "smirnoff99Frosst-1.1.0.offxml",
             "openff-1.0.0.offxml",
             "openff_unconstrained-1.0.0.offxml",
             "openff-1.3.0.offxml",
@@ -809,8 +807,8 @@ class TestForceField(_ForceFieldFixtures):
 
     def test_force_field_case(self):
         """Ensure forcefield paths are loaded in a case-insensitive manner"""
-        default_case = ForceField("smirnoff99Frosst-1.1.0.offxml")
-        lower_case = ForceField("smirnoff99frosst-1.1.0.offxml")
+        default_case = ForceField("openff-2.0.0.offxml")
+        lower_case = ForceField("oPeNFF-2.0.0.offxml")
 
         assert hash(default_case) == hash(lower_case)
 
