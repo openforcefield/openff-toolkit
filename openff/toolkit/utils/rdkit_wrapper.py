@@ -327,7 +327,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             min_frag_idx = frag_idxs[0]
             max_frag_idx = frag_idxs[-1]
             if len(frag_idxs) != (max_frag_idx - min_frag_idx) + 1:
-                expected_idxs = set(range(min_frag_idx, max_frag_idx+1))
+                expected_idxs = set(range(min_frag_idx, max_frag_idx + 1))
                 missing_idxs = expected_idxs.difference(set(frag_idxs))
                 raise PDBMoleculeHasNoncontiguousAtomIndicesError(
                     "At least one molecule in the PDB file has noncontiguous atom indices. "
