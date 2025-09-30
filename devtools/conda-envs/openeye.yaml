@@ -14,7 +14,6 @@ dependencies:
   - python-constraint
   - openmm >=7.6
   - openff-forcefields >=2023.05.1
-  - smirnoff99Frosst
   - openff-units
   - openff-amber-ff-ports
   - openff-utilities >=0.1.5
