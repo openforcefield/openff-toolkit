@@ -39,6 +39,7 @@ from openff.toolkit.utils.exceptions import (
     MultipleComponentsInMoleculeWarning,
     NonUniqueSubstructureName,
     NotAttachedToMoleculeError,
+    PDBMoleculeHasNoncontiguousAtomIndicesError,
     RadicalsNotSupportedError,
     SMILESParseError,
     SubstructureAtomSmartsInvalid,
@@ -314,6 +315,33 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         )  # concats both dicts, unique keys are enforced in previous function
 
         rdkit_mol = self._polymer_openmm_topology_to_rdmol(omm_top, substructure_dictionary)
+
+        # If the PDB file contains a single molecule that doesn't have contiguous atom indices,
+        # we would need to rearrange the atoms away from the order that the user expects. We could
+        # do this with some additional logic, but until a user makes a compelling case for this to
+        # be supported, we'll just raise an error.
+        sorted_mol_frags = [tuple(sorted(i)) for i in Chem.GetMolFrags(rdkit_mol)]
+
+        for mol_idx, frag_idxs in enumerate(sorted_mol_frags):
+            # frag_idxs is sorted
+            min_frag_idx = frag_idxs[0]
+            max_frag_idx = frag_idxs[-1]
+            if len(frag_idxs) != (max_frag_idx - min_frag_idx) + 1:
+                expected_idxs = set(range(min_frag_idx, max_frag_idx + 1))
+                missing_idxs = expected_idxs.difference(set(frag_idxs))
+                raise PDBMoleculeHasNoncontiguousAtomIndicesError(
+                    "At least one molecule in the PDB file has noncontiguous atom indices. "
+                    "This is not currently supported by Topology.from_pdb.\n\n"
+                    f"Atom indices {min(missing_idxs) + 1} and {max(missing_idxs) + 1} "
+                    f"are in molecule {mol_idx}, but some or all of the intervening indices are not.\n\n"
+                    "This can happen when a crosslink is introduced between two molecules, but other "
+                    "molecules are present between them in the PDB atom ordering. "
+                    "You may be able to get around this error by rearranging the atom order in your PDB file to "
+                    "ensure that all the atoms in a single covalently bonded molecule are listed on a contiguous "
+                    "series of lines (don't change atom/residue/chain naming or numbering or any "
+                    "CONECT records, just the order of the ATOM/HETATM records). "
+                    "For more information see https://github.com/openforcefield/openff-toolkit/issues/2093"
+                )
 
         rdmol_conformer = Chem.Conformer()
         for atom_idx in range(rdkit_mol.GetNumAtoms()):
@@ -602,6 +630,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Get a tuple of tuples of atom indices belonging to separate molecules in this RDMol
         # (note that this rdmol may actually be a solvated protein-ligand system)
         sorted_mol_frags = [tuple(sorted(i)) for i in Chem.GetMolFrags(mol)]
+
         query_number = 0
         for res_idx, res_name in enumerate(substructure_library):
             # TODO: This is a hack for the moment since we don't have a more sophisticated way to resolve clashes

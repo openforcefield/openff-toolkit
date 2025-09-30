@@ -13,6 +13,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Behavior changes
 
 ### Bugfixes
+- [PR #2107](https://github.com/openforcefield/openff-toolkit/pull/2107): Fixes [Issue #2093](https://github.com/openforcefield/openff-toolkit/issues/2093), where in rare cases `Topology.from_pdb` would mangle the order/coordinates of loaded atoms, by making it raise a `PDBMoleculeHasNoncontiguousAtomIndicesError` instead. 
+
 
 ### New features
 

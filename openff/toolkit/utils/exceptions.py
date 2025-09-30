@@ -406,6 +406,12 @@ class MultipleMoleculesInPDBError(OpenFFToolkitException):
     """Error raised when a multiple molecules are found when one was expected"""
 
 
+class PDBMoleculeHasNoncontiguousAtomIndicesError(OpenFFToolkitException):
+    """Error raised when attempting to load a PDB file where at least one molecule has a gap in its atom
+    indices (this can not be represented in an OpenFF Topology as atoms in a molecule must be
+    contiguously indexed)"""
+
+
 class MultipleComponentsInMoleculeWarning(UserWarning):
     """Warning emitted when user attempts to make an OpenFF Molecule with multiple disconnected components"""
 
