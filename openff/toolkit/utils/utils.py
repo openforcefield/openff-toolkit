@@ -166,7 +166,7 @@ def quantity_to_string(input_quantity: Quantity) -> str:
     if isinstance(unitless_value, np.ndarray):
         unitless_value = list(unitless_value)
 
-    unit_string = unit_to_string(input_quantity.units)
+    unit_string = unit_to_string(input_quantity.units)  # type: ignore
 
     return f"{unitless_value} * {unit_string}"
 

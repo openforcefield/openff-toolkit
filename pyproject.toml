@@ -61,7 +61,6 @@ exclude_lines = [
 
 [tool.mypy]
 python_version = 3.12
-plugins = "numpy.typing.mypy_plugin"
 warn_unused_configs = true
 # would be nice to flip back to true
 warn_unused_ignores = false
@@ -79,7 +78,7 @@ module = [
     "openmm",
     "openmm.app",
     "openmm.unit",
-    "rdkit",
+    "rdkit",  # maybe revisit if/when stubs are fixed
     "rdkit.Chem",
     "rdkit.Chem.Draw",
     "rdkit.DataStructs.cDataStructs",
@@ -93,3 +92,11 @@ module = [
     "constraint",
 ]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# bit of a hack to prevent crash
+module=[
+    "rdkit"
+]
+follow_imports = "skip"
+follow_imports_for_stubs = true
