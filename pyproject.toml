@@ -13,7 +13,6 @@ authors = [ { name = "Open Force Field Consortium", email = "info@openforcefield
 requires-python = ">=3.11"
 classifiers = [
   "Development Status :: 3 - Alpha",
-  "License :: OSI Approved :: MIT",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
