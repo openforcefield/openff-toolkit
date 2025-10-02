@@ -1,11 +1,12 @@
 [build-system]
-requires = ["setuptools", "versioningit"]
+requires = ["setuptools >77.0.3", "versioningit"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name="openff-toolkit"
 description = "openff-toolkit"
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
 urls = {Homepage = "https://github.com/openforcefield/openff-toolkit"}
 authors = [{name = "Open Force Field Consortium", email = "info@openforcefield.org"}]
 keywords=["molecular mechanics", "force field", "parameterization",]
