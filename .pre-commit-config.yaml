@@ -1,6 +1,6 @@
 ci:
   autoupdate_schedule: "quarterly"
-files: ^openff|(^examples/((?!deprecated).)*$)|^docs|(^utilities/((?!deprecated).)*$)
+files: ^pyproject.toml|openff|(^examples/((?!deprecated).)*$)|^docs|(^utilities/((?!deprecated).)*$)
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.12.11
@@ -13,3 +13,7 @@ repos:
   hooks:
     - id: blacken-docs
       files: ^docs/.*\.(rst|md)$
+- repo: https://github.com/tox-dev/pyproject-fmt
+  rev: v2.7.0
+  hooks:
+    - id: pyproject-fmt
