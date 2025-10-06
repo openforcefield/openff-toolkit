@@ -3,9 +3,9 @@ import re
 
 import numpy
 import pytest
+from openff.nagl_models._dynamic_fetch import BadFileSuffixError
 from openff.utilities import has_package, skip_if_missing
 
-from openff.nagl_models._dynamic_fetch import BadFileSuffixError
 from openff.toolkit import Molecule, unit
 from openff.toolkit._tests.create_molecules import (
     create_acetaldehyde,
