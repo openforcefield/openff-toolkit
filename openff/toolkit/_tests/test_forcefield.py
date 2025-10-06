@@ -6,7 +6,6 @@ Tests for forcefield class
 import copy
 import itertools
 import os
-import re
 from tempfile import NamedTemporaryFile
 
 import numpy as np
@@ -999,7 +998,7 @@ class TestForceField(_ForceFieldFixtures):
         # Ensure an exception is raised if we try to read the XML string with cosmetic attributes
         with pytest.raises(
             SMIRNOFFSpecError,
-            match=re.escape("Unexpected kwarg [(]parameters: k, length[)]  passed"),
+            match=r"Unexpected kwarg [(]parameters: k, length[)]  passed",
         ):
             ForceField(xml_ff_w_cosmetic_elements)
 
@@ -1014,7 +1013,7 @@ class TestForceField(_ForceFieldFixtures):
         assert 'parameterize_eval="blah=blah2"' in string_1
         with pytest.raises(
             SMIRNOFFSpecError,
-            match=re.escape("Unexpected kwarg [(]parameters: k, length[)]  passed"),
+            match=r"Unexpected kwarg [(]parameters: k, length[)]  passed",
         ):
             ForceField(string_1, allow_cosmetic_attributes=False)
 

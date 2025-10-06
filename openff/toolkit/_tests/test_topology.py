@@ -413,7 +413,7 @@ class TestTopology:
         assert n_cc_bonds == 2
         assert n_ch_bonds == 10
 
-        with pytest.raises(ValueError, matchr="must be an int.*'str'"):
+        with pytest.raises(ValueError, match=r"must be an int.*'str'"):
             topology.bond("one")
 
         with pytest.raises(BondNotInTopologyError, match="No bond with index -1"):
