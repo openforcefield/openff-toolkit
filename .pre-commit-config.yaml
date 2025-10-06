@@ -3,13 +3,13 @@ ci:
 files: ^pyproject.toml|openff|(^examples/((?!deprecated).)*$)|^docs|(^utilities/((?!deprecated).)*$)
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.12.11
+  rev: v0.13.3
   hooks:
     - id: ruff-format
     - id: ruff-check
       args: [--fix]
 - repo: https://github.com/adamchainz/blacken-docs
-  rev: 1.19.1
+  rev: 1.20.0
   hooks:
     - id: blacken-docs
       files: ^docs/.*\.(rst|md)$
