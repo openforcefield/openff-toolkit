@@ -343,7 +343,7 @@ class _SimpleMolecule:
             molecule_dict["conformers_unit"] = "angstrom"  # Have this defined as a class variable?
             for conf in self._conformers:
                 conf_unitless = conf.m_as(unit.angstrom)
-                conf_serialized, conf_shape = serialize_numpy(conf_unitless)
+                conf_serialized, _ = serialize_numpy(conf_unitless)
                 molecule_dict["conformers"].append(conf_serialized)
 
         molecule_dict["hierarchy_schemes"] = dict()

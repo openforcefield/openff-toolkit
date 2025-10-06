@@ -160,7 +160,7 @@ class TestTopology:
     def test_from_molecule_bad_argument(self):
         with pytest.raises(
             ValueError,
-            match="Invalid type.*Topology",
+            match=r"Invalid type.*Topology",
         ):
             topology = Topology()
 
@@ -183,13 +183,13 @@ class TestTopology:
 
         with pytest.raises(
             ValueError,
-            match="Invalid type.*set.*molecules",
+            match=r"Invalid type.*set.*molecules",
         ):
             topology.add_molecules({create_water(), create_ammonia()})
 
         with pytest.raises(
             ValueError,
-            match="Invalid type.*str.*molecules",
+            match=r"Invalid type.*str.*molecules",
         ):
             topology.add_molecules("CC.CCO")
 
@@ -328,7 +328,7 @@ class TestTopology:
         assert n_carbons == 2
         assert n_hydrogens == 6
 
-        with pytest.raises(ValueError, match="must be an int.*'str'"):
+        with pytest.raises(ValueError, match=r"must be an int.*'str'"):
             topology.atom("one")
 
         with pytest.raises(AtomNotInTopologyError):
@@ -413,7 +413,7 @@ class TestTopology:
         assert n_cc_bonds == 2
         assert n_ch_bonds == 10
 
-        with pytest.raises(ValueError, match="must be an int.*'str'"):
+        with pytest.raises(ValueError, matchr="must be an int.*'str'"):
             topology.bond("one")
 
         with pytest.raises(BondNotInTopologyError, match="No bond with index -1"):
@@ -588,13 +588,13 @@ class TestTopology:
         molecules.append(Molecule.from_smiles("CCO"))
         with pytest.raises(
             ValueError,
-            match="No match found for molecule C. This would be a "
-            "very unusual molecule to try and parameterize, "
-            "and it is likely that the data source it was "
-            "read from does not contain connectivity "
-            "information. If this molecule is coming from "
-            "PDB, please ensure that the file contains CONECT "
-            "records.",
+            match=r"No match found for molecule C. This would be a "
+            r"very unusual molecule to try and parameterize, "
+            r"and it is likely that the data source it was "
+            r"read from does not contain connectivity "
+            r"information. If this molecule is coming from "
+            r"PDB, please ensure that the file contains CONECT "
+            r"records.",
         ):
             Topology.from_openmm(pdbfile.topology, unique_molecules=molecules)
 
@@ -815,7 +815,7 @@ class TestTopology:
         with StringIO(pdb_string) as f:
             Topology.from_pdb(f)
 
-        with pytest.raises(ValueError, match="Unexpected type.*PDBFile"):
+        with pytest.raises(ValueError, match=r"Unexpected type.*PDBFile"):
             Topology.from_pdb(openmm.app.PDBFile(protein_path))
 
     @requires_rdkit
@@ -982,7 +982,7 @@ class TestTopology:
         _check_file(topology, coordinates=positions_angstrom.m)
         _check_file(topology, coordinates=to_openmm(positions_angstrom))
 
-        with pytest.raises(ValueError, match="Could not process.*list.*"):
+        with pytest.raises(ValueError, match=r"Could not process.*list.*"):
             _check_file(topology, coordinates=positions_angstrom.m.tolist())
 
     @requires_rdkit
@@ -2028,7 +2028,7 @@ def test_tagsorted_dict_multiple_keys(tsd):
 @pytest.mark.parametrize("tsd", [TagSortedDict({(0, 1, 2): 5, (1, 2): 4})])
 def test_tagsorted_dict_clear(tsd):
     """Test the clear method"""
-    tsd, ref_key = _tagsorted_dict_init_ref_key(tsd)
+    tsd, _ = _tagsorted_dict_init_ref_key(tsd)
 
     tsd.clear()
 
@@ -2322,7 +2322,7 @@ class TestTopologyPositions:
 
         with pytest.raises(
             ValueError,
-            match="cannot be None.*use clear_positions",
+            match=r"cannot be None.*use clear_positions",
         ):
             topology_with_positions.set_positions(None)
 
@@ -2446,7 +2446,7 @@ class TestTopologyFromPdbCustomSubstructures:
         )
         ref = Chem.MolFromSmarts(substructure_smarts)
         rdkit_wrapper = RDKitToolkitWrapper()
-        fuzzy, neighbor_idxs = rdkit_wrapper._fuzzy_query(ref)
+        fuzzy, _ = rdkit_wrapper._fuzzy_query(ref)
         sym_atoms, sym_bonds = rdkit_wrapper._get_symmetrical_groups(fuzzy, ref)
 
         assert sorted(sym_atoms) == [3, 4]
@@ -2464,7 +2464,7 @@ class TestTopologyFromPdbCustomSubstructures:
         )
         ref = Chem.MolFromSmarts(substructure_smarts)
         rdkit_wrapper = RDKitToolkitWrapper()
-        fuzzy, neighbor_idxs = rdkit_wrapper._fuzzy_query(ref)
+        fuzzy, _ = rdkit_wrapper._fuzzy_query(ref)
         sym_atoms, sym_bonds = rdkit_wrapper._get_symmetrical_groups(fuzzy, ref)
 
         assert sorted(sym_atoms) == [3, 4, 10, 13]

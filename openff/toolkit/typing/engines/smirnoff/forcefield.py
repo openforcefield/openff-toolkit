@@ -1097,7 +1097,7 @@ class ForceField:
 
         """
         if io_format is None:
-            basename, io_format = os.path.splitext(filename)
+            _, io_format = os.path.splitext(filename)
 
         # Resolve which IO handler to use
         if isinstance(io_format, ParameterIOHandler):

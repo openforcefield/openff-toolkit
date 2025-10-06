@@ -648,16 +648,14 @@ class TestParameterHandler:
         # Generate a SMIRNOFFSpecError by providing a value higher than the max supported
         with pytest.raises(
             SMIRNOFFVersionError,
-            match="SMIRNOFF offxml file was written with version 1000.0, "
-            "but this version of ForceField only supports version",
+            match=r"SMIRNOFF offxml file was written with version 1000.0, but this version of ForceField only supports version",
         ):
             ParameterHandler(version="1000.0")
 
         # Generate a SMIRNOFFSpecError by providing a value lower than the min supported
         with pytest.raises(
             SMIRNOFFVersionError,
-            match="SMIRNOFF offxml file was written with version 0.1, "
-            "but this version of ForceField only supports version",
+            match=r"SMIRNOFF offxml file was written with version 0.1, but this version of ForceField only supports version",
         ):
             ParameterHandler(version="0.1")
 
@@ -672,7 +670,7 @@ class TestParameterHandler:
 
         with pytest.raises(SMIRNOFFVersionError):
             MyPHSubclass(version=0.1)
-        with pytest.raises(Exception, match="Could not convert .*list"):
+        with pytest.raises(Exception, match=r"Could not convert .*list"):
             MyPHSubclass(version=[0])
         MyPHSubclass(version=0.3)
         MyPHSubclass(version=1)
@@ -789,7 +787,7 @@ class TestParameterHandler:
 
         handler = MyParameterHandler(version=0.3)
 
-        with pytest.raises(NotImplementedError, match="no longer create OpenMM forces."):
+        with pytest.raises(NotImplementedError, match=r"no longer create OpenMM forces."):
             handler.create_force()
 
 
@@ -1298,7 +1296,7 @@ class TestBondType:
         """
         Test that ParameterTypes raise an error on receiving unexpected attributes passed to __init__()
         """
-        with pytest.raises(SMIRNOFFSpecError, match="Unexpected kwarg (pilot: alice)*"):
+        with pytest.raises(SMIRNOFFSpecError, match=r"Unexpected kwarg \(pilot: alice\)"):
             BondHandler.BondType(
                 smirks="[*:1]-[*:2]",
                 length=1.02 * unit.angstrom,
@@ -1733,7 +1731,7 @@ class TestvdWHandler:
     def test_unsupported_method(self):
         with pytest.raises(
             SMIRNOFFSpecError,
-            match="LJPME.*following values are supported.*(?!LJPME.)",
+            match=r"LJPME.*following values are supported.*(?!LJPME.)",
         ):
             vdWHandler(version=0.5, periodic_method="LJPME")
 
@@ -1785,7 +1783,7 @@ class TestvdWHandlerUpConversion:
     def test_invalid_0_4_kwargs(self):
         with pytest.raises(
             SMIRNOFFSpecError,
-            match="removed in version 0.4 of the vdW",
+            match=r"removed in version 0.4 of the vdW",
         ):
             vdWHandler(version=0.4, method="cutoff")
 
@@ -1904,7 +1902,7 @@ class TestElectrostaticsHandlerUpconversion:
         assert handler.exception_potential == "Coulomb"
 
     def test_invalid_0_4_kwargs(self):
-        with pytest.raises(SMIRNOFFSpecError, match="removed in version 0.4 of the E"):
+        with pytest.raises(SMIRNOFFSpecError, match=r"removed in version 0.4 of the E"):
             ElectrostaticsHandler(version=0.4, method="PME")
 
 

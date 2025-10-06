@@ -395,26 +395,26 @@ class TestAtom:
         )
 
     def test_set_partial_charges_no_charges(self, water_without_charges):
-        with pytest.raises(MissingPartialChargesError, match="in a molecule with no partial charges."):
+        with pytest.raises(MissingPartialChargesError, match="in a molecule with no partial charges"):
             water_without_charges.atoms[2].partial_charge = 0.0 * unit.elementary_charge
 
     def test_set_partial_charges_int(self, water):
-        with pytest.raises(ValueError, match="Cannot set.*'int'"):
+        with pytest.raises(ValueError, match=r"Cannot set.*'int'"):
             water.atoms[2].partial_charge = 4
 
     @requires_pkg("openmm")
     def test_set_partial_charges_openmm_quantity(self, water):
         import openmm.unit
 
-        with pytest.raises(ValueError, match="Cannot set.*openmm.unit"):
+        with pytest.raises(ValueError, match=r"Cannot set.*openmm.unit"):
             water.atoms[2].partial_charge = 0.0 * openmm.unit.elementary_charge
 
     def test_set_partial_charges_array(self, water):
-        with pytest.raises(ValueError, match="unit-wrapped.*numpy.ndarray"):
+        with pytest.raises(ValueError, match=r"unit-wrapped.*numpy.ndarray"):
             water.atoms[2].partial_charge = unit.Quantity([0.0, 0.0], unit.elementary_charge)
 
     def test_set_partial_charges_bogus(self, water):
-        with pytest.raises(ValueError, match="Cannot set.*class 'str'"):
+        with pytest.raises(ValueError, match=r"Cannot set.*class 'str'"):
             water.atoms[2].partial_charge = "the right charge"
 
 
@@ -426,7 +426,7 @@ class TestBond:
     def test_cannot_change_molecule(self, bond):
         with pytest.raises(
             AssertionError,
-            match="Bond.molecule is already set and can only be set once",
+            match=r"Bond.molecule is already set and can only be set once",
         ):
             bond.molecule = create_reversed_ethanol()
 
@@ -1000,7 +1000,7 @@ class TestMolecule:
 
         with pytest.raises(
             ValueError,
-            match="Specified file or file-like.*exactly one molecule",
+            match=r"Specified file or file-like.*exactly one molecule",
         ):
             Molecule(filename, allow_undefined_stereo=True)
 
@@ -3568,7 +3568,7 @@ class TestMoleculeFromPDB:
         with open(protein_path) as f:
             Molecule.from_polymer_pdb(f)
 
-        with pytest.raises(ValueError, match="Unexpected type.*PDBFile"):
+        with pytest.raises(ValueError, match=r"Unexpected type.*PDBFile"):
             Molecule.from_polymer_pdb(openmm.app.PDBFile(protein_path))
 
     # TODO: Implement all the tests
@@ -4032,7 +4032,7 @@ class TestHierarchies:
         # Redundant hier schemes are NOT OK if their iter name is already used
         with pytest.raises(
             HierarchySchemeWithIteratorNameAlreadyRegisteredException,
-            match='Can not add iterator with name "res_by_num" to this molecule',
+            match=r'Can not add iterator with name "res_by_num" to this molecule',
         ):
             dipeptide_residues_perceived.add_hierarchy_scheme(("residue_number",), "res_by_num")
         assert len(dipeptide_residues_perceived.hierarchy_schemes) == 3
@@ -4046,10 +4046,8 @@ class TestHierarchies:
             dipeptide_residues_perceived.res_by_num[0]
         with pytest.raises(
             HierarchySchemeNotFoundException,
-            match=(
-                'Can not delete HierarchyScheme with name "res_by_num" because no HierarchyScheme '
-                "with that iterator name exists"
-            ),
+            match=r'Can not delete HierarchyScheme with name "res_by_num" because no HierarchyScheme '
+            "with that iterator name exists",
         ):
             dipeptide_residues_perceived.delete_hierarchy_scheme("res_by_num")
 
@@ -4058,13 +4056,13 @@ class TestHierarchies:
         offmol = Molecule()
 
         # Raise an error if iterator name isn't a string, even if it's hashable
-        with pytest.raises(TypeError, match="'iterator_name' kwarg must be a string, received 1"):
+        with pytest.raises(TypeError, match=r"'iterator_name' kwarg must be a string, received 1"):
             offmol.add_hierarchy_scheme(("chain", "residue_number", "insertion_code", "residue_name"), 1)
 
         # Ensure that the uniqueness criteria kwarg is some sort of iterable
         with pytest.raises(
             TypeError,
-            match="'uniqueness_criteria' kwarg must be a list or a tuple of strings, received 'residue_number'",
+            match=r"'uniqueness_criteria' kwarg must be a list or a tuple of strings, received 'residue_number'",
         ):
             offmol.add_hierarchy_scheme("residue_number", "residues")
         # Providing uniqueness_criteria as a list is OK
@@ -4073,7 +4071,7 @@ class TestHierarchies:
         # Ensure that the items in the uniqueness_criteria are strings
         with pytest.raises(
             TypeError,
-            match="Each item in the 'uniqueness_criteria' kwarg must be a string, received [(]'chain_id',[)]",
+            match=r"Each item in the 'uniqueness_criteria' kwarg must be a string, received [(]'chain_id',[)]",
         ):
             offmol.add_hierarchy_scheme([("chain_id",)], "chains")
 
