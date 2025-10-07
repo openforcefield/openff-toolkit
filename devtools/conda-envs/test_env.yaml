@@ -22,13 +22,12 @@ dependencies:
   - openff-nagl-models >=0.3.0
   - typing_extensions
     # Toolkit-specific
-  - ambertools >=22
-    # rdkit 2024.03.6 and 2024.09.1 packages fail when run natively on osx-arm64 macs
-    # https://github.com/rdkit/rdkit/issues/7583
-  - rdkit !=2024.03.6,!=2024.09.1
+  - ambertools =24
+  - rdkit =2025
 
   - openeye-toolkits
     # Test-only/optional/dev/typing
+  - mypy =1.18
   - pytest =8
   - pytest-cov
   - pytest-xdist
@@ -45,5 +44,11 @@ dependencies:
   - nglview
   - mdtraj
   - nbval
-  # No idea why this is necessary, see https://github.com/openforcefield/openff-toolkit/pull/1821
-  - nomkl
+  - pip:
+    - types-setuptools
+    - types-toml
+    - types-PyYAML
+    - types-networkx
+    - types-xmltodict
+    - types-cachetools
+    - mongo-types
