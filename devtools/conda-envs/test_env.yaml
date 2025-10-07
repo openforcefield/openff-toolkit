@@ -47,3 +47,5 @@ dependencies:
   - nbval
   # No idea why this is necessary, see https://github.com/openforcefield/openff-toolkit/pull/1821
   - nomkl
+  - pip:
+    - git+https://github.com/loriab/QCElemental.git@py314
