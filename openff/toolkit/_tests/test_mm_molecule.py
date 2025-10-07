@@ -399,6 +399,6 @@ class TestHierarchyData:
     def test_lookup_attribute_not_found(self, simple_dipeptide):
         with pytest.raises(
             AttributeError,
-            match="object has no attribute .*foobars",
+            match=r"object has no attribute .*foobars",
         ):
             simple_dipeptide.foobars

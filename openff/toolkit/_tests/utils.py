@@ -615,7 +615,7 @@ def compare_system_energies(
 
             # Set particle charges to 0.0.
             for particle_idx in range(nonbonded_force.getNumParticles()):
-                charge, sigma, epsilon = nonbonded_force.getParticleParameters(particle_idx)
+                _, sigma, epsilon = nonbonded_force.getParticleParameters(particle_idx)
                 nonbonded_force.setParticleParameters(particle_idx, 0.0, sigma, epsilon)
 
             # Set particle exceptions charge products to 0.0.
@@ -623,7 +623,7 @@ def compare_system_energies(
                 (
                     atom1,
                     atom2,
-                    chargeprod,
+                    _,
                     sigma,
                     epsilon,
                 ) = nonbonded_force.getExceptionParameters(exception_idx)
@@ -631,10 +631,9 @@ def compare_system_energies(
 
     # Create Contexts and compare the energies.
     integrator = openmm.VerletIntegrator(1.0 * openmm_unit.femtoseconds)
-    from openmm import Platform
 
-    context1 = openmm.Context(system1, integrator, Platform.getPlatformByName("Reference"))
-    context2 = openmm.Context(system2, copy.deepcopy(integrator), Platform.getPlatformByName("Reference"))
+    context1 = openmm.Context(system1, integrator, openmm.Platform.getPlatformByName("Reference"))
+    context2 = openmm.Context(system2, copy.deepcopy(integrator), openmm.Platform.getPlatformByName("Reference"))
 
     def map_energies_by_force_type(potential_energy1, potential_energy2):
         """Convert dictionary force_group -> energy to force_type -> energy."""
@@ -1185,7 +1184,7 @@ def _find_all_bonds(system):
 
     # Find all the constrained bonds, which do not have a HarmonicBondForce term.
     for constraint_idx in range(system.getNumConstraints()):
-        atom1, atom2, distance = system.getConstraintParameters(constraint_idx)
+        atom1, atom2, _ = system.getConstraintParameters(constraint_idx)
         bond_set.add((atom1, atom2))
         bond_set.add((atom2, atom1))
 
@@ -1716,7 +1715,7 @@ def get_14_scaling_factors(omm_sys: openmm.System) -> tuple[list, list]:
     coul_14 = list()
 
     for exception_idx in range(nonbond_force.getNumExceptions()):
-        i, j, q, sig, eps = nonbond_force.getExceptionParameters(exception_idx)
+        i, j, q, _, eps = nonbond_force.getExceptionParameters(exception_idx)
 
         # Trust that q == 0 covers the cases of 1-2, 1-3, and truly being 0
         if q._value != 0:

@@ -3057,7 +3057,7 @@ class LibraryChargeHandler(_NonbondedHandler):
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
-            unique_tags, connectivity = GLOBAL_TOOLKIT_REGISTRY.call("get_tagged_smarts_connectivity", self.smirks)
+            unique_tags, _ = GLOBAL_TOOLKIT_REGISTRY.call("get_tagged_smarts_connectivity", self.smirks)
             if len(self.charge) != len(unique_tags):
                 raise SMIRNOFFSpecError(
                     f"LibraryCharge {self} was initialized with unequal number of tagged atoms and charges"
@@ -3292,7 +3292,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
-            unique_tags, connectivity = GLOBAL_TOOLKIT_REGISTRY.call("get_tagged_smarts_connectivity", self.smirks)
+            unique_tags, _ = GLOBAL_TOOLKIT_REGISTRY.call("get_tagged_smarts_connectivity", self.smirks)
 
             n_tags = len(unique_tags)
             n_increments = len(self.charge_increment)

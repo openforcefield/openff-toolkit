@@ -733,7 +733,7 @@ class TestOpenEyeToolkitWrapper:
         smiles_impl = "C#C"
         with pytest.raises(
             ValueError,
-            match="but OpenEye Toolkit interpreted SMILES 'C#C' as having implicit hydrogen",
+            match=r"but OpenEye Toolkit interpreted SMILES 'C#C' as having implicit hydrogen",
         ):
             offmol = Molecule.from_smiles(
                 smiles_impl,
@@ -807,7 +807,7 @@ class TestOpenEyeToolkitWrapper:
         """Reproduce Issue #1897"""
         with pytest.raises(
             EmptyInChiError,
-            match="failed to generate" + (".*key" if method == "to_inchikey" else ""),
+            match="failed to generate" + (r".*key" if method == "to_inchikey" else ""),
         ):
             # call either .to_inchi or .to_inchikey
             getattr(
@@ -1317,7 +1317,7 @@ class TestOpenEyeToolkitWrapper:
 
         molecule = Molecule.from_smiles("C(C2)(C3)1CC23C1")
 
-        with pytest.raises(ConformerGenerationError, match="Omega conf.*fail"):
+        with pytest.raises(ConformerGenerationError, match=r"Omega conf.*fail"):
             toolkit.generate_conformers(molecule, n_conformers=1)
 
     def test_apply_elf_conformer_selection(self):
@@ -1561,7 +1561,7 @@ class TestOpenEyeToolkitWrapper:
         # in a failed task together in a single ValueError.
         with pytest.raises(
             ValueError,
-            match=f"has 2 conformers, but charge method '{partial_charge_method}' expects exactly {expected_n_confs}.",
+            match=rf"has 2 conformers, but charge method '{partial_charge_method}' expects exactly {expected_n_confs}.",
         ):
             molecule.assign_partial_charges(
                 toolkit_registry=toolkit_registry,
@@ -1574,7 +1574,7 @@ class TestOpenEyeToolkitWrapper:
         # confs, and specify strict_n_conformers, which should produce an IncorrectNumConformersError
         with pytest.raises(
             IncorrectNumConformersError,
-            match=f"has 2 conformers, but charge method '{partial_charge_method}' expects exactly {expected_n_confs}.",
+            match=rf"has 2 conformers, but charge method '{partial_charge_method}' expects exactly {expected_n_confs}.",
         ):
             OETKW = OpenEyeToolkitWrapper()
             OETKW.assign_partial_charges(
@@ -1778,7 +1778,7 @@ class TestOpenEyeToolkitWrapper:
         molecule = toolkit_wrapper.from_smiles("C")
 
         expected_error = (
-            "Bond order model 'not a real bond order model' is not supported by "
+            r"Bond order model 'not a real bond order model' is not supported by "
             "OpenEyeToolkitWrapper. Supported models are "
             r"\['am1-wiberg', 'am1-wiberg-elf10', 'pm3-wiberg', 'pm3-wiberg-elf10'\]"
         )
@@ -2059,7 +2059,7 @@ class TestRDKitToolkitWrapper:
         smiles_impl = "C#C"
         with pytest.raises(
             ValueError,
-            match="but RDKit toolkit interpreted SMILES 'C#C' as having implicit hydrogen",
+            match=r"but RDKit toolkit interpreted SMILES 'C#C' as having implicit hydrogen",
         ):
             offmol = Molecule.from_smiles(
                 smiles_impl,
@@ -2794,7 +2794,7 @@ class TestRDKitToolkitWrapper:
 
         molecule = Molecule.from_smiles("C(C2)(C3)1CC23C1")
 
-        with pytest.raises(ConformerGenerationError, match="RDKit conf.*fail"):
+        with pytest.raises(ConformerGenerationError, match=r"RDKit conf.*fail"):
             toolkit.generate_conformers(molecule, n_conformers=1)
 
     def test_generate_conformers_large_molecule(self):
@@ -3380,7 +3380,7 @@ class TestAmberToolsToolkitWrapper:
         # which should produce a warning
         with pytest.warns(
             IncorrectNumConformersWarning,
-            match="has 2 conformers, but charge method 'am1bcc' expects exactly 1.",
+            match=r"has 2 conformers, but charge method 'am1bcc' expects exactly 1.",
         ):
             molecule.assign_partial_charges(
                 partial_charge_method="am1bcc",
@@ -3401,7 +3401,7 @@ class TestAmberToolsToolkitWrapper:
         # which should raise the first error encountered
         with pytest.raises(
             ValueError,
-            match="has 2 conformers, but charge method 'am1bcc' expects exactly 1.",
+            match=r"has 2 conformers, but charge method 'am1bcc' expects exactly 1.",
         ):
             molecule.assign_partial_charges(
                 partial_charge_method="am1bcc",
@@ -3416,7 +3416,7 @@ class TestAmberToolsToolkitWrapper:
         # in a failed task together in a single ValueError.
         with pytest.raises(
             ValueError,
-            match="has 2 conformers, but charge method 'am1bcc' expects exactly 1.",
+            match=r"has 2 conformers, but charge method 'am1bcc' expects exactly 1.",
         ):
             toolkit_registry.call(
                 "assign_partial_charges",
@@ -3431,7 +3431,7 @@ class TestAmberToolsToolkitWrapper:
         # confs, and specify strict_n_conformers, which should produce an IncorrectNumConformersError
         with pytest.raises(
             IncorrectNumConformersError,
-            match="has 2 conformers, but charge method 'am1bcc' expects exactly 1.",
+            match=r"has 2 conformers, but charge method 'am1bcc' expects exactly 1.",
         ):
             ATTKW = AmberToolsToolkitWrapper()
             ATTKW.assign_partial_charges(
@@ -3844,7 +3844,7 @@ class TestBuiltInToolkitWrapper:
         molecule.generate_conformers(n_conformers=1)
         with pytest.warns(
             IncorrectNumConformersWarning,
-            match="has 1 conformers, but charge method 'zeros' expects exactly 0.",
+            match=r"has 1 conformers, but charge method 'zeros' expects exactly 0.",
         ):
             molecule.assign_partial_charges(
                 toolkit_registry=toolkit_registry,
@@ -3866,7 +3866,7 @@ class TestBuiltInToolkitWrapper:
         # was thrown inside them, so we just check for a ValueError here
         with pytest.raises(
             ValueError,
-            match="has 1 conformers, but charge method 'zeros' expects exactly 0.",
+            match=r"has 1 conformers, but charge method 'zeros' expects exactly 0.",
         ):
             molecule.assign_partial_charges(
                 toolkit_registry=toolkit_registry,
@@ -3879,7 +3879,7 @@ class TestBuiltInToolkitWrapper:
         # confs, and specify strict_n_conformers, which should produce an IncorrectNumConformersError
         with pytest.raises(
             IncorrectNumConformersError,
-            match="has 1 conformers, but charge method 'zeros' expects exactly 0.",
+            match=r"has 1 conformers, but charge method 'zeros' expects exactly 0.",
         ):
             BITKW = BuiltInToolkitWrapper()
             BITKW.assign_partial_charges(
@@ -3919,25 +3919,25 @@ class TestToolkitWrapper:
         # Check with min=1 should warn
         with pytest.warns(
             IncorrectNumConformersWarning,
-            match="has 0 conformers, but charge method 'nocharge' expects at least 1",
+            match=r"has 0 conformers, but charge method 'nocharge' expects at least 1",
         ):
             tkw._check_n_conformers(mol, "nocharge", min_confs=1)
         # Check with min=1 and strict_n_conformers should raise an error
         with pytest.raises(
             IncorrectNumConformersError,
-            match="has 0 conformers, but charge method 'nocharge' expects at least 1",
+            match=r"has 0 conformers, but charge method 'nocharge' expects at least 1",
         ):
             tkw._check_n_conformers(mol, "nocharge", min_confs=1, strict_n_conformers=True)
         # Check with min=1, max=1 and strict_n_conformers should raise an error
         with pytest.raises(
             IncorrectNumConformersError,
-            match="has 0 conformers, but charge method 'nocharge' expects exactly 1",
+            match=r"has 0 conformers, but charge method 'nocharge' expects exactly 1",
         ):
             tkw._check_n_conformers(mol, "nocharge", min_confs=1, max_confs=1, strict_n_conformers=True)
         # Check with min=1, max=2 and strict_n_conformers should raise an error
         with pytest.raises(
             IncorrectNumConformersError,
-            match="has 0 conformers, but charge method 'nocharge' expects between 1 and 2",
+            match=r"has 0 conformers, but charge method 'nocharge' expects between 1 and 2",
         ):
             tkw._check_n_conformers(mol, "nocharge", min_confs=1, max_confs=2, strict_n_conformers=True)
         # Check with max=1 should pass
@@ -4312,7 +4312,7 @@ class TestToolkitRegistry:
         # Specify that the ToolkitRegistry should raise the first ChargeMethodUnavailableError it encounters
         with pytest.raises(
             ChargeMethodUnavailableError,
-            match='"notarealchargemethod"" is not supported by the Built-in toolkit.',
+            match=r'"notarealchargemethod"" is not supported by the Built-in toolkit.',
         ):
             registry.call(
                 "assign_partial_charges",
@@ -4324,7 +4324,7 @@ class TestToolkitRegistry:
         # ensure it raises a single ValueError when no ToolkitWrappers succeed
         with pytest.raises(
             ValueError,
-            match="partial_charge_method 'notarealchargemethod' is not available from AmberToolsToolkitWrapper",
+            match=r"partial_charge_method 'notarealchargemethod' is not available from AmberToolsToolkitWrapper",
         ):
             registry.call(
                 "assign_partial_charges",

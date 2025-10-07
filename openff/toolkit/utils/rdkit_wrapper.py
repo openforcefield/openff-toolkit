@@ -249,7 +249,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         # check isomorphic and get the mapping if true the mapping will be
         # dict[offmol_index, pdbmol_index] sorted by offmol index
-        isomorphic, mapping = _cls.are_isomorphic(
+        _, mapping = _cls.are_isomorphic(
             offmol,
             pdbmol,
             return_atom_map=True,

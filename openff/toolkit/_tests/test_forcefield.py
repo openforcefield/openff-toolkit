@@ -824,11 +824,11 @@ class TestForceField(_ForceFieldFixtures):
         # Check that the file does not exist in the current working directory.
         assert not os.path.isfile("force-field.offxml")
 
-        with pytest.raises(OSError, match="Source 'force-field.offxml' could not be read."):
+        with pytest.raises(OSError, match=r"Source 'force-field.offxml' could not be read."):
             ForceField("force-field.offxml")
 
     def test_load_bad_version(self):
-        with pytest.raises(SMIRNOFFVersionError, match="99.3"):
+        with pytest.raises(SMIRNOFFVersionError, match=r"99.3"):
             ForceField(
                 get_data_file_path("test_forcefields/unsupported_smirnoff_version.offxml"),
                 disable_version_check=False,
@@ -998,7 +998,7 @@ class TestForceField(_ForceFieldFixtures):
         # Ensure an exception is raised if we try to read the XML string with cosmetic attributes
         with pytest.raises(
             SMIRNOFFSpecError,
-            match="Unexpected kwarg [(]parameters: k, length[)]  passed",
+            match=r"Unexpected kwarg [(]parameters: k, length[)]  passed",
         ):
             ForceField(xml_ff_w_cosmetic_elements)
 
@@ -1013,7 +1013,7 @@ class TestForceField(_ForceFieldFixtures):
         assert 'parameterize_eval="blah=blah2"' in string_1
         with pytest.raises(
             SMIRNOFFSpecError,
-            match="Unexpected kwarg [(]parameters: k, length[)]  passed",
+            match=r"Unexpected kwarg [(]parameters: k, length[)]  passed",
         ):
             ForceField(string_1, allow_cosmetic_attributes=False)
 
@@ -1131,7 +1131,7 @@ class TestForceField(_ForceFieldFixtures):
         # Ensure an exception is raised if we try to read the XML string with cosmetic attributes
         with pytest.raises(
             SMIRNOFFSpecError,
-            match="Unexpected kwarg [(]parameters: k, length[)]  passed",
+            match=r"Unexpected kwarg [(]parameters: k, length[)]  passed",
         ):
             ForceField(xml_ff_w_cosmetic_elements)
 
@@ -1146,7 +1146,7 @@ class TestForceField(_ForceFieldFixtures):
         assert 'parameterize_eval="blah=blah2"' in open(iofile1.name).read()
         with pytest.raises(
             SMIRNOFFSpecError,
-            match="Unexpected kwarg [(]parameters: k, length[)]  passed",
+            match=r"Unexpected kwarg [(]parameters: k, length[)]  passed",
         ):
             ForceField(iofile1.name, allow_cosmetic_attributes=False)
 
@@ -1170,9 +1170,9 @@ class TestForceField(_ForceFieldFixtures):
         Section versions are a requirement added in the 0.3 spec."""
         with pytest.raises(
             SMIRNOFFSpecError,
-            match="Missing version while trying to construct "
-            "<class 'openff.toolkit.typing.engines."
-            "smirnoff.parameters.ToolkitAM1BCCHandler'>.",
+            match=r"Missing version while trying to construct "
+            r"<class 'openff.toolkit.typing.engines."
+            r"smirnoff.parameters.ToolkitAM1BCCHandler'>.",
         ):
             ForceField(xml_without_section_version)
 
@@ -1222,7 +1222,7 @@ class TestForceField(_ForceFieldFixtures):
         nonstandard_xml_ff = xml_ff_w_comments.replace('scale14="0.5"', 'scale14="1.0"')
         with pytest.raises(
             IncompatibleParameterError,
-            match="handler value: 0.5, incompatible value: 1.0",
+            match=r"handler value: 0.5, incompatible value: 1.0",
         ):
             ForceField(xml_simple_ff, nonstandard_xml_ff)
 
@@ -1441,7 +1441,7 @@ class TestForceField(_ForceFieldFixtures):
 
         with pytest.raises(
             TypeError,
-            match="got an unexpected keyword argument .*invalid_kwarg.*",
+            match=r"got an unexpected keyword argument .*invalid_kwarg.*",
         ):
             # TODO: specify desired toolkit_registry behavior in Interchange
             force_field.create_openmm_system(
@@ -1908,7 +1908,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol.pdb"))
         topology = Topology.from_openmm(pdbfile.topology, unique_molecules=[ethanol])
 
-        with pytest.raises(NonIntegralMoleculeChargeError, match="Molecule .* has a net charge"):
+        with pytest.raises(NonIntegralMoleculeChargeError, match=r"Molecule .* has a net charge"):
             force_field.create_openmm_system(
                 topology,
                 charge_from_molecules=[ethanol],
@@ -3134,8 +3134,8 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
 
         (
             amber_omm_system,
-            amber_omm_topology,
-            amber_positions,
+            _,
+            _,
         ) = create_system_from_amber(
             prmtop_file.name,
             inpcrd_file.name,
@@ -3380,8 +3380,8 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
 
         (
             amber_omm_system,
-            amber_omm_topology,
-            amber_positions,
+            _,
+            _,
         ) = create_system_from_amber(
             prmtop_file.name,
             inpcrd_file.name,
@@ -3723,7 +3723,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         # If important, this can be a custom exception instead of a verbose ValidationError
         with pytest.raises(
             ValidationError,
-            match="Input should be 'linear'.*input_value='invalid method name'",
+            match=r"Input should be 'linear'.*input_value='invalid method name'",
         ):
             forcefield.create_openmm_system(
                 topology,
@@ -3740,7 +3740,7 @@ class TestForceFieldWithToolkits(_ForceFieldFixtures):
         topology = create_ethanol().to_topology()
         with pytest.raises(
             NotImplementedError,
-            match="Only .*ToolkitRegistry.*ToolkitWrapper.* are supported",
+            match=r"Only .*ToolkitRegistry.*ToolkitWrapper.* are supported",
         ):
             force_field.create_openmm_system(
                 topology,
@@ -3749,7 +3749,7 @@ class TestForceFieldWithToolkits(_ForceFieldFixtures):
 
     def test_toolkit_registry_no_charge_methods(self, force_field):
         topology = create_ethanol().to_topology()
-        with pytest.raises(ValueError, match="No registered toolkits can provide .*find_smarts_matches"):
+        with pytest.raises(ValueError, match=r"No registered toolkits can provide .*find_smarts_matches"):
             force_field.create_openmm_system(topology, toolkit_registry=BuiltInToolkitWrapper())
 
     @pytest.mark.skip(reason="Broken until Interchange supports Electrostatics 0.4")
@@ -3763,7 +3763,7 @@ class TestForceFieldWithToolkits(_ForceFieldFixtures):
         force_field.deregister_parameter_handler("ToolkitAM1BCC")
         force_field["ChargeIncrementModel"].partial_charge_method = "am1bccelf10"
 
-        with pytest.raises(ValueError, match="No registered toolkits can provide .*elf10"):
+        with pytest.raises(ValueError, match=r"No registered toolkits can provide .*elf10"):
             force_field.create_openmm_system(
                 topology,
                 toolkit_registry=ToolkitRegistry([RDKitToolkitWrapper(), AmberToolsToolkitWrapper()]),
