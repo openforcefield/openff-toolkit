@@ -1,62 +1,59 @@
 [build-system]
-requires = ["setuptools", "versioningit"]
 build-backend = "setuptools.build_meta"
+requires = [ "setuptools>=77.0.3", "versioningit" ]
 
 [project]
-name="openff-toolkit"
+name = "openff-toolkit"
 description = "openff-toolkit"
-license = {text = "MIT"}
-urls = {Homepage = "https://github.com/openforcefield/openff-toolkit"}
-authors = [{name = "Open Force Field Consortium", email = "info@openforcefield.org"}]
-keywords=["molecular mechanics", "force field", "parameterization",]
-classifiers=[
-    "Development Status :: 3 - Alpha",
-    "Topic :: Utilities",
-    "License :: OSI Approved :: MIT",
-    'Programming Language :: Python :: 3',
-]
 readme = "README.md"
+keywords = [ "force field", "molecular mechanics", "parameterization" ]
+license = "MIT"
+license-files = [ "LICENSE" ]
+authors = [ { name = "Open Force Field Consortium", email = "info@openforcefield.org" } ]
 requires-python = ">=3.11"
-dynamic = ["version"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Utilities",
+]
+
+dynamic = [ "version" ]
+urls = { Homepage = "https://github.com/openforcefield/openff-toolkit" }
 
 [tool.setuptools.packages]
 find = {}
 
-[tool.versioningit]
-
 [tool.ruff]
 line-length = 119
-exclude = ["examples/deprecated/", "utilities/deprecated"]
+exclude = [ "examples/deprecated/", "utilities/deprecated" ]
 
-[tool.ruff.lint]
-ignore = ["E721","D105","D107","D200","D203","D212", "RUF012"]
-select = ["I", "E", "F", "W", "NPY", "UP", "RUF"]
-
-[tool.ruff.lint.per-file-ignores]
-"openff/toolkit/**/__init__.py" = ["F401"]
-"openff/toolkit/_tests/**/*.py" = ["E501"]
-"openff/toolkit/typing/engines/smirnoff.parameters.py" = ["RUF012"]
-"openff/toolkit/_tests/_stale_tests.py" = ["F821"]
-"docs/users/molecule_cookbook.ipynb" = ["F821", "E402"]
-"examples/visualization/visualization.ipynb" = ["F821"]
-
-[tool.ruff.lint.isort]
+lint.select = [ "E", "F", "I", "NPY", "RUF", "UP", "W" ]
+lint.ignore = [ "D105", "D107", "D200", "D203", "D212", "E721", "RUF012" ]
+lint.per-file-ignores."docs/users/molecule_cookbook.ipynb" = [ "E402", "F821" ]
+lint.per-file-ignores."examples/visualization/visualization.ipynb" = [ "F821" ]
+lint.per-file-ignores."openff/toolkit/**/__init__.py" = [ "F401" ]
+lint.per-file-ignores."openff/toolkit/_tests/**/*.py" = [ "E501" ]
+lint.per-file-ignores."openff/toolkit/_tests/_stale_tests.py" = [ "F821" ]
+lint.per-file-ignores."openff/toolkit/typing/engines/smirnoff.parameters.py" = [ "RUF012" ]
+lint.isort.known-first-party = [ "openff.toolkit" ]
 # can't find a clean way to get Rust's globset to handle this via regex ...
 # https://docs.astral.sh/ruff/settings/#lint_isort_known-third-party
-known-third-party = ["openff.interchange", "openff.utilities", "openff.units"]
-known-first-party = ["openff.toolkit"]
+lint.isort.known-third-party = [ "openff.interchange", "openff.utilities", "openff.units" ]
 
 [tool.coverage.run]
 omit = [
-    "*/*/_tests/*",
+  "*/*/_tests/*",
 ]
 
 [tool.coverage.report]
 exclude_lines = [
-    "pragma: no cover",
-    "if TYPE_CHECKING:",
-    "raise NotImplementedError",
-    "@overload",
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+  "raise NotImplementedError",
+  "@overload",
 ]
 
 [tool.mypy]
@@ -70,33 +67,27 @@ exclude = "openff/toolkit/_tests/|openff/toolkit/data/"
 
 [[tool.mypy.overrides]]
 module = [
-    "openff.units",
-    "openff.units.*",
-    "openff.nagl.*",
-    "openff.nagl_models.*",
-    "mdtraj",
-    "openmm",
-    "openmm.app",
-    "openmm.unit",
-    "rdkit",  # maybe revisit if/when stubs are fixed
-    "rdkit.Chem",
-    "rdkit.Chem.Draw",
-    "rdkit.DataStructs.cDataStructs",
-    "openeye",
-    "openeye.oechem",
-    "parmed",
-    "msgpack",
-    "qcelemental",
-    "nglview",
-    "nglview.base_adaptor",
-    "constraint",
+  "openff.units",
+  "openff.units.*",
+  "openff.nagl.*",
+  "openff.nagl_models.*",
+  "mdtraj",
+  "openmm",
+  "openmm.app",
+  "openmm.unit",
+  "rdkit",
+  "rdkit.Chem",
+  "rdkit.Chem.Draw",
+  "rdkit.DataStructs.cDataStructs",
+  "openeye",
+  "openeye.oechem",
+  "parmed",
+  "msgpack",
+  "qcelemental",
+  "nglview",
+  "nglview.base_adaptor",
+  "constraint",
 ]
 ignore_missing_imports = true
 
-[[tool.mypy.overrides]]
-# bit of a hack to prevent crash
-module=[
-    "rdkit"
-]
-follow_imports = "skip"
-follow_imports_for_stubs = true
+[tool.versioningit]

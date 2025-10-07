@@ -6,6 +6,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+
 ## Current development
 
 ### API-breaking changes
@@ -18,6 +19,15 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Improved documentation and warnings
 
+
+## 0.17.1
+
+### Bugfixes
+- [PR #2107](https://github.com/openforcefield/openff-toolkit/pull/2107): Fixes [Issue #2093](https://github.com/openforcefield/openff-toolkit/issues/2093), where in rare cases `Topology.from_pdb` would mangle the order/coordinates of loaded atoms, by making it raise a `PDBMoleculeHasNoncontiguousAtomIndicesError` instead. 
+- [PR #2109](https://github.com/openforcefield/openff-toolkit/pull/2109): Fixes [Issue #2108](https://github.com/openforcefield/openff-toolkit/issues/2108) by updating tests to reflect that smirnoff99Frosst is no longer installed as a dependency of the OpenFF Toolkit. 
+
+### Improved documentation and warnings
+- [PR #2111](https://github.com/openforcefield/openff-toolkit/pull/2111): Formats and cleans up pyproject.toml.
 
 ## 0.17.0
 
