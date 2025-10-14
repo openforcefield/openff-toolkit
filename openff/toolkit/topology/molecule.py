@@ -5677,6 +5677,11 @@ def _atom_nums_to_hill_formula(atom_nums: list[int]) -> str:
     SYMBOLS_ = deepcopy(SYMBOLS)
     SYMBOLS_[0] = "X"
 
+    atom_nums = deepcopy(atom_nums)
+    for idx in range(len(atom_nums)):
+        if atom_nums[idx] < 0:
+            atom_nums[idx] = 1
+
     atom_symbol_counts = Counter(SYMBOLS_[atom_num] for atom_num in atom_nums)
 
     formula = []
