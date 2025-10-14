@@ -2154,8 +2154,8 @@ class FrozenMolecule(Serializable):
                 for node in data:
                     h_counter = -1
                     for neighbor in data.neighbors(node):
-                        if data.nodes[neighbor]['atomic_number'] == 1:
-                            data.nodes[neighbor]['atomic_number'] = h_counter
+                        if data.nodes[neighbor]["atomic_number"] == 1:
+                            data.nodes[neighbor]["atomic_number"] = h_counter
                             h_counter -= 1
                 return data
 
