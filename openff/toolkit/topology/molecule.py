@@ -2138,10 +2138,16 @@ class FrozenMolecule(Serializable):
 
             if isinstance(data, FrozenMolecule):
                 # Molecule class instance
+                data = deepcopy(data)
                 if strip_pyrimidal_n_atom_stereo:
                     # Make a copy of the molecule so we don't modify the original
-                    data = deepcopy(data)
                     data.strip_atom_stereochemistry(SMARTS, toolkit_registry=toolkit_registry)
+                for atom in data.atoms:
+                    h_counter = -1
+                    for neighbor in atom.bonded_atoms:
+                        if neighbor.atomic_number == 1:
+                            neighbor._atomic_number = h_counter
+                            h_counter -= 1
                 return data.to_networkx()
 
             elif isinstance(data, nx.Graph):
