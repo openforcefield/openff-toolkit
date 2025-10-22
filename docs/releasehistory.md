@@ -15,6 +15,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+- [PR #2115](https://github.com/openforcefield/openff-toolkit/pull/2115): Avoid unnecessary conformer coordinate lookups which were causing performance issues with large molecules. Fixes [Issue #1855](https://github.com/openforcefield/openff-toolkit/issues/1844).
+
 ### New features
 
 ### Improved documentation and warnings

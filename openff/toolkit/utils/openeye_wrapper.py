@@ -1300,11 +1300,16 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 n_atoms = molecule.n_atoms
                 # Store with implicit units until we're sure this conformer exists
                 positions = np.zeros(shape=[n_atoms, 3], dtype=np.float64)
-                for oe_id in conf.GetCoords().keys():
-                    # implicitly in angstrom
-                    off_atom_coords = conf.GetCoords()[oe_id]
+
+                # store before iterating and then lookup, so GetCoords() is called once per conformer
+                # this maps (OEChem) atom indices to coordinates (implicitly with Angstrom)
+                oe_coords: dict[int, tuple[float, float, float]] = conf.GetCoords()
+
+                for oe_id in oe_coords:
+                    off_atom_coords = oe_coords[oe_id]
                     off_atom_index = off_to_oe_idx[oe_id]
                     positions[off_atom_index, :] = off_atom_coords
+
                 all_zeros = not np.any(positions)
                 if all_zeros and n_atoms > 1:
                     continue
