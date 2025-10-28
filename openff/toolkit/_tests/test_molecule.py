@@ -59,6 +59,7 @@ from openff.toolkit.topology.molecule import (
 from openff.toolkit.utils import get_data_file_path
 from openff.toolkit.utils.exceptions import (
     AtomMappingWarning,
+    BadMoleculeAssumptionError,
     HierarchyIteratorNameConflictError,
     IncompatibleShapeError,
     IncompatibleTypeError,
@@ -1668,6 +1669,16 @@ class TestMolecule:
             )
             is inputs["result"]
         )
+
+    def test_isomorphic_speedup_assumptions(self):
+        """
+        This test ensures that the assumptions needed by the isomorphism checking speedup in
+        https://github.com/openforcefield/openff-toolkit/pull/2114 are policed
+        """
+        mol1 = Molecule.from_mapped_smiles("[F:1][H-:2][H-:3][Cl:4]")
+        mol2 = Molecule.from_mapped_smiles("[Cl:1][H-:2][H-:3][F:4]")
+        with pytest.raises(BadMoleculeAssumptionError):
+            assert mol1.is_isomorphic_with(mol2)
 
     @requires_openeye
     def test_strip_atom_stereochemistry(self):

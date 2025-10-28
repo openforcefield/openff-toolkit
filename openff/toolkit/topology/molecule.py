@@ -55,6 +55,7 @@ from openff.toolkit import Quantity, unit
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
     AtomMappingWarning,
+    BadMoleculeAssumptionError,
     BondExistsError,
     HierarchyIteratorNameConflictError,
     HierarchySchemeNotFoundException,
@@ -2145,6 +2146,12 @@ class FrozenMolecule(Serializable):
                 for atom in data.atoms:
                     h_counter = -1
                     for neighbor in atom.bonded_atoms:
+                        if neighbor.atomic_number > 0:
+                            raise BadMoleculeAssumptionError(
+                                f"Molecule {data} appears to violate an assumption of the OpenFF Toolkit "
+                                f"(likely that an H can't have two bonds). Please check your molecule for error, "
+                                f"and if it is indeed what you intend, open an issue at "
+                                f"https://github.com/openforcefield/openff-toolkit/issues")
                         if neighbor.atomic_number == 1:
                             neighbor._atomic_number = h_counter
                             h_counter -= 1

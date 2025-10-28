@@ -12,6 +12,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### API-breaking changes
 
 ### Behavior changes
+- [PR #2114](https://github.com/openforcefield/openff-toolkit/pull/2114): Fixes [Issue #2035](https://github.com/openforcefield/openff-toolkit/issues/2035) (and touches on several others) by improving the runtime of Molecule.are_isomorphic/is_isomorphic_with, which can greatly improve interchange creation and export runtime.  
+
 
 ### Bugfixes
 
