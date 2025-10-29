@@ -2146,7 +2146,7 @@ class FrozenMolecule(Serializable):
                 for atom in data.atoms:
                     h_counter = -1
                     for neighbor in atom.bonded_atoms:
-                        if neighbor.atomic_number > 0:
+                        if neighbor.atomic_number < 0:
                             raise BadMoleculeAssumptionError(
                                 f"Molecule {data} appears to violate an assumption of the OpenFF Toolkit "
                                 f"(likely that an H can't have two bonds). Please check your molecule for error, "
