@@ -2132,14 +2132,19 @@ class FrozenMolecule(Serializable):
             edge_match_func = None  # type: ignore
 
         # Here we should work out what data type we have, also deal with lists?
-        def to_networkx(data: FrozenMolecule | nx.Graph) -> nx.Graph:
-            """For the given data type, return the networkx graph"""
+        def _to_networkx(data: FrozenMolecule | nx.Graph) -> nx.Graph:
+            """
+            For the given data type, return the networkx graph. Note that the graphs returned from this method
+            will have negative-numbered hydrogens (eg. the first hydrogen on a heavy atom will have atomic number
+            -1, the second -2, etc). This is a performance hack to reduce the number of potential symmetric matches
+            that must be evaluated during isomorphism checks.
+            """
             if strip_pyrimidal_n_atom_stereo:
                 SMARTS = "[N+0X3:1](-[*])(-[*])(-[*])"
 
+            data = deepcopy(data)
             if isinstance(data, FrozenMolecule):
                 # Molecule class instance
-                data = deepcopy(data)
                 if strip_pyrimidal_n_atom_stereo:
                     # Make a copy of the molecule so we don't modify the original
                     data.strip_atom_stereochemistry(SMARTS, toolkit_registry=toolkit_registry)
@@ -2149,8 +2154,8 @@ class FrozenMolecule(Serializable):
                         if neighbor.atomic_number < 0:
                             raise BadMoleculeAssumptionError(
                                 f"Molecule {data} appears to violate an assumption of the OpenFF Toolkit "
-                                f"(likely that an H can't have two bonds). Please check your molecule for error, "
-                                f"and if it is indeed what you intend, open an issue at "
+                                f"(likely that an H can't have two bonds). Please check that your molecule is "
+                                f"what you think it is, and if it is indeed what you intend, open an issue at "
                                 f"https://github.com/openforcefield/openff-toolkit/issues"
                             )
                         if neighbor.atomic_number == 1:
@@ -2174,8 +2179,8 @@ class FrozenMolecule(Serializable):
                     f"or networkx.Graph representation of the molecule."
                 )
 
-        mol1_netx = to_networkx(mol1)
-        mol2_netx = to_networkx(mol2)
+        mol1_netx = _to_networkx(mol1)
+        mol2_netx = _to_networkx(mol2)
 
         from networkx.algorithms.isomorphism import GraphMatcher
 
