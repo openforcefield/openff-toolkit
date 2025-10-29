@@ -55,6 +55,7 @@ from openff.toolkit import Quantity, unit
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
     AtomMappingWarning,
+    BadMoleculeAssumptionError,
     BondExistsError,
     HierarchyIteratorNameConflictError,
     HierarchySchemeNotFoundException,
@@ -2131,20 +2132,44 @@ class FrozenMolecule(Serializable):
             edge_match_func = None  # type: ignore
 
         # Here we should work out what data type we have, also deal with lists?
-        def to_networkx(data: FrozenMolecule | nx.Graph) -> nx.Graph:
-            """For the given data type, return the networkx graph"""
+        def _to_networkx(data: FrozenMolecule | nx.Graph) -> nx.Graph:
+            """
+            For the given data type, return the networkx graph. Note that the graphs returned from this method
+            will have negative-numbered hydrogens (eg. the first hydrogen on a heavy atom will have atomic number
+            -1, the second -2, etc). This is a performance hack to reduce the number of potential symmetric matches
+            that must be evaluated during isomorphism checks.
+            """
             if strip_pyrimidal_n_atom_stereo:
                 SMARTS = "[N+0X3:1](-[*])(-[*])(-[*])"
 
+            data = deepcopy(data)
             if isinstance(data, FrozenMolecule):
                 # Molecule class instance
                 if strip_pyrimidal_n_atom_stereo:
                     # Make a copy of the molecule so we don't modify the original
-                    data = deepcopy(data)
                     data.strip_atom_stereochemistry(SMARTS, toolkit_registry=toolkit_registry)
+                for atom in data.atoms:
+                    h_counter = -1
+                    for neighbor in atom.bonded_atoms:
+                        if neighbor.atomic_number < 0:
+                            raise BadMoleculeAssumptionError(
+                                f"Molecule {data} appears to violate an assumption of the OpenFF Toolkit "
+                                f"(likely that an H can't have two bonds). Please check that your molecule is "
+                                f"what you think it is, and if it is indeed what you intend, open an issue at "
+                                f"https://github.com/openforcefield/openff-toolkit/issues"
+                            )
+                        if neighbor.atomic_number == 1:
+                            neighbor._atomic_number = h_counter
+                            h_counter -= 1
                 return data.to_networkx()
 
             elif isinstance(data, nx.Graph):
+                for node in data:
+                    h_counter = -1
+                    for neighbor in data.neighbors(node):
+                        if data.nodes[neighbor]["atomic_number"] == 1:
+                            data.nodes[neighbor]["atomic_number"] = h_counter
+                            h_counter -= 1
                 return data
 
             else:
@@ -2154,8 +2179,8 @@ class FrozenMolecule(Serializable):
                     f"or networkx.Graph representation of the molecule."
                 )
 
-        mol1_netx = to_networkx(mol1)
-        mol2_netx = to_networkx(mol2)
+        mol1_netx = _to_networkx(mol1)
+        mol2_netx = _to_networkx(mol2)
 
         from networkx.algorithms.isomorphism import GraphMatcher
 
@@ -5664,6 +5689,11 @@ def _atom_nums_to_hill_formula(atom_nums: list[int]) -> str:
 
     SYMBOLS_ = deepcopy(SYMBOLS)
     SYMBOLS_[0] = "X"
+
+    atom_nums = deepcopy(atom_nums)
+    for idx in range(len(atom_nums)):
+        if atom_nums[idx] < 0:
+            atom_nums[idx] = 1
 
     atom_symbol_counts = Counter(SYMBOLS_[atom_num] for atom_num in atom_nums)
 
