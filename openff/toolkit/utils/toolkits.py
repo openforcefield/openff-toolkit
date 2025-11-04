@@ -34,6 +34,7 @@ __all__ = (
     "RDKIT_AVAILABLE",
     "AmberToolsToolkitWrapper",
     "AntechamberNotFoundError",
+    "BadMoleculeAssumptionError",
     "BuiltInToolkitWrapper",
     "ChargeCalculationError",
     "ChargeMethodUnavailableError",
@@ -72,6 +73,7 @@ from openff.toolkit.utils.constants import (
 )
 from openff.toolkit.utils.exceptions import (
     AntechamberNotFoundError,
+    BadMoleculeAssumptionError,
     ChargeCalculationError,
     ChargeMethodUnavailableError,
     GAFFAtomTypeWarning,

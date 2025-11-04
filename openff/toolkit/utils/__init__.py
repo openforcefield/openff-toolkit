@@ -15,6 +15,7 @@ from openff.toolkit.utils.toolkits import (
     RDKIT_AVAILABLE,
     AmberToolsToolkitWrapper,
     AntechamberNotFoundError,
+    BadMoleculeAssumptionError,
     BuiltInToolkitWrapper,
     ChargeCalculationError,
     ChargeMethodUnavailableError,
