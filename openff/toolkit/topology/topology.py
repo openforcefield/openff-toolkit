@@ -2500,6 +2500,7 @@ class Topology(Serializable):
             radius=0.25,
             multipleBond=bool(ensure_correct_connectivity),
         )
+        widget.center()
 
         return widget
 

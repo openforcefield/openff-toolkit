@@ -5465,6 +5465,7 @@ class Molecule(FrozenMolecule):
                     radius=0.25,
                     multipleBond=True,
                 )
+                widget.center()
 
                 return widget
 
