@@ -16,6 +16,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #2114](https://github.com/openforcefield/openff-toolkit/pull/2114): Fixes [Issue #2035](https://github.com/openforcefield/openff-toolkit/issues/2035) (and touches on several others) by improving the runtime of Molecule.are_isomorphic/is_isomorphic_with, which can greatly improve interchange creation and export runtime.  
 - [PR #2114](https://github.com/openforcefield/openff-toolkit/pull/2114): May change the specific mapping of symmetric atoms returned by `Molecule.are_isomorphic` (to a different but chemically equivalent mapping) 
 
+### Bugfixes
+
+- [PR #2115](https://github.com/openforcefield/openff-toolkit/pull/2115): Avoid unnecessary conformer coordinate lookups which were causing performance issues with large molecules. Fixes [Issue #1855](https://github.com/openforcefield/openff-toolkit/issues/1844).
 
 
 ## 0.17.1
