@@ -7,7 +7,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `micro` increments represent bugfix releases or improvements in documentation
 
 
-## Current development
+## 0.18.0
 
 ### API-breaking changes
 - [PR #2114](https://github.com/openforcefield/openff-toolkit/pull/2114): Removes `Molecule.are_isomorphic.to_networkx` from the public API (by renaming to `_to_networkx`). We are nearly certain that nobody is using this, and it is DIFFERENT from the much more useful `Molecule.to_networkx`. This change is motivated by the observation that further behavior changes to this method can relieve critical performance bottlenecks, and that we shouldn't repeatedly change the behavior of public methods.  
@@ -16,11 +16,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #2114](https://github.com/openforcefield/openff-toolkit/pull/2114): Fixes [Issue #2035](https://github.com/openforcefield/openff-toolkit/issues/2035) (and touches on several others) by improving the runtime of Molecule.are_isomorphic/is_isomorphic_with, which can greatly improve interchange creation and export runtime.  
 - [PR #2114](https://github.com/openforcefield/openff-toolkit/pull/2114): May change the specific mapping of symmetric atoms returned by `Molecule.are_isomorphic` (to a different but chemically equivalent mapping) 
 
-### Bugfixes
-
-### New features
-
-### Improved documentation and warnings
 
 
 ## 0.17.1
