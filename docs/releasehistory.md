@@ -9,6 +9,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### Miscellaneous
+
+- [PR #2XXX](https://github.com/openforcefield/openff-toolkit/pull/2XXX): Removes many duplicate warnings about API stability. (Versions starting with 0.x have no stability guarantees, though efforts are made to communicate major API breaks and behavior changes beforehand.)
+
 ### API-breaking changes
 
 ### Behavior changes
