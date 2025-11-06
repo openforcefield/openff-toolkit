@@ -35,8 +35,6 @@ class ToolkitWrapper:
     """
     Base class for wrappers around external software toolkits.
 
-    .. warning :: This API is experimental and subject to change.
-
     See also
     ========
     ToolkitRegistry, OpenEyeToolkitWrapper, RDKitToolkitWrapper,
@@ -75,8 +73,6 @@ class ToolkitWrapper:
     def toolkit_name(self):
         """
         Return the name of the toolkit wrapped by this class as a str
-
-        .. warning :: This API is experimental and subject to change.
 
         Returns
         -------
@@ -128,8 +124,6 @@ class ToolkitWrapper:
     def toolkit_version(self):
         """
         Return the version of the wrapped toolkit as a str
-
-        .. warning :: This API is experimental and subject to change.
 
         Returns
         -------

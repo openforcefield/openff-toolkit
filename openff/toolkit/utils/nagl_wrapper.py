@@ -72,8 +72,6 @@ class NAGLToolkitWrapper(ToolkitWrapper):
         """
         Compute partial charges with NAGL and store in ``self.partial_charges``
 
-        .. warning :: This API is experimental and subject to change.
-
         Parameters
         ----------
         molecule

@@ -72,7 +72,6 @@ class ToolkitRegistry:
 
     For more, see the :py:meth:`call` method.
 
-    .. warning :: This API is experimental and subject to change.
     """
 
     _toolkits: list[ToolkitWrapper]
@@ -134,8 +133,6 @@ class ToolkitRegistry:
         """
         List registered toolkits.
 
-        .. warning :: This API is experimental and subject to change.
-
         .. todo :: Should this return a generator? Deep copies? Classes? Toolkit names?
 
         Returns
@@ -148,8 +145,6 @@ class ToolkitRegistry:
     def registered_toolkit_versions(self) -> dict[str, str]:
         """
         Return a dict containing the version of each registered toolkit.
-
-        .. warning :: This API is experimental and subject to change.
 
         Returns
         -------
@@ -290,8 +285,6 @@ class ToolkitRegistry:
         """
         Register the provided toolkit wrapper class, instantiating an object of it.
 
-        .. warning :: This API is experimental and subject to change.
-
         .. todo ::
 
            This method should raise an exception if the toolkit is unavailable, unless an optional argument
@@ -334,8 +327,6 @@ class ToolkitRegistry:
         """
         Remove a ToolkitWrapper from the list of toolkits in this ToolkitRegistry
 
-        .. warning :: This API is experimental and subject to change.
-
         Parameters
         ----------
         toolkit_wrapper
@@ -375,8 +366,6 @@ class ToolkitRegistry:
     def add_toolkit(self, toolkit_wrapper: ToolkitWrapper):
         """
         Append a ToolkitWrapper onto the list of toolkits in this ToolkitRegistry
-
-        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------

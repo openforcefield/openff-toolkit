@@ -73,7 +73,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     """
     RDKit toolkit wrapper
 
-    .. warning :: This API is experimental and subject to change.
     """
 
     _toolkit_name = "The RDKit"
@@ -1033,8 +1032,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         A file-like object is an object with a ".read()" method.
 
-        .. warning :: This API is experimental and subject to change.
-
         Parameters
         ----------
         file_obj
@@ -1405,8 +1402,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         Create a Molecule from a SMILES string using the RDKit toolkit.
 
-        .. warning :: This API is experimental and subject to change.
-
         Parameters
         ----------
         smiles
@@ -1575,8 +1570,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         r"""
         Generate molecule conformers using RDKit.
 
-        .. warning :: This API is experimental and subject to change.
-
         .. todo ::
 
            * which parameters should we expose? (or can we implement a general system with \*\*kwargs?)
@@ -1654,8 +1647,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         Compute partial charges with RDKit, and assign
         the new values to the partial_charges attribute.
-
-        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
@@ -2088,8 +2079,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Requires the RDKit to be installed.
 
-        .. warning :: This API is experimental and subject to change.
-
         Parameters
         ----------
         rdmol
@@ -2491,8 +2480,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         Create an RDKit molecule
         Requires the RDKit to be installed.
 
-        .. warning :: This API is experimental and subject to change.
-
         Parameters
         ----------
 
@@ -2867,8 +2854,6 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     ) -> list[tuple[int, ...]]:
         """
         Find all SMARTS matches for the specified molecule, using the specified aromaticity model.
-
-        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------

@@ -2,10 +2,6 @@
 have been registered through the `entrypoint plugin system <https://packaging.python.
 org/guides/creating-and-discovering-plugins/#using-package-metadata>`_.
 
-.. warning ::
-
-   This feature is experimental and may be removed / altered in future versions.
-
 Currently only ``ParameterHandler`` classes can be registered via the plugin
 system. This is possible by registering the handler class through an entry
 point in your projects ``setup.py`` file::
