@@ -20,7 +20,6 @@ jobs:
     name: ${{ matrix.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.rdkit }}, OpenEye=${{ matrix.openeye }}, NAGL=${{ matrix.nagl }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
         python-version: ["3.11", "3.12"]
@@ -74,7 +73,7 @@ jobs:
 
       - name: Optionally remove OpenFF NAGL
         if: ${{ matrix.nagl == false }}
-        run: micromamba remove openff-nagl-base openff-nagl-models
+        run: micromamba remove openff-nagl-base openff-nagl-models --force
 
       - name: Install package
         run: python -m pip install .
