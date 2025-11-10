@@ -106,7 +106,7 @@ jobs:
 
       - name: Optionally remove OpenFF NAGL
         if: ${{ matrix.nagl == false }}
-        run: micromamba remove openff-nagl openff-nagl-base openff-nagl-models
+        run: micromamba remove openff-nagl-base openff-nagl-models
 
       - name: Check installed toolkits
         run: |
