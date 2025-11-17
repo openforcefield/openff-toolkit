@@ -61,7 +61,7 @@ class ToolkitRegistry:
 
     >>> from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
     >>> GLOBAL_TOOLKIT_REGISTRY
-    <ToolkitRegistry containing OpenEye Toolkit, The RDKit, AmberTools, Built-in Toolkit>
+    <ToolkitRegistry containing OpenFF NAGL, OpenEye Toolkit, The RDKit, AmberTools, Built-in Toolkit>
 
     Note that this will contain different ToolkitWrapper objects based on what
     toolkits are currently installed.
