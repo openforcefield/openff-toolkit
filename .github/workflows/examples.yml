@@ -32,7 +32,7 @@ jobs:
             openeye: false
           - rdkit: true
             openeye: true
-          - rdkit: true
+          - rdkit: false
             nagl: true
 
     env:
