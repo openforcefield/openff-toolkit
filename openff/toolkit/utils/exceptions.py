@@ -760,3 +760,7 @@ class AmbiguousBondChemicalAssignment(OpenFFToolkitException):
         msg += f"\t{reason}"
         super().__init__(msg)
         self.msg = msg
+
+
+class BadMoleculeAssumptionError(OpenFFToolkitException):
+    """Exception raised when a molecule violates assumptions made by the OpenFF Toolkit's implementation"""

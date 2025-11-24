@@ -42,7 +42,7 @@ jobs:
       NB_ARGS: --nbval-lax --dist loadscope --ignore=examples/deprecated
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 

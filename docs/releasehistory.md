@@ -6,7 +6,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-
 ## Current development
 
 ### API-breaking changes
@@ -14,8 +13,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Behavior changes
 
 ### Bugfixes
-
-- [PR #2115](https://github.com/openforcefield/openff-toolkit/pull/2115): Avoid unnecessary conformer coordinate lookups which were causing performance issues with large molecules. Fixes [Issue #1855](https://github.com/openforcefield/openff-toolkit/issues/1844).
 
 ### New features
 
@@ -25,6 +22,20 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 - [PR #2121](https://github.com/openforcefield/openff-toolkit/pull/2121): Treat OpenFF NAGL as an optional dependency in CI
 - [PR #2123](https://github.com/openforcefield/openff-toolkit/pull/2123): Update CI matrix to include the case of RDKit/AmberTools and OpenEye Toolkits both being installed.
+
+## 0.18.0
+
+### API-breaking changes
+- [PR #2114](https://github.com/openforcefield/openff-toolkit/pull/2114): Removes `Molecule.are_isomorphic.to_networkx` from the public API (by renaming to `_to_networkx`). We are nearly certain that nobody is using this, and it is DIFFERENT from the much more useful `Molecule.to_networkx`. This change is motivated by the observation that further behavior changes to this method can relieve critical performance bottlenecks, and that we shouldn't repeatedly change the behavior of public methods.  
+
+### Behavior changes
+- [PR #2114](https://github.com/openforcefield/openff-toolkit/pull/2114): Fixes [Issue #2035](https://github.com/openforcefield/openff-toolkit/issues/2035) (and touches on several others) by improving the runtime of Molecule.are_isomorphic/is_isomorphic_with, which can greatly improve interchange creation and export runtime.  
+- [PR #2114](https://github.com/openforcefield/openff-toolkit/pull/2114): May change the specific mapping of symmetric atoms returned by `Molecule.are_isomorphic` (to a different but chemically equivalent mapping) 
+
+### Bugfixes
+
+- [PR #2115](https://github.com/openforcefield/openff-toolkit/pull/2115): Avoid unnecessary conformer coordinate lookups which were causing performance issues with large molecules. Fixes [Issue #1855](https://github.com/openforcefield/openff-toolkit/issues/1844).
+
 
 ## 0.17.1
 
