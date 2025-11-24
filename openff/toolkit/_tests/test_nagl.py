@@ -3,7 +3,6 @@ import re
 
 import numpy
 import pytest
-from openff.nagl_models._dynamic_fetch import BadFileSuffixError
 from openff.utilities import has_package, skip_if_missing
 
 from openff.toolkit import Molecule, unit
@@ -126,6 +125,8 @@ class TestNAGLToolkitWrapper:
             )
 
     def test_unsupported_charge_method(self):
+        from openff.nagl_models._dynamic_fetch import BadFileSuffixError
+
         with pytest.raises(
             BadFileSuffixError,
             match="Found an unrecognized file path extension on filename='hartree_fock'",
