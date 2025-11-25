@@ -273,7 +273,7 @@ class ParameterAttribute:
     >>> my_par.attr_required
     Traceback (most recent call last):
     ...
-    AttributeError: 'MyParameter' object has no attribute '_attr_required'. Did you mean: 'attr_required'?
+    AttributeError: 'MyParameter' object has no attribute '_attr_required'
 
     The attribute allow automatic conversion and validation of units.
 

@@ -74,6 +74,9 @@ if TYPE_CHECKING:
     from openff.toolkit.utils import ToolkitRegistry, ToolkitWrapper
 
 TKR: TypeAlias = Union["ToolkitRegistry", "ToolkitWrapper"]
+
+AtomLike: TypeAlias = Union["Atom", "_SimpleAtom"]
+BondLike: TypeAlias = Union["Bond", "_SimpleBond"]
 MoleculeLike: TypeAlias = Union["Molecule", "FrozenMolecule", "_SimpleMolecule"]
 
 _DISTANCE_UNITS = set(
@@ -459,7 +462,7 @@ class Topology(Serializable):
         """
         self._constrained_atom_pairs = dict()
         self._box_vectors = None
-        self._molecules = list()
+        self._molecules: list[MoleculeLike] = list()
         self._cached_chemically_identical_molecules = None
 
     def __iadd__(self, other):
@@ -501,7 +504,7 @@ class Topology(Serializable):
         return combined
 
     @property
-    def unique_molecules(self) -> Iterator[Molecule | _SimpleMolecule]:
+    def unique_molecules(self) -> Iterator[MoleculeLike]:
         """
         Get a list of chemically unique molecules in this Topology.
 
@@ -700,7 +703,7 @@ class Topology(Serializable):
         # invalidate themselves during appropriate events.
         yield from self._molecules
 
-    def molecule(self, index: int) -> Molecule | _SimpleMolecule:
+    def molecule(self, index: int) -> MoleculeLike:
         """
         Returns the molecule with a given index in this Topology.
 
@@ -816,7 +819,7 @@ class Topology(Serializable):
         return n_bonds
 
     @property
-    def bonds(self) -> Generator["Bond", None, None]:
+    def bonds(self) -> Generator[BondLike, None, None]:
         """Returns an iterator over the bonds in this Topology
 
         Returns
@@ -832,7 +835,7 @@ class Topology(Serializable):
         return sum(mol.n_angles for mol in self._molecules)
 
     @property
-    def angles(self) -> Generator[tuple["Atom", ...], None, None]:
+    def angles(self) -> Generator[tuple[AtomLike, AtomLike, AtomLike], None, None]:
         """Iterator over the angles in this Topology. Returns a Generator of tuple[Atom]."""
         for molecule in self._molecules:
             yield from molecule.angles
@@ -843,7 +846,7 @@ class Topology(Serializable):
         return sum(mol.n_propers for mol in self._molecules)
 
     @property
-    def propers(self) -> Generator[tuple[Union["Atom", _SimpleAtom], ...], None, None]:
+    def propers(self) -> Generator[tuple[AtomLike, AtomLike, AtomLike, AtomLike], None, None]:
         """Iterable of tuple[Atom]: iterator over the proper torsions in this Topology."""
         for molecule in self.molecules:
             yield from molecule.propers
@@ -854,7 +857,7 @@ class Topology(Serializable):
         return sum(mol.n_impropers for mol in self._molecules)
 
     @property
-    def impropers(self) -> Generator[tuple["Atom", ...], None, None]:
+    def impropers(self) -> Generator[tuple[AtomLike, AtomLike, AtomLike, AtomLike], None, None]:
         """Generator of tuple[Atom]: iterator over the possible improper torsions in this Topology."""
         for molecule in self._molecules:
             yield from molecule.impropers
@@ -1764,7 +1767,7 @@ class Topology(Serializable):
             off_atom.name = atom.name
 
         for offmol in topology.molecules:
-            offmol.add_default_hierarchy_schemes()
+            offmol.add_default_hierarchy_schemes()  # type: ignore[operator]
 
         return topology
 
@@ -2105,8 +2108,10 @@ class Topology(Serializable):
 
         # Copy the array in nanometers and make it an OpenFF Quantity
         array = Quantity(np.asarray(array.to(unit.nanometer).magnitude), unit.nanometer)
-        if array.shape != (self.n_atoms, 3):
-            raise WrongShapeError(f"Array has shape {array.shape} but should have shape {self.n_atoms, 3}")
+        if array.shape != (self.n_atoms, 3):  # type: ignore[attr-defined]
+            raise WrongShapeError(
+                f"Array has shape {array.shape} but should have shape {self.n_atoms, 3}"  # type: ignore[attr-defined]
+            )
 
         start = 0
         for molecule in self.molecules:
@@ -2298,7 +2303,7 @@ class Topology(Serializable):
         # atom_molecule_index = atom_topology_index - search_index
         # return topology_molecule.atom(atom_molecule_index)
 
-    def bond(self, bond_topology_index: int) -> "Bond":  # type: ignore[return]
+    def bond(self, bond_topology_index: int) -> BondLike:  # type: ignore[return]
         """
         Get the Bond at a given Topology bond index.
 
@@ -2311,6 +2316,7 @@ class Topology(Serializable):
         -------
         An openff.toolkit.topology.Bond
         """
+        # TODO: Does this work with _SimpleMolecule/_SimpleBond?
         if not isinstance(bond_topology_index, int):
             raise ValueError(
                 "Argument passed to `Topology.bond` must be an int. "
@@ -2341,7 +2347,7 @@ class Topology(Serializable):
 
         To add multiple molecules, particularly many times, use `add_molecules` for better performance.
         """
-        if isinstance(molecule, Molecule | _SimpleMolecule):
+        if isinstance(molecule, FrozenMolecule | _SimpleMolecule):
             # Route everything through add_molecules for simplicity; the overhead of
             # making a list and grabbing the first element should be negligible
             return self.add_molecules([molecule])[0]

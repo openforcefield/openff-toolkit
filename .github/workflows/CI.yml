@@ -30,8 +30,6 @@ jobs:
           - rdkit: false
             openeye: false
           - openeye: true
-            python-version: "3.11"
-          - openeye: true
             python-version: "3.12"
           - openeye: true
             python-version: "3.13"
@@ -159,7 +157,7 @@ jobs:
           python -m pytest -x --durations=20 $PYTEST_ARGS $COV openff/toolkit/_tests
 
       - name: Run code snippets in docs
-        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
+        if: ${{ matrix.rdkit == true && matrix.openeye == true && matrix.nagl == true }}
         run: pytest -v --no-cov --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
 
       - name: Run notebooks in docs
@@ -167,7 +165,7 @@ jobs:
         run: python -m pytest -v --no-cov --nbval-lax docs/
 
       - name: Run examples in docstrings
-        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
+        if: ${{ matrix.rdkit == true && matrix.openeye == true && matrix.nagl == true }}
         run: |
           pytest openff \
             -v -x -n logical --no-cov --doctest-modules \

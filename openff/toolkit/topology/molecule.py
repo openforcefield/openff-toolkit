@@ -1251,8 +1251,9 @@ class FrozenMolecule(Serializable):
         for bond in self.bonds:
             id += f"{bond.bond_order}_{bond.stereochemistry}_{bond.atom1_index}_{bond.atom2_index}__"
 
-        self._ordered_connection_table_hash = hashlib.sha3_224(id.encode("utf-8")).hexdigest()
-        return self._ordered_connection_table_hash
+        # at this point, it's no longer a union type
+        self._ordered_connection_table_hash = hashlib.sha3_224(id.encode("utf-8")).hexdigest()  # type: ignore[assignment]
+        return self._ordered_connection_table_hash  # type: ignore[return-value]
 
     @classmethod
     def from_dict(cls: type[FM], molecule_dict: dict) -> FM:
@@ -2810,6 +2811,8 @@ class FrozenMolecule(Serializable):
         self._hill_formula = None
         self._cached_smiles = dict()
         # TODO: Clear fractional bond orders
+
+        # TODO: deleting this attribute instead of setting it to None would be cleaner
         self._ordered_connection_table_hash = None
 
         for atom in self.atoms:
@@ -5677,7 +5680,8 @@ def _networkx_graph_to_hill_formula(graph: "nx.Graph[int]") -> str:
     if not isinstance(graph, nx.Graph):
         raise ValueError("The graph must be a NetworkX graph.")
 
-    atom_nums = list(dict(graph.nodes(data="atomic_number", default=1)).values())
+    atom_nums: list[int] = [atomic_number for (_, atomic_number) in graph.nodes(data="atomic_number", default=1)]
+
     return _atom_nums_to_hill_formula(atom_nums)  # type:ignore[arg-type]
 
 
