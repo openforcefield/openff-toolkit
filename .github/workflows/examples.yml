@@ -9,6 +9,7 @@ on:
       - main
   schedule:
     - cron: "0 4 * * *"
+  workflow_dispatch:
 
 defaults:
   run:
