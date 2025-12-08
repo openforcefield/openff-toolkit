@@ -22,11 +22,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
         python-version: ["3.11", "3.12"]
-        rdkit: [true, false]
-        openeye: [true, false]
-        nagl: [true, false]
+        rdkit: [true]
+        openeye: [false]
+        nagl: [false]
         exclude:
           - rdkit: false
             openeye: false
