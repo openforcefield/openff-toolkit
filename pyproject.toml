@@ -25,7 +25,6 @@ urls = { Homepage = "https://github.com/openforcefield/openff-toolkit" }
 
 [tool.setuptools.packages.find]
 include = [ 'openff.toolkit*' ]
-exclude = [ 'openff.toolkit.data' ]
 
 [tool.ruff]
 line-length = 119
