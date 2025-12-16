@@ -261,7 +261,7 @@ class ToolkitRegistry:
                 try:
                     return method(*args, **kwargs)
                 except Exception as e:
-                    print(e.msg)
+                    print(str(e))
                     for exception_type in raise_exception_types:
                         if isinstance(e, exception_type):
                             raise e
