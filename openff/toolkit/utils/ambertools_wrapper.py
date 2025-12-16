@@ -229,7 +229,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
                 ],
                 cwd=tmpdir,
                 stderr=subprocess.STDOUT,
-                shell=True,
+                universal_newlines=True,
             )
             # Write out just charges
             subprocess.check_output(
