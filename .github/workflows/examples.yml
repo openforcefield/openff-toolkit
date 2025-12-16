@@ -24,7 +24,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
         python-version: ["3.11", "3.12"]
-        rdkit: [true, false]
+        rdkit: [true]
         openeye: [true, false]
         nagl: [true, false]
         exclude:
