@@ -4,6 +4,7 @@ __all__ = ("ToolkitRegistry", "toolkit_registry_manager")
 
 import inspect
 import logging
+import subprocess
 from collections.abc import Callable
 from contextlib import contextmanager
 
@@ -253,7 +254,7 @@ class ToolkitRegistry:
         """
         if raise_exception_types is None:
             raise_exception_types = [Exception]
-
+        raise_exception_types.append(subprocess.CalledProcessError)
         errors = list()
         for toolkit in self._toolkits:
             if hasattr(toolkit, method_name):
