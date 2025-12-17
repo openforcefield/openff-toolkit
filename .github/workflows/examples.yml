@@ -21,10 +21,11 @@ jobs:
     name: ${{ matrix.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.rdkit }}, OpenEye=${{ matrix.openeye }}, NAGL=${{ matrix.nagl }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
         python-version: ["3.11", "3.12"]
-        rdkit: [true]
+        rdkit: [true, false]
         openeye: [true, false]
         nagl: [true, false]
         exclude:
@@ -38,7 +39,7 @@ jobs:
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
       PACKAGE: openff
-      PYTEST_ARGS: -r fE -v -x --tb=short -n 1 --durations=10
+      PYTEST_ARGS: -r fE -v -x --tb=short -nauto --durations=10
       NB_ARGS: --nbval-lax --dist loadscope --ignore=examples/deprecated
 
     steps:
@@ -143,4 +144,4 @@ jobs:
             NB_ARGS+=" --ignore=examples/using_smirnoff_in_amber_or_gromacs/"
           fi
 
-          python -m pytest $PYTEST_ARGS $NB_ARGS examples/toolkit_showcase/toolkit_showcase.ipynb
+          python -m pytest $PYTEST_ARGS $NB_ARGS examples

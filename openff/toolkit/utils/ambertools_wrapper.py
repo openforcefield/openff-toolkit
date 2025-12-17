@@ -228,8 +228,6 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
                     str(net_charge),
                 ],
                 cwd=tmpdir,
-                stderr=subprocess.STDOUT,
-                universal_newlines=True,
             )
             # Write out just charges
             subprocess.check_output(
