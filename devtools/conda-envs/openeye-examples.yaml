@@ -18,6 +18,8 @@ dependencies:
   - openff-units
   - openff-utilities >=0.1.5
   - openff-interchange-base =0.4
+  # No idea why this is necessary, see https://github.com/openforcefield/openff-toolkit/pull/1821
+  - nomkl
   - openff-nagl-base >=0.4.0
   - openff-nagl-models >=0.3.0
   - typing_extensions
