@@ -126,7 +126,6 @@ class Particle(Serializable):
 
     A particle object could be an ``Atom`` or similar.
 
-    .. warning :: This API is experimental and subject to change.
     """
 
     _molecule: "FrozenMolecule"
@@ -213,7 +212,6 @@ class Atom(Particle):
          quantities (such as ``id`` or ``serial`` index in a PDB file),
          or string labels (such as Lennard-Jones types)?
 
-    .. warning :: This API is experimental and subject to change.
     """
 
     def __init__(
@@ -642,8 +640,6 @@ class Bond(Serializable):
     """
     Chemical bond representation.
 
-    .. warning :: This API is experimental and subject to change.
-
     .. todo :: Allow bonds to have associated properties.
 
     Attributes
@@ -659,7 +655,6 @@ class Bond(Serializable):
     stereochemstry
         A string representing this stereochemistry of this bond.
 
-    .. warning :: This API is experimental and subject to change.
     """
 
     def __init__(
@@ -889,8 +884,6 @@ class FrozenMolecule(Serializable):
     Create a molecule from SMILES
 
     >>> molecule = FrozenMolecule.from_smiles('Cc1ccccc1')
-
-    .. warning :: This API is experimental and subject to change.
 
 
     """
@@ -1997,8 +1990,6 @@ class FrozenMolecule(Serializable):
         By default, all attributes are checked, but stereochemistry around
         pyrimidal nitrogen is ignored.
 
-        .. warning :: This API is experimental and subject to change.
-
         Parameters
         ----------
         mol1
@@ -2216,8 +2207,6 @@ class FrozenMolecule(Serializable):
         """
         Check if the molecule is isomorphic with the other molecule which can be an openff.toolkit.topology.Molecule
         or nx.Graph(). Full matching is done using the options described bellow.
-
-        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
@@ -2752,8 +2741,6 @@ class FrozenMolecule(Serializable):
 
         Bond orders are stored on each bond, in the
         ``bond.fractional_bond_order`` attribute.
-
-        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
@@ -4437,8 +4424,6 @@ class FrozenMolecule(Serializable):
         * ``extras["canonical_isomeric_explicit_hydrogen_mapped_smiles"]``
         * ``identifiers["canonical_isomeric_explicit_hydrogen_mapped_smiles"]``
 
-        .. warning :: This API is experimental and subject to change.
-
         Parameters
         ----------
         multiplicity
@@ -4530,8 +4515,6 @@ class FrozenMolecule(Serializable):
         are ordered according to the mapping. Each atom must be mapped exactly
         once; any duplicate, missing, or out-of-range mappings will cause the
         method to fail.
-
-        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
@@ -4778,8 +4761,6 @@ class FrozenMolecule(Serializable):
 
         Requires RDKit to be installed.
 
-        .. warning :: This API is experimental and subject to change.
-
         The molecule is created and sanitised based on the SMILES string, we then find a mapping
         between this molecule and one from the PDB based only on atomic number and connections.
         The SMILES molecule is then reindexed to match the PDB, the conformer is attached, and the
@@ -4826,8 +4807,6 @@ class FrozenMolecule(Serializable):
         Each toolkit defines its own canonical ordering of atoms. The canonical
         order may change from toolkit version to toolkit version or between
         toolkits.
-
-        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
@@ -4878,8 +4857,6 @@ class FrozenMolecule(Serializable):
         The keys of the ``self.properties["atom_map"]`` property are updated for
         the new ordering. Other values of the properties dictionary are
         transferred unchanged.
-
-        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
@@ -5222,8 +5199,6 @@ class Molecule(FrozenMolecule):
     Create a molecule from SMILES
 
     >>> molecule = Molecule.from_smiles('Cc1ccccc1')
-
-    .. warning :: This API is experimental and subject to change.
 
     """
 

@@ -89,7 +89,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     """
     OpenEye toolkit wrapper
 
-    .. warning :: This API is experimental and subject to change.
     """
 
     _toolkit_name = "OpenEye Toolkit"
@@ -1081,8 +1080,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         ``partial_charges = None``.
         This assumption is made in both ``to_openeye`` and ``from_openeye``.
 
-        .. warning :: This API is experimental and subject to change.
-
         Parameters
         ----------
         oemol
@@ -1469,8 +1466,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         .. todo ::
 
            * Should the aromaticity model be specified in some other way?
-
-        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
@@ -1947,8 +1942,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         Create a Molecule from a SMILES string using the OpenEye toolkit.
 
-        .. warning :: This API is experimental and subject to change.
-
         Parameters
         ----------
         smiles
@@ -2104,8 +2097,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     ):
         r"""
         Generate molecule conformers using OpenEye Omega.
-
-        .. warning :: This API is experimental and subject to change.
 
         .. todo ::
 
@@ -2276,8 +2267,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         Compute partial charges with OpenEye quacpac, and assign
         the new values to the partial_charges attribute.
 
-        .. warning :: This API is experimental and subject to change.
-
         .. todo ::
 
            * Should the default be ELF?
@@ -2445,8 +2434,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         """
         Update and store list of bond orders this molecule. Bond orders are stored on each
         bond, in the `bond.fractional_bond_order` attribute.
-
-        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
@@ -2701,8 +2688,6 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
     ) -> list[tuple[int, ...]]:
         """
         Find all SMARTS matches for the specified molecule, using the specified aromaticity model.
-
-        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
