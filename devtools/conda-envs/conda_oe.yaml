@@ -13,4 +13,6 @@ dependencies:
   - pytest-rerunfailures
   - nbval
   # Remove once https://github.com/ParmEd/ParmEd/pull/1387 gets into a release
-  - numpy !=2.3
+  # This is brought in indirectly by openff-toolkit-examples
+  # parmed <- openff-toolkit-examples <- openff-toolkit <- ambertools
+  - numpy <2.3

@@ -1,8 +1,9 @@
 name: Tests against beta/RC builds
 
 on:
-  push:
-  pull_request:
+  schedule:
+    - cron: "0 22 * * *"
+  workflow_dispatch:
 
 defaults:
   run:
