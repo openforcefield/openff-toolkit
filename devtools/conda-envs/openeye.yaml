@@ -40,7 +40,6 @@ dependencies:
   - qcengine
   - mdtraj
   - nglview
-  - parmed =4
   - mypy =1.18
   - typing_extensions
   - pip:
