@@ -1,13 +1,15 @@
 name: openff-toolkit-test-openeye
 channels:
+  - conda-forge/label/openff-interchange_dev
   - openeye
   - conda-forge
 dependencies:
+  - openff-interchange-base =0.4.11
     # Base depends
   - python
   - versioningit
   - packaging
-  - numpy <2.3
+  - numpy
   - networkx
   - cachetools
   - xmltodict

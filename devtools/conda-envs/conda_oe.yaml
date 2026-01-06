@@ -1,8 +1,10 @@
 name: latest-deployment
 channels:
+  - conda-forge/label/openff-interchange_dev
   - conda-forge
   - openeye
 dependencies:
+  - openff-interchange-base =0.4.11
     # Base depends
   - openff-toolkit-examples
     # Tests
@@ -11,4 +13,4 @@ dependencies:
   - pytest-rerunfailures
   - nbval
   # Remove once https://github.com/ParmEd/ParmEd/pull/1387 gets into a release
-  - numpy <2.3
+  - numpy !=2.3

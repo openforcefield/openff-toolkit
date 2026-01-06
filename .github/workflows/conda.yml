@@ -1,13 +1,8 @@
 name: Conda latest
 
 on:
-  release:
-    types:
-      - released
-      - prereleased
-  schedule:
-    - cron: "0 20 * * *"
-  workflow_dispatch:
+  push:
+  pull_request:
 
 defaults:
   run:
@@ -18,7 +13,6 @@ jobs:
     name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenEye=${{ matrix.openeye }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
         python-version: ["3.11"]

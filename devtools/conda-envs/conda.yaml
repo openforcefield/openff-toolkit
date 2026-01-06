@@ -1,7 +1,9 @@
 name: latest-deployment
 channels:
+  - conda-forge/label/openff-interchange_dev
   - conda-forge
 dependencies:
+  - openff-interchange-base =0.4.11
     # Base depends
   - openff-toolkit-examples
     # Tests

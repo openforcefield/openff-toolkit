@@ -1,7 +1,10 @@
 name: openff-toolkit-test-rdkit
 channels:
+  - conda-forge/label/openff-interchange_dev
+  - openeye
   - conda-forge
 dependencies:
+  - openff-interchange-base =0.4.11
     # Base depends
   - python
   - versioningit

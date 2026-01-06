@@ -1,5 +1,6 @@
 name: openff-toolkit-test
 channels:
+  - conda-forge/label/openff-interchange_dev
   - openeye
   - conda-forge
 dependencies:
