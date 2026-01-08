@@ -112,12 +112,6 @@ jobs:
           micromamba list
           pip list
 
-        # See https://github.com/openforcefield/openff-units/issues/111
-        # for more or better solution - possibly not needed when links are checked
-        # before a parallel pytest run
-      - name: Shim for `pytest-xdist` + Pint cross-interaction
-        run: python -c "from openff.toolkit import *"
-
       - name: Run example scripts
         run: |
           if [[ ${{ matrix.rdkit }} == false ]]; then
