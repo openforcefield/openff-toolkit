@@ -1143,9 +1143,6 @@ class _ParameterAttributeHandler:
         in the OpenFF Toolkit, but can be written out during
         output.
 
-        .. warning :: The API for modifying cosmetic attributes is experimental
-           and may change in the future (see issue #338).
-
         Parameters
         ----------
         attr_name
@@ -1161,9 +1158,6 @@ class _ParameterAttributeHandler:
         """
         Delete a cosmetic attribute from this object.
 
-        .. warning :: The API for modifying cosmetic attributes is experimental
-           and may change in the future (see issue #338).
-
         Parameters
         ----------
         attr_name
@@ -1177,9 +1171,6 @@ class _ParameterAttributeHandler:
     def attribute_is_cosmetic(self, attr_name):
         """
         Determine whether an attribute of this object is cosmetic.
-
-        .. warning :: The API for modifying cosmetic attributes is experimental
-           and may change in the future (see issue #338).
 
         Parameters
         ----------
@@ -1372,8 +1363,6 @@ class _ParameterAttributeHandler:
 class ParameterList(list):
     """
     Parameter list that also supports accessing items by SMARTS string.
-
-    .. warning :: This API is experimental and subject to change.
 
     """
 
@@ -1592,8 +1581,6 @@ class ParameterType(_ParameterAttributeHandler):
     This base class provides utilities to create new parameter types. See
     the below for examples of how to do this.
 
-    .. warning :: This API is experimental and subject to change.
-
     Attributes
     ----------
     smirks
@@ -1758,8 +1745,6 @@ class ParameterHandler(_ParameterAttributeHandler):
        Parameter handler objects can only belong to a single :class:`ForceField` object.
        If you need to create a copy to attach to a different :class:`ForceField` object,
        use ``create_copy()``.
-
-    .. warning :: This API is experimental and subject to change.
 
     """
 
@@ -2362,14 +2347,10 @@ class ConstraintHandler(ParameterHandler):
     ``ConstraintHandler`` must be applied before ``BondHandler`` and ``AngleHandler``,
     since those classes add constraints for which equilibrium geometries are needed from those tags.
 
-    .. warning :: This API is experimental and subject to change.
     """
 
     class ConstraintType(ParameterType):
-        """A SMIRNOFF constraint type
-
-        .. warning :: This API is experimental and subject to change.
-        """
+        """A SMIRNOFF constraint type"""
 
         _ELEMENT_NAME = "Constraint"
 
@@ -2380,16 +2361,10 @@ class ConstraintHandler(ParameterHandler):
 
 
 class BondHandler(ParameterHandler):
-    """Handle SMIRNOFF ``<Bonds>`` tags
-
-    .. warning :: This API is experimental and subject to change.
-    """
+    """Handle SMIRNOFF ``<Bonds>`` tags"""
 
     class BondType(ParameterType):
-        """A SMIRNOFF bond type
-
-        .. warning :: This API is experimental and subject to change.
-        """
+        """A SMIRNOFF bond type"""
 
         _ELEMENT_NAME = "Bond"
 
@@ -2490,16 +2465,10 @@ class BondHandler(ParameterHandler):
 
 
 class AngleHandler(ParameterHandler):
-    """Handle SMIRNOFF ``<AngleForce>`` tags
-
-    .. warning :: This API is experimental and subject to change.
-    """
+    """Handle SMIRNOFF ``<AngleForce>`` tags"""
 
     class AngleType(ParameterType):
-        """A SMIRNOFF angle type.
-
-        .. warning :: This API is experimental and subject to change.
-        """
+        """A SMIRNOFF angle type."""
 
         _ELEMENT_NAME = "Angle"
 
@@ -2532,16 +2501,10 @@ class AngleHandler(ParameterHandler):
 
 # TODO: There's a lot of duplicated code in ProperTorsionHandler and ImproperTorsionHandler
 class ProperTorsionHandler(ParameterHandler):
-    """Handle SMIRNOFF ``<ProperTorsionForce>`` tags
-
-    .. warning :: This API is experimental and subject to change.
-    """
+    """Handle SMIRNOFF ``<ProperTorsionForce>`` tags"""
 
     class ProperTorsionType(ParameterType):
-        """A SMIRNOFF torsion type for proper torsions.
-
-        .. warning :: This API is experimental and subject to change.
-        """
+        """A SMIRNOFF torsion type for proper torsions."""
 
         _ELEMENT_NAME = "Proper"
 
@@ -2601,16 +2564,10 @@ class ProperTorsionHandler(ParameterHandler):
 
 # TODO: There's a lot of duplicated code in ProperTorsionHandler and ImproperTorsionHandler
 class ImproperTorsionHandler(ParameterHandler):
-    """Handle SMIRNOFF ``<ImproperTorsionForce>`` tags
-
-    .. warning :: This API is experimental and subject to change.
-    """
+    """Handle SMIRNOFF ``<ImproperTorsionForce>`` tags"""
 
     class ImproperTorsionType(ParameterType):
-        """A SMIRNOFF torsion type for improper torsions.
-
-        .. warning :: This API is experimental and subject to change.
-        """
+        """A SMIRNOFF torsion type for improper torsions."""
 
         _ELEMENT_NAME = "Improper"
 
@@ -2679,16 +2636,10 @@ class _NonbondedHandler(ParameterHandler):
 
 
 class vdWHandler(_NonbondedHandler):
-    """Handle SMIRNOFF ``<vdW>`` tags
-
-    .. warning :: This API is experimental and subject to change.
-    """
+    """Handle SMIRNOFF ``<vdW>`` tags"""
 
     class vdWType(ParameterType):
-        """A SMIRNOFF vdWForce type.
-
-        .. warning :: This API is experimental and subject to change.
-        """
+        """A SMIRNOFF vdWForce type."""
 
         _ELEMENT_NAME = "Atom"
 
@@ -2853,10 +2804,7 @@ class vdWHandler(_NonbondedHandler):
 
 
 class ElectrostaticsHandler(_NonbondedHandler):
-    """Handles SMIRNOFF ``<Electrostatics>`` tags.
-
-    .. warning :: This API is experimental and subject to change.
-    """
+    """Handles SMIRNOFF ``<Electrostatics>`` tags."""
 
     _TAGNAME = "Electrostatics"
     _DEPENDENCIES = [vdWHandler]
@@ -3039,16 +2987,10 @@ class ElectrostaticsHandler(_NonbondedHandler):
 
 
 class LibraryChargeHandler(_NonbondedHandler):
-    """Handle SMIRNOFF ``<LibraryCharges>`` tags
-
-    .. warning :: This API is experimental and subject to change.
-    """
+    """Handle SMIRNOFF ``<LibraryCharges>`` tags"""
 
     class LibraryChargeType(ParameterType):
-        """A SMIRNOFF Library Charge type.
-
-        .. warning :: This API is experimental and subject to change.
-        """
+        """A SMIRNOFF Library Charge type."""
 
         _ELEMENT_NAME = "LibraryCharge"
 
@@ -3243,10 +3185,7 @@ class NAGLChargesHandler(_NonbondedHandler):
 
 
 class ToolkitAM1BCCHandler(_NonbondedHandler):
-    """Handle SMIRNOFF ``<ToolkitAM1BCC>`` tags
-
-    .. warning :: This API is experimental and subject to change.
-    """
+    """Handle SMIRNOFF ``<ToolkitAM1BCC>`` tags"""
 
     _TAGNAME = "ToolkitAM1BCC"  # SMIRNOFF tag name to process
     _DEPENDENCIES = [vdWHandler, ElectrostaticsHandler, LibraryChargeHandler, NAGLChargesHandler]
@@ -3275,16 +3214,10 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
 
 
 class ChargeIncrementModelHandler(_NonbondedHandler):
-    """Handle SMIRNOFF ``<ChargeIncrementModel>`` tags
-
-    .. warning :: This API is experimental and subject to change.
-    """
+    """Handle SMIRNOFF ``<ChargeIncrementModel>`` tags"""
 
     class ChargeIncrementType(ParameterType):
-        """A SMIRNOFF bond charge correction type.
-
-        .. warning :: This API is experimental and subject to change.
-        """
+        """A SMIRNOFF bond charge correction type."""
 
         _ELEMENT_NAME = "ChargeIncrement"
 
@@ -3367,16 +3300,10 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
 
 class GBSAHandler(ParameterHandler):
-    """Handle SMIRNOFF ``<GBSA>`` tags
-
-    .. warning :: This API is experimental and subject to change.
-    """
+    """Handle SMIRNOFF ``<GBSA>`` tags"""
 
     class GBSAType(ParameterType):
-        """A SMIRNOFF GBSA type.
-
-        .. warning :: This API is experimental and subject to change.
-        """
+        """A SMIRNOFF GBSA type."""
 
         _ELEMENT_NAME = "Atom"
 
@@ -3446,7 +3373,6 @@ class _BaseVirtualSiteType(ParameterType):
     """
     Handle virtual site parameters, including geometry and electrostatics, but not vdW interactions.
 
-    .. warning :: This API is experimental and subject to change.
     """
 
     _ELEMENT_NAME = "VirtualSite"
@@ -3597,7 +3523,6 @@ class _BaseVirtualSiteType(ParameterType):
 class VirtualSiteHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<VirtualSites>`` tags
     TODO: Add example usage/documentation
-    .. warning :: This API is experimental and subject to change.
     """
 
     class VirtualSiteType(_BaseVirtualSiteType, vdWHandler.vdWType):

@@ -30,7 +30,6 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
     """
     AmberTools toolkit wrapper
 
-    .. warning :: This API is experimental and subject to change.
     """
 
     _toolkit_name = "AmberTools"
@@ -111,8 +110,6 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         Compute partial charges with AmberTools using antechamber/sqm, and assign
         the new values to the partial_charges attribute.
-
-        .. warning :: This API experimental and subject to change.
 
         .. todo ::
 
@@ -391,8 +388,6 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         """
         Update and store list of bond orders this molecule. Bond orders are stored on each
         bond, in the `bond.fractional_bond_order` attribute.
-
-        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------
