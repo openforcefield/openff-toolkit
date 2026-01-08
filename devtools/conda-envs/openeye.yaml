@@ -7,7 +7,7 @@ dependencies:
   - python
   - versioningit
   - packaging
-  - numpy <2.3
+  - numpy
   - networkx
   - cachetools
   - xmltodict
@@ -38,7 +38,6 @@ dependencies:
   - qcengine
   - mdtraj
   - nglview
-  - parmed =4
   - mypy =1.18
   - typing_extensions
   - pip:
