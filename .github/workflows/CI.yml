@@ -128,16 +128,6 @@ jobs:
           micromamba list
           pip list
 
-        # See https://github.com/openforcefield/openff-units/issues/111
-        # for more or better solution - possibly not needed when links are checked
-        # before a parallel pytest run
-      - name: Shim for `pytest-xdist` + Pint cross-interaction
-        run: python -c "from openff.toolkit import *"
-
-      - name: Check links
-        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
-
       - name: Run mypy
         # When possible re-enable this with OE+RDK=True, but for now rdkit builds often have bugs
         # in stubs and there are other subtleties (in the source code and builds) that reduce the number

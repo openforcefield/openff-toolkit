@@ -2926,7 +2926,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         the AMBER files to be used as reference parameters.
 
         """
-        import parmed
+        parmed = pytest.importorskip("parmed")
 
         from openff.toolkit._tests.utils import (
             compare_system_energies,
@@ -3048,7 +3048,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         Regression test on HCT, OBC1, and OBC2 GBSA models. This test ensures that the
         SMIRNOFF-based GBSA models match the equivalent OpenMM implementations.
         """
-        import parmed as pmd
+        parmed = pytest.importorskip("parmed")
 
         from openff.toolkit._tests.utils import (
             compare_system_energies,
@@ -3101,7 +3101,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         )
 
         omm_top = off_top.to_openmm()
-        pmd_struct = pmd.openmm.load_topology(omm_top, off_omm_system, positions)
+        pmd_struct = parmed.openmm.load_topology(omm_top, off_omm_system, positions)
         prmtop_file = NamedTemporaryFile(suffix=".prmtop")
         inpcrd_file = NamedTemporaryFile(suffix=".inpcrd")
         pmd_struct.save(prmtop_file.name, overwrite=True)
@@ -3329,7 +3329,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
     def test_molecule_energy_gb_no_sa(self, zero_charges, gbsa_model):
         """Test creating a GBSA system without a surface energy term, and validate its energy
         against the same system made using OpenMM's AMBER GBSA functionality"""
-        import parmed as pmd
+        parmed = pytest.importorskip("parmed")
 
         from openff.toolkit._tests.utils import (
             compare_system_energies,
@@ -3366,7 +3366,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         off_omm_system = ff.create_openmm_system(off_top, charge_from_molecules=[molecule])
 
         omm_top = off_top.to_openmm()
-        pmd_struct = pmd.openmm.load_topology(omm_top, off_omm_system, positions)
+        pmd_struct = parmed.openmm.load_topology(omm_top, off_omm_system, positions)
         prmtop_file = NamedTemporaryFile(suffix=".prmtop")
         inpcrd_file = NamedTemporaryFile(suffix=".inpcrd")
         pmd_struct.save(prmtop_file.name, overwrite=True)
