@@ -49,11 +49,16 @@ def test_readme_links(readme_link):
         pytest.skip("DOI links are behind DDoS protection and do not resolve")
     if "codecov.io" in readme_link:
         pytest.skip("Codecov website DOI also may be behind DDoS protection")
-    if "export" in readme_link:
-        # October 2023 Zenodo upgrade seems to have broken this link - although
-        # it is still accessible from the web UI (go to the landing page of a
-        # record, Export section (select BibTeX in drop-down) and click "Export"
+    if "zenodo" in readme_link:
+        # October 2023 Zenodo upgrade seems to have broken the bibtex export
+        # link although it is still accessible from the web UI (go to the
+        # landing page of a record, Export section (select BibTeX in
+        # drop-down) and click "Export"
         # button will bring you to this link.
+
+        # Jan 2026 Zenodo seems to have blocked GitHub Actions IP access to
+        # regular release pages as well, so skip all zenodo checks.
+        # https://support.zenodo.org/help/en-gb/13-policies/29-why-is-my-ip-address-blocked
         pytest.skip("Seems to be a Zenodo regression in bibtex link")
     if readme_link.endswith("MIT"):
         # January 22 2024: Link causing some failures, accessible in browser
