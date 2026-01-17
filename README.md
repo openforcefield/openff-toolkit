@@ -21,13 +21,9 @@ The toolkit currently covers two main areas we have committed to stably maintain
 
 ## How to cite
 
-Please cite the OpenFF Toolkit using the [Zenodo record](https://zenodo.org/record/13886754) of the [latest release](https://zenodo.org/record/13886754) or the version that was used. The BibTeX reference of the latest release can be found [here](https://zenodo.org/records/13886754/export/bibtex).
+Please cite the OpenFF Toolkit using the Zenodo record of the [latest release](https://zenodo.org/records/13886754/latest) or the version that was used. 
 
 ## Installation
-
-The Open Force Field Toolkit (`openff-toolkit`) is a Python toolkit, and supports Python 3.9 through 3.11.
-
-### Installing via Mamba/Conda
 
 Detailed installation instructions can be found [here](https://open-forcefield-toolkit.readthedocs.io/en/stable/installation.html).
 
