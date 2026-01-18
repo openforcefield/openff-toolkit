@@ -71,6 +71,9 @@ jobs:
             micromamba list
             pip list
 
+      - name: Check links
+        run: pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
+
       - name: Run unit tests
         run: |
           PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_examples.py"
