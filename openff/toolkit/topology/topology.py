@@ -394,8 +394,6 @@ class Topology(Serializable):
     A Topology is a chemical representation of a system containing one or more molecules appearing in a specified
     order.
 
-    .. warning :: This API is experimental and subject to change.
-
     Examples
     --------
 
