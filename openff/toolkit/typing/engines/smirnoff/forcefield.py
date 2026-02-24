@@ -48,7 +48,7 @@ if TYPE_CHECKING:
     from openff.interchange import Interchange
 
     from openff.toolkit import Molecule
-    from openff.toolkit.topology.topology import Topology, ValenceDict
+    from openff.toolkit.topology.topology import ImproperDict, Topology, ValenceDict
     from openff.toolkit.utils.base_wrapper import ToolkitWrapper
     from openff.toolkit.utils.toolkit_registry import ToolkitRegistry
 
@@ -1228,47 +1228,42 @@ class ForceField:
                 allow_nonintegral_charges=allow_nonintegral_charges,
             )
 
-    def label_molecules(self, topology: "Topology") -> list[dict[str, "ValenceDict"]]:
+    def label_molecules(self, topology: "Topology") -> list[dict[str, Union[dict, "ValenceDict", "ImproperDict"]]]:
         """
-        Return labels for a list of molecules corresponding to parameters from this force field.
+        Return a list of labels storing parameters applied from each handler to each molecule in the topology.
 
-        For each molecule, a dictionary of force types is returned, and for each force type,
-        each force term is provided with the atoms involved, the parameter id assigned, and the corresponding SMIRKS.
+        For each molecule, there is a dictionary of mapping handler names (keys) to valence dicts (values,
+        type `ValenceDict`, `ImproperDict`, or `dict` depending on the handler). Each valence dict maps
+        tuples of atom indices (keys) to applied parameter types (values).
 
         .. todo::
            What is the most useful API for this method?
 
            - Should we instead accept :class:`Molecule` objects as input and
              individually return labels?
-           - Should we attach the labels to the :class:`Molecule` object?
-           - Or should we label all interactions in a :class:`Topology` instead
-             of just labeling its ``unique_molecules``?
 
         Parameters
         ----------
         topology
-            A Topology object containing one or more unique molecules to be labeled
+            A `Topology` object containing molecule(s) to be labeled
 
         Returns
         -------
         molecule_labels
-            List of labels for unique molecules. Each entry in the list
-            corresponds to one unique molecule in the Topology and is a
-            dictionary keyed by force type, i.e., ``molecule_labels[0]
-            ['HarmonicBondForce']`` gives details for the harmonic bond
-            parameters for the first molecule. Each element is a list of the
-            form: ``[ ( [ atom1, ..., atomN], parameter_id, SMIRKS), ... ]``.
+            List of labels for molecules. Each entry in the list corresponds to one molecule in the
+            `Topology` and is a dictionary mapping a handler name to a valence dict. Each valence
+            dict maps tuples of atom indices to applied parameter types.
         """
         from openff.toolkit.typing.engines.smirnoff.parameters import VirtualSiteHandler
 
         # Loop over molecules and label
-        molecule_labels = list()
+        molecule_labels: list[dict[str, dict | ValenceDict | ImproperDict]] = list()
 
         # TODO: This was previously ... enumerate(topology.reference_molecules). It's currently
         # unclear if this should be topology.unique_molecules instead, since that might be faster
         # (if also modifying this to label _all_ duplicates of each unique molecule)
         for molecule in topology.molecules:
-            current_molecule_labels = dict()
+            current_molecule_labels: dict[str, dict | ValenceDict | ImproperDict] = dict()
             for tag, parameter_handler in self._parameter_handlers.items():
                 param_is_list = False
 
@@ -1300,6 +1295,7 @@ class ForceField:
                 current_molecule_labels[tag] = parameter_matches
 
             molecule_labels.append(current_molecule_labels)
+
         return molecule_labels
 
     def _get_parameter_handler_class(self, tagname: str) -> type[ParameterHandler]:
