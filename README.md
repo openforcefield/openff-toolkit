@@ -23,8 +23,6 @@ The toolkit currently covers two main areas we have committed to stably maintain
 
 For instructions on how to cite OpenFF tools or force fields, see our [website](https://openforcefield.org/science/how-to-cite/)
 
-Please cite the OpenFF Toolkit using the Zenodo record of the [latest release](https://zenodo.org/records/13886754/latest) or the version that was used. 
-
 ## Installation
 
 Detailed installation instructions can be found [here](https://open-forcefield-toolkit.readthedocs.io/en/stable/installation.html).
