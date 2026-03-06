@@ -4854,7 +4854,7 @@ class FrozenMolecule(Serializable):
             )
 
     def remap(
-        self,
+        self: FM,
         mapping_dict: dict[int, int],
         current_to_new: bool = True,
         partial: bool = False,
