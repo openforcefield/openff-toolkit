@@ -4854,13 +4854,13 @@ class FrozenMolecule(Serializable):
             )
 
     def remap(
-        self,
+        self: FM,
         mapping_dict: dict[int, int],
         current_to_new: bool = True,
         partial: bool = False,
-    ):
+    ) -> FM:
         """
-        Reorder the atoms in the molecule according to the given mapping dict.
+        Return a copy of this molecule with the atoms reordered according to the given mapping dict.
 
         The mapping dict must be a dictionary mapping atom indices to atom
         indices. Each atom index must be an integer in the half-open interval
@@ -4876,10 +4876,10 @@ class FrozenMolecule(Serializable):
         ``current_to_new`` argument.
 
         The keys of the ``self.properties["atom_map"]`` property are updated for
-        the new ordering. Other values of the properties dictionary are
+        the new ordering. Other values of the ``.properties`` dictionary are
         transferred unchanged.
 
-        .. warning :: This API is experimental and subject to change.
+        Partial charges and conformers are remapped according to the mapping dict.
 
         Parameters
         ----------
