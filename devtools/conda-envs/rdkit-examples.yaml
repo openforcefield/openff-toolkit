@@ -17,7 +17,7 @@ dependencies:
   - openff-amber-ff-ports >=0.0.3
   - openff-units
   - openff-utilities >=0.1.5
-  - openff-interchange-base =0.4
+  - openff-interchange-base =0.5
   # No idea why this is necessary, see https://github.com/openforcefield/openff-toolkit/pull/1821
   - nomkl
   - openff-nagl-base >=0.4.0
