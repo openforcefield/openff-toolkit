@@ -128,10 +128,6 @@ jobs:
           micromamba list
           pip list
 
-      - name: Check links
-        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
-        run: pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
-
       - name: Run mypy
         # When possible re-enable this with OE+RDK=True, but for now rdkit builds often have bugs
         # in stubs and there are other subtleties (in the source code and builds) that reduce the number
@@ -175,3 +171,7 @@ jobs:
           files: ./coverage.xml
           disable_search: true
           fail_ci_if_error: true
+
+      - name: Check links
+        if: ${{ matrix.rdkit == true && matrix.openeye == true }}
+        run: pytest -r fE --tb=short openff/toolkit/_tests/test_links.py
