@@ -31,10 +31,12 @@ Detailed installation instructions can be found [here](https://open-forcefield-t
 
 Two major force field development efforts have been undertaken by the Open Force Field Initiative, with results hosted in separate repositories.
 
-* The [Open Force Fields repository](https://github.com/openforcefield/openff-forcefields/), which features the [Parsley](https://openforcefield.org/community/news/general/introducing-openforcefield-1.0/) and [Sage](https://openforcefield.org/community/news/general/sage2.0.0-release/) force field lines. These are the Open Force Field Initiative's efforts toward building _new_ force fields. The initial parameters are taken from smirnoff99Frosst, but software and data produced by the Initiative's efforts have been used to refit parameter values and add new SMIRKS-based parameters.
-* The [smirnoff99Frosst repository](https://github.com/openforcefield/smirnoff99Frosst/), which is descended from AMBER's parm99 force field as well as Merck-Frosst's parm@frosst. This line of force fields does not aim to alter parameter values, but is instead a test of accurately converting an atom type-based force field to the SMIRNOFF format.
+* The [OpenFF Force Fields repository](https://github.com/openforcefield/openff-forcefields/), which features the [Parsley](https://openforcefield.org/community/news/general/introducing-openforcefield-1.0/) and [Sage](https://openforcefield.org/community/news/general/sage2.0.0-release/) force field lines. These are the Open Force Field Initiative's efforts toward building _new_ force fields. The initial parameters are taken from smirnoff99Frosst, but software and data produced by the Initiative's efforts have been used to refit parameter values and add new SMIRKS-based parameters.
+* The [smirnoff99Frosst repository](https://github.com/openforcefield/smirnoff99Frosst/), which is descended from AMBER's parm99 force field as well as Merck-Frosst's parm@frosst. This line of force fields did not aim to alter parameter values, but is instead a test of accurately converting an atom type-based force field to the SMIRNOFF format. This repository is now archived, meaning that while the data files will remain available, the python tooling is no longer maintained.
 
-Force fields from both of these packages are available in their respective GitHub repositories and also as conda packages. Tables detailing the individual file names/versions within these force field lines are in the README of each repository. By default, installing the Open Force Field toolkit using `conda` or the single-file toolkit installers will also install these conda packages. A [plugin architecture](https://github.com/openforcefield/openff-toolkit/blob/main/FAQ.md#how-can-i-distribute-my-own-force-fields-in-smirnoff-format) is provided for other force field developers to produce python/conda packages that can be imported by the Open Force Field Toolkit as well.
+Tables detailing the individual file names/versions within these force field lines are in the README of each repository. By default, installing the `openff-toolkit` conda package will also install the `openff-forcefields` conda packages. 
+
+A plugin architecture is provided for other force field developers to produce python/conda packages that can be imported by the Open Force Field Toolkit as well. See "How can I distribute my own force fields in SMIRNOFF format?" in [our FAQ](https://docs.openforcefield.org/en/latest/faq.html) for details.
 
 # Toolkit features
 
@@ -63,20 +65,22 @@ topology = Topology.from_molecules(molecule)
 
 # Load the latest OpenFF force field release: version 2.1.0, codename "Sage"
 from openff.toolkit import ForceField
-forcefield = ForceField('openff-2.1.0.offxml')
+forcefield = ForceField('openff-2.3.0.offxml')
 
-# Create an OpenMM system representing the molecule with SMIRNOFF-applied parameters
-openmm_system = forcefield.create_openmm_system(topology)
 
 # Create an Interchange object for representations in other formats
 interchange = forcefield.create_interchange(topology)
+
+# Create an OpenMM system representing the molecule with SMIRNOFF-applied parameters
+openmm_system = interchange.to_openmm(topology)
+
 ```
 
 Detailed examples of using SMIRNOFF with the toolkit can be found [in the documentation](https://open-forcefield-toolkit.readthedocs.io/en/stable/examples.html).
 
 # Frequently asked questions (FAQ)
 
-See [`FAQ.md`](FAQ.md) for answers to a variety of common problems, such as:
+See [our software ecosystem FAQ](https://docs.openforcefield.org/en/latest/faq.html) for answers to a variety of common problems, such as:
 * Why do I need to provide molecules corresponding to the components of my system, or a `Topology` with bond orders?
 * Can I use an Amber, CHARMM, or GROMACS topology/coordinate file as a starting point for applying a SMIRNOFF force field?
 * What if I am starting from a PDB file?
