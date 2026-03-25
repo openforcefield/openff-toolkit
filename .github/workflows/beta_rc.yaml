@@ -27,7 +27,7 @@ jobs:
       PYTEST_ARGS: -r fE --tb=short -nauto
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 

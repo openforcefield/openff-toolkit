@@ -55,7 +55,7 @@ The default value of this argument is the [`GLOBAL_TOOLKIT_REGISTRY`], which by 
 ```pycon
 >>> from openff.toolkit import GLOBAL_TOOLKIT_REGISTRY
 >>> len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits)
-4
+5
 
 ```
 
@@ -64,7 +64,7 @@ The [`toolkit_registry_manager`] context manager allows `GLOBAL_TOOLKIT_REGISTRY
 ```pycon
 >>> from openff.toolkit.utils import toolkit_registry_manager
 >>> print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
-4
+5
 >>> with toolkit_registry_manager(
 ...     ToolkitRegistry([RDKitToolkitWrapper(), AmberToolsToolkitWrapper()])
 ... ):
