@@ -20,7 +20,6 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
     """
     Built-in ToolkitWrapper for very basic functionality. Intended for testing and not much more.
 
-    .. warning :: This API is experimental and subject to change.
     """
 
     _toolkit_name = "Built-in Toolkit"
@@ -50,9 +49,6 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         Compute partial charges with the built-in toolkit using simple arithmetic operations,
         and assign the new values to the partial_charges attribute.
-
-
-        .. warning :: This API is experimental and subject to change.
 
         Parameters
         ----------

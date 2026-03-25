@@ -8,6 +8,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
+### Miscellaneous
+
+- [PR #2120](https://github.com/openforcefield/openff-toolkit/pull/2120): Removes boilerplate warnings about API stability from docstrings throughout the toolkit. These warnings were attached to essentially every public class and method and therefore provided no useful signal. API changes continue to be communicated through the changelog and deprecation warnings.
+
 ### API-breaking changes
 
 ### Behavior changes
