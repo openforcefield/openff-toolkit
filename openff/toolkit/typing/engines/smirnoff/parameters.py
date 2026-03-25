@@ -3522,6 +3522,7 @@ class _BaseVirtualSiteType(ParameterType):
 
 class VirtualSiteHandler(_NonbondedHandler):
     """Handle SMIRNOFF ``<VirtualSites>`` tags
+
     TODO: Add example usage/documentation
     """
 

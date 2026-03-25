@@ -654,7 +654,6 @@ class Bond(Serializable):
         The fractional bond order, or partial bond order of this bond.
     stereochemstry
         A string representing this stereochemistry of this bond.
-
     """
 
     def __init__(
@@ -884,7 +883,6 @@ class FrozenMolecule(Serializable):
     Create a molecule from SMILES
 
     >>> molecule = FrozenMolecule.from_smiles('Cc1ccccc1')
-
 
     """
 
