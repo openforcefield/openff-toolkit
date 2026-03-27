@@ -32,7 +32,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install environment
-        uses: mamba-org/setup-micromamba@v2
+        uses: mamba-org/setup-micromamba@v3
         with:
           environment-file: devtools/conda-envs/test_env.yaml
           condarc: |
