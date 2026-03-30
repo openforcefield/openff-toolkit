@@ -62,7 +62,7 @@ jobs:
           fi
 
       - name: Install conda environment with ${{ env.ENVFILE }}
-        uses: mamba-org/setup-micromamba@v2
+        uses: mamba-org/setup-micromamba@v3
         with:
           environment-file: devtools/conda-envs/${{env.ENVFILE}}-examples.yaml
           create-args: >-
