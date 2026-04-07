@@ -256,8 +256,6 @@ class TestTopology:
 
     def test_issue_1527(self):
         """Test the error handling of setting box vectors with an OpenMM quantity."""
-        import openmm.unit
-
         topology = Topology()
         topology.box_vectors = np.ones(3) * openmm.unit.nanometer
 
@@ -1811,8 +1809,9 @@ class TestTopologyHierarchyIterators:
         protein_path = get_data_file_path("proteins/ace-ala-nh2.pdb")
 
         protein = Topology.from_pdb(protein_path).molecule(0)
+        protein_copy = deepcopy(protein)
 
-        topology = Topology.from_molecules([protein, protein])
+        topology = Topology.from_molecules([protein, protein_copy])
 
         assert topology.residues[0].residue_number == topology.residues[3].residue_number
         assert topology.residues[1].residue_number == topology.residues[4].residue_number
