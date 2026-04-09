@@ -142,8 +142,9 @@ jobs:
           PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_examples.py"
           PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_links.py"
 
-          # TODO: Flip back to schedule condition before merge
-          PYTEST_ARGS+=" --runslow"
+          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
+            PYTEST_ARGS+=" --runslow"
+          fi
 
           python -m pytest -x --durations=20 $PYTEST_ARGS $COV openff/toolkit/_tests
 
