@@ -1116,6 +1116,7 @@ class TestTopology:
                     coord = line.split()[-6]
         assert coord == "10.172"
 
+    @requires_rdkit
     def test_to_file_ensure_uniqueness_true(self):
         """
         Checks that ensure_unique_atom_names=True provides per-molecule unique atom names
@@ -1133,6 +1134,7 @@ class TestTopology:
                 atom_names.append(atom_name)
         assert len(atom_names) == len(set(atom_names))
 
+    @requires_rdkit
     def test_to_file_ensure_uniqueness_false(self):
         """
         Checks that ensure_unique_atom_names=False preserves atom names
@@ -1151,6 +1153,7 @@ class TestTopology:
                 atom_name = line[12:16].strip()
                 assert atom_name in atom_names
 
+    @requires_rdkit
     def test_to_file_ensure_uniqueness_residues(self):
         """
         Checks that ensure_unique_atom_names="residues" provides per-residue unique atom names
@@ -1299,6 +1302,7 @@ class TestTopology:
         # and 12 atoms named "", for a total of 3 unique atom names
         assert len(atom_names) == 3
 
+    @requires_rdkit
     @pytest.mark.parametrize("explicit_arg", [True, False])
     def test_to_openmm_preserve_per_residue_unique_atom_names(self, explicit_arg):
         """
@@ -1332,6 +1336,7 @@ class TestTopology:
         final_atomnames = [str(atom.name) for atom in omm_topology.atoms()]
         assert final_atomnames == init_atomnames
 
+    @requires_rdkit
     @pytest.mark.parametrize("explicit_arg", [True, False])
     def test_to_openmm_generate_per_residue_unique_atom_names(self, explicit_arg):
         """
@@ -1377,6 +1382,7 @@ class TestTopology:
             atom_names.add(atom.name)
         assert len(atom_names) < 32, "There should be duplicate atom names in this output topology"
 
+    @requires_rdkit
     @pytest.mark.parametrize("ensure_unique_atom_names", ["chains", True])
     def test_to_openmm_generate_per_molecule_unique_atom_names_with_residues(self, ensure_unique_atom_names):
         """
@@ -1802,6 +1808,7 @@ class TestTopologyHierarchyIterators:
         ):
             topology.residues
 
+    @requires_rdkit
     def test_molecule_order_wins_over_residue_order(
         self,
     ):
