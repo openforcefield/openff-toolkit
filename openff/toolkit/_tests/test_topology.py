@@ -5,15 +5,20 @@ Tests for Topology
 
 import itertools
 import re
+import tempfile
+from collections import defaultdict
 from copy import deepcopy
+from io import StringIO
+from pathlib import Path
 
 import numpy as np
+import openmm.app
+import openmm.unit
 import pytest
 from openff.units.openmm import from_openmm
 from openff.utilities import skip_if_missing
-from openmm import app
 
-from openff.toolkit import Quantity, unit
+from openff.toolkit import Molecule, Quantity, Topology, unit
 from openff.toolkit._tests.create_molecules import (
     create_ammonia,
     create_cyclohexane,
@@ -39,9 +44,7 @@ from openff.toolkit._tests.utils import (
 from openff.toolkit.topology import (
     Atom,
     ImproperDict,
-    Molecule,
     TagSortedDict,
-    Topology,
     ValenceDict,
 )
 from openff.toolkit.topology._mm_molecule import _SimpleMolecule
@@ -253,11 +256,8 @@ class TestTopology:
 
     def test_issue_1527(self):
         """Test the error handling of setting box vectors with an OpenMM quantity."""
-        import numpy
-        import openmm.unit
-
         topology = Topology()
-        topology.box_vectors = numpy.ones(3) * openmm.unit.nanometer
+        topology.box_vectors = np.ones(3) * openmm.unit.nanometer
 
         assert isinstance(topology.box_vectors, unit.Quantity)
 
@@ -535,7 +535,7 @@ class TestTopology:
 
     def test_from_openmm(self):
         """Test creation of an OpenFF Topology object from an OpenMM Topology and component molecules"""
-        pdbfile = app.PDBFile(get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb"))
+        pdbfile = openmm.app.PDBFile(get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb"))
 
         with pytest.raises(MissingUniqueMoleculesError, match="requires a list of Molecule objects"):
             Topology.from_openmm(pdbfile.topology)
@@ -571,7 +571,7 @@ class TestTopology:
 
     def test_from_openmm_missing_reference(self):
         """Test creation of an OpenFF Topology object from an OpenMM Topology when missing a unique molecule"""
-        pdbfile = app.PDBFile(get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb"))
+        pdbfile = openmm.app.PDBFile(get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb"))
 
         molecules = [create_ethanol()]
         with pytest.raises(ValueError, match="No match found for molecule C6H12"):
@@ -582,7 +582,7 @@ class TestTopology:
         Test creation of an OpenFF Topology object from an OpenMM Topology
         when the origin PDB lacks CONECT records
         """
-        pdbfile = app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol_no_conect.pdb"))
+        pdbfile = openmm.app.PDBFile(get_data_file_path("systems/test_systems/1_ethanol_no_conect.pdb"))
 
         molecules = []
         molecules.append(Molecule.from_smiles("CCO"))
@@ -610,7 +610,7 @@ class TestTopology:
 
         # Check that bond orders are preserved.
         n_double_bonds = sum([b.order == 2 for b in omm_topology.bonds()])
-        n_aromatic_bonds = sum([b.type is app.Aromatic for b in omm_topology.bonds()])
+        n_aromatic_bonds = sum([b.type is openmm.app.Aromatic for b in omm_topology.bonds()])
         assert n_double_bonds == 6
         assert n_aromatic_bonds == 12
 
@@ -797,21 +797,18 @@ class TestTopology:
 
     @requires_rdkit
     def test_from_pdb_input_types(self):
-        import pathlib
-        from io import StringIO
-
         import openmm.app
 
         protein_path = get_data_file_path("proteins/ace-ala-nh2.pdb")
 
         Topology.from_pdb(protein_path)
 
-        Topology.from_pdb(pathlib.Path(protein_path))
+        Topology.from_pdb(Path(protein_path))
 
         with open(protein_path) as f:
             Topology.from_pdb(f)
 
-        pdb_string = pathlib.Path(protein_path).read_text()
+        pdb_string = Path(protein_path).read_text()
         with StringIO(pdb_string) as f:
             Topology.from_pdb(f)
 
@@ -954,21 +951,15 @@ class TestTopology:
         - unitless NumPy array
         - converted OpenMM quantity
         """
-        from tempfile import NamedTemporaryFile
-
-        from openff.units.openmm import to_openmm
-
-        from openff.toolkit.topology import Molecule, Topology
-
-        topology = Topology()
-        mol = Molecule.from_pdb_and_smiles(get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO")
-        topology.add_molecule(mol)
-        positions_angstrom = mol.conformers[0]
+        topology = Topology.from_pdb(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"), unique_molecules=[Molecule.from_smiles("CCO")]
+        )
+        positions_angstrom = topology.get_positions().to("angstrom")
 
         def _check_file(topology, coordinates):
             # Write the molecule to PDB and ensure that the X coordinate of the first atom is 10.172
             count = 1
-            with NamedTemporaryFile(suffix=".pdb") as iofile:
+            with tempfile.NamedTemporaryFile(suffix=".pdb") as iofile:
                 topology.to_file(iofile.name, coordinates)
                 data = open(iofile.name).readlines()
                 for line in data:
@@ -980,7 +971,7 @@ class TestTopology:
         _check_file(topology, coordinates=positions_angstrom)
         _check_file(topology, coordinates=positions_angstrom.to(unit.nanometer))
         _check_file(topology, coordinates=positions_angstrom.m)
-        _check_file(topology, coordinates=to_openmm(positions_angstrom))
+        _check_file(topology, coordinates=positions_angstrom.to_openmm())
 
         with pytest.raises(ValueError, match=r"Could not process.*list.*"):
             _check_file(topology, coordinates=positions_angstrom.m.tolist())
@@ -990,16 +981,13 @@ class TestTopology:
         """
         Checks if fileformat specifier is indpendent of upper/lowercase
         """
-        from tempfile import NamedTemporaryFile
+        topology = Topology.from_pdb(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"), unique_molecules=[Molecule.from_smiles("CCO")]
+        )
+        positions = topology.get_positions().to("angstrom")
 
-        from openff.toolkit.topology import Molecule, Topology
-
-        topology = Topology()
-        mol = Molecule.from_pdb_and_smiles(get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO")
-        topology.add_molecule(mol)
-        positions = mol.conformers[0]
         count = 1
-        with NamedTemporaryFile(suffix=".pdb") as iofile:
+        with tempfile.NamedTemporaryFile(suffix=".pdb") as iofile:
             topology.to_file(iofile.name, positions, file_format="pDb")
             data = open(iofile.name).readlines()
             for line in data:
@@ -1013,12 +1001,11 @@ class TestTopology:
         """
         Checks for invalid file format
         """
-        from openff.toolkit.topology import Molecule, Topology
+        topology = Topology.from_pdb(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"), unique_molecules=[Molecule.from_smiles("CCO")]
+        )
+        positions = topology.get_positions().to("angstrom")
 
-        topology = Topology()
-        mol = Molecule.from_pdb_and_smiles(get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO")
-        topology.add_molecule(mol)
-        positions = mol.conformers[0]
         fname = "ethanol_file.pdb"
         with pytest.raises(NotImplementedError):
             topology.to_file(fname, positions, file_format="AbC")
@@ -1027,13 +1014,9 @@ class TestTopology:
         """
         Checks if Topology.to_file() writes a file with no topology and no coordinates
         """
-        from tempfile import NamedTemporaryFile
-
-        from openff.toolkit.topology import Topology
-
         topology = Topology()
         lines = []
-        with NamedTemporaryFile(suffix=".pdb") as iofile:
+        with tempfile.NamedTemporaryFile(suffix=".pdb") as iofile:
             topology.to_file(iofile.name, [] * unit.nanometer)
             data = open(iofile.name).readlines()
             for line in data:
@@ -1046,21 +1029,19 @@ class TestTopology:
         Checks for the following if Topology.to_write maintains the order of atoms
          for the same molecule with different indexing
         """
-        from tempfile import NamedTemporaryFile
-
-        from openff.toolkit.topology import Molecule, Topology
-
         topology = Topology()
         topology.add_molecule(create_ethanol())
         topology.add_molecule(create_reversed_ethanol())
-        mol = Molecule.from_pdb_and_smiles(get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO")
+        mol = Topology.from_pdb(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"), unique_molecules=[Molecule.from_smiles("CCO")]
+        ).molecule(0)
         positions = mol.conformers[0]
         # Make up coordinates for the second ethanol by translating the first by 10 angstroms (note that this will
         # still be a gibberish conformation, since the atom order in the second molecule is different)
         positions = np.concatenate([positions, positions + 10.0 * unit.angstrom])
         element_order = []
 
-        with NamedTemporaryFile(suffix=".pdb") as iofile:
+        with tempfile.NamedTemporaryFile(suffix=".pdb") as iofile:
             topology.to_file(iofile.name, positions)
             data = open(iofile.name).readlines()
             for line in data:
@@ -1092,15 +1073,10 @@ class TestTopology:
         """
         Checks that a file-like object can be written to (vs a path or str)
         """
-        from io import StringIO
-        from tempfile import NamedTemporaryFile
-
-        from openff.toolkit.topology import Molecule, Topology
-
-        topology = Topology()
-        mol = Molecule.from_pdb_and_smiles(get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO")
-        topology.add_molecule(mol)
-        positions = mol.conformers[0]
+        topology = Topology.from_pdb(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"), unique_molecules=[Molecule.from_smiles("CCO")]
+        )
+        positions = topology.get_positions()
 
         # Check a file-like wrapper around a str
         with StringIO() as iofile:
@@ -1108,13 +1084,13 @@ class TestTopology:
             data1 = [line + "\n" for line in iofile.getvalue().splitlines()]
 
         # Check an actual real file object
-        with NamedTemporaryFile(mode="w+", suffix=".pdb") as iofile:
+        with tempfile.NamedTemporaryFile(mode="w+", suffix=".pdb") as iofile:
             topology.to_file(iofile, positions)
             iofile.seek(0)
             data2 = iofile.readlines()
 
         # Do it the old fashioned way for comparison
-        with NamedTemporaryFile(mode="w+", suffix=".pdb") as iofile:
+        with tempfile.NamedTemporaryFile(mode="w+", suffix=".pdb") as iofile:
             topology.to_file(iofile.name, positions)
             data3 = iofile.readlines()
 
@@ -1126,13 +1102,9 @@ class TestTopology:
         """
         Checks that to_file can take positions from the topology
         """
-        from io import StringIO
-
-        from openff.toolkit.topology import Molecule, Topology
-
-        topology = Topology()
-        mol = Molecule.from_pdb_and_smiles(get_data_file_path("systems/test_systems/1_ethanol.pdb"), "CCO")
-        topology.add_molecule(mol)
+        topology = Topology.from_pdb(
+            get_data_file_path("systems/test_systems/1_ethanol.pdb"), unique_molecules=[Molecule.from_smiles("CCO")]
+        )
 
         count = 1
         with StringIO() as iofile:
@@ -1144,16 +1116,12 @@ class TestTopology:
                     coord = line.split()[-6]
         assert coord == "10.172"
 
+    @requires_rdkit
     def test_to_file_ensure_uniqueness_true(self):
         """
         Checks that ensure_unique_atom_names=True provides per-molecule unique atom names
         """
-        from io import StringIO
-
-        from openff.toolkit.topology import Molecule, Topology
-
-        mol = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
-        topology = Topology.from_molecules([mol])
+        topology = Topology.from_pdb(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
 
         with StringIO() as iofile:
             topology.to_file(iofile, ensure_unique_atom_names=True)
@@ -1166,16 +1134,13 @@ class TestTopology:
                 atom_names.append(atom_name)
         assert len(atom_names) == len(set(atom_names))
 
+    @requires_rdkit
     def test_to_file_ensure_uniqueness_false(self):
         """
         Checks that ensure_unique_atom_names=False preserves atom names
         """
-        from io import StringIO
+        topology = Topology.from_pdb(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
 
-        from openff.toolkit.topology import Molecule, Topology
-
-        mol = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
-        topology = Topology.from_molecules([mol])
         atom_names = set([atom.name for atom in topology.atoms])
         assert None not in atom_names, "All input atoms must be named"
 
@@ -1188,22 +1153,16 @@ class TestTopology:
                 atom_name = line[12:16].strip()
                 assert atom_name in atom_names
 
+    @requires_rdkit
     def test_to_file_ensure_uniqueness_residues(self):
         """
         Checks that ensure_unique_atom_names="residues" provides per-residue unique atom names
         """
-        from io import StringIO
-
-        from openff.toolkit.topology import Molecule, Topology
-
-        mol = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
-        topology = Topology.from_molecules([mol])
+        topology = Topology.from_pdb(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
 
         with StringIO() as iofile:
             topology.to_file(iofile, ensure_unique_atom_names="residues")
             data = iofile.getvalue().splitlines()
-
-        from collections import defaultdict
 
         residues = defaultdict(list)
         for line in data:
@@ -1222,7 +1181,7 @@ class TestTopology:
         """
         Check that a DuplicateUniqueMoleculeError is raised if we try to pass in two indistinguishably unique mols
         """
-        pdbfile = app.PDBFile(get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb"))
+        pdbfile = openmm.app.PDBFile(get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb"))
         molecules = [
             Molecule.from_file(get_data_file_path(name))
             for name in (
@@ -1343,14 +1302,14 @@ class TestTopology:
         # and 12 atoms named "", for a total of 3 unique atom names
         assert len(atom_names) == 3
 
+    @requires_rdkit
     @pytest.mark.parametrize("explicit_arg", [True, False])
     def test_to_openmm_preserve_per_residue_unique_atom_names(self, explicit_arg):
         """
         Test that to_openmm preserves atom names that are unique per-residue by default
         """
         # Create a topology from a capped dialanine
-        peptide = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
-        off_topology = Topology.from_molecules([peptide])
+        off_topology = Topology.from_pdb(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
 
         # Assert the test's assumptions
         _ace, ala1, ala2, _nme = off_topology.hierarchy_iterator("residues")
@@ -1377,14 +1336,14 @@ class TestTopology:
         final_atomnames = [str(atom.name) for atom in omm_topology.atoms()]
         assert final_atomnames == init_atomnames
 
+    @requires_rdkit
     @pytest.mark.parametrize("explicit_arg", [True, False])
     def test_to_openmm_generate_per_residue_unique_atom_names(self, explicit_arg):
         """
         Test that to_openmm preserves atom names that are unique per-residue by default
         """
         # Create a topology from a capped dialanine
-        peptide = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
-        off_topology = Topology.from_molecules([peptide])
+        off_topology = Topology.from_pdb(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
 
         # Remove atom names from some residues, make others have duplicate atom names
         ace, ala1, ala2, nme = off_topology.hierarchy_iterator("residues")
@@ -1423,14 +1382,14 @@ class TestTopology:
             atom_names.add(atom.name)
         assert len(atom_names) < 32, "There should be duplicate atom names in this output topology"
 
+    @requires_rdkit
     @pytest.mark.parametrize("ensure_unique_atom_names", ["chains", True])
     def test_to_openmm_generate_per_molecule_unique_atom_names_with_residues(self, ensure_unique_atom_names):
         """
         Test that to_openmm preserves atom names that are unique per-residue by default
         """
         # Create a topology from a capped dialanine
-        peptide = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
-        off_topology = Topology.from_molecules([peptide])
+        off_topology = Topology.from_pdb(get_data_file_path("proteins/MainChain_ALA_ALA.pdb"))
 
         # Remove atom names from some residues, make others have duplicate atom names
         ace, ala1, ala2, nme = off_topology.hierarchy_iterator("residues")
@@ -1566,7 +1525,7 @@ class TestTopology:
     def test_chemical_environments_matches_OE(self):
         """Test Topology.chemical_environment_matches"""
         toolkit_wrapper = OpenEyeToolkitWrapper()
-        pdbfile = app.PDBFile(get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb"))
+        pdbfile = openmm.app.PDBFile(get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb"))
         # toolkit_wrapper = RDKitToolkitWrapper()
         molecules = [
             Molecule.from_file(get_data_file_path(name))
@@ -1592,7 +1551,7 @@ class TestTopology:
     def test_chemical_environments_matches_RDK(self):
         """Test Topology.chemical_environment_matches"""
         toolkit_wrapper = RDKitToolkitWrapper()
-        pdbfile = app.PDBFile(get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb"))
+        pdbfile = openmm.app.PDBFile(get_data_file_path("systems/packmol_boxes/cyclohexane_ethanol_0.4_0.6.pdb"))
         # toolkit_wrapper = RDKitToolkitWrapper()
         # molecules = [Molecule.from_file(get_data_file_path(name)) for name in ('molecules/ethanol.mol2',
         #                                                                      'molecules/cyclohexane.mol2')]
@@ -1849,18 +1808,17 @@ class TestTopologyHierarchyIterators:
         ):
             topology.residues
 
+    @requires_rdkit
     def test_molecule_order_wins_over_residue_order(
         self,
     ):
         """Test that no effort is made to sort residues by residue number across molecules."""
         protein_path = get_data_file_path("proteins/ace-ala-nh2.pdb")
 
-        topology = Topology.from_molecules(
-            [
-                Molecule.from_polymer_pdb(protein_path),
-                Molecule.from_polymer_pdb(protein_path),
-            ]
-        )
+        protein = Topology.from_pdb(protein_path).molecule(0)
+        protein_copy = deepcopy(protein)
+
+        topology = Topology.from_molecules([protein, protein_copy])
 
         assert topology.residues[0].residue_number == topology.residues[3].residue_number
         assert topology.residues[1].residue_number == topology.residues[4].residue_number

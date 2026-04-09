@@ -14,7 +14,7 @@ dependencies:
   - xmltodict <=1.0.2
   - python-constraint
   - openmm >=7.6
-  - openff-forcefields >=2023.05.1
+  - openff-forcefields >=2025
   - openff-units
   - openff-amber-ff-ports
   - openff-utilities >=0.1.5
@@ -30,7 +30,7 @@ dependencies:
 
   - openeye-toolkits
     # Test-only/optional/dev/typing
-  - pytest =8
+  - pytest
   - pytest-cov
   - pytest-xdist
   - pytest-rerunfailures

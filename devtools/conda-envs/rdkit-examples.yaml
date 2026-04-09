@@ -32,6 +32,7 @@ dependencies:
   - pytest =8
   - pytest-xdist
   - pytest-rerunfailures
+  - pytest-timeout
   - pyyaml
   - toml
   - bson
