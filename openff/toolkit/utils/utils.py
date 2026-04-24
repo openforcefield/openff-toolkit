@@ -61,7 +61,7 @@ def inherit_docstrings(cls):
 T = TypeVar("T")
 
 
-def all_subclasses(cls: type[T]) -> list[type[T]]:
+def all_subclasses[T](cls: type[T]) -> list[type[T]]:
     """Recursively retrieve all subclasses of the specified class"""
     return cls.__subclasses__() + [g for s in cls.__subclasses__() for g in all_subclasses(s)]
 
