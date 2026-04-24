@@ -26,6 +26,7 @@ urls = { Homepage = "https://github.com/openforcefield/openff-toolkit" }
 packages.find.include = [ "openff.toolkit*" ]
 
 [tool.ruff]
+target-version = "py312"
 line-length = 119
 exclude = [ "examples/deprecated/", "utilities/deprecated" ]
 lint.select = [ "E", "F", "I", "NPY", "RUF", "UP", "W" ]
