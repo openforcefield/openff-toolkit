@@ -126,10 +126,6 @@ jobs:
           micromamba list
           pip list
 
-      - name: Run code snippets in docs
-        if: ${{ matrix.rdkit == true && matrix.openeye == true && matrix.nagl == true }}
-        run: pytest -v --no-cov --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
-
       - name: Run mypy
         # When possible re-enable this with OE+RDK=True, but for now rdkit builds often have bugs
         # in stubs and there are other subtleties (in the source code and builds) that reduce the number
@@ -148,6 +144,10 @@ jobs:
           PYTEST_ARGS+=" --runslow"
 
           python -m pytest -x --durations=20 $PYTEST_ARGS $COV openff/toolkit/_tests
+
+      - name: Run code snippets in docs
+        if: ${{ matrix.rdkit == true && matrix.openeye == true && matrix.nagl == true }}
+        run: pytest -v --no-cov --doctest-glob="docs/*.rst" --doctest-glob="docs/*.md" docs/
 
       - name: Run notebooks in docs
         if: ${{ matrix.rdkit == true && matrix.openeye == true }}
