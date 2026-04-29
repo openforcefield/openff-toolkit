@@ -16,7 +16,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Behavior changes
 
-- [PR #2174](https://github.com/openforcefield/openff-toolkit/pull/2XXX): Drop support for Python 3.11
+- [PR #2174](https://github.com/openforcefield/openff-toolkit/pull/2174): Drop support for Python 3.11
 
 ### Bugfixes
 
