@@ -19,7 +19,7 @@ import tempfile
 import warnings
 from collections import defaultdict
 from functools import wraps
-from typing import TYPE_CHECKING, Any, TypeAlias
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from cachetools import LRUCache, cached
@@ -67,7 +67,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-TTA: TypeAlias = tuple[tuple[Any, ...], ...]
+type TTA = tuple[tuple[Any, ...], ...]
 
 
 def get_oeformat(file_format: str) -> str:

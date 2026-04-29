@@ -10,27 +10,25 @@ keywords = [ "force field", "molecular mechanics", "parameterization" ]
 license = "MIT"
 license-files = [ "LICENSE" ]
 authors = [ { name = "Open Force Field Consortium", email = "info@openforcefield.org" } ]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
   "Topic :: Utilities",
 ]
-
 dynamic = [ "version" ]
 urls = { Homepage = "https://github.com/openforcefield/openff-toolkit" }
 
-[tool.setuptools.packages.find]
-include = [ 'openff.toolkit*' ]
+[tool.setuptools]
+packages.find.include = [ "openff.toolkit*" ]
 
 [tool.ruff]
+target-version = "py312"
 line-length = 119
 exclude = [ "examples/deprecated/", "utilities/deprecated" ]
-
 lint.select = [ "E", "F", "I", "NPY", "RUF", "UP", "W" ]
 lint.ignore = [ "D105", "D107", "D200", "D203", "D212", "E721", "RUF012" ]
 lint.per-file-ignores."docs/users/molecule_cookbook.ipynb" = [ "E402", "F821" ]
@@ -43,19 +41,6 @@ lint.isort.known-first-party = [ "openff.toolkit" ]
 # can't find a clean way to get Rust's globset to handle this via regex ...
 # https://docs.astral.sh/ruff/settings/#lint_isort_known-third-party
 lint.isort.known-third-party = [ "openff.interchange", "openff.utilities", "openff.units" ]
-
-[tool.coverage.run]
-omit = [
-  "*/*/_tests/*",
-]
-
-[tool.coverage.report]
-exclude_lines = [
-  "pragma: no cover",
-  "if TYPE_CHECKING:",
-  "raise NotImplementedError",
-  "@overload",
-]
 
 [tool.mypy]
 python_version = 3.12
@@ -91,5 +76,16 @@ module = [
   "constraint",
 ]
 ignore_missing_imports = true
+
+[tool.coverage]
+run.omit = [
+  "*/*/_tests/*",
+]
+report.exclude_lines = [
+  "@overload",
+  "if TYPE_CHECKING:",
+  "pragma: no cover",
+  "raise NotImplementedError",
+]
 
 [tool.versioningit]
