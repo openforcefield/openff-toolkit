@@ -50,7 +50,7 @@ jobs:
           fi
 
           if [[ ${{ matrix.openeye }} == false ]]; then
-              echo "ENVFILE=no_openeye" >> $GITHUB_ENV
+              echo "ENVFILE=no-openeye" >> $GITHUB_ENV
               echo "JOBNAME=No OpenEye" >> $GITHUB_ENV
               echo "TOOLKIT_CHECKS=" >> $GITHUB_ENV
               echo "PACKAGES_TO_REMOVE=openeye-toolkits" >> $GITHUB_ENV
