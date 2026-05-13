@@ -1,4 +1,4 @@
-name: openff-toolkit-test-rdkit
+name: openff-toolkit-test-no-openeye
 channels:
   - conda-forge
 dependencies:

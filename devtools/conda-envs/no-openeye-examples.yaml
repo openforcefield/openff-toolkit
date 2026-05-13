@@ -1,4 +1,4 @@
-name: rdkit-examples
+name: no-openeye-examples
 channels:
   - conda-forge
 dependencies:
@@ -27,7 +27,7 @@ dependencies:
     # Toolkit-specific
   - ambertools
     # https://github.com/rdkit/rdkit/issues/7221 and https://github.com/rdkit/rdkit/issues/7583
-  - rdkit =2024
+  - rdkit =2024  # Bump me!
     # Test-only/optional/dev/typing/examples
   - pytest =8
   - pytest-xdist
