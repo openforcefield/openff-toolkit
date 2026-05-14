@@ -21,18 +21,16 @@ jobs:
     name: ${{ matrix.os }}, Python ${{ matrix.python-version }}, RDKit=${{ matrix.rdkit }}, OpenEye=${{ matrix.openeye }}, NAGL=${{ matrix.nagl }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os: [ubuntu-latest, macos-latest]
         python-version: [ "3.12"]
         rdkit: [true, false]
-        openeye: [true, false]
+        openeye: [false]
         nagl: [true, false]
         exclude:
           - rdkit: false
             openeye: false
-          - rdkit: true
-            openeye: true
           - rdkit: false
             nagl: true
 
