@@ -39,9 +39,9 @@ dependencies:
   - qcengine
   - mdtraj
   - nglview
-  - mypy =2
   - typing_extensions
   - pip:
+    - mypy =2
     - types-setuptools
     - types-toml
     - types-PyYAML
