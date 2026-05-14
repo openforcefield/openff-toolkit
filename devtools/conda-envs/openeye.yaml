@@ -41,7 +41,7 @@ dependencies:
   - nglview
   - typing_extensions
   - pip:
-    - mypy =2
+    - mypy ==2
     - types-setuptools
     - types-toml
     - types-PyYAML
