@@ -26,7 +26,7 @@ dependencies:
   - nglview
     # Toolkit-specific
   - ambertools =24.8
-  - rdkit
+  - rdkit >=2024
     # Test-only/optional/dev/typing/examples
   - pytest >=8
   - pytest-xdist
@@ -42,4 +42,9 @@ dependencies:
   - mdtraj
   - pdbfixer
   - openmmforcefields >=0.11.2
-  - gromacs >=2023.3
+    # older versions okay, just constrain to help solver
+  - gromacs >=2025
+
+  # this is just to help the solver, and is a consequence of AmberTools not being re-built for
+  # any recent versions of Boot
+  - icu =75
