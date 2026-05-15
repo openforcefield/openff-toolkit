@@ -19,7 +19,7 @@ dependencies:
   - openff-utilities >=0.1.5
   - openff-interchange-base >=0.5
   # No idea why this is necessary, see https://github.com/openforcefield/openff-toolkit/pull/1821
-  - nomkl
+  # nomkl
   - openff-nagl-base >=0.5.5
   - openff-nagl-models >=2025.09
   - typing_extensions
@@ -41,7 +41,7 @@ dependencies:
   - nbval
   - mdtraj
   - pdbfixer
-  - openmmforcefields >=0.11.2
+  - openmmforcefields >=0.16.0
     # older versions okay, just constrain to help solver
   - gromacs >=2025
 
