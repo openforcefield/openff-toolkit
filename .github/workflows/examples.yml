@@ -42,10 +42,16 @@ jobs:
 
       - name: Set environment variables
         run: |
-          if [[ ${{ matrix.openeye }} == false && ${{ matrix.rdkit }} == true ]]; then
+          if [[ ${{ matrix.openeye }} == false ]]; then
               echo "ENVFILE=rdkit" >> $GITHUB_ENV
-              echo "TOOLKIT_CHECKS=RDKIT" >> $GITHUB_ENV
+              echo "TOOLKIT_CHECKS=RDKIT OPENEYE" >> $GITHUB_ENV
               echo "PACKAGES_TO_REMOVE=openeye-toolkits" >> $GITHUB_ENV
+          fi
+
+          if [[ ${{ matrix.openeye }} == false ]]; then
+              echo "ENVFILE=base" >> $GITHUB_ENV
+              echo "TOOLKIT_CHECKS=RDKIT" >> $GITHUB_ENV
+              echo "PACKAGES_TO_REMOVE="" >> $GITHUB_ENV
           fi
 
       - name: Install conda environment with ${{ env.ENVFILE }}
