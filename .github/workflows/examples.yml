@@ -27,11 +27,7 @@ jobs:
         python-version: [ "3.12"]
         rdkit: [true]
         openeye: [true, false]
-        nagl: [true, false]
-        exclude:
-          - openeye: false
-          - rdkit: true
-            openeye: true
+        nagl: [true]
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
