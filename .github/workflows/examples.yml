@@ -49,7 +49,7 @@ jobs:
 
       - name: Install OpenEye toolkits
         if: ${{ matrix.openeye == true }}
-        run: micromamba install -c openeye "openeye-toolkits >=2024"
+        run: micromamba install -c openeye "openeye-toolkits >=2024" -y
 
       - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
         if: ${{ matrix.openeye == true }}
@@ -68,7 +68,7 @@ jobs:
       - name: Check OpenEye NOT installed
         if: ${{ matrix.openeye == false }}
         run: |
-          python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert not OPENEYE_AVAILABLE, 'OpenEye available but shouldn't be'"
+          python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert not OPENEYE_AVAILABLE, 'OpenEye available but shouldn\'t be'"
 
       - name: Environment Information
         run: |
