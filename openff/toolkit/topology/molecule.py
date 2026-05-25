@@ -5654,7 +5654,7 @@ def _networkx_graph_to_hill_formula(graph: "nx.Graph[int]") -> str:
     if not isinstance(graph, nx.Graph):
         raise ValueError("The graph must be a NetworkX graph.")
 
-    atom_nums: list[int] = [atomic_number for (_, atomic_number) in graph.nodes(data="atomic_number", default=1)] # type: ignore[misc]
+    atom_nums: list[int] = [atomic_number for (_, atomic_number) in graph.nodes(data="atomic_number", default=1)]  # type: ignore[misc]
 
     return _atom_nums_to_hill_formula(atom_nums)  # type:ignore[arg-type]
 
