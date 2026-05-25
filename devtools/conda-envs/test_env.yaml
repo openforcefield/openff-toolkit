@@ -40,9 +40,9 @@ dependencies:
   - bson
   - msgpack-python
   - pydantic
-  - qcelemental <0.50
+  - qcelemental
   - qcportal >=0.50
-  - qcengine <0.50
+  - qcengine
   - nglview
   - mdtraj
   - nbval

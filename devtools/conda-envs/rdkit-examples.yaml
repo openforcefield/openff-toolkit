@@ -34,9 +34,9 @@ dependencies:
   - toml
   - bson
   - msgpack-python
-  - qcelemental <0.50
+  - qcelemental
   - qcportal >=0.50
-  - qcengine <0.50
+  - qcengine
   - nbval
   - mdtraj
   - pdbfixer
