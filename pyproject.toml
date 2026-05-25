@@ -44,7 +44,6 @@ lint.isort.known-third-party = [ "openff.interchange", "openff.utilities", "open
 
 [tool.mypy]
 python_version = 3.12
-plugins = "numpy.typing.mypy_plugin"
 warn_unused_configs = true
 # would be nice to flip back to true
 warn_unused_ignores = false
