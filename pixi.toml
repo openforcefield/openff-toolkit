@@ -1,0 +1,77 @@
+[workspace]
+name = "openff-toolkit-examples"
+channels = [ "conda-forge" ]
+platforms = [ "linux-64", "osx-arm64" ]
+
+[dependencies]
+pip = "*"
+versioningit = "*"
+packaging = "*"
+typing_extensions = "*"
+numpy = "*"
+networkx = "*"
+cachetools = "*"
+xmltodict = "<=1.0.2"
+python-constraint = "*"
+openmm = ">=7.6"
+openff-forcefields = ">=2023.11"
+openff-amber-ff-ports = ">=0.0.3"
+openff-units = "*"
+openff-utilities = ">=0.1.5"
+openff-interchange-base = ">=0.5"
+openff-nagl-base = ">=0.5.2"
+openff-nagl-models = ">=2025"
+rdkit = ">=2024"
+
+[feature.examples.dependencies]
+nglview = "<4"
+setuptools = "80.*"  # shim because nglview needs pkg_resources
+qcelemental = "<0.50"
+qcportal = ">=0.50"
+qcengine = "<0.50"
+nbval = "*"
+mdtraj = "*"
+pdbfixer = "*"
+# openmmforcefields >=0.15
+
+[feature.engines.dependencies]
+gromacs = ">=2023.3"
+pyedr = "*"
+lammps = "*"
+
+[feature.ambertools.dependencies]
+ambertools = ">=22"
+
+[feature.openeye]
+channels = [ "openeye" ]
+
+[feature.openeye.dependencies]
+openeye-toolkits = "*"
+
+[environments]
+examples-ambertools = [ "py312", "test", "examples", "engines", "ambertools" ]
+examples-openeye = [ "py312", "test", "examples", "engines", "openeye" ]
+
+[tasks]
+run_scripts = {
+    cmd = "python -m pytest $PYTEST_ARGS openff/toolkit/_tests/test_examples.py",
+    env = {
+        PYTEST_ARGS = "-r fE -v -x --tb=short -n auto --durations=10",
+    }
+}
+run_notebooks = {
+    cmd = "python -m pytest $PYTEST_ARGS $NB_ARGS examples/",
+    env = {
+        PYTEST_ARGS = "-r fE -v -x --tb=auto -n auto --durations=10",
+        NB_ARGS = "-p no:randomly --nbval-lax --dist loadscope --ignore=examples/deprecated",
+    }
+}
+
+[feature.py312.dependencies]
+python = "3.12.*"
+
+[feature.test.dependencies]
+pytest = "*"
+pytest-cov = "*"
+pytest-xdist = "*"
+pytest-randomly = "*"
