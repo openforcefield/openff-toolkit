@@ -11,10 +11,6 @@ on:
     - cron: "0 4 * * *"
   workflow_dispatch:
 
-defaults:
-  run:
-    shell: pixi run bash -e {0}
-
 jobs:
   test:
     if: (github.event_name == 'schedule' && github.repository == 'openforcefield/openff-toolkit') || (github.event_name != 'schedule')
@@ -53,15 +49,15 @@ jobs:
       - name: Check OpenEye installed
         if: contains(matrix.environment, 'openeye')
         run: |
-          python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert OPENEYE_AVAILABLE, 'OpenEye unavailable'"
+          pixi run python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert OPENEYE_AVAILABLE, 'OpenEye unavailable'"
 
       - name: Check OpenEye NOT installed
         if: ! contains(matrix.environment, 'openeye')
         run: |
-          python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert not OPENEYE_AVAILABLE, 'OpenEye available but shouldn\'t be'"
+          pixi run python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert not OPENEYE_AVAILABLE, 'OpenEye available but shouldn\'t be'"
 
       - name: Run example scripts
-        run: run_scripts
+        run: pixi run -e ${{ matrix.environment }} run_scripts
 
       - name: Run example notebooks
-        run: run_notebooks
+        run: pixi run -e ${{ matrix.environment }} run_notebooks
