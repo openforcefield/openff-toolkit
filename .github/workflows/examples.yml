@@ -49,12 +49,12 @@ jobs:
       - name: Check OpenEye installed
         if: contains(matrix.environment, 'openeye')
         run: |
-          pixi run python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert OPENEYE_AVAILABLE, 'OpenEye unavailable'"
+          pixi run -e examples-openeye python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert OPENEYE_AVAILABLE, 'OpenEye unavailable'"
 
       - name: Check OpenEye NOT installed
         if: ! contains(matrix.environment, 'openeye')
         run: |
-          pixi run python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert not OPENEYE_AVAILABLE, 'OpenEye available but shouldn\'t be'"
+          pixi run -e examples-ambertools python -c "from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE; assert not OPENEYE_AVAILABLE, 'OpenEye available but shouldn\'t be'"
 
       - name: Run example scripts
         run: pixi run -e ${{ matrix.environment }} run_scripts
