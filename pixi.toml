@@ -24,7 +24,8 @@ openff-nagl-models = ">=2025"
 rdkit = ">=2024"
 
 [feature.examples.dependencies]
-nglview = "*"
+nglview = "<4"
+setuptools = "80.*"  # shim because nglview needs pkg_resources
 qcelemental = "<0.50"
 qcportal = ">=0.50"
 qcengine = "<0.50"
@@ -32,8 +33,11 @@ nbval = "*"
 mdtraj = "*"
 pdbfixer = "*"
 # openmmforcefields >=0.15
+
+[feature.engines.dependencies]
 gromacs = ">=2023.3"
 pyedr = "*"
+lammps = "*"
 
 [feature.ambertools.dependencies]
 ambertools = ">=22"
@@ -45,8 +49,8 @@ channels = [ "openeye" ]
 openeye-toolkits = "*"
 
 [environments]
-examples-ambertools = [ "py312", "test", "examples", "ambertools" ]
-examples-openeye = [ "py312", "test", "examples", "openeye" ]
+examples-ambertools = [ "py312", "test", "examples", "engines", "ambertools" ]
+examples-openeye = [ "py312", "test", "examples", "engines", "openeye" ]
 
 [tasks]
 run_scripts = {
