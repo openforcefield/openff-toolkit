@@ -40,3 +40,4 @@ dependencies:
   - pdbfixer
   # openmmforcefields >=0.15
   - gromacs >=2023.3
+  - pyedr
