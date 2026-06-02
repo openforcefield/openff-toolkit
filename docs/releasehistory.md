@@ -19,6 +19,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #2174](https://github.com/openforcefield/openff-toolkit/pull/2174): Drop support for Python 3.11
 
 ### Bugfixes
+- [PR #2187](https://github.com/openforcefield/openff-toolkit/pull/2187): Updated the QCArchive example notebook to be compliant with new validation behavior in QCEngine and QCElemental >=0.50. 
 
 ### New features
 
