@@ -20,6 +20,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 - [PR #2187](https://github.com/openforcefield/openff-toolkit/pull/2187): Updated the QCArchive example notebook to be compliant with new validation behavior in QCEngine and QCElemental >=0.50. 
+- [Issue #2191](https://github.com/openforcefield/openff-toolkit/issues/2191): Adds support for loading N-terminal, protonated, disulfide-bonded cysteine residues in `Topology.from_pdb`.
 
 ### New features
 
