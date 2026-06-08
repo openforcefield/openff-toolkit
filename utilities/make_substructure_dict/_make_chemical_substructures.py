@@ -7,7 +7,7 @@ from openff.toolkit.utils.utils import get_data_file_path
 if not os.path.exists("aa-variants-v1.cif"):
     import requests
 
-    r = requests.get("https://ftp.wwpdb.org/pub/pdb/data/monomers/aa-variants-v1.cif")
+    r = requests.get("https://files.wwpdb.org/pub/pdb/data/monomers/aa-variants-v1.cif")
     print(r.ok)
     if r.ok:
         with open("aa-variants-v1.cif", "wb") as of:
@@ -28,6 +28,7 @@ cif_object.from_file(
 # Automatically patch known problems - better that this explodes when things are fixed
 cif_object._patch_known_problems()
 cif_object._add_common_substructures()
+cif_object._add_common_cysteine_substructures()
 cif_object._add_common_linkages()
 
 # Make Old substructure file to keep some functions working
