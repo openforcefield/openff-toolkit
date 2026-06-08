@@ -163,7 +163,7 @@ jobs:
             --ignore=openff/toolkit/utils/utils.py
 
       - name: Codecov
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
