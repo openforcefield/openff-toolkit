@@ -30,6 +30,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 - [PR #2121](https://github.com/openforcefield/openff-toolkit/pull/2121): Treat OpenFF NAGL as an optional dependency in CI
 - [PR #2123](https://github.com/openforcefield/openff-toolkit/pull/2123): Update CI matrix to include the case of RDKit/AmberTools and OpenEye Toolkits both being installed.
+- [PR #2186](https://github.com/openforcefield/openff-toolkit/pull/2186): Do not use AmberTools in examples
 
 ## 0.18.0
 
