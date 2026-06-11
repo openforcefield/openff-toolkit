@@ -4,6 +4,7 @@ Functions which create a topological molecule directly, without a toolkit.
 These are common to several test modules.
 
 """
+
 from __future__ import annotations
 
 import numpy as np

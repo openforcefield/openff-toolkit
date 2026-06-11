@@ -2,6 +2,7 @@
 """
 Wrapper class providing a minimal consistent interface to the `RDKit <http://www.rdkit.org/>`.
 """
+
 from __future__ import annotations
 
 __all__ = ("RDKitToolkitWrapper",)

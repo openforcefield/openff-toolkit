@@ -2,6 +2,7 @@
 Utility classes and functions to create objects supporting callback registration.
 
 """
+
 from __future__ import annotations
 
 __all__ = [

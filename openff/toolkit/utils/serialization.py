@@ -11,6 +11,7 @@ Serialization mix-in
    installed?
 
 """
+
 from __future__ import annotations
 
 import abc

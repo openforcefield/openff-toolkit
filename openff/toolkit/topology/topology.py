@@ -11,6 +11,7 @@ Class definitions to represent a molecular system and its chemical components
    * Use `attrs <http://www.attrs.org/>`_ for object setter boilerplate?
 
 """
+
 from __future__ import annotations
 
 import re

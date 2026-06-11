@@ -2,6 +2,7 @@
 Wrapper class providing a minimal consistent interface to
 the `OpenEye Toolkit <https://docs.eyesopen.com/toolkits/python/quickstart-python/index.html>`_
 """
+
 from __future__ import annotations
 
 __all__ = ("OpenEyeToolkitWrapper",)

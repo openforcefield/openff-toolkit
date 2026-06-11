@@ -9,6 +9,7 @@ TypedMolecule TODOs
   deserialize a Molecule or a TypedMolecule.
 
 """
+
 from __future__ import annotations
 
 import functools
