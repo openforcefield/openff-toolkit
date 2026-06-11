@@ -32,6 +32,8 @@ jobs:
             openeye: false
           - openeye: true
             python-version: "3.13"
+          - openeye: true
+            python-version: "3.14"
           - rdkit: false
             nagl: true
 
