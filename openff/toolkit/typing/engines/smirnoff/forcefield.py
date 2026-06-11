@@ -10,6 +10,7 @@ Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) for
    * Speed up overall import time by putting non-global imports only where they are needed
 
 """
+
 from __future__ import annotations
 
 import logging

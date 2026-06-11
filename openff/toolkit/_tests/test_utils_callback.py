@@ -2,6 +2,7 @@
 Tests for callback utility classes and functions.
 
 """
+
 from __future__ import annotations
 
 import pytest

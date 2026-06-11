@@ -6,6 +6,7 @@ XML I/O parser for the SMIRNOFF (SMIRKS Native Open Force Field) format.
 .. codeauthor:: Peter K. Eastman <peastman@stanford.edu>
 
 """
+
 from __future__ import annotations
 
 __all__ = [

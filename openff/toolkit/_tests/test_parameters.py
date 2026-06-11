@@ -2,6 +2,7 @@
 Test classes and function in module openff.toolkit.typing.engines.smirnoff.parameters.
 
 """
+
 from __future__ import annotations
 
 from collections import defaultdict

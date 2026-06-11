@@ -1,6 +1,7 @@
 """
 Wrapper class providing a minimal consistent interface to `AmberTools <http://ambermd.org/AmberTools.php>`_.
 """
+
 from __future__ import annotations
 
 __all__ = ("AmberToolsToolkitWrapper",)

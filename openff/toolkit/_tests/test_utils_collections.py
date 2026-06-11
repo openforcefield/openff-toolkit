@@ -2,6 +2,7 @@
 Tests for custom collections classes.
 
 """
+
 from __future__ import annotations
 
 import copy

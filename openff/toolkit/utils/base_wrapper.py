@@ -1,6 +1,7 @@
 """
 Base class for toolkit wrappers. Defines the public API and some shared methods
 """
+
 from __future__ import annotations
 
 __all__ = ("ToolkitWrapper",)

@@ -2,6 +2,7 @@
 Tests for utility methods for serialization
 
 """
+
 from __future__ import annotations
 
 import numpy as np

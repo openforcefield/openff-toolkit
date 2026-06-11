@@ -1,6 +1,7 @@
 """
 Test that the examples in the repo run without errors.
 """
+
 from __future__ import annotations
 
 import pathlib

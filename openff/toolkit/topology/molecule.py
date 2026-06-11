@@ -24,6 +24,7 @@ Molecular chemical entity representation and routines to interface with cheminfo
    * Speed up overall import time by putting non-global imports only where they are needed
 
 """
+
 from __future__ import annotations
 
 import hashlib

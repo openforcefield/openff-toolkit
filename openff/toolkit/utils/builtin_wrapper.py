@@ -1,6 +1,7 @@
 """
 Built-in ToolkitWrapper for very basic functionality. Intended for testing and not much more.
 """
+
 from __future__ import annotations
 
 __all__ = ("BuiltInToolkitWrapper",)
