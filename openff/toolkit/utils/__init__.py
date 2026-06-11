@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from openff.toolkit.utils.constants import (
     ALLOWED_AROMATICITY_MODELS,
     ALLOWED_CHARGE_MODELS,

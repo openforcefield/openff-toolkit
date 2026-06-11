@@ -11,6 +11,7 @@ Class definitions to represent a molecular system and its chemical components
    * Use `attrs <http://www.attrs.org/>`_ for object setter boilerplate?
 
 """
+from __future__ import annotations
 
 import re
 from collections import defaultdict
@@ -22,7 +23,6 @@ from typing import (
     TYPE_CHECKING,
     Literal,
     TextIO,
-    Union,
 )
 
 import numpy as np
@@ -520,7 +520,7 @@ class Topology(Serializable):
     def from_molecules(
         cls,
         molecules: MoleculeLike | Iterable[MoleculeLike],
-    ) -> "Topology":
+    ) -> Topology:
         """
         Create a new Topology object containing one copy of each of the specified molecule(s).
 
@@ -546,7 +546,7 @@ class Topology(Serializable):
 
         return topology
 
-    def assert_bonded(self, atom1: Union[int, "Atom"], atom2: Union[int, "Atom"]):
+    def assert_bonded(self, atom1: int | Atom, atom2: int | Atom):
         """
         Raise an exception if the specified atoms are not bonded in the topology.
 
@@ -724,7 +724,7 @@ class Topology(Serializable):
         return n_atoms
 
     @property
-    def atoms(self) -> Generator["Atom", None, None]:
+    def atoms(self) -> Generator[Atom, None, None]:
         """Returns an iterator over the atoms in this Topology. These will be in ascending order of topology index.
 
         Returns
@@ -734,7 +734,7 @@ class Topology(Serializable):
         for molecule in self._molecules:
             yield from molecule.atoms
 
-    def atom_index(self, atom: "Atom") -> int:
+    def atom_index(self, atom: Atom) -> int:
         """
         Returns the index of a given atom in this topology
 
@@ -861,7 +861,7 @@ class Topology(Serializable):
     @property
     def smirnoff_impropers(
         self,
-    ) -> Generator[tuple[Union["Atom", _SimpleAtom], ...], None, None]:
+    ) -> Generator[tuple[Atom | _SimpleAtom, ...], None, None]:
         """
         Iterate over improper torsions in the molecule, but only those with
         trivalent centers, reporting the central atom second in each improper.
@@ -901,7 +901,7 @@ class Topology(Serializable):
     @property
     def amber_impropers(
         self,
-    ) -> Generator[tuple[Union["Atom", _SimpleAtom], ...], None, None]:
+    ) -> Generator[tuple[Atom | _SimpleAtom, ...], None, None]:
         """
         Iterate over improper torsions in the molecule, but only those with
         trivalent centers, reporting the central atom first in each improper.
@@ -1327,10 +1327,10 @@ class Topology(Serializable):
     @requires_package("openmm")
     def from_openmm(
         cls,
-        openmm_topology: "openmm.app.Topology",
+        openmm_topology: openmm.app.Topology,
         unique_molecules: Iterable[FrozenMolecule] | None = None,
-        positions: Union[None, Quantity, "OMMQuantity"] = None,
-    ) -> "Topology":
+        positions: None | Quantity | OMMQuantity = None,
+    ) -> Topology:
         """
         Construct an OpenFF Topology object from an OpenMM Topology object.
 
@@ -1771,7 +1771,7 @@ class Topology(Serializable):
     def to_openmm(
         self,
         ensure_unique_atom_names: str | bool = "residues",
-    ) -> "openmm.app.Topology":
+    ) -> openmm.app.Topology:
         """
         Create an OpenMM Topology object.
 
@@ -1935,7 +1935,7 @@ class Topology(Serializable):
     def to_file(
         self,
         file: Path | str | TextIO,
-        positions: Union["OMMQuantity", Quantity, NDArray] | None = None,
+        positions: OMMQuantity | Quantity | NDArray | None = None,
         file_format: Literal["PDB"] = "PDB",
         keep_ids: bool = False,
         ensure_unique_atom_names: str | bool = "residues",
@@ -2122,9 +2122,9 @@ class Topology(Serializable):
     @requires_package("mdtraj")
     def from_mdtraj(
         cls,
-        mdtraj_topology: "mdtraj.Topology",
+        mdtraj_topology: mdtraj.Topology,
         unique_molecules: Iterable[MoleculeLike] | None = None,
-        positions: Union[None, "OMMQuantity", Quantity] = None,
+        positions: None | OMMQuantity | Quantity = None,
     ):
         """
         Construct an OpenFF ``Topology`` from an MDTraj ``Topology``
@@ -2192,7 +2192,7 @@ class Topology(Serializable):
 
         return md.Topology.from_openmm(self.to_openmm())
 
-    def get_bond_between(self, i: Union[int, "Atom"], j: Union[int, "Atom"]) -> "Bond":
+    def get_bond_between(self, i: int | Atom, j: int | Atom) -> Bond:
         """Returns the bond between two atoms
 
         Parameters
@@ -2228,7 +2228,7 @@ class Topology(Serializable):
 
         raise NotBondedError(f"No bond between atom {i} and {j}")
 
-    def is_bonded(self, i: Union[int, "Atom"], j: Union[int, "Atom"]) -> bool:
+    def is_bonded(self, i: int | Atom, j: int | Atom) -> bool:
         """Returns True if the two atoms are bonded
 
         Parameters
@@ -2248,7 +2248,7 @@ class Topology(Serializable):
         except NotBondedError:
             return False
 
-    def atom(self, atom_topology_index: int) -> "Atom":
+    def atom(self, atom_topology_index: int) -> Atom:
         """
         Get the Atom at a given Topology atom index.
 
@@ -2437,7 +2437,7 @@ class Topology(Serializable):
             return False
 
     @requires_package("nglview")
-    def visualize(self, ensure_correct_connectivity: bool = False) -> "NGLWidget":
+    def visualize(self, ensure_correct_connectivity: bool = False) -> NGLWidget:
         """
         Visualize with NGLView.
 
@@ -2537,7 +2537,7 @@ class Topology(Serializable):
             if hasattr(molecule, iter_name):
                 yield from getattr(molecule, iter_name)
 
-    def __getattr__(self, name: str) -> list["HierarchyElement"]:
+    def __getattr__(self, name: str) -> list[HierarchyElement]:
         """If a requested attribute is not found, check the hierarchy schemes"""
         # Avoid attempting to process dunder methods as hierarchy scheme iterator names
         if name.startswith("__"):

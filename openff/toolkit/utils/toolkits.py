@@ -19,6 +19,7 @@ Currently supported toolkits:
    * Change global variables from _INSTALLED to _AVAILABLE
 
 """
+from __future__ import annotations
 
 __all__ = (
     "ALLOWED_AROMATICITY_MODELS",

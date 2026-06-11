@@ -2,6 +2,7 @@
 """
 Wrapper class providing a minimal consistent interface to the `RDKit <http://www.rdkit.org/>`.
 """
+from __future__ import annotations
 
 __all__ = ("RDKitToolkitWrapper",)
 
@@ -1105,7 +1106,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # TODO: TDT file support
         return mols
 
-    def to_file_obj(self, molecule: "Molecule", file_obj, file_format: str):
+    def to_file_obj(self, molecule: Molecule, file_obj, file_format: str):
         """
         Writes an OpenFF Molecule to a file-like object
 
@@ -1155,7 +1156,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             finally:
                 writer.close()
 
-    def to_file(self, molecule: "Molecule", file_path: str, file_format: str):
+    def to_file(self, molecule: Molecule, file_path: str, file_format: str):
         """
         Writes an OpenFF Molecule to a file-like object
 
@@ -1179,11 +1180,11 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def enumerate_stereoisomers(
         self,
-        molecule: "Molecule",
+        molecule: Molecule,
         undefined_only: bool = False,
         max_isomers: int = 20,
         rationalise: bool = True,
-    ) -> list["Molecule"]:
+    ) -> list[Molecule]:
         """
         Enumerate the stereocenters and bonds of the current molecule.
 
@@ -1240,7 +1241,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return molecules
 
-    def enumerate_tautomers(self, molecule: "Molecule", max_states: int = 20) -> list["Molecule"]:
+    def enumerate_tautomers(self, molecule: Molecule, max_states: int = 20) -> list[Molecule]:
         """
         Enumerate the possible tautomers of the current molecule.
 
@@ -1279,7 +1280,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return molecules[:max_states]
 
-    def canonical_order_atoms(self, molecule: "Molecule") -> "Molecule":
+    def canonical_order_atoms(self, molecule: Molecule) -> Molecule:
         """
         Canonical order the atoms in the molecule using the RDKit.
 
@@ -1320,7 +1321,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def to_smiles(
         self,
-        molecule: "Molecule",
+        molecule: Molecule,
         isomeric: bool = True,
         explicit_hydrogens: bool = True,
         mapped: bool = False,
@@ -1560,7 +1561,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def generate_conformers(
         self,
-        molecule: "Molecule",
+        molecule: Molecule,
         n_conformers: int = 1,
         rms_cutoff: Quantity | None = None,
         clear_existing: bool = True,
@@ -1637,7 +1638,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def assign_partial_charges(
         self,
-        molecule: "Molecule",
+        molecule: Molecule,
         partial_charge_method: str | None = None,
         use_conformers: list[Quantity] | None = None,
         strict_n_conformers: bool = False,
@@ -1713,7 +1714,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     @classmethod
     def _elf_is_problematic_conformer(
         cls,
-        molecule: "Molecule",
+        molecule: Molecule,
         conformer: Quantity,
     ) -> tuple[bool, str | None]:
         """A function which checks if a particular conformer is known to be problematic
@@ -1760,7 +1761,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return False, None
 
     @classmethod
-    def _elf_prune_problematic_conformers(cls, molecule: "Molecule") -> list[Quantity]:
+    def _elf_prune_problematic_conformers(cls, molecule: Molecule) -> list[Quantity]:
         """A function which attempts to remove conformers which are known to be
         problematic when computing ELF partial charges.
 
@@ -1793,7 +1794,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     @classmethod
     def _elf_compute_electrostatic_energy(
         cls,
-        molecule: "Molecule",
+        molecule: Molecule,
         conformer: Quantity,
     ) -> float:
         """Computes the 'electrostatic interaction energy' of a particular conformer
@@ -1864,7 +1865,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         return 0.5 * interaction_energies.sum()
 
     @classmethod
-    def _elf_compute_rms_matrix(cls, molecule: "Molecule") -> NDArray:
+    def _elf_compute_rms_matrix(cls, molecule: Molecule) -> NDArray:
         """Computes the symmetric RMS matrix of all conformers in a molecule taking
         only heavy atoms into account.
 
@@ -1906,7 +1907,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     @classmethod
     def _elf_select_diverse_conformers(
         cls,
-        molecule: "Molecule",
+        molecule: Molecule,
         ranked_conformers: list[Quantity],
         limit: int,
         rms_tolerance: Quantity,
@@ -1979,7 +1980,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def apply_elf_conformer_selection(
         self,
-        molecule: "Molecule",
+        molecule: Molecule,
         percentage: float = 2.0,
         limit: int = 10,
         rms_tolerance: Quantity = 0.05 * unit.angstrom,
@@ -2475,7 +2476,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return rdmol
 
-    def to_rdkit(self, molecule: "Molecule", aromaticity_model: str = DEFAULT_AROMATICITY_MODEL):
+    def to_rdkit(self, molecule: Molecule, aromaticity_model: str = DEFAULT_AROMATICITY_MODEL):
         """
         Create an RDKit molecule
         Requires the RDKit to be installed.
@@ -2603,7 +2604,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
         # Return non-editable version
         return Chem.Mol(rdmol)
 
-    def to_inchi(self, molecule: "Molecule", fixed_hydrogens: bool = False):
+    def to_inchi(self, molecule: Molecule, fixed_hydrogens: bool = False):
         """
         Create an InChI string for the molecule using the RDKit Toolkit.
         InChI is a standardised representation that does not capture tautomers
@@ -2649,7 +2650,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return inchi
 
-    def to_inchikey(self, molecule: "Molecule", fixed_hydrogens: bool = False) -> str:
+    def to_inchikey(self, molecule: Molecule, fixed_hydrogens: bool = False) -> str:
         """
         Create an InChIKey for the molecule using the RDKit Toolkit.
         InChIKey is a standardised representation that does not capture tautomers
@@ -2847,7 +2848,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def find_smarts_matches(
         self,
-        molecule: "Molecule",
+        molecule: Molecule,
         smarts: str,
         aromaticity_model: str = "OEAroModel_MDL",
         unique: bool = False,
@@ -2877,7 +2878,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             unique=unique,
         )
 
-    def atom_is_in_ring(self, atom: "Atom") -> bool:
+    def atom_is_in_ring(self, atom: Atom) -> bool:
         """Return whether or not an atom is in a ring.
 
         It is assumed that this atom is in molecule.
@@ -2909,7 +2910,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
 
         return is_in_ring
 
-    def bond_is_in_ring(self, bond: "Bond") -> bool:
+    def bond_is_in_ring(self, bond: Bond) -> bool:
         """Return whether or not a bond is in a ring.
 
         It is assumed that this atom is in molecule.
@@ -3135,7 +3136,7 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
             raise NotImplementedError()
 
     @classmethod
-    def _assign_rdmol_bonds_stereo(cls, off_molecule: "Molecule", rd_molecule):
+    def _assign_rdmol_bonds_stereo(cls, off_molecule: Molecule, rd_molecule):
         """Copy the info about bonds stereochemistry from the OFF Molecule to RDKit Mol.
         The method proceeds by formulating mapping global E/Z stereo information onto
         local 'bond directions' as a constraint satisfaction problem (CSP).

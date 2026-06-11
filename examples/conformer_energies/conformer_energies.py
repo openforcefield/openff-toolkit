@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 
 from openff.interchange.drivers.openmm import get_openmm_energies

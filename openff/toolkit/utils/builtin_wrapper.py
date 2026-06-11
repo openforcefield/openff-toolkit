@@ -1,6 +1,7 @@
 """
 Built-in ToolkitWrapper for very basic functionality. Intended for testing and not much more.
 """
+from __future__ import annotations
 
 __all__ = ("BuiltInToolkitWrapper",)
 
@@ -38,7 +39,7 @@ class BuiltInToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def assign_partial_charges(
         self,
-        molecule: "FrozenMolecule",
+        molecule: FrozenMolecule,
         partial_charge_method: str | None = None,
         use_conformers: Quantity | None = None,
         strict_n_conformers: bool = False,

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Copy the openff-toolkit examples suite to a local directory"""
+from __future__ import annotations
 
 import argparse
 from os import environ

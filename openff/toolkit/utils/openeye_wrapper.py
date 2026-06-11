@@ -2,6 +2,7 @@
 Wrapper class providing a minimal consistent interface to
 the `OpenEye Toolkit <https://docs.eyesopen.com/toolkits/python/quickstart-python/index.html>`_
 """
+from __future__ import annotations
 
 __all__ = ("OpenEyeToolkitWrapper",)
 
@@ -277,7 +278,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         obj,
         allow_undefined_stereo: bool = False,
         _cls=None,
-    ) -> "FrozenMolecule":
+    ) -> FrozenMolecule:
         """
         Convert an OEMol (or OEMol-derived object) into an openff.toolkit.topology.molecule
 
@@ -325,7 +326,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     def _polymer_openmm_topology_to_oemol(
         self,
-        omm_top: "openmm.app.Topology",
+        omm_top: openmm.app.Topology,
         substructure_library: dict[str, dict],
     ):
         """
@@ -460,7 +461,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         file_format: str,
         allow_undefined_stereo: bool = False,
         _cls=None,
-    ) -> list["FrozenMolecule"]:
+    ) -> list[FrozenMolecule]:
         """
         Return an openff.toolkit.topology.Molecule from a file using this toolkit.
 
@@ -524,7 +525,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         file_format: str,
         allow_undefined_stereo: bool = False,
         _cls=None,
-    ) -> list["Molecule"]:
+    ) -> list[Molecule]:
         """
         Return an openff.toolkit.topology.Molecule from a file-like object (an object with a ".read()" method using
         this toolkit.
@@ -563,7 +564,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return self._read_oemolistream_molecules(ifs, allow_undefined_stereo, _cls=_cls)
 
-    def to_file_obj(self, molecule: "Molecule", file_obj, file_format: str):
+    def to_file_obj(self, molecule: Molecule, file_obj, file_format: str):
         """
         Writes an OpenFF Molecule to a file-like object
 
@@ -593,7 +594,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     def to_file(
         self,
-        molecule: "Molecule",
+        molecule: Molecule,
         file_path: str | pathlib.Path,
         file_format: str,
     ):
@@ -807,9 +808,9 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     def enumerate_protomers(
         self,
-        molecule: "FrozenMolecule",
+        molecule: FrozenMolecule,
         max_states: int = 0,
-    ) -> list["FrozenMolecule"]:
+    ) -> list[FrozenMolecule]:
         """
         Enumerate the formal charges of a molecule to generate different protomers.
         Note that, in cases where the input molecule has an uncommon protonation state
@@ -850,11 +851,11 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     def enumerate_stereoisomers(
         self,
-        molecule: "FrozenMolecule",
+        molecule: FrozenMolecule,
         undefined_only: bool = False,
         max_isomers: int = 20,
         rationalise: bool = True,
-    ) -> list["FrozenMolecule"]:
+    ) -> list[FrozenMolecule]:
         """
         Enumerate the stereocenters and bonds of the current molecule.
 
@@ -910,7 +911,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return molecules[:max_isomers]
 
-    def enumerate_tautomers(self, molecule: "FrozenMolecule", max_states: int = 20) -> list["FrozenMolecule"]:
+    def enumerate_tautomers(self, molecule: FrozenMolecule, max_states: int = 20) -> list[FrozenMolecule]:
         """
         Enumerate the possible tautomers of the current molecule
 
@@ -1063,7 +1064,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         oemol,
         allow_undefined_stereo: bool = False,
         _cls=None,
-    ) -> "FrozenMolecule":
+    ) -> FrozenMolecule:
         """
         Create a Molecule from an OpenEye molecule. If the OpenEye molecule has
         implicit hydrogens, this function will make them explicit.
@@ -1444,7 +1445,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     def to_openeye(
         self,
-        molecule: "FrozenMolecule",
+        molecule: FrozenMolecule,
         aromaticity_model: str = DEFAULT_AROMATICITY_MODEL,
     ):
         r"""
@@ -1606,7 +1607,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return oemol
 
-    def atom_is_in_ring(self, atom: "Atom") -> bool:
+    def atom_is_in_ring(self, atom: Atom) -> bool:
         """Return whether or not an atom is in a ring.
 
         It is assumed that this atom is in molecule.
@@ -1638,7 +1639,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return is_in_ring
 
-    def bond_is_in_ring(self, bond: "Bond") -> bool:
+    def bond_is_in_ring(self, bond: Bond) -> bool:
         """Return whether or not a bond is in a ring.
 
         It is assumed that this atom is in molecule.
@@ -1696,7 +1697,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     def to_smiles(
         self,
-        molecule: "Molecule",
+        molecule: Molecule,
         isomeric: bool = True,
         explicit_hydrogens: bool = True,
         mapped: bool = False,
@@ -1766,7 +1767,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         smiles = oechem.OECreateSmiString(oemol, smiles_options)
         return smiles
 
-    def to_inchi(self, molecule: "Molecule", fixed_hydrogens: bool = False) -> str:
+    def to_inchi(self, molecule: Molecule, fixed_hydrogens: bool = False) -> str:
         """
         Create an InChI string for the molecule using the OpenEye OEChem Toolkit.
         InChI is a standardised representation that does not capture tautomers
@@ -1813,7 +1814,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return inchi
 
-    def to_inchikey(self, molecule: "Molecule", fixed_hydrogens: bool = False) -> str:
+    def to_inchikey(self, molecule: Molecule, fixed_hydrogens: bool = False) -> str:
         """
         Create an InChIKey for the molecule using the OpenEye OEChem Toolkit.
         InChIKey is a standardised representation that does not capture tautomers
@@ -1858,7 +1859,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return inchi_key
 
-    def to_iupac(self, molecule: "Molecule") -> str:
+    def to_iupac(self, molecule: Molecule) -> str:
         """Generate IUPAC name from Molecule
 
         Parameters
@@ -1888,7 +1889,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         return oeiupac.OECreateIUPACName(oemol)
 
-    def canonical_order_atoms(self, molecule: "FrozenMolecule") -> "FrozenMolecule":
+    def canonical_order_atoms(self, molecule: FrozenMolecule) -> FrozenMolecule:
         """
         Canonical order the atoms in the molecule using the OpenEye toolkit.
 
@@ -1938,7 +1939,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         allow_undefined_stereo: bool = False,
         _cls=None,
         name: str = "",
-    ) -> "FrozenMolecule":
+    ) -> FrozenMolecule:
         """
         Create a Molecule from a SMILES string using the OpenEye toolkit.
 
@@ -2002,7 +2003,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         allow_undefined_stereo: bool = False,
         _cls=None,
         name: str = "",
-    ) -> "FrozenMolecule":
+    ) -> FrozenMolecule:
         """
         Construct a Molecule from a InChI representation
 
@@ -2052,7 +2053,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
         allow_undefined_stereo: bool = False,
         _cls=None,
         **kwargs,
-    ) -> "FrozenMolecule":
+    ) -> FrozenMolecule:
         """
         Construct a Molecule from an IUPAC name
 
@@ -2089,7 +2090,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     def generate_conformers(
         self,
-        molecule: "Molecule",
+        molecule: Molecule,
         n_conformers: int = 1,
         rms_cutoff: Quantity | None = None,
         clear_existing: bool = True,
@@ -2161,7 +2162,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     def apply_elf_conformer_selection(
         self,
-        molecule: "Molecule",
+        molecule: Molecule,
         percentage: float = 2.0,
         limit: int = 10,
     ):
@@ -2256,7 +2257,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     def assign_partial_charges(
         self,
-        molecule: "Molecule",
+        molecule: Molecule,
         partial_charge_method: str | None = None,
         use_conformers: list[Quantity] | None = None,
         strict_n_conformers: bool = False,
@@ -2426,7 +2427,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     def assign_fractional_bond_orders(
         self,
-        molecule: "Molecule",
+        molecule: Molecule,
         bond_order_model: str | None = None,
         use_conformers: list[Quantity] | None = None,
         _cls=None,
@@ -2681,7 +2682,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
     def find_smarts_matches(
         self,
-        molecule: "Molecule",
+        molecule: Molecule,
         smarts: str,
         aromaticity_model=DEFAULT_AROMATICITY_MODEL,
         unique=False,

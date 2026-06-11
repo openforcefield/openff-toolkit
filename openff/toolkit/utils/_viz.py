@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import uuid
 from io import StringIO
 from typing import TYPE_CHECKING
@@ -40,7 +42,7 @@ class MoleculeNGLViewTrajectory(Structure, Trajectory):
 
     def __init__(
         self,
-        molecule: "Molecule",
+        molecule: Molecule,
         ext: str = "MOL2",
     ):
         if not molecule.conformers:
@@ -89,7 +91,7 @@ class TopologyNGLViewStructure(Structure):
 
     def __init__(
         self,
-        topology: "Topology",
+        topology: Topology,
         ext: str = "PDB",
     ):
         self.topology = topology

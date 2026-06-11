@@ -1,6 +1,7 @@
 """
 Wrapper class providing a minimal consistent interface to `AmberTools <http://ambermd.org/AmberTools.php>`_.
 """
+from __future__ import annotations
 
 __all__ = ("AmberToolsToolkitWrapper",)
 
@@ -100,7 +101,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def assign_partial_charges(
         self,
-        molecule: "Molecule",
+        molecule: Molecule,
         partial_charge_method: str | None = None,
         use_conformers: list[Quantity] | None = None,
         strict_n_conformers: bool = False,
@@ -380,7 +381,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     def assign_fractional_bond_orders(
         self,
-        molecule: "Molecule",
+        molecule: Molecule,
         bond_order_model: str | None = None,
         use_conformers: list[str] | None = None,
         _cls=None,

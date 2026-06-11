@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import importlib
 import pathlib
 import warnings
@@ -60,14 +62,14 @@ class NAGLToolkitWrapper(ToolkitWrapper):
 
     def assign_partial_charges(
         self,
-        molecule: "Molecule",
+        molecule: Molecule,
         partial_charge_method: str,
-        use_conformers: list["Quantity"] | None = None,
+        use_conformers: list[Quantity] | None = None,
         strict_n_conformers: bool = False,
         normalize_partial_charges: bool = True,
         doi: str | None = None,
         file_hash: str | None = None,
-        _cls: type["FrozenMolecule"] | None = None,
+        _cls: type[FrozenMolecule] | None = None,
     ):
         """
         Compute partial charges with NAGL and store in ``self.partial_charges``

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 
 from _cif_to_substructure_dict import CifSubstructures
