@@ -10,9 +10,11 @@ TypedMolecule TODOs
 
 """
 
+from __future__ import annotations
+
 import functools
 from collections.abc import Generator, Iterable
-from typing import TYPE_CHECKING, NoReturn, Union
+from typing import TYPE_CHECKING, NoReturn
 
 from openff.units.elements import MASSES, SYMBOLS
 
@@ -62,7 +64,7 @@ class _SimpleMolecule:
         self.bonds.append(bond)
 
     @property
-    def conformers(self) -> list["Quantity"] | None:
+    def conformers(self) -> list[Quantity] | None:
         return self._conformers
 
     def add_conformer(self, conformer):
@@ -82,13 +84,13 @@ class _SimpleMolecule:
     def n_conformers(self) -> int:
         return 0 if self._conformers is None else len(self._conformers)
 
-    def atom(self, index: int) -> "_SimpleAtom":
+    def atom(self, index: int) -> _SimpleAtom:
         return self.atoms[index]
 
     def atom_index(self, atom) -> int:
         return self.atoms.index(atom)
 
-    def bond(self, index: int) -> "_SimpleBond":
+    def bond(self, index: int) -> _SimpleBond:
         return self.bonds[index]
 
     def get_bond_between(self, atom1_index, atom2_index):
@@ -104,9 +106,9 @@ class _SimpleMolecule:
         self,
     ) -> Generator[
         tuple[
-            "_SimpleAtom",
-            "_SimpleAtom",
-            "_SimpleAtom",
+            _SimpleAtom,
+            _SimpleAtom,
+            _SimpleAtom,
         ],
         None,
         None,
@@ -127,10 +129,10 @@ class _SimpleMolecule:
         self,
     ) -> Generator[
         tuple[
-            "_SimpleAtom",
-            "_SimpleAtom",
-            "_SimpleAtom",
-            "_SimpleAtom",
+            _SimpleAtom,
+            _SimpleAtom,
+            _SimpleAtom,
+            _SimpleAtom,
         ],
         None,
         None,
@@ -155,10 +157,10 @@ class _SimpleMolecule:
         self,
     ) -> Generator[
         tuple[
-            "_SimpleAtom",
-            "_SimpleAtom",
-            "_SimpleAtom",
-            "_SimpleAtom",
+            _SimpleAtom,
+            _SimpleAtom,
+            _SimpleAtom,
+            _SimpleAtom,
         ],
         None,
         None,
@@ -181,10 +183,10 @@ class _SimpleMolecule:
         self,
     ) -> Generator[
         tuple[
-            "_SimpleAtom",
-            "_SimpleAtom",
-            "_SimpleAtom",
-            "_SimpleAtom",
+            _SimpleAtom,
+            _SimpleAtom,
+            _SimpleAtom,
+            _SimpleAtom,
         ],
         None,
         None,
@@ -198,10 +200,10 @@ class _SimpleMolecule:
         self,
     ) -> Generator[
         tuple[
-            "_SimpleAtom",
-            "_SimpleAtom",
-            "_SimpleAtom",
-            "_SimpleAtom",
+            _SimpleAtom,
+            _SimpleAtom,
+            _SimpleAtom,
+            _SimpleAtom,
         ],
         None,
         None,
@@ -232,7 +234,7 @@ class _SimpleMolecule:
         return self.to_hill_formula()
 
     @property
-    def hierarchy_schemes(self) -> dict[str, "HierarchyScheme"]:
+    def hierarchy_schemes(self) -> dict[str, HierarchyScheme]:
         return self._hierarchy_schemes
 
     def to_hill_formula(self) -> str:
@@ -243,7 +245,7 @@ class _SimpleMolecule:
 
         return _atom_nums_to_hill_formula(atom_nums)
 
-    def to_networkx(self) -> "nx.Graph":
+    def to_networkx(self) -> nx.Graph:
         # TODO: Custom attribtues should probably be attached to the nodes (and possibly also
         #       the edges?). See for more:
         #       https://github.com/openforcefield/openff-toolkit/pull/1179#discussion_r808549385
@@ -264,7 +266,7 @@ class _SimpleMolecule:
 
         return graph
 
-    def to_topology(self) -> "Topology":
+    def to_topology(self) -> Topology:
         from openff.toolkit.topology import Topology
 
         return Topology.from_molecules([self])
@@ -277,7 +279,7 @@ class _SimpleMolecule:
         return _nth_degree_neighbors_from_graphlike(graphlike=self, n_degrees=n_degrees)
 
     @classmethod
-    def _from_subgraph(cls, subgraph: "nx.Graph"):
+    def _from_subgraph(cls, subgraph: nx.Graph):
         molecule = cls()
 
         # The subgraph stores indices that might not start at zero (i.e. topology indices)
@@ -434,7 +436,7 @@ class _SimpleMolecule:
             "an OpenFF Molecule with sufficiently specified chemistry."
         )
 
-    def is_isomorphic_with(self, other: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"], **kwargs) -> bool:
+    def is_isomorphic_with(self, other: FrozenMolecule | _SimpleMolecule | nx.Graph, **kwargs) -> bool:
         """
         Check for pseudo-isomorphism.
 
@@ -454,8 +456,8 @@ class _SimpleMolecule:
 
     @staticmethod
     def are_isomorphic(
-        mol1: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"],
-        mol2: Union["FrozenMolecule", "_SimpleMolecule", "nx.Graph"],
+        mol1: FrozenMolecule | _SimpleMolecule | nx.Graph,
+        mol2: FrozenMolecule | _SimpleMolecule | nx.Graph,
         return_atom_map: bool = False,
     ) -> tuple[bool, dict[int, int] | None]:
         import networkx
@@ -521,7 +523,7 @@ class _SimpleMolecule:
         """``True`` if the molecule has unique atom names, ``False`` otherwise."""
         return _has_unique_atom_names(self)
 
-    def __getattr__(self, name: str) -> list["HierarchyElement"]:
+    def __getattr__(self, name: str) -> list[HierarchyElement]:
         """If a requested attribute is not found, check the hierarchy schemes"""
         try:
             return self.__dict__["_hierarchy_schemes"][name].hierarchy_elements
@@ -583,7 +585,7 @@ class _SimpleAtom:
         return SYMBOLS[self.atomic_number]
 
     @property
-    def mass(self) -> "Quantity":
+    def mass(self) -> Quantity:
         return MASSES[self.atomic_number]
 
     @property

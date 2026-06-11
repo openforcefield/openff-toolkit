@@ -3,6 +3,8 @@ Tests for cheminformatics toolkit wrappers
 
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import pathlib

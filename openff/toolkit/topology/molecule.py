@@ -25,6 +25,8 @@ Molecular chemical entity representation and routines to interface with cheminfo
 
 """
 
+from __future__ import annotations
+
 import hashlib
 import json
 import operator
@@ -41,7 +43,6 @@ from typing import (
     Literal,
     TextIO,
     TypeVar,
-    Union,
     overload,
 )
 
@@ -127,10 +128,10 @@ class Particle(Serializable):
 
     """
 
-    _molecule: "FrozenMolecule"
+    _molecule: FrozenMolecule
 
     @property
-    def molecule(self) -> "FrozenMolecule":
+    def molecule(self) -> FrozenMolecule:
         r"""
         The ``Molecule`` this particle is part of.
 
@@ -144,7 +145,7 @@ class Particle(Serializable):
         return self._molecule
 
     @molecule.setter
-    def molecule(self, molecule: "FrozenMolecule"):
+    def molecule(self, molecule: FrozenMolecule):
         """
         Set the particle's molecule pointer. Note that this will only work if the particle currently
         doesn't have a molecule
@@ -285,7 +286,7 @@ class Atom(Particle):
     # TODO: We can probably avoid an explicit call and determine this dynamically
     #   from self._molecule (maybe caching the result) to get rid of some bookkeeping.
     # TODO: Should stereochemistry be reset/cleared/recomputed upon addition of a bond?
-    def add_bond(self, bond: "Bond"):
+    def add_bond(self, bond: Bond):
         """Adds a bond that this atom is involved in
 
         .. todo :: Is this how we want to keep records?
@@ -343,7 +344,7 @@ class Atom(Particle):
         return self._formal_charge
 
     @formal_charge.setter
-    def formal_charge(self, other: "int | Quantity | OMMQuantity"):
+    def formal_charge(self, other: int | Quantity | OMMQuantity):
         """
         Set the atom's formal charge. Accepts either ints or unit-wrapped ints with units of charge.
         """
@@ -503,7 +504,7 @@ class Atom(Particle):
         return self._bonds
 
     @property
-    def bonded_atoms(self) -> Generator["Atom", None, None]:
+    def bonded_atoms(self) -> Generator[Atom, None, None]:
         """
         The list of ``Atom`` objects this atom is involved in bonds with
 
@@ -780,7 +781,7 @@ class Bond(Serializable):
         return self._is_aromatic
 
     @property
-    def molecule(self) -> "FrozenMolecule":
+    def molecule(self) -> FrozenMolecule:
         return self._molecule
 
     @molecule.setter
@@ -1451,7 +1452,7 @@ class FrozenMolecule(Serializable):
         self,
         uniqueness_criteria: Iterable[str],
         iterator_name: str,
-    ) -> "HierarchyScheme":
+    ) -> HierarchyScheme:
         """
         Use the molecule's metadata to facilitate iteration over its atoms.
 
@@ -1516,7 +1517,7 @@ class FrozenMolecule(Serializable):
         return new_hier_scheme
 
     @property
-    def hierarchy_schemes(self) -> dict[str, "HierarchyScheme"]:
+    def hierarchy_schemes(self) -> dict[str, HierarchyScheme]:
         """
         The hierarchy schemes available on the molecule.
 
@@ -1589,7 +1590,7 @@ class FrozenMolecule(Serializable):
             hierarchy_scheme = self._hierarchy_schemes[iter_name]
             hierarchy_scheme.perceive_hierarchy()
 
-    def __getattr__(self, name: str) -> list["HierarchyElement"]:
+    def __getattr__(self, name: str) -> list[HierarchyElement]:
         """If a requested attribute is not found, check the hierarchy schemes"""
         try:
             return self.__dict__["_hierarchy_schemes"][name].hierarchy_elements
@@ -1950,8 +1951,8 @@ class FrozenMolecule(Serializable):
 
     @staticmethod
     def are_isomorphic(
-        mol1: "FrozenMolecule | _SimpleMolecule | nx.Graph[int]",
-        mol2: "FrozenMolecule | _SimpleMolecule | nx.Graph[int]",
+        mol1: FrozenMolecule | _SimpleMolecule | nx.Graph[int],
+        mol2: FrozenMolecule | _SimpleMolecule | nx.Graph[int],
         return_atom_map: bool = False,
         aromatic_matching: bool = True,
         formal_charge_matching: bool = True,
@@ -2191,7 +2192,7 @@ class FrozenMolecule(Serializable):
 
     def is_isomorphic_with(
         self,
-        other: "FrozenMolecule | _SimpleMolecule | nx.Graph[int]",
+        other: FrozenMolecule | _SimpleMolecule | nx.Graph[int],
         aromatic_matching: bool = True,
         formal_charge_matching: bool = True,
         bond_order_matching: bool = True,
@@ -2803,7 +2804,7 @@ class FrozenMolecule(Serializable):
             if "_molecule_atom_index" in atom.__dict__:
                 del atom.__dict__["_molecule_atom_index"]
 
-    def to_networkx(self) -> "nx.Graph":
+    def to_networkx(self) -> nx.Graph:
         """Generate a NetworkX undirected graph from the molecule.
 
         Nodes are Atoms labeled with atom indices and atomic elements (via the ``element`` node atrribute).
@@ -3541,7 +3542,7 @@ class FrozenMolecule(Serializable):
         return self._hill_formula
 
     @staticmethod
-    def _object_to_hill_formula(obj: Union["FrozenMolecule", "nx.Graph[int]"]) -> str:
+    def _object_to_hill_formula(obj: FrozenMolecule | nx.Graph[int]) -> str:
         """Take a Molecule or NetworkX graph and generate its Hill formula.
         This provides a backdoor to the old functionality of Molecule.to_hill_formula, which
         was a static method that duck-typed inputs of Molecule or graph objects."""
@@ -4337,7 +4338,7 @@ class FrozenMolecule(Serializable):
         self,
         aromaticity_model=DEFAULT_AROMATICITY_MODEL,
         toolkit_registry=GLOBAL_TOOLKIT_REGISTRY,
-    ) -> "RDMol":
+    ) -> RDMol:
         """
         Create an RDKit molecule
 
@@ -4376,7 +4377,7 @@ class FrozenMolecule(Serializable):
         cls: type[FM],
         oemol,
         allow_undefined_stereo: bool = False,
-    ) -> "FrozenMolecule":
+    ) -> FrozenMolecule:
         """
         Create a ``Molecule`` from an OpenEye molecule.
 
@@ -5286,8 +5287,8 @@ class Molecule(FrozenMolecule):
 
     def add_bond(
         self,
-        atom1: Union[int, "Atom"],
-        atom2: Union[int, "Atom"],
+        atom1: int | Atom,
+        atom2: int | Atom,
         bond_order: int,
         is_aromatic: bool,
         stereochemistry: Literal["E", "Z", None] = None,
@@ -5364,19 +5365,19 @@ class Molecule(FrozenMolecule):
     def visualize(
         self,
         backend: Literal["rdkit"],
-    ) -> "IPython.display.SVG": ...
+    ) -> IPython.display.SVG: ...
 
     @overload
     def visualize(
         self,
         backend: Literal["openeye"],
-    ) -> "IPython.display.Image": ...
+    ) -> IPython.display.Image: ...
 
     @overload
     def visualize(
         self,
         backend: Literal["nglview"],
-    ) -> "nglview.NGLWidget": ...
+    ) -> nglview.NGLWidget: ...
 
     def visualize(
         self,
@@ -5384,7 +5385,7 @@ class Molecule(FrozenMolecule):
         width: int = 500,
         height: int = 300,
         show_all_hydrogens: bool = True,
-    ) -> Union["IPython.display.SVG", "IPython.display.Image", "nglview.NGLWidget"]:
+    ) -> IPython.display.SVG | IPython.display.Image | nglview.NGLWidget:
         """
         Render a visualization of the molecule in Jupyter
 
@@ -5634,7 +5635,7 @@ class Molecule(FrozenMolecule):
             pass
 
 
-def _networkx_graph_to_hill_formula(graph: "nx.Graph[int]") -> str:
+def _networkx_graph_to_hill_formula(graph: nx.Graph[int]) -> str:
     """
     Convert a NetworkX graph to a Hill formula.
 
@@ -5697,7 +5698,7 @@ def _atom_nums_to_hill_formula(atom_nums: list[int]) -> str:
 def _nth_degree_neighbors_from_graphlike(
     graphlike: MoleculeLike,
     n_degrees: int,
-) -> Iterator[tuple[Atom, Atom] | tuple["_SimpleAtom", "_SimpleAtom"]]:
+) -> Iterator[tuple[Atom, Atom] | tuple[_SimpleAtom, _SimpleAtom]]:
     """
     Given a graph-like object, return a tuple of the nth degree neighbors of each atom.
 
@@ -5864,7 +5865,7 @@ class HierarchyScheme:
         self,
         identifier: tuple[str | int, ...],
         atom_indices: Sequence[int],
-    ) -> "HierarchyElement":
+    ) -> HierarchyElement:
         """
         Instantiate a new HierarchyElement belonging to this HierarchyScheme.
 
@@ -5990,7 +5991,7 @@ class HierarchyElement:
         return len(self.atom_indices)
 
     @property
-    def atoms(self) -> Iterator["Atom"]:
+    def atoms(self) -> Iterator[Atom]:
         """
         Iterator over the atoms in this hierarchy element.
         """
@@ -6044,7 +6045,7 @@ class HierarchyElement:
 
 
 def _has_unique_atom_names(
-    obj: "FrozenMolecule | _SimpleMolecule | HierarchyElement",
+    obj: FrozenMolecule | _SimpleMolecule | HierarchyElement,
 ) -> bool:
     """``True`` if the object has unique atom names, ``False`` otherwise."""
     unique_atom_names = set([atom.name for atom in obj.atoms])

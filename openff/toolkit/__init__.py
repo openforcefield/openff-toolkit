@@ -3,6 +3,8 @@ openff-toolkit
 A modern, extensible library for molecular mechanics force field science from the Open Force Field Consortium.
 """
 
+from __future__ import annotations
+
 import importlib
 from importlib.metadata import version
 from typing import TYPE_CHECKING

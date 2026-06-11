@@ -1,5 +1,7 @@
 "Registry for ToolkitWrapper objects"
 
+from __future__ import annotations
+
 __all__ = ("ToolkitRegistry", "toolkit_registry_manager")
 
 import inspect

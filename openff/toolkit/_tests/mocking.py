@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy
 
 from openff.toolkit import Quantity, unit

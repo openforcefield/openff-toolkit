@@ -7,6 +7,8 @@ New pluggable handlers can be created by creating subclasses of :class:`Paramete
 
 """
 
+from __future__ import annotations
+
 __all__ = [
     "AngleHandler",
     "AngleType",
@@ -60,7 +62,7 @@ import logging
 import re
 from collections import defaultdict
 from collections.abc import Callable
-from typing import Any, Literal, Union, cast, get_args
+from typing import Any, Literal, cast, get_args
 
 import numpy
 from openff.units.units import Unit
@@ -1374,7 +1376,7 @@ class ParameterList(list):
 
     def __init__(
         self,
-        input_parameter_list: list["ParameterType"] | None = None,
+        input_parameter_list: list[ParameterType] | None = None,
     ):
         """
         Initialize a new ParameterList, optionally providing a list of ParameterType objects
@@ -1489,7 +1491,7 @@ class ParameterList(list):
             index = self.index(item)
         super().__delitem__(index)
 
-    def __getitem__(self, item: Union[int, slice, str, "ParameterType"]):  # type: ignore[override]
+    def __getitem__(self, item: int | slice | str | ParameterType):  # type: ignore[override]
         """
         Retrieve item by index or SMIRKS. If multiple parameters have the same
         SMIRKS, this returns the last one.
@@ -1555,7 +1557,7 @@ class ParameterList(list):
 
 
 class VirtualSiteParameterList(ParameterList):
-    def __getitem__(self, val: Union[int, slice, str, "ParameterType"]):  # type: ignore[override]
+    def __getitem__(self, val: int | slice | str | ParameterType):  # type: ignore[override]
         indexable_item: int | slice
 
         if isinstance(val, int):
@@ -2273,7 +2275,7 @@ class ParameterHandler(_ParameterAttributeHandler):
 
     def _check_attributes_are_equal(
         self,
-        other: "ParameterHandler",
+        other: ParameterHandler,
         identical_attrs: tuple[str, ...] = tuple(),
         tolerance_attrs: tuple[str, ...] = tuple(),
         tolerance: float = 1e-6,
@@ -2431,7 +2433,7 @@ class BondHandler(ParameterHandler):
         elif self.version == Version("0.4") and "potential" not in kwargs:
             self.potential = "(k/2)*(r-length)^2"
 
-    def check_handler_compatibility(self, other_handler: "BondHandler"):
+    def check_handler_compatibility(self, other_handler: BondHandler):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
@@ -2481,7 +2483,7 @@ class AngleHandler(ParameterHandler):
 
     potential = ParameterAttribute(default="harmonic")
 
-    def check_handler_compatibility(self, other_handler: "AngleHandler"):
+    def check_handler_compatibility(self, other_handler: AngleHandler):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
@@ -2529,7 +2531,7 @@ class ProperTorsionHandler(ParameterHandler):
     fractional_bondorder_method = ParameterAttribute(default="AM1-Wiberg")
     fractional_bondorder_interpolation = ParameterAttribute(default="linear", converter=_allow_only(["linear"]))
 
-    def check_handler_compatibility(self, other_handler: "ProperTorsionHandler"):
+    def check_handler_compatibility(self, other_handler: ProperTorsionHandler):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
@@ -2585,7 +2587,7 @@ class ImproperTorsionHandler(ParameterHandler):
     )
     default_idivf = ParameterAttribute(default="auto")
 
-    def check_handler_compatibility(self, other_handler: "ImproperTorsionHandler"):
+    def check_handler_compatibility(self, other_handler: ImproperTorsionHandler):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
@@ -2772,7 +2774,7 @@ class vdWHandler(_NonbondedHandler):
     # Tolerance when comparing float attributes for handler compatibility.
     _SCALETOL = 1e-5
 
-    def check_handler_compatibility(self, other_handler: "vdWHandler"):
+    def check_handler_compatibility(self, other_handler: vdWHandler):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
@@ -2951,7 +2953,7 @@ class ElectrostaticsHandler(_NonbondedHandler):
                 )
         super().__init__(**kwargs)
 
-    def check_handler_compatibility(self, other_handler: "ElectrostaticsHandler"):
+    def check_handler_compatibility(self, other_handler: ElectrostaticsHandler):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
@@ -3133,7 +3135,7 @@ class NAGLChargesHandler(_NonbondedHandler):
 
     def check_handler_compatibility(
         self,
-        other_handler: "NAGLChargesHandler",
+        other_handler: NAGLChargesHandler,
         assume_missing_is_default: bool = True,
     ):
         """
@@ -3193,7 +3195,7 @@ class ToolkitAM1BCCHandler(_NonbondedHandler):
 
     def check_handler_compatibility(
         self,
-        other_handler: "ToolkitAM1BCCHandler",
+        other_handler: ToolkitAM1BCCHandler,
         assume_missing_is_default: bool = True,
     ):
         """
@@ -3255,7 +3257,7 @@ class ChargeIncrementModelHandler(_NonbondedHandler):
 
     def check_handler_compatibility(
         self,
-        other_handler: "ChargeIncrementModelHandler",
+        other_handler: ChargeIncrementModelHandler,
         assume_missing_is_default: bool = True,
     ):
         """
@@ -3335,7 +3337,7 @@ class GBSAHandler(ParameterHandler):
     # Tolerance when comparing float attributes for handler compatibility.
     _SCALETOL = 1e-5
 
-    def check_handler_compatibility(self, other_handler: "GBSAHandler"):
+    def check_handler_compatibility(self, other_handler: GBSAHandler):
         """
         Checks whether this ParameterHandler encodes compatible physics as another ParameterHandler. This is
         called if a second handler is attempted to be initialized for the same tag.
@@ -3617,7 +3619,7 @@ class VirtualSiteHandler(_NonbondedHandler):
                 f"environment variable `OPENFF_UNSAFE_VSITES=1`."
             )
 
-    def check_handler_compatibility(self, other_handler: "VirtualSiteHandler"):
+    def check_handler_compatibility(self, other_handler: VirtualSiteHandler):
         self._check_attributes_are_equal(
             other_handler,
             identical_attrs=("exclusion_policy",),

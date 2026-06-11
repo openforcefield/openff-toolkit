@@ -3,6 +3,8 @@ Test classes and function in module openff.toolkit.typing.engines.smirnoff.param
 
 """
 
+from __future__ import annotations
+
 from collections import defaultdict
 from inspect import isabstract, isclass
 

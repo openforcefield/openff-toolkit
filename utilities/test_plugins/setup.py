@@ -3,6 +3,8 @@ openff-test-parameter-plugins
 A test package used to ensure that parameterhandler plugins are handled correctly
 """
 
+from __future__ import annotations
+
 from setuptools import setup
 
 setup(

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from openff.toolkit.topology.molecule import (
     Atom,
     Bond,

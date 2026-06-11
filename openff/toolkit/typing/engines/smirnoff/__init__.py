@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from openff.toolkit.typing.engines.smirnoff.forcefield import (
     ForceField,
     get_available_force_fields,

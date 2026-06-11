@@ -6,6 +6,8 @@ This file is designed to be used with nbval: https://nbval.readthedocs.io/
 The nbval-sanitize.cfg file is also for use with nbval.
 """
 
+from __future__ import annotations
+
 
 def pytest_collectstart(collector):
     """

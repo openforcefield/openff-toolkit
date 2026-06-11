@@ -2,6 +2,8 @@
 Test classes and function in module openff.toolkit.typing.engines.smirnoff.plugins
 """
 
+from __future__ import annotations
+
 import pytest
 
 from openff.toolkit import ForceField, Quantity

@@ -3,6 +3,8 @@ Custom collections classes.
 
 """
 
+from __future__ import annotations
+
 __all__ = [
     "ValidatedDict",
     "ValidatedList",

@@ -3,6 +3,8 @@ Utility subroutines
 
 """
 
+from __future__ import annotations
+
 __all__ = [
     "all_subclasses",
     "convert_0_1_smirnoff_to_0_2",
@@ -298,7 +300,7 @@ def convert_all_quantities_to_string(
 
 @overload
 def convert_all_quantities_to_string(
-    smirnoff_data: "Quantity",
+    smirnoff_data: Quantity,
 ) -> str | list[str] | dict[str, Any]: ...
 
 
@@ -701,7 +703,7 @@ def recursive_attach_unit_strings(smirnoff_data, units_to_attach):
     return smirnoff_data
 
 
-def get_molecule_parameterIDs(molecules: list["Molecule"], forcefield: "ForceField") -> tuple[dict, dict]:
+def get_molecule_parameterIDs(molecules: list[Molecule], forcefield: ForceField) -> tuple[dict, dict]:
     """Process a list of molecules with a specified SMIRNOFF ffxml file and determine which parameters are used by
     which molecules, returning collated results.
 

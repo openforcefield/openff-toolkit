@@ -7,6 +7,8 @@ XML I/O parser for the SMIRNOFF (SMIRKS Native Open Force Field) format.
 
 """
 
+from __future__ import annotations
+
 __all__ = [
     "ParameterIOHandler",
     "XMLParameterIOHandler",

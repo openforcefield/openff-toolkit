@@ -3,6 +3,8 @@ Tests for utility methods for serialization
 
 """
 
+from __future__ import annotations
+
 import numpy as np
 import pytest
 from openff.utilities import requires_package as requires_pkg

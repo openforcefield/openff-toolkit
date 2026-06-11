@@ -2,6 +2,8 @@
 Base class for toolkit wrappers. Defines the public API and some shared methods
 """
 
+from __future__ import annotations
+
 __all__ = ("ToolkitWrapper",)
 
 from functools import wraps
@@ -27,7 +29,7 @@ class _ChargeSettings(TypedDict, total=False):
     oe_charge_method: str
 
 
-def _mol_to_ctab_and_aro_key(self, molecule: "Molecule", aromaticity_model=DEFAULT_AROMATICITY_MODEL) -> str:
+def _mol_to_ctab_and_aro_key(self, molecule: Molecule, aromaticity_model=DEFAULT_AROMATICITY_MODEL) -> str:
     return f"{molecule.ordered_connection_table_hash()}-{aromaticity_model}"
 
 
@@ -186,7 +188,7 @@ class ToolkitWrapper:
 
     def _check_n_conformers(
         self,
-        molecule: "Molecule",
+        molecule: Molecule,
         partial_charge_method: str | None = None,
         min_confs: int | None = None,
         max_confs: int | None = None,

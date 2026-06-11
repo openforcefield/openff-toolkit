@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from openff.toolkit import unit
 from openff.toolkit.typing.engines.smirnoff import ParameterHandler, ParameterIOHandler
 from openff.toolkit.typing.engines.smirnoff.parameters import (

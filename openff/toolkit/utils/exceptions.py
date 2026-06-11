@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from collections import defaultdict
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from openmm.app import Atom as OpenMMAtom
@@ -429,7 +431,7 @@ class UnassignedChemistryInPDBError(OpenFFToolkitException, ValueError):
         self,
         msg: str | None = None,
         substructure_library: dict[str, list[tuple]] | None = None,
-        omm_top: Optional["OpenMMTopology"] = None,
+        omm_top: OpenMMTopology | None = None,
         unassigned_bonds: list[tuple[int, int]] | None = None,
         unassigned_atoms: list[int] | None = None,
         matches: defaultdict[int, list[str]] | None = None,

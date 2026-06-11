@@ -3,6 +3,8 @@ Test classes and function in module openff.toolkit.typing.engines.smirnoff.io.
 
 """
 
+from __future__ import annotations
+
 import pytest
 
 from openff.toolkit.typing.engines.smirnoff.io import XMLParameterIOHandler

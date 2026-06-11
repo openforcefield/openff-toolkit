@@ -20,6 +20,8 @@ Currently supported toolkits:
 
 """
 
+from __future__ import annotations
+
 __all__ = (
     "ALLOWED_AROMATICITY_MODELS",
     "ALLOWED_CHARGE_MODELS",

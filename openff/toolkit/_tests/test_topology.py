@@ -3,6 +3,8 @@ Tests for Topology
 
 """
 
+from __future__ import annotations
+
 import itertools
 import re
 from copy import deepcopy

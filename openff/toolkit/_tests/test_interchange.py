@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pytest
 from openff.utilities import requires_package as requires_pkg
 

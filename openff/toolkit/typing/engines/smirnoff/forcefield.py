@@ -11,11 +11,13 @@ Parameter assignment tools for the SMIRNOFF (SMIRKS Native Open Force Field) for
 
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import pathlib
 from importlib.metadata import entry_points
-from typing import IO, TYPE_CHECKING, Any, Union
+from typing import IO, TYPE_CHECKING, Any
 
 from packaging.version import Version
 
@@ -1104,8 +1106,8 @@ class ForceField:
 
     def combine(
         self,
-        other: "ForceField",
-    ) -> "ForceField":
+        other: ForceField,
+    ) -> ForceField:
         """
         Combine this `ForceField` with another `ForceField`, returning a new `ForceField`.
 
@@ -1128,13 +1130,13 @@ class ForceField:
     @requires_package("openmm")
     def create_openmm_system(
         self,
-        topology: "Topology",
+        topology: Topology,
         *,
-        toolkit_registry: Union["ToolkitRegistry", "ToolkitWrapper"] | None = None,
-        charge_from_molecules: list["Molecule"] | None = None,
-        partial_bond_orders_from_molecules: list["Molecule"] | None = None,
+        toolkit_registry: ToolkitRegistry | ToolkitWrapper | None = None,
+        charge_from_molecules: list[Molecule] | None = None,
+        partial_bond_orders_from_molecules: list[Molecule] | None = None,
         allow_nonintegral_charges: bool = False,
-    ) -> "openmm.System":
+    ) -> openmm.System:
         """Create an OpenMM System from this ForceField and a Topology.
 
         Note that most force fields specify their own partial charges, and any
@@ -1174,12 +1176,12 @@ class ForceField:
     @requires_package("openff.interchange")
     def create_interchange(
         self,
-        topology: "Topology",
-        toolkit_registry: Union["ToolkitRegistry", "ToolkitWrapper"] | None = None,
-        charge_from_molecules: list["Molecule"] | None = None,
-        partial_bond_orders_from_molecules: list["Molecule"] | None = None,
+        topology: Topology,
+        toolkit_registry: ToolkitRegistry | ToolkitWrapper | None = None,
+        charge_from_molecules: list[Molecule] | None = None,
+        partial_bond_orders_from_molecules: list[Molecule] | None = None,
         allow_nonintegral_charges: bool = False,
-    ) -> "Interchange":
+    ) -> Interchange:
         """
         Create an Interchange object from a ForceField, Topology, and (optionally) box vectors.
 
@@ -1228,7 +1230,7 @@ class ForceField:
                 allow_nonintegral_charges=allow_nonintegral_charges,
             )
 
-    def label_molecules(self, topology: "Topology") -> list[dict[str, "ValenceDict"]]:
+    def label_molecules(self, topology: Topology) -> list[dict[str, ValenceDict]]:
         """
         Return labels for a list of molecules corresponding to parameters from this force field.
 
@@ -1313,7 +1315,7 @@ class ForceField:
         return ph_class
 
     @requires_package("openff.interchange")
-    def get_partial_charges(self, molecule: "Molecule", **kwargs: Any) -> Quantity:
+    def get_partial_charges(self, molecule: Molecule, **kwargs: Any) -> Quantity:
         """Generate the partial charges for the given molecule in this force field.
 
         Parameters

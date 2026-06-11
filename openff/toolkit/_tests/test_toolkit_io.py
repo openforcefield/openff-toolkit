@@ -3,6 +3,8 @@ Tests for I/O functionality of the toolkit wrappers
 
 """
 
+from __future__ import annotations
+
 import pathlib
 import sys
 import tempfile

@@ -18,6 +18,8 @@ where in this example your package is named ``myapp`` and contains a class which
 inherits from ``ParameterHandler`` named ``CustomHandler``.
 """
 
+from __future__ import annotations
+
 import logging
 from importlib.metadata import entry_points
 
