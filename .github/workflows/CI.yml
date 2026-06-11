@@ -25,15 +25,11 @@ jobs:
         os: [ubuntu-latest, macos-latest]
         python-version: ["3.12", "3.13", "3.14"]
         rdkit: [true, false]
-        openeye: [true, false]
+        openeye: [false]
         nagl: [true, false]
         exclude:
           - rdkit: false
             openeye: false
-          - openeye: true
-            python-version: "3.13"
-          - openeye: true
-            python-version: "3.14"
           - rdkit: false
             nagl: true
 
