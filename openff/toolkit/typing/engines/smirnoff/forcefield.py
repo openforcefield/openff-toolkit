@@ -1259,9 +1259,6 @@ class ForceField:
         # Loop over molecules and label
         molecule_labels: list[dict[str, dict | ValenceDict | ImproperDict]] = list()
 
-        # TODO: This was previously ... enumerate(topology.reference_molecules). It's currently
-        # unclear if this should be topology.unique_molecules instead, since that might be faster
-        # (if also modifying this to label _all_ duplicates of each unique molecule)
         for molecule in topology.molecules:
             current_molecule_labels: dict[str, dict | ValenceDict | ImproperDict] = dict()
             for tag, parameter_handler in self._parameter_handlers.items():
