@@ -10,11 +10,10 @@ keywords = [ "force field", "molecular mechanics", "parameterization" ]
 license = "MIT"
 license-files = [ "LICENSE" ]
 authors = [ { name = "Open Force Field Consortium", email = "info@openforcefield.org" } ]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
@@ -27,6 +26,7 @@ urls = { Homepage = "https://github.com/openforcefield/openff-toolkit" }
 packages.find.include = [ "openff.toolkit*" ]
 
 [tool.ruff]
+target-version = "py312"
 line-length = 119
 exclude = [ "examples/deprecated/", "utilities/deprecated" ]
 lint.select = [ "E", "F", "I", "NPY", "RUF", "UP", "W" ]
@@ -44,7 +44,6 @@ lint.isort.known-third-party = [ "openff.interchange", "openff.utilities", "open
 
 [tool.mypy]
 python_version = 3.12
-plugins = "numpy.typing.mypy_plugin"
 warn_unused_configs = true
 # would be nice to flip back to true
 warn_unused_ignores = false

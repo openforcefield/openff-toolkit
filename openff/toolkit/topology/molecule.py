@@ -40,7 +40,6 @@ from typing import (
     Any,
     Literal,
     TextIO,
-    TypeAlias,
     TypeVar,
     Union,
     overload,
@@ -105,8 +104,8 @@ if TYPE_CHECKING:
 
 # TODO: These aliases are duplicated in a few places, might make sense to consolidate them
 #       into a single location, but that'd weirdly nudge them towards first-class existence
-TKR: TypeAlias = ToolkitRegistry | ToolkitWrapper
-MoleculeLike: TypeAlias = Union["Molecule", "FrozenMolecule", "_SimpleMolecule"]
+type TKR = ToolkitRegistry | ToolkitWrapper
+type MoleculeLike = "Molecule" | "FrozenMolecule" | "_SimpleMolecule"
 FM = TypeVar("FM", bound="FrozenMolecule")
 P = TypeVar("P", bound="Particle")
 A = TypeVar("A", bound="Atom")
@@ -5655,7 +5654,7 @@ def _networkx_graph_to_hill_formula(graph: "nx.Graph[int]") -> str:
     if not isinstance(graph, nx.Graph):
         raise ValueError("The graph must be a NetworkX graph.")
 
-    atom_nums: list[int] = [atomic_number for (_, atomic_number) in graph.nodes(data="atomic_number", default=1)]
+    atom_nums: list[int] = [atomic_number for (_, atomic_number) in graph.nodes(data="atomic_number", default=1)]  # type: ignore[misc]
 
     return _atom_nums_to_hill_formula(atom_nums)  # type:ignore[arg-type]
 

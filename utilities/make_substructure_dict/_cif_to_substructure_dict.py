@@ -659,6 +659,45 @@ class CifSubstructures:
         self.data["NME"] = {"[N:1]([C:2]([H:4])([H:5])[H:6])[H:3]": ["N", "C", "H", "H1", "H2", "H3"]}
         self.data["NH2"] = {"[N:1]([H:2])[H:3]": ["N", "HN1", "HN2"]}
 
+    def _add_common_cysteine_substructures(self):
+        """
+        Add common cysteine states missing from the Chemical Component Dictionary.
+        """
+
+        self.data["CYS"].update(
+            {
+                "[N+:1]([C@:2]([C:3](=[O:4])[O-:7])([C:5]([S:6])([H:9])[H:10])[H:8])([H:11])([H:12])[H:13]": [
+                    "N",
+                    "CA",
+                    "C",
+                    "O",
+                    "CB",
+                    "SG",
+                    "OXT",
+                    "HA",
+                    "HB2",
+                    "HB3",
+                    "H1",
+                    "H2",
+                    "H3",
+                ],
+                "[N+:1]([C@:2]([C:3]=[O:4])([C:5]([S:6])([H:8])[H:9])[H:7])([H:10])([H:11])[H:12]": [
+                    "N",
+                    "CA",
+                    "C",
+                    "O",
+                    "CB",
+                    "SG",
+                    "HA",
+                    "HB2",
+                    "HB3",
+                    "H1",
+                    "H2",
+                    "H3",
+                ],
+            }
+        )
+
     def _add_common_linkages(self):
         """
         .. warning: Needed as of Oct-21-2021

@@ -427,7 +427,6 @@ Widget state can also be saved programmatically by executing the notebook with [
 ## Supported Python versions
 
 The OpenFF Toolkit roughly follows [NEP 29](https://numpy.org/neps/nep-0029-deprecation_policy.html).
-As of April 2023 this means Python 3.9-3.10 are officially supported (3.11 is missing some upstream dependencies).
 We develop, test, and distribute on macOS and Linux-based operating systems.
 We do not currently support Windows.
 Some CI builds run using only RDKit as a backend, some run using only OpenEye Toolkits, and some run using both installed at once.
@@ -440,14 +439,12 @@ The CI matrix is currently as follows:
 +-----------------------+------------+-----------+-------------+------------+-----------+-------------+
 |                       | RDKit      | OpenEye   | RDKit + OE  | RDKit      | OpenEye   | RDKit + OE  |
 +=======================+============+===========+=============+============+===========+=============+
-| Python 3.8 and older  | No support after April 2023                                                 |
+| Python 3.11 and older | No support after April 2026                                                 |
 +-----------------------+------------+-----------+-------------+------------+-----------+-------------+
-| Python 3.9            | **Test**   | **Test**  | **Test**    | **Test**   | **Test**  | **Test**    |
+| Python 3.12           | **Test**   | **Test**  | **Test**    | **Test**   | **Test**  | **Test**    |
 +-----------------------+------------+-----------+-------------+------------+-----------+-------------+
-| Python 3.10           | **Test**   | Skip      | Skip        | **Test**   | Skip      | Skip        |
+| Python 3.13           | **Test**   | Skip      | Skip        | **Test**   | Skip      | Skip        |
 +-----------------------+------------+-----------+-------------+------------+-----------+-------------+
-| Python 3.11           | **Test**   | Skip      | Skip        | **Test**   | Skip      | Skip        |
-+-----------------------+------------+-----------+-------------+------------+-----------+-------------+
-| Python 3.12 and newer | Pending official releases and upstream support                              | 
+| Python 3.14 and newer | Pending official releases and upstream support                              |
 +-----------------------+------------+-----------+-------------+------------+-----------+-------------+
 ```

@@ -3692,6 +3692,13 @@ class TestMoleculeFromPDB:
         expected_mol = Molecule.from_smiles("CC(=O)N[C@H](CSSC[C@H](NC(=O)C)C(=O)NC)C(=O)NC")
         assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
 
+    def test_molecule_from_pdb_nterminal_cys_disulfide(self):
+        offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/NTerminal_CYS_disulfide.pdb"))
+        assert offmol.n_atoms == 40
+        assert offmol.total_charge == 1 * unit.elementary_charge
+        expected_mol = Molecule.from_smiles("[NH3+][C@H](CSSC[C@H](NC(=O)C)C(=O)NC)C(=O)NC")
+        assert offmol.is_isomorphic_with(expected_mol, atom_stereochemistry_matching=False)
+
     def test_molecule_from_pdb_mainchain_hid_dipeptide(self):
         offmol = Molecule.from_polymer_pdb(get_data_file_path("proteins/MainChain_HID.pdb"))
         assert offmol.n_atoms == 29
