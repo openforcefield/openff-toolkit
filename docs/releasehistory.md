@@ -18,6 +18,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Improved documentation and warnings
 
+### Miscellaneous improvements
+
+- [PR #2170](https://github.com/openforcefield/openff-toolkit/pull/2170): Consolidate Pytest configuration, improve some internal tests.
 
 ## 0.18.1
 

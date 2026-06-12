@@ -76,6 +76,19 @@ module = [
 ]
 ignore_missing_imports = true
 
+[tool.pytest]
+ini_options.addopts = [ "--strict-markers" ]
+ini_options.markers = [
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+  "wip: marks tests as work in progress",
+]
+ini_options.doctest_optionflags = [
+  "ELLIPSIS",
+  "DONT_ACCEPT_TRUE_FOR_1",
+  "NORMALIZE_WHITESPACE",
+]
+ini_options.testpaths = [ "openff/toolkit/_tests/" ]
+
 [tool.coverage]
 run.omit = [
   "*/*/_tests/*",
