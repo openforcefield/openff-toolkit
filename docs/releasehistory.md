@@ -18,6 +18,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Improved documentation and warnings
 
+- [PR #2156](https://github.com/openforcefield/openff-toolkit/pull/2156): Update `ForceField.label_molecules` docstring
 
 ## 0.18.1
 
