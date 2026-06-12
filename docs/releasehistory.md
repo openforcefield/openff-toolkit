@@ -8,10 +8,6 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ## Current development
 
-### Miscellaneous
-
-- [PR #2120](https://github.com/openforcefield/openff-toolkit/pull/2120): Removes boilerplate warnings about API stability from docstrings throughout the toolkit. These warnings were attached to essentially every public class and method and therefore provided no useful signal. API changes continue to be communicated through the changelog and deprecation warnings.
-
 ### API-breaking changes
 
 ### Behavior changes
@@ -21,6 +17,22 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### New features
 
 ### Improved documentation and warnings
+
+
+## 0.18.1
+
+### Behavior changes
+
+- [PR #2174](https://github.com/openforcefield/openff-toolkit/pull/2174): Drop support for Python 3.11
+
+### Bugfixes
+
+- [PR #2187](https://github.com/openforcefield/openff-toolkit/pull/2187): Updated the QCArchive example notebook to be compliant with new validation behavior in QCEngine and QCElemental >=0.50. 
+- [Issue #2191](https://github.com/openforcefield/openff-toolkit/issues/2191): Adds support for loading N-terminal, protonated, disulfide-bonded cysteine residues in `Topology.from_pdb`.
+
+### Improved documentation and warnings
+
+- [PR #2120](https://github.com/openforcefield/openff-toolkit/pull/2120): Removes boilerplate warnings about API stability from docstrings throughout the toolkit. These warnings were attached to essentially every public class and method and therefore provided no useful signal. API changes continue to be communicated through the changelog and deprecation warnings.
 
 ### Testing improvements
 

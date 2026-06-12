@@ -22,7 +22,6 @@ from typing import (
     TYPE_CHECKING,
     Literal,
     TextIO,
-    TypeAlias,
     Union,
 )
 
@@ -73,11 +72,10 @@ if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import Atom, Bond
     from openff.toolkit.utils import ToolkitRegistry, ToolkitWrapper
 
-TKR: TypeAlias = Union["ToolkitRegistry", "ToolkitWrapper"]
-
-AtomLike: TypeAlias = Union["Atom", "_SimpleAtom"]
-BondLike: TypeAlias = Union["Bond", "_SimpleBond"]
-MoleculeLike: TypeAlias = Union["Molecule", "FrozenMolecule", "_SimpleMolecule"]
+type TKR = ToolkitRegistry | ToolkitWrapper
+type AtomLike = "Atom" | "_SimpleAtom"
+type BondLike = "Bond" | "_SimpleBond"
+type MoleculeLike = "Molecule" | "FrozenMolecule" | "_SimpleMolecule"
 
 _DISTANCE_UNITS = set(
     [

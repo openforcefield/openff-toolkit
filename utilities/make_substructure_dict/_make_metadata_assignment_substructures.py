@@ -7,7 +7,7 @@ from openff.toolkit.utils import get_data_file_path
 if not os.path.exists("aa-variants-v1.cif"):
     import requests
 
-    r = requests.get("https://ftp.wwpdb.org/pub/pdb/data/monomers/aa-variants-v1.cif")
+    r = requests.get("https://files.wwpdb.org/pub/pdb/data/monomers/aa-variants-v1.cif")
     print(r.ok)
     if r.ok:
         with open("aa-variants-v1.cif", "wb") as of:
@@ -28,6 +28,7 @@ cif_object.from_file(
 # Automatically add known substructures that are missing from aa_variants but expected by force fields (like ACE and
 # NME caps)
 cif_object._add_common_substructures()
+cif_object._add_common_cysteine_substructures()
 
 output_file = get_data_file_path("proteins/T4-protein.sdf").replace(
     "T4-protein.sdf", "aa_residues_substructures_with_caps.json"
