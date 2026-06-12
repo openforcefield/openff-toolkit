@@ -6,6 +6,19 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
+## Current development
+
+### API-breaking changes
+
+### Behavior changes
+
+### Bugfixes
+
+### New features
+
+### Improved documentation and warnings
+
+
 ## 0.18.1
 
 ### Behavior changes
@@ -13,6 +26,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #2174](https://github.com/openforcefield/openff-toolkit/pull/2174): Drop support for Python 3.11
 
 ### Bugfixes
+
 - [PR #2187](https://github.com/openforcefield/openff-toolkit/pull/2187): Updated the QCArchive example notebook to be compliant with new validation behavior in QCEngine and QCElemental >=0.50. 
 - [Issue #2191](https://github.com/openforcefield/openff-toolkit/issues/2191): Adds support for loading N-terminal, protonated, disulfide-bonded cysteine residues in `Topology.from_pdb`.
 
