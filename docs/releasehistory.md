@@ -18,6 +18,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Improved documentation and warnings
 
+- [PR #2156](https://github.com/openforcefield/openff-toolkit/pull/2156): Update `ForceField.label_molecules` docstring
+
 ### Miscellaneous improvements
 
 - [PR #2170](https://github.com/openforcefield/openff-toolkit/pull/2170): Consolidate Pytest configuration, improve some internal tests.
