@@ -44,6 +44,10 @@ requires_openeye_mol2 = pytest.mark.skipif(
     not OpenEyeToolkitWrapper.is_available(),
     reason="Test requires OE toolkit to read mol2 files",
 )
+requires_am1bcc = pytest.mark.skipif(
+    not (OpenEyeToolkitWrapper.is_available() or AmberToolsToolkitWrapper.is_available()),
+    reason="Test requires OE or AmberTools for providing AM1-BCC partial charges",
+)
 
 
 def _get_readme_path() -> pathlib.Path | None:

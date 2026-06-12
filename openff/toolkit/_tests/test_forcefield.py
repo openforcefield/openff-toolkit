@@ -28,6 +28,7 @@ from openff.toolkit._tests.create_molecules import (
 from openff.toolkit._tests.utils import (
     compare_partial_charges,
     get_14_scaling_factors,
+    requires_am1bcc,
     requires_openeye,
     requires_openeye_mol2,
     requires_rdkit,
@@ -2116,7 +2117,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
         """Test application of charge increments on a molecule with a net charge"""
         file_path = get_data_file_path("test_forcefields/test_forcefield.offxml")
         ff = ForceField(file_path, xml_charge_increment_model_ff_net_charge)
-        del ff._parameter_handlers["ToolkitAM1BCC"]
+        del ff._parameter_handlers["NAGLCharges"]
 
         acetate = create_acetate()
         top = acetate.to_topology()
@@ -2658,6 +2659,7 @@ class TestForceFieldChargeAssignment(_ForceFieldFixtures):
             q, _, _ = nonbondedForce.getParticleParameters(particle_index)
             assert q == expected_charge
 
+    @requires_am1bcc
     def test_library_charges_dont_parameterize_molecule_because_of_incomplete_coverage(
         self,
     ):
@@ -3559,7 +3561,7 @@ class TestForceFieldParameterAssignment(_ForceFieldFixtures):
         ff_no_vdw.deregister_parameter_handler("vdW")
 
         ff_no_electrostatics.deregister_parameter_handler("Electrostatics")
-        ff_no_electrostatics.deregister_parameter_handler("ToolkitAM1BCC")
+        ff_no_electrostatics.deregister_parameter_handler("NAGLCharges")
 
         sys_no_electrostatics = ff_no_electrostatics.create_openmm_system(top)
 
@@ -3760,7 +3762,7 @@ class TestForceFieldWithToolkits(_ForceFieldFixtures):
             get_data_file_path("test_forcefields/test_forcefield.offxml"),
             xml_charge_increment_model_ff_ethanol,
         )
-        force_field.deregister_parameter_handler("ToolkitAM1BCC")
+        force_field.deregister_parameter_handler("NAGLCharges")
         force_field["ChargeIncrementModel"].partial_charge_method = "am1bccelf10"
 
         with pytest.raises(ValueError, match=r"No registered toolkits can provide .*elf10"):

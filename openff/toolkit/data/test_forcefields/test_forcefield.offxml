@@ -342,5 +342,5 @@
 		<Atom smirks="[#53X0-1:1]" epsilon="0.0536816 * mole**-1 * kilocalorie" id="n35" rmin_half="2.86 * angstrom"></Atom>
 	</vdW>
 	<Electrostatics version="0.4" periodic_potential="Ewald3D-ConductingBoundary" nonperiodic_potential="Coulomb" exception_potential="Coulomb" scale12="0.0" scale13="0.0" scale14="0.833333" scale15="1.0" switch_width="0.0 * angstrom" cutoff="9.0 * angstrom"></Electrostatics>
-	<ToolkitAM1BCC version="0.3"></ToolkitAM1BCC>
+    <NAGLCharges model_file="openff-gnn-am1bcc-1.0.0.pt" model_file_hash="7981e7f5b0b1e424c9e10a40d9e7606d96dcd3dd2b095cb4eeff6829f92238ee" version="0.3"></NAGLCharges>
 </SMIRNOFF>

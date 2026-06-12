@@ -3306,15 +3306,18 @@ class TestQCArchiveInterface:
 class TestGetAvailableChargeMethods:
     def test_with_global_toolkit_registry(self):
         """Test the get_available_charge_methods method"""
-        from openff.toolkit.utils.toolkits import OPENEYE_AVAILABLE
+        from openff.toolkit.utils.toolkits import AMBERTOOLS_AVAILABLE, OPENEYE_AVAILABLE
 
         available_methods = create_ethanol().get_available_charge_methods()
 
         for method in available_methods:
             assert isinstance(method, str)
 
-        # The toolkit should always have (basic) AM1-BCC available
-        assert "am1bcc" in available_methods
+        # OpenFF NAGL is required in 0.18.0+
+        assert "openff-gnn-am1bcc-1.0.0.pt" in available_methods
+
+        # am1bcc requires AmberTools, which is NOT available by default
+        assert ("am1bcc" in available_methods) == AMBERTOOLS_AVAILABLE
 
         # These are provided by both RDKit and OpenEye
         assert "mmff94" in available_methods
