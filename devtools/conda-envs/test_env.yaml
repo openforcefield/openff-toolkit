@@ -30,7 +30,7 @@ dependencies:
 
   - openeye-toolkits
     # Test-only/optional/dev/typing
-  - pytest =8
+  - pytest
   - pytest-cov
   - pytest-xdist
   - pytest-rerunfailures
