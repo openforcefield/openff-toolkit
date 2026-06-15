@@ -4333,6 +4333,43 @@ class TestToolkitRegistry:
                 raise_exception_types=[],
             )
 
+    @requires_rdkit
+    def test_inchi_methods_fall_back_through_toolkits(self):
+        """InChI conversion methods should skip a higher-precedence toolkit that
+        raises and fall back to the next one (issue #2172). For example, OpenEye
+        refuses InChI generation for >1024-atom molecules while RDKit supports
+        it, so ``to_inchi`` must fall back to RDKit rather than propagating the
+        first toolkit's error."""
+
+        class _FailingInChIWrapper(RDKitToolkitWrapper):
+            """A wrapper that advertises the InChI methods but always fails."""
+
+            def to_inchi(self, *args, **kwargs):
+                raise ValueError("simulated to_inchi failure")
+
+            def to_inchikey(self, *args, **kwargs):
+                raise ValueError("simulated to_inchikey failure")
+
+            def from_inchi(self, *args, **kwargs):
+                raise ValueError("simulated from_inchi failure")
+
+        registry = ToolkitRegistry(toolkit_precedence=[])
+        registry.register_toolkit(_FailingInChIWrapper())
+        registry.register_toolkit(RDKitToolkitWrapper())
+
+        molecule = Molecule.from_smiles("CCO")
+
+        # Each call must skip the failing wrapper and succeed via RDKit, instead
+        # of aborting on the first toolkit's error.
+        inchi = molecule.to_inchi(toolkit_registry=registry)
+        assert inchi.startswith("InChI=")
+
+        inchikey = molecule.to_inchikey(toolkit_registry=registry)
+        assert len(inchikey) > 10
+
+        roundtrip = Molecule.from_inchi(inchi, toolkit_registry=registry)
+        assert roundtrip.n_atoms == molecule.n_atoms
+
 
 @requires_openeye
 @requires_ambertools
