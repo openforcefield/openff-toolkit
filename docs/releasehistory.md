@@ -23,6 +23,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Miscellaneous improvements
 
 - [PR #2170](https://github.com/openforcefield/openff-toolkit/pull/2170): Consolidate Pytest configuration, improve some internal tests.
+- [PR #21XX](https://github.com/openforcefield/openff-toolkit/pull/21XX): Use `setuptools-scm` for version handling.
 
 ## 0.18.1
 
