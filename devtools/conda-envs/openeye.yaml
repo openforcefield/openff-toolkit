@@ -29,6 +29,7 @@ dependencies:
   - pytest-cov
   - pytest-xdist
   - pytest-rerunfailures
+  - pytest-timeout
   - pyyaml
   - toml
   - bson
@@ -39,9 +40,9 @@ dependencies:
   - qcengine
   - mdtraj
   - nglview
-  - mypy =1.18
   - typing_extensions
   - pip:
+    - mypy ==2
     - types-setuptools
     - types-toml
     - types-PyYAML

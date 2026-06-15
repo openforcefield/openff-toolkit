@@ -44,7 +44,6 @@ lint.isort.known-third-party = [ "openff.interchange", "openff.utilities", "open
 
 [tool.mypy]
 python_version = 3.12
-plugins = "numpy.typing.mypy_plugin"
 warn_unused_configs = true
 # would be nice to flip back to true
 warn_unused_ignores = false
@@ -76,6 +75,19 @@ module = [
   "constraint",
 ]
 ignore_missing_imports = true
+
+[tool.pytest]
+ini_options.addopts = [ "--strict-markers" ]
+ini_options.markers = [
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+  "wip: marks tests as work in progress",
+]
+ini_options.doctest_optionflags = [
+  "ELLIPSIS",
+  "DONT_ACCEPT_TRUE_FOR_1",
+  "NORMALIZE_WHITESPACE",
+]
+ini_options.testpaths = [ "openff/toolkit/_tests/" ]
 
 [tool.coverage]
 run.omit = [

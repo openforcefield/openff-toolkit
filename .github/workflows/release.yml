@@ -7,7 +7,7 @@ jobs:
     steps:
 
     - name: Update stable tag
-      uses: richardsimko/update-tag@v1
+      uses: richardsimko/update-tag@v2
       with:
         tag_name: stable
       env:

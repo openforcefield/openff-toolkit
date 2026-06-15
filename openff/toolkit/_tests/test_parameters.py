@@ -2202,7 +2202,7 @@ class TestVirtualSiteHandler:
     ):
         if unsafe_vsites:
             monkeypatch.setenv("OPENFF_UNSAFE_VSITES", "1")
-        molecule = Molecule.from_smiles(smiles, allow_undefined_stereo=True)
+        molecule = Molecule.from_mapped_smiles(smiles, allow_undefined_stereo=True)
         topology: Topology = molecule.to_topology()
 
         atoms = {i: atom for i, atom in enumerate(topology.atoms)}

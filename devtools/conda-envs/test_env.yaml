@@ -30,7 +30,7 @@ dependencies:
 
   - openeye-toolkits
     # Test-only/optional/dev/typing
-  - pytest =8
+  - pytest
   - pytest-cov
   - pytest-xdist
   - pytest-rerunfailures
@@ -46,5 +46,3 @@ dependencies:
   - nglview
   - mdtraj
   - nbval
-  # No idea why this is necessary, see https://github.com/openforcefield/openff-toolkit/pull/1821
-  - nomkl

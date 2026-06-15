@@ -95,8 +95,8 @@ class TestNAGLToolkitWrapper:
             )
 
         numpy.testing.assert_allclose(
-            forward.partial_charges,
-            reverse.partial_charges[::-1],
+            forward.partial_charges.m,
+            reverse.partial_charges.m[::-1],
             atol=1e-7,
         )
 
