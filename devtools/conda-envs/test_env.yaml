@@ -1,6 +1,5 @@
 name: openff-toolkit-test
 channels:
-  - openeye
   - conda-forge
 dependencies:
     # Base depends
@@ -24,11 +23,7 @@ dependencies:
   - typing_extensions
     # Toolkit-specific
   - ambertools >=22
-    # rdkit 2024.03.6 and 2024.09.1 packages fail when run natively on osx-arm64 macs
-    # https://github.com/rdkit/rdkit/issues/7583
-  - rdkit !=2024.03.6,!=2024.09.1
 
-  - openeye-toolkits
     # Test-only/optional/dev/typing
   - pytest
   - pytest-cov
