@@ -1,6 +1,6 @@
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = [ "setuptools>=77.0.3", "versioningit" ]
+requires = [ "setuptools>=77.0.3", "setuptools-scm" ]
 
 [project]
 name = "openff-toolkit"
@@ -24,6 +24,9 @@ urls = { Homepage = "https://github.com/openforcefield/openff-toolkit" }
 
 [tool.setuptools]
 packages.find.include = [ "openff.toolkit*" ]
+
+[tool.setuptools_scm]
+fallback_version = "0.0.0"
 
 [tool.ruff]
 target-version = "py312"
@@ -99,5 +102,3 @@ report.exclude_lines = [
   "pragma: no cover",
   "raise NotImplementedError",
 ]
-
-[tool.versioningit]
