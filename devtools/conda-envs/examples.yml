@@ -39,5 +39,4 @@ dependencies:
   - nbval
   - mdtraj
   - pdbfixer
-  - openmmforcefields >=0.11.2
   - gromacs >=2023.3
