@@ -34,7 +34,7 @@ jobs:
       NB_ARGS: --nbval-lax --dist loadscope --ignore=examples/deprecated
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up conda environment
         uses: mamba-org/setup-micromamba@v3

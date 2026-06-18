@@ -27,7 +27,7 @@ jobs:
       PYTEST_ARGS: -r fE --tb=short -nauto
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install environment
         uses: mamba-org/setup-micromamba@v3
