@@ -41,7 +41,7 @@ jobs:
       COV: --cov=openff/toolkit/ --cov-append --cov-report=xml
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set environment variables
         run: |
