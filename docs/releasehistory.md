@@ -22,7 +22,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Miscellaneous improvements
 
-- Add root-level `CONTRIBUTING.md` and link Code of Conduct in developer documentation for better contributor visibility.
+- Add root-level `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md` to link OMSF Code of Conduct in developer documentation for better contributor visibility.
 - [PR #2170](https://github.com/openforcefield/openff-toolkit/pull/2170): Consolidate Pytest configuration, improve some internal tests.
 - [PR #2201](https://github.com/openforcefield/openff-toolkit/pull/2201): Use `setuptools-scm` for version handling.
 
