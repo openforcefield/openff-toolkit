@@ -20,7 +20,6 @@ dependencies:
   - openff-interchange-base >=0.5
   - openff-nagl-base =0.4.0
   - openff-nagl-models >=0.3.0
-  - typing_extensions
     # Toolkit-specific
   - openeye-toolkits
     # Test-only/optional/dev/typing
@@ -39,7 +38,6 @@ dependencies:
   - qcengine
   - mdtraj
   - nglview
-  - typing_extensions
   - pip:
     - mypy ==2
     - types-setuptools
