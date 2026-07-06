@@ -3,7 +3,6 @@ import re
 
 import numpy
 import pytest
-from openff.utilities import has_package, skip_if_missing
 
 from openff.toolkit import Molecule, unit
 from openff.toolkit._tests.create_molecules import (
@@ -14,6 +13,7 @@ from openff.toolkit._tests.create_molecules import (
     create_reversed_ethanol,
 )
 from openff.toolkit._tests.utils import requires_openeye
+from openff.toolkit._utilities import has_package, skip_if_missing
 from openff.toolkit.utils import GLOBAL_TOOLKIT_REGISTRY
 from openff.toolkit.utils.exceptions import (
     ToolkitUnavailableException,

@@ -22,24 +22,26 @@ __all__ = [
     "temporary_cd",
     "unit_to_string",
 ]
-
 import contextlib
 import functools
 import logging
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
+from functools import wraps
 from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 import numpy as np
 import pint
 from numpy.typing import NDArray
 from openff.units import Quantity, Unit
-from openff.utilities import requires_package
+
+from openff.toolkit._utilities.exceptions import MissingOptionalDependencyError
 
 if TYPE_CHECKING:
     from openff.toolkit import ForceField, Molecule
 
 logger = logging.getLogger(__name__)
 
+F = TypeVar("F", bound=Callable[..., Any])
 
 # Pre-create an instance of the dimensionless unit to speed up comparisons later
 _DIMENSIONLESS = Unit("dimensionless")
@@ -803,3 +805,40 @@ def sort_smirnoff_dict(data):
             # Handle metadata or the bottom of a recursive dict
             sorted_dict[key] = val
     return sorted_dict
+
+
+def requires_package(package_name: str) -> Callable[..., Any]:
+    """
+    Helper function to denote that a funciton requires some optional
+    dependency. A function decorated with this decorator will raise
+    `MissingOptionalDependencyError` if the package is not found by
+    `importlib.import_module()`.
+
+    Parameters
+    ----------
+    package_name : str
+        The name of the module to be imported.
+
+    Raises
+    ------
+    MissingOptionalDependencyError
+
+    """
+
+    def inner_decorator(function: F) -> F:
+        @wraps(function)
+        def wrapper(*args, **kwargs):  # type: ignore[no-untyped-def]
+            import importlib
+
+            try:
+                importlib.import_module(package_name)
+            except ImportError:
+                raise MissingOptionalDependencyError(library_name=package_name)
+            except Exception as e:
+                raise e
+
+            return function(*args, **kwargs)
+
+        return wrapper  # type: ignore[return-value]
+
+    return inner_decorator

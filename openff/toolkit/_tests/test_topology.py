@@ -16,7 +16,6 @@ import openmm.app
 import openmm.unit
 import pytest
 from openff.units.openmm import from_openmm
-from openff.utilities import skip_if_missing
 
 from openff.toolkit import Molecule, Quantity, Topology, unit
 from openff.toolkit._tests.create_molecules import (
@@ -41,6 +40,7 @@ from openff.toolkit._tests.utils import (
     requires_pkg,
     requires_rdkit,
 )
+from openff.toolkit._utilities import skip_if_missing
 from openff.toolkit.topology import (
     Atom,
     ImproperDict,
