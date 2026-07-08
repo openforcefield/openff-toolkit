@@ -44,7 +44,7 @@ jobs:
           fi
 
           if [[ ${{ matrix.openeye }} == false ]]; then
-              echo "ENVFILE=test_env_no_rdkit" >> $GITHUB_ENV
+              echo "ENVFILE=test_env_no_openeye" >> $GITHUB_ENV
           fi
 
       - name: Install environment with ${{ env.JOBNAME }}
