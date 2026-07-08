@@ -1,6 +1,5 @@
 name: openeye-examples
 channels:
-  - openeye
   - conda-forge
 dependencies:
     # Base depends
@@ -13,17 +12,17 @@ dependencies:
   - xmltodict <=1.0.2
   - python-constraint
   - openmm >=7.6
-  - openff-forcefields >=2023.11
+  - openff-forcefields >=2025
   - openff-amber-ff-ports >=0.0.3
   - openff-units
   - openff-utilities >=0.1.5
   - openff-interchange-base >=0.5
-  - openff-nagl-base >=0.4.0
-  - openff-nagl-models >=0.3.0
+  - openff-nagl-base >=0.5.3
+  - openff-nagl-models >=2025
   - typing_extensions
   - nglview
     # Toolkit-specific
-  - openeye-toolkits
+  - openeye::openeye-toolkits
     # Test-only/optional/dev/typing/examples
   - pytest =8
   - pytest-xdist
@@ -38,5 +37,5 @@ dependencies:
   - mdtraj
   - nbval
   - pdbfixer
-  - openmmforcefields >=0.11.2
   - gromacs >=2023.3
+  - pyedr
