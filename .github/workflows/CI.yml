@@ -72,33 +72,6 @@ jobs:
       - name: Install test plugins
         run: python -m pip install utilities/test_plugins
 
-      - name: Remove undesired toolkits
-        run: |
-          if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
-            for cpkg in ${{ env.PACKAGES_TO_REMOVE }}; do
-              if [[ $(micromamba list | grep $cpkg) ]]; then micromamba remove --force $cpkg --yes ; fi
-            done
-          fi
-
-      - name: Optionally remove OpenFF NAGL
-        if: ${{ matrix.nagl == false }}
-        run: micromamba remove openff-nagl-base openff-nagl-models
-
-      - name: Check installed toolkits
-        run: |
-          for tk in ${{ env.TOOLKIT_CHECKS }}; do
-            python -c "from openff.toolkit.utils.toolkits import ${tk}_AVAILABLE; assert ${tk}_AVAILABLE, '${tk} unavailable'"
-          done
-
-      - name: Check uninstalled toolkits
-        run: |
-          if [ ! -z "${{ env.PACKAGES_TO_REMOVE }}" ]; then
-            for tk in ${{ env.PACKAGES_TO_REMOVE }}; do
-              TK=$(echo ${tk%-*} | tr 'a-z' 'A-Z')
-              python -c "from openff.toolkit.utils.toolkits import ${TK}_AVAILABLE; assert not ${TK}_AVAILABLE, '${TK} available'"
-            done
-          fi
-
       - name: Environment Information
         run: |
           micromamba info

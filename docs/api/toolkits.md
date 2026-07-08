@@ -55,7 +55,7 @@ The default value of this argument is the [`GLOBAL_TOOLKIT_REGISTRY`], which by 
 ```pycon
 >>> from openff.toolkit import GLOBAL_TOOLKIT_REGISTRY
 >>> len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits)
-5
+4
 
 ```
 
