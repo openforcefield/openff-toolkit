@@ -39,3 +39,12 @@ dependencies:
   - qcportal >=0.50
   - qcengine
   - nglview
+  - pip:
+    - mypy ==2
+    - types-setuptools
+    - types-toml
+    - types-PyYAML
+    - types-networkx
+    - types-xmltodict
+    - types-cachetools
+    - mongo-types
