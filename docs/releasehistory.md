@@ -18,7 +18,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Improved documentation and warnings
 
-- [PR #2156](https://github.com/openforcefield/openff-toolkit/pull/2156): Update `ForceField.label_molecules` docstring
+- [PR #2156](https://github.com/openforcefield/openff-toolkit/pull/2156): Update `ForceField.label_molecules` docstring.
+- [PR #2214](https://github.com/openforcefield/openff-toolkit/pull/2214): Update examples to use Sage 2.3.0.
 
 ### Miscellaneous improvements
 
