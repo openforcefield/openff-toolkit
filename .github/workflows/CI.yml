@@ -47,7 +47,7 @@ jobs:
               echo "ENVFILE=test_env_no_openeye" >> $GITHUB_ENV
           fi
 
-      - name: Install environment with ${{ env.JOBNAME }}
+      - name: Install environment with OpenEye=${{ matrix.openeye }}
         uses: mamba-org/setup-micromamba@v3
         with:
           environment-file: devtools/conda-envs/${{ env.ENVFILE }}.yaml
