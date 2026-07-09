@@ -1,6 +1,5 @@
 name: openff-toolkit-test
 channels:
-  - openeye
   - conda-forge
 dependencies:
     # Base depends
@@ -27,7 +26,7 @@ dependencies:
     # https://github.com/rdkit/rdkit/issues/7583
   - rdkit !=2024.03.6,!=2024.09.1
 
-  - openeye-toolkits
+  - openeye::openeye-toolkits
     # Test-only/optional/dev/typing
   - pytest
   - pytest-cov
@@ -45,3 +44,12 @@ dependencies:
   - nglview
   - mdtraj
   - nbval
+  - pip:
+    - mypy ==2
+    - types-setuptools
+    - types-toml
+    - types-PyYAML
+    - types-networkx
+    - types-xmltodict
+    - types-cachetools
+    - mongo-types
