@@ -13,20 +13,25 @@ on:
 
 defaults:
   run:
-    shell: bash -l {0}
+    shell: pixi run bash -e {0}
 
 jobs:
   test:
     if: (github.event_name == 'schedule' && github.repository == 'openforcefield/openff-toolkit') || (github.event_name != 'schedule')
-    name: Test on ${{ matrix.environment }}
+    name: Test on ${{ matrix.os }}, ${{ matrix.environment }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
         environment:
           - py312base
+          - py312ambertools
           - py312openeye
           - py312all
+          - py313all
+          - py312examples
+          - py312examples-openeye
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
@@ -52,6 +57,7 @@ jobs:
         run: pixi run -e ${{ matrix.environment }} run_mypy
 
       - name: Run unit tests
+        if: ${{ !contains(matrix.environment, 'examples') }}
         run: pixi run -e ${{ matrix.environment }} run_tests
        
         # TODO: The three pytest+docs runners can be Pixi tasks
