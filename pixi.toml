@@ -37,6 +37,7 @@ run_mypy = {
 
 [dependencies]
 python = "*"
+setuptools-scm = "*"
 packaging = "*"
 numpy = "*"
 networkx = "*"
