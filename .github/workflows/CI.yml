@@ -46,7 +46,7 @@ jobs:
           frozen: true
 
       - name: License OpenEye Toolkits
-        if: ${{ !contains(matrix.environment, 'amber') }}
+        if: ${{ contains(matrix.environment, 'openeye') || contains(matrix.environment, 'all') }}
         run: |
           echo "${SECRET_OE_LICENSE}" > ${OE_LICENSE}
           pixi run -e ${{ matrix.environment }} python -c "from openeye import oechem; assert oechem.OEChemIsLicensed()"
