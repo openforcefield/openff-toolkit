@@ -54,6 +54,7 @@ jobs:
           SECRET_OE_LICENSE: ${{ secrets.OE_LICENSE }}
 
       - name: Run mypy
+        if: ${{ contains(matrix.environment, 'all') }}
         run: pixi run -e ${{ matrix.environment }} run_mypy
 
       - name: Run unit tests
