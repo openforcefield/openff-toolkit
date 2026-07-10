@@ -80,3 +80,6 @@ target/
 examples/testing/test_system_conversion/out.*
 examples/testing/test_system_conversion/out2.*
 examples/testing/test_system_conversion/system.*
+# pixi environments
+.pixi/*
+!.pixi/config.toml

@@ -1,0 +1,119 @@
+[workspace]
+authors = ["Open Force Field Initiative <info@openforcefield.org>"]
+channels = ["conda-forge"]
+name = "openff-toolkit"
+platforms = ["linux-64", "osx-arm64"]
+
+[tasks]
+# can do a pypi-dependencies .. -e . setup if circular dependency with Interchange is untangled
+postinstall = "pip install -e . utilities/test_plugins/"
+run_tests = {
+    cmd = "python -m pytest $PYTEST_ARGS $COV openff/toolkit/_tests/",
+    env = {
+      PYTEST_ARGS = "-r fE --tb=short -nauto --durations=20",
+      COV = "--cov=openff/toolkit/ --cov-append --cov-report=xml",
+    },
+    depends-on = "postinstall",
+}
+run_examples = {
+    cmd = "python -m pytest $PYTEST_ARGS $NB_ARGS examples",
+    env= {
+      PYTEST_ARGS = "-r fE -v -x --tb=short -nauto --durations=10",
+      NB_ARGS = "--nbval-lax --dist loadscope --ignore=examples/deprecated",
+    },
+    depends-on = "postinstall",
+}
+run_example_scripts = {
+    cmd = "python -m pytest $PYTEST_ARGS openff/toolkit/_tests/test_examples.py",
+    env = {
+      PYTEST_ARGS = "-r fE -v -x --tb=short -nauto --durations=10",
+    },
+    depends-on = "postinstall",
+}
+run_mypy = {
+    cmd = "python -m mypy -p 'openff.toolkit'",
+    depends-on = "postinstall",
+}
+
+[dependencies]
+python = "*"
+setuptools-scm = "*"
+packaging = "*"
+numpy = "*"
+networkx = "*"
+cachetools = "*"
+xmltodict = "<=1.0.2"
+python-constraint = "*"
+openmm = ">=7.6"
+openff-forcefields = ">=2023.5.1"
+openff-units = "*"
+openff-amber-ff-ports = "*"
+openff-utilities = ">=0.1.5"
+openff-interchange-base = ">=0.5"
+openff-nagl-base = ">=0.4.0"
+openff-nagl-models = ">=0.3.0"
+typing_extensions = "*"
+rdkit = "!=2024.3.6,!=2024.9.1"
+pyyaml = "*"
+toml = "*"
+bson = "*"
+msgpack-python = "*"
+
+[feature.typing.pypi-dependencies]
+mypy = "==2.*"
+types-setuptools = "*"
+types-toml = "*"
+types-PyYAML = "*"
+types-networkx = "*"
+types-xmltodict = "*"
+types-cachetools = "*"
+mongo-types = "*"
+
+[feature.test.dependencies]
+pytest = "*"
+pytest-cov = "*"
+pytest-xdist = "*"
+pytest-rerunfailures = "*"
+pytest-timeout = "*"
+qcengine = "*"
+qcportal = ">=0.50"
+qcelemental = "*"
+pydantic = "*"
+nglview = "*"
+mdtraj = "*"
+nbval = "*"
+
+[feature.ambertools.dependencies]
+ambertools = ">=22"
+
+[feature.openeye]
+channels = [ "openeye" ]
+dependencies = { openeye-toolkits = "*" }
+
+[feature.examples.dependencies]
+qcengine = "*"
+qcportal = ">=0.50"
+qcelemental = "*"
+pdbfixer = "*"
+gromacs = "*"
+
+[feature.py312.dependencies]
+python = "3.12.*"
+
+[feature.py313.dependencies]
+python = "3.13.*"
+
+[feature.dev.pypi-dependencies]
+pre-commit = "*"
+ipython = "*"
+ipdb = "*"
+
+[environments]
+py312base = ["py312", "test", "typing" ]
+py312openeye = ["py312", "test", "typing", "openeye" ]
+py312ambertools = ["py312", "test", "typing", "ambertools" ]
+py312all = ["py312", "test", "typing", "openeye", "ambertools"]
+py313all = ["py312", "test", "typing", "openeye", "ambertools"]
+py312examples = ["py312", "test", "examples"]
+py312examples-openeye = ["py312", "test", "examples", "openeye"]
+dev = [ "py313", "test", "typing", "dev" ]
