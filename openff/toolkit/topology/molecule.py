@@ -48,9 +48,9 @@ from typing import (
 import numpy as np
 from openff.units import Unit
 from openff.units.elements import MASSES, SYMBOLS
-from openff.utilities.exceptions import MissingOptionalDependencyError
 
 from openff.toolkit import Quantity, unit
+from openff.toolkit._utilities.exceptions import MissingOptionalDependencyError
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
     AtomMappingWarning,

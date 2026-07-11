@@ -74,7 +74,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     @functools.cached_property
     def _toolkit_version(self):
-        from openff.utilities.provenance import get_ambertools_version
+        from openff.toolkit._utilities.provenance import get_ambertools_version
 
         return get_ambertools_version()
 

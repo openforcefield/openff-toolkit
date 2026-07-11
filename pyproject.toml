@@ -43,7 +43,7 @@ lint.per-file-ignores."openff/toolkit/typing/engines/smirnoff.parameters.py" = [
 lint.isort.known-first-party = [ "openff.toolkit" ]
 # can't find a clean way to get Rust's globset to handle this via regex ...
 # https://docs.astral.sh/ruff/settings/#lint_isort_known-third-party
-lint.isort.known-third-party = [ "openff.interchange", "openff.utilities", "openff.units" ]
+lint.isort.known-third-party = [ "openff.interchange", "openff.units" ]
 
 [tool.mypy]
 python_version = 3.12
@@ -80,10 +80,11 @@ module = [
 ignore_missing_imports = true
 
 [tool.pytest]
-ini_options.addopts = [ "--strict-markers" ]
+ini_options.addopts = '--strict-markers -m "not leaky"'
 ini_options.markers = [
   "slow: marks tests as slow (deselect with '-m \"not slow\"')",
   "wip: marks tests as work in progress",
+  "leaky: run leaky tests",
 ]
 ini_options.doctest_optionflags = [
   "ELLIPSIS",
