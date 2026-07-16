@@ -18,46 +18,27 @@ defaults:
 jobs:
   test:
     if: (github.event_name == 'schedule' && github.repository == 'openforcefield/openff-toolkit') || (github.event_name != 'schedule')
-    name: ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenEye=${{ matrix.openeye }}
+    name: ${{ matrix.os }}, Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
         python-version: [ "3.12"]
-        rdkit: [true]
-        openeye: [true, false]
 
     env:
-      OE_LICENSE: ${{ github.workspace }}/oe_license.txt
-      PACKAGE: openff
       PYTEST_ARGS: -r fE -v -x --tb=short -nauto --durations=10
       NB_ARGS: --nbval-lax --dist loadscope --ignore=examples/deprecated
 
     steps:
       - uses: actions/checkout@v7
 
-      - name: Set environment variables
-        run: |
-          if [[ ${{ matrix.openeye }} == true ]]; then
-              echo "ENVFILE=openeye" >> $GITHUB_ENV
-          fi
-
-          if [[ ${{ matrix.openeye }} == false ]]; then
-              echo "ENVFILE=rdkit" >> $GITHUB_ENV
-          fi
-
-      - name: Install conda environment with ${{ env.ENVFILE }}
+      - name: Install conda environment
         uses: mamba-org/setup-micromamba@v3
         with:
-          environment-file: devtools/conda-envs/${{env.ENVFILE}}-examples.yaml
+          environment-file: devtools/conda-envs/examples.yaml
           create-args: >-
             python=${{ matrix.python-version }}
-
-      - name: Make oe_license.txt file from GH org secret "OE_LICENSE"
-        env:
-          OE_LICENSE_TEXT: ${{ secrets.OE_LICENSE }}
-        run: echo "${OE_LICENSE_TEXT}" > ${OE_LICENSE}
 
       - name: Install package
         run: python -m pip install .
@@ -67,12 +48,6 @@ jobs:
           micromamba info
           micromamba list
           pip list
-
-      - name: Check OpenEye installation and wrapper availability
-        if: ${{ matrix.openeye == true }}
-        run: |
-            python -c "from openeye import oechem; assert oechem.OEChemIsLicensed(), 'OpenEye is not installed/licensed properly'"
-            python -c "from openff.toolkit.utils.toolkits import OpenEyeToolkitWrapper; assert OpenEyeToolkitWrapper().is_available(), 'OpenEyeToolkitWrapper is not available'"
 
       - name: Run example scripts
         run: |

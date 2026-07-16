@@ -1,4 +1,4 @@
-name: rdkit-examples
+name: openff-toolkit-examples
 channels:
   - conda-forge
 dependencies:
