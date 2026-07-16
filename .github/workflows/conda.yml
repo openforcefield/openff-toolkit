@@ -115,7 +115,7 @@ jobs:
             python -c "import openeye; print(openeye.oechem.OEChemIsLicensed())"
           fi
 
-          PYTEST_ARGS=" -r fE --runslow openff/toolkit/_tests/conftest.py"
+          PYTEST_ARGS=" -r fE -n auto --runslow openff/toolkit/_tests/conftest.py"
           PYTEST_ARGS+=" --ignore=openff/toolkit/_tests/test_links.py"
           pytest $PYTEST_ARGS openff
 
@@ -125,4 +125,4 @@ jobs:
 
       - name: Run example notebooks
         run: |
-          python -m pytest -r fE -v -x --nbval-lax --ignore=examples/deprecated --ignore=examples/external examples
+          python -m pytest -r fE -v -x --nbval-lax --dist loadscope --ignore=examples/deprecated --ignore=examples/external examples
