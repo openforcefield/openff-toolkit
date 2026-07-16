@@ -19,7 +19,6 @@ dependencies:
   - openff-interchange-base >=0.5
   - openff-nagl-base >=0.5.3
   - openff-nagl-models >=2025
-  - typing_extensions
   - nglview
     # Toolkit-specific
   - openeye::openeye-toolkits
