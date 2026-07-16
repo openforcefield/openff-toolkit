@@ -68,6 +68,12 @@ jobs:
           micromamba list
           pip list
 
+      - name: Check OpenEye installation and wrapper availability
+        if: ${{ matrix.openeye == true }}
+        run: |
+            python -c "from openeye import oechem; assert oechem.OEChemIsLicensed(), 'OpenEye is not installed/licensed properly'"
+            python -c "from openff.toolkit.utils.toolkits import OpenEyeToolkitWrapper; assert OpenEyeToolkitWrapper().is_available(), 'OpenEyeToolkitWrapper is not available'"
+
       - name: Run example scripts
         run: |
           pytest $PYTEST_ARGS openff/toolkit/_tests/test_examples.py
