@@ -46,51 +46,51 @@ lint.isort.known-first-party = [ "openff.toolkit" ]
 lint.isort.known-third-party = [ "openff.interchange", "openff.utilities", "openff.units" ]
 
 [tool.mypy]
+exclude = "openff/toolkit/_tests/|openff/toolkit/data/"
 python_version = 3.12
-warn_unused_configs = true
 # would be nice to flip back to true
 warn_unused_ignores = false
 warn_incomplete_stub = true
+warn_unused_configs = true
 show_error_codes = true
-exclude = "openff/toolkit/_tests/|openff/toolkit/data/"
 
 [[tool.mypy.overrides]]
 module = [
-  "openff.units",
-  "openff.units.*",
+  "constraint",
+  "mdtraj",
+  "msgpack",
+  "nglview",
+  "nglview.base_adaptor",
+  "openeye",
+  "openeye.oechem",
   "openff.nagl.*",
   "openff.nagl_models.*",
-  "mdtraj",
+  "openff.units",
+  "openff.units.*",
   "openmm",
   "openmm.app",
   "openmm.unit",
+  "parmed",
+  "qcelemental",
   "rdkit",
   "rdkit.Chem",
   "rdkit.Chem.Draw",
   "rdkit.DataStructs.cDataStructs",
-  "openeye",
-  "openeye.oechem",
-  "parmed",
-  "msgpack",
-  "qcelemental",
-  "nglview",
-  "nglview.base_adaptor",
-  "constraint",
 ]
 ignore_missing_imports = true
 
 [tool.pytest]
+ini_options.testpaths = [ "openff/toolkit/_tests/" ]
 ini_options.addopts = [ "--strict-markers" ]
 ini_options.markers = [
   "slow: marks tests as slow (deselect with '-m \"not slow\"')",
   "wip: marks tests as work in progress",
 ]
 ini_options.doctest_optionflags = [
-  "ELLIPSIS",
   "DONT_ACCEPT_TRUE_FOR_1",
+  "ELLIPSIS",
   "NORMALIZE_WHITESPACE",
 ]
-ini_options.testpaths = [ "openff/toolkit/_tests/" ]
 
 [tool.coverage]
 run.omit = [
