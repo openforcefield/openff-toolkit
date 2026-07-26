@@ -166,6 +166,9 @@ class XMLParameterIOHandler(ParameterIOHandler):
 
         """
         xml_string = self.to_string(smirnoff_data)
+        # Ensure POSIX compliance: files must end with a newline (fixes #1761)
+        if not xml_string.endswith("\n"):
+            xml_string += "\n"
         with open(file_path, "w") as of:
             of.write(xml_string)
 
