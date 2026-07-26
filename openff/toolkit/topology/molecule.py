@@ -443,11 +443,9 @@ class Atom(Particle):
         # there should be some input validation, if we can agree on what possible values this might take.
         # currently (July 2025) toolkit wrappers only deal with "CW", "CCW", or None.
         # for more, see https://github.com/openforcefield/openff-toolkit/issues/2084
-        _VALID_STEREOCHEMISTRY = {None, 'S', 'R'}
+        _VALID_STEREOCHEMISTRY = {None, "S", "R"}
         if value not in _VALID_STEREOCHEMISTRY:
-            raise ValueError(
-                f"stereochemistry must be None, 'S', or 'R', got {value!r}"
-            )
+            raise ValueError(f"stereochemistry must be None, 'S', or 'R', got {value!r}")
         self._stereochemistry = value
 
     @property
