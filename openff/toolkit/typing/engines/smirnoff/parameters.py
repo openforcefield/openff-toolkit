@@ -389,8 +389,7 @@ class ParameterAttribute:
             # raise AttributeError consistent with __get__ behavior.
             if self.default is ParameterAttribute.UNDEFINED:
                 raise AttributeError(
-                    f"'{type(instance).__name__}' object attribute"
-                    f" '{self.name}' has not been set"
+                    f"'{type(instance).__name__}' object attribute '{self.name}' has not been set"
                 ) from None
             # Otherwise the attribute is already at its default — succeed silently.
 
