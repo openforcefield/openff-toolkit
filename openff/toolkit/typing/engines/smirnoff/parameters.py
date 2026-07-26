@@ -2009,7 +2009,12 @@ class ParameterHandler(_ParameterAttributeHandler):
 
         if not allow_duplicate_smirks:
             if self._index_of_parameter(new_parameter) is not None:
-                msg = f"A parameter SMIRKS pattern {new_parameter.smirks} already exists."
+                # Build an informative message. For VirtualSite parameters, uniqueness
+                # is determined by (type, SMIRKS, name), so include the name if present.
+                param_id = f"SMIRKS pattern {new_parameter.smirks!r}"
+                if hasattr(new_parameter, "name") and new_parameter.name is not None:
+                    param_id += f" with name {new_parameter.name!r}"
+                msg = f"A parameter with {param_id} already exists."
                 raise DuplicateParameterError(msg)
 
         before_index, after_index = None, None
