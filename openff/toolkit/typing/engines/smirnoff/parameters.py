@@ -374,6 +374,25 @@ class ParameterAttribute:
         value = self._convert_and_validate(instance, value)
         setattr(instance, self._name, value)
 
+    def __delete__(self, instance):
+        """Reset this attribute to its default, or remove it if already at default.
+
+        After deletion, accessing the attribute will return its default value (if
+        one was specified) or raise ``AttributeError`` for required attributes.
+        This completes the Python descriptor protocol alongside ``__get__`` and
+        ``__set__`` (fixes #1680).
+        """
+        try:
+            delattr(instance, self._name)
+        except AttributeError:
+            # The attribute was never explicitly set. If there is no default,
+            # raise AttributeError consistent with __get__ behavior.
+            if self.default is ParameterAttribute.UNDEFINED:
+                raise AttributeError(
+                    f"'{type(instance).__name__}' object attribute '{self.name}' has not been set"
+                ) from None
+            # Otherwise the attribute is already at its default — succeed silently.
+
     def converter(self, converter):
         """Create a new ParameterAttribute with an associated converter.
 
