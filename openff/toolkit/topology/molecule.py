@@ -1387,6 +1387,8 @@ class FrozenMolecule(Serializable):
         """
         # updated to use the new isomorphic checking method, with full matching
         # TODO the doc string did not match the previous function what matching should this method do?
+        if not isinstance(other, FrozenMolecule):
+            return NotImplemented
         return Molecule.are_isomorphic(self, other, return_atom_map=False)[0]
 
     def __deepcopy__(self, memo):
