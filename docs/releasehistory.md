@@ -14,6 +14,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+- [PR #XXXX](https://github.com/openforcefield/openff-toolkit/pull/XXXX): Fixes [Issue 2150](https://github.com/openforcefield/openff-toolkit/issue/2150) in which `ForceField.to_string()`/`to_file()` would fail to round-trip `VirtualSite` parameters with `None`-valued attributes (such as `outOfPlaneAngle`/`inPlaneAngle` on `BondCharge` sites) when using `xmltodict>=1.0.3`.
+
 ### New features
 
 ### Improved documentation and warnings
