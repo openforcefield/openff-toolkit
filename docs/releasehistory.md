@@ -11,6 +11,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### API-breaking changes
 
 ### Behavior changes
+- [PR #XXXX](https://github.com/openforcefield/openff-toolkit/pull/XXXX): If a ParameterType object has attributes with `None` values, the `to_dict` method will now stringify them into `"None"`. 
 
 ### Bugfixes
 
