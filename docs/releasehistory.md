@@ -23,10 +23,10 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Miscellaneous improvements
 
-- [PR #2210] Add root-level `CODE_OF_CONDUCT.md` to link OMSF Code of Conduct.
+- [PR #2210](https://github.com/openforcefield/openff-toolkit/pull/2210) Add root-level `CODE_OF_CONDUCT.md` to link OMSF Code of Conduct.
 - [PR #2170](https://github.com/openforcefield/openff-toolkit/pull/2170): Consolidate Pytest configuration, improve some internal tests.
 - [PR #2201](https://github.com/openforcefield/openff-toolkit/pull/2201): Use `setuptools-scm` for version handling.
-
+- [PR #2226](https://github.com/openforcefield/openff-toolkit/pull/2226): Add reruns to failing notebook tests to (hopefully) avoid sporadic failures.  
 ## 0.18.1
 
 ### Behavior changes
