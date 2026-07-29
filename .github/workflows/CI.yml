@@ -18,13 +18,14 @@ defaults:
 jobs:
   test:
     if: (github.event_name == 'schedule' && github.repository == 'openforcefield/openff-toolkit') || (github.event_name != 'schedule')
-    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenEye=${{ matrix.openeye }}
+    name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenEye=${{ matrix.openeye }}, NAGL=${{ matrix.nagl }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
         python-version: ["3.12", "3.13"]
         openeye: [true, false]
+        nagl: [true, false]
         exclude:
           - openeye: true
             python-version: "3.13"
@@ -72,6 +73,10 @@ jobs:
       - name: Install test plugins
         run: python -m pip install utilities/test_plugins
 
+      - name: Optionally remove OpenFF NAGL
+        if: ${{ matrix.nagl == false }}
+        run: micromamba remove openff-nagl-base openff-nagl-models
+
       - name: Environment Information
         run: |
           micromamba info
@@ -79,11 +84,6 @@ jobs:
           pip list
 
       - name: Run mypy
-        # When possible re-enable this with OE+RDK=True, but for now rdkit builds often have bugs
-        # in stubs and there are other subtleties (in the source code and builds) that reduce the number
-        # of available builds.
-        # See ex https://github.com/rdkit/rdkit/issues/7221
-        # and https://github.com/rdkit/rdkit/issues/7583
         if: ${{ matrix.openeye == true }}
         run: mypy -p "openff.toolkit"
 
