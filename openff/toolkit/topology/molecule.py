@@ -1711,6 +1711,7 @@ class FrozenMolecule(Serializable):
                 _cls=cls,
                 allow_undefined_stereo=allow_undefined_stereo,
                 name=name,
+                raise_exception_types=[],
             )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
@@ -1765,7 +1766,12 @@ class FrozenMolecule(Serializable):
         """
 
         if isinstance(toolkit_registry, ToolkitRegistry):
-            inchi = toolkit_registry.call("to_inchi", self, fixed_hydrogens=fixed_hydrogens)
+            inchi = toolkit_registry.call(
+                "to_inchi",
+                self,
+                fixed_hydrogens=fixed_hydrogens,
+                raise_exception_types=[],
+            )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
             inchi = toolkit.to_inchi(self, fixed_hydrogens=fixed_hydrogens)  # type: ignore[attr-defined]
@@ -1814,7 +1820,12 @@ class FrozenMolecule(Serializable):
         """
 
         if isinstance(toolkit_registry, ToolkitRegistry):
-            inchi_key = toolkit_registry.call("to_inchikey", self, fixed_hydrogens=fixed_hydrogens)
+            inchi_key = toolkit_registry.call(
+                "to_inchikey",
+                self,
+                fixed_hydrogens=fixed_hydrogens,
+                raise_exception_types=[],
+            )
         elif isinstance(toolkit_registry, ToolkitWrapper):
             toolkit = toolkit_registry
             inchi_key = toolkit.to_inchikey(self, fixed_hydrogens=fixed_hydrogens)  # type: ignore[attr-defined]
