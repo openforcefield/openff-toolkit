@@ -2165,6 +2165,25 @@ class TestVirtualSiteHandler:
         roundtripped_force_field = ForceField(offxml_string)
         assert offxml_string == roundtripped_force_field.to_string()
 
+    def test_to_dict_none_attribute_value(self):
+        """`None`-valued attributes must serialize to the literal string "None", not an
+        empty string, so that OFFXML files can round-trip through `xmltodict>=1.0.3`,
+        which serializes `None` as an empty string instead of "None". See Issue #2150.
+        """
+        parameter = VirtualSiteMocking.bond_charge_parameter("[*:1][*:2]")
+
+        # These two lines capture the behavior of the current API. This isn't necessarily a good behavior
+        # but it's an API break if it changes.
+        assert parameter.outOfPlaneAngle is None
+        assert parameter.inPlaneAngle is None
+
+        parameter_dict = parameter.to_dict()
+
+        # Likewise, it'd be better to be able to roundtrip `None` instead of turning it into `"None"`,
+        # but XML (the primary FF serialization format) does not by default support a safe `None` equivalent.
+        assert parameter_dict["outOfPlaneAngle"] == "None"
+        assert parameter_dict["inPlaneAngle"] == "None"
+
     @pytest.mark.parametrize(
         "smiles, matched_indices, parameter, expected_raises, unsafe_vsites",
         [

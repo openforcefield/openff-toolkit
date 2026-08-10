@@ -11,8 +11,11 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### API-breaking changes
 
 ### Behavior changes
+- [PR #2225](https://github.com/openforcefield/openff-toolkit/pull/2225): If a ParameterType object has attributes with `None` values, the `to_dict` method will now stringify them into `"None"`. Note that this is required to preserve the behavior of `to_xml` in recent versions of `xmltodict`.
 
 ### Bugfixes
+
+- [PR #2225](https://github.com/openforcefield/openff-toolkit/pull/2225): Fixes [Issue 2150](https://github.com/openforcefield/openff-toolkit/issue/2150) in which `ForceField.to_string()`/`to_file()` would fail to round-trip `VirtualSite` parameters with `None`-valued attributes (such as `outOfPlaneAngle`/`inPlaneAngle` on `BondCharge` sites) when using `xmltodict>=1.0.3`.
 
 ### New features
 

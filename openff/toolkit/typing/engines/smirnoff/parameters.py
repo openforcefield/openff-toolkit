@@ -1000,8 +1000,8 @@ class _ParameterAttributeHandler:
         discard_cosmetic_attributes
             Whether to discard non-spec attributes of this object
         duplicate_attributes
-            A list of names of attributes that redundantly decsribe
-            data and should be discarded during serializaiton
+            A list of names of attributes that redundantly describe
+            data and should be discarded during serialization
 
         Returns
         -------
@@ -1031,6 +1031,10 @@ class _ParameterAttributeHandler:
         # If attribs_to_return is ordered here, that will effectively be an informal output ordering
         for attrib_name in attribs_to_return:
             attrib_value = getattr(self, attrib_name)
+
+            # Stringify None due to limitations of XML format (Issue #2150)
+            if attrib_value is None:
+                attrib_value = "None"
 
             if attrib_name in indexed_mapped_attribs:
                 for idx, mapping in enumerate(attrib_value):
