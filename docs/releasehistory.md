@@ -11,7 +11,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### API-breaking changes
 
 ### Behavior changes
-- [PR #2225](https://github.com/openforcefield/openff-toolkit/pull/2225): If a ParameterType object has attributes with `None` values, the `to_dict` method will now stringify them into `"None"`. 
+- [PR #2225](https://github.com/openforcefield/openff-toolkit/pull/2225): If a ParameterType object has attributes with `None` values, the `to_dict` method will now stringify them into `"None"`. Note that this is required to preserve the behavior of `to_xml` in recent versions of `xmltodict`.
 
 ### Bugfixes
 
