@@ -18,7 +18,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Improved documentation and warnings
 
-- [PR #2156](https://github.com/openforcefield/openff-toolkit/pull/2156): Update `ForceField.label_molecules` docstring
+- [PR #2156](https://github.com/openforcefield/openff-toolkit/pull/2156): Update `ForceField.label_molecules` docstring.
+- [PR #2185](https://github.com/openforcefield/openff-toolkit/pull/2185): Update `Molecule.assign_partial_charges` docstring to have examples of using AshGC. 
 
 ### Miscellaneous improvements
 
