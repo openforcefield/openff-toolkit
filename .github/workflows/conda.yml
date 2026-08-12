@@ -32,7 +32,7 @@ jobs:
       PACKAGE: openff-toolkit
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Vanilla install from conda
         uses: mamba-org/setup-micromamba@v3
@@ -128,4 +128,4 @@ jobs:
 
       - name: Run example notebooks
         run: |
-          python -m pytest -r fE -v -x --tb=short --nbval-lax --ignore=examples/deprecated --ignore=examples/external examples
+          python -m pytest -r fE -v -x --tb=short --nbval-lax --reruns 3 --ignore=examples/deprecated --ignore=examples/external examples

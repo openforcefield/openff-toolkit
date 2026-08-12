@@ -41,8 +41,8 @@ def compute_conformer_energies_from_file(filename):
         + f" ({molecule.name})"
     )
 
-    # Load the openff-2.2.1 force field appropriate for vacuum calculations (without constraints)
-    forcefield = ForceField("openff_unconstrained-2.2.1.offxml")
+    # Load the openff-2.3.0 force field appropriate for vacuum calculations (without constraints)
+    forcefield = ForceField("openff_unconstrained-2.3.0.offxml")
     # Create an Interchange object, which stores the result of parametrizing with this force field
     print(f"Parametrizing {molecule.name} (may take a moment to calculate charges)...")
     interchange = forcefield.create_interchange(molecule.to_topology())
