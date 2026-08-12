@@ -6,22 +6,21 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 * `minor` increments add features but do not break API compatibility
 * `micro` increments represent bugfix releases or improvements in documentation
 
-## Current development
-
-### API-breaking changes
+## 0.19.0
 
 ### Behavior changes
-- [PR #2225](https://github.com/openforcefield/openff-toolkit/pull/2225): If a ParameterType object has attributes with `None` values, the `to_dict` method will now stringify them into `"None"`. Note that this is required to preserve the behavior of `to_xml` in recent versions of `xmltodict`.
+
+- [PR #2225](https://github.com/openforcefield/openff-toolkit/pull/2225): If a ParameterType object has attributes with `None` values, the `to_dict` method will now stringify them into `"None"`. Note that this is required to preserve the behavior of `to_xml` when using `xmltodict` version 1.0.3 and greater. 
 
 ### Bugfixes
 
 - [PR #2225](https://github.com/openforcefield/openff-toolkit/pull/2225): Fixes [Issue 2150](https://github.com/openforcefield/openff-toolkit/issue/2150) in which `ForceField.to_string()`/`to_file()` would fail to round-trip `VirtualSite` parameters with `None`-valued attributes (such as `outOfPlaneAngle`/`inPlaneAngle` on `BondCharge` sites) when using `xmltodict>=1.0.3`.
 
-### New features
 
 ### Improved documentation and warnings
 
 - [PR #2156](https://github.com/openforcefield/openff-toolkit/pull/2156): Update `ForceField.label_molecules` docstring.
+- [PR #2185](https://github.com/openforcefield/openff-toolkit/pull/2185): Update `Molecule.assign_partial_charges` docstring to have examples of using AshGC. 
 - [PR #2214](https://github.com/openforcefield/openff-toolkit/pull/2214): Update examples to use Sage 2.3.0, use RDKit and OpenFF NAGL, and skip optionally installing OpenEye Toolkits.
 
 ### Miscellaneous improvements
@@ -30,6 +29,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #2170](https://github.com/openforcefield/openff-toolkit/pull/2170): Consolidate Pytest configuration, improve some internal tests.
 - [PR #2201](https://github.com/openforcefield/openff-toolkit/pull/2201): Use `setuptools-scm` for version handling.
 - [PR #2226](https://github.com/openforcefield/openff-toolkit/pull/2226): Add reruns to failing notebook tests to (hopefully) avoid sporadic failures.  
+
 ## 0.18.1
 
 ### Behavior changes
