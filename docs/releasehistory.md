@@ -14,6 +14,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+- [Issue #2172](https://github.com/openforcefield/openff-toolkit/issues/2172): `Molecule.to_inchi`, `Molecule.to_inchikey`, and `Molecule.from_inchi` now fall back to the next registered toolkit when a higher-precedence toolkit raises, instead of aborting on the first toolkit's error. For example, InChI generation for molecules with more than 1024 atoms now falls back to RDKit when OpenEye declines to process them.
+
 ### New features
 
 ### Improved documentation and warnings
