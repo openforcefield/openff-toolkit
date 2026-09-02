@@ -74,9 +74,12 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     @functools.cached_property
     def _toolkit_version(self):
-        from openff.utilities.provenance import get_ambertools_version
+        try:
+           from openff.utilities.provenance import get_ambertools_version
 
-        return get_ambertools_version()
+           return get_ambertools_version()
+        except Exception:
+            return 'Unknown'
 
     @staticmethod
     def is_available() -> bool:
