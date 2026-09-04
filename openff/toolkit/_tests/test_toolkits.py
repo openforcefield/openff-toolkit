@@ -91,24 +91,19 @@ openeye_inchi_stereochemistry_lost = [
     "DrugBank_5415",
     "DrugBank_5418",
     "DrugBank_2955",
-    "DrugBank_2987",
     "DrugBank_5555",
     "DrugBank_472",
     "DrugBank_5737",
     "DrugBank_3332",
     "DrugBank_3461",
     "DrugBank_794",
-    "DrugBank_3502",
     "DrugBank_6026",
     "DrugBank_3622",
-    "DrugBank_977",
     "DrugBank_3693",
     "DrugBank_3726",
     "DrugBank_3739",
     "DrugBank_6222",
-    "DrugBank_6232",
     "DrugBank_3844",
-    "DrugBank_6295",
     "DrugBank_6304",
     "DrugBank_6305",
     "DrugBank_3930",
@@ -116,48 +111,35 @@ openeye_inchi_stereochemistry_lost = [
     "DrugBank_6353",
     "DrugBank_6355",
     "DrugBank_6401",
-    "DrugBank_4161",
-    "DrugBank_4162",
     "DrugBank_6509",
-    "DrugBank_6531",
     "DrugBank_1570",
     "DrugBank_4249",
     "DrugBank_1634",
     "DrugBank_1659",
     "DrugBank_6647",
-    "DrugBank_1700",
     "DrugBank_1721",
-    "DrugBank_1742",
     "DrugBank_1802",
-    "DrugBank_6775",
     "DrugBank_1849",
-    "DrugBank_1864",
     "DrugBank_6875",
     "DrugBank_1897",
     "DrugBank_4593",
     "DrugBank_1962",
-    "DrugBank_4662",
     "DrugBank_7049",
     "DrugBank_4702",
     "DrugBank_2095",
     "DrugBank_4778",
-    "DrugBank_2141",
     "DrugBank_2148",
     "DrugBank_2178",
     "DrugBank_4865",
     "DrugBank_2208",
     "DrugBank_2210",
     "DrugBank_2276",
-    "DrugBank_4959",
-    "DrugBank_4964",
     "DrugBank_5043",
     "DrugBank_2429",
     "DrugBank_5076",
     "DrugBank_2465",
     "DrugBank_2519",
     "DrugBank_2538",
-    "DrugBank_5158",
-    "DrugBank_5176",
     "DrugBank_2592",
 ]
 
@@ -196,9 +178,7 @@ rdkit_inchi_stereochemistry_lost = [
 ]
 
 openeye_iupac_bad_stereo = [
-    "DrugBank_977",
     "DrugBank_1634",
-    "DrugBank_1700",
     "DrugBank_1962",
     "DrugBank_2148",
     "DrugBank_2178",
@@ -208,32 +188,24 @@ openeye_iupac_bad_stereo = [
     "DrugBank_2538",
     "DrugBank_2592",
     "DrugBank_2651",
-    "DrugBank_2987",
     "DrugBank_3332",
-    "DrugBank_3502",
     "DrugBank_3622",
     "DrugBank_3726",
     "DrugBank_3844",
     "DrugBank_3930",
-    "DrugBank_4161",
-    "DrugBank_4162",
     "DrugBank_4778",
     "DrugBank_4593",
-    "DrugBank_4959",
     "DrugBank_5043",
     "DrugBank_5076",
-    "DrugBank_5176",
     "DrugBank_5418",
     "DrugBank_5737",
     "DrugBank_5902",
-    "DrugBank_6295",
     "DrugBank_6304",
     "DrugBank_6305",
     "DrugBank_6329",
     "DrugBank_6355",
     "DrugBank_6401",
     "DrugBank_6509",
-    "DrugBank_6531",
     "DrugBank_6647",
     "DrugBank_390",
     "DrugBank_810",
@@ -241,7 +213,6 @@ openeye_iupac_bad_stereo = [
     "DrugBank_4346",
     "DrugBank_7124",
     "DrugBank_2799",
-    "DrugBank_4662",
     "DrugBank_4865",
     "DrugBank_2465",
 ]
@@ -351,6 +322,72 @@ class TestOpenEyeToolkitWrapper:
                 )
             else:
                 Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
+
+    @pytest.mark.parametrize(
+        "smiles,expected_stereo,exception_regex",
+        [
+            # Trivalent N with a trivalent (aromatic) carbon neighbor: Unlike RDKit, OpenEye
+            # perceives this N as stereogenic, however actual molecular forces may make it
+            # planar. These first two cases ensures that either planar or pyramidal
+            # configurations are accepted.
+            ("C[N@](CC)c1c(Br)cccc1", "R", None),
+            ("CN(CC)c1c(Br)cccc1", None, None),
+            # Trivalent N with no trivalent carbon neighbor: an ordinary stereocenter, so
+            # unspecified stereo here must still raise as normal.
+            ("C[N@](CC)CCC", "R", None),
+            ("CN(CC)CCC", None, "unspecified stereochemistry"),
+        ],
+    )
+    def test_smiles_nitrogen_chirality_skip(self, smiles, expected_stereo, exception_regex):
+        """
+        Test that a trivalent nitrogen with a trivalent carbon neighbor does not trigger
+        UndefinedStereochemistryError when its stereochemistry is unspecified, while an
+        otherwise-equivalent nitrogen without such a neighbor still does.
+        """
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+
+        if exception_regex is not None:
+            with pytest.raises(UndefinedStereochemistryError, match=exception_regex):
+                toolkit_wrapper.from_smiles(smiles)
+            molecule = toolkit_wrapper.from_smiles(smiles, allow_undefined_stereo=True)
+        else:
+            molecule = toolkit_wrapper.from_smiles(smiles)
+
+        nitrogen_stereo = [atom.stereochemistry for atom in molecule.atoms if atom.symbol == "N"]
+        assert nitrogen_stereo == [expected_stereo]
+
+    @pytest.mark.parametrize(
+        "filename,expected_stereo,exception_regex",
+        [
+            ("bromoaniline_pyramidal_n.sdf", "R", None),
+            ("bromoaniline_planar_n.sdf", None, None),
+            ("trialkylamine_pyramidal_n.sdf", "R", None),
+            ("trialkylamine_planar_n.sdf", None, "unspecified stereochemistry"),
+        ],
+    )
+    def test_from_file_nitrogen_chirality_skip(self, filename, expected_stereo, exception_regex):
+        """
+        Same as test_smiles_nitrogen_chirality_skip, but exercising the from_file/SDF-reading
+        code path, which perceives stereochemistry from 3D coordinates via OE3DToInternalStereo
+        rather than from SMILES parity.
+        """
+        toolkit_wrapper = OpenEyeToolkitWrapper()
+        file_path = get_data_file_path(f"molecules/{filename}")
+
+        if exception_regex is not None:
+            with pytest.raises(UndefinedStereochemistryError, match=exception_regex):
+                toolkit_wrapper.from_file(file_path, file_format="sdf")
+            molecules = toolkit_wrapper.from_file(file_path, file_format="sdf", allow_undefined_stereo=True)
+        else:
+            molecules = toolkit_wrapper.from_file(file_path, file_format="sdf")
+
+        nitrogen_stereo = [
+            atom.stereochemistry
+            for molecule in molecules
+            for atom in molecule.atoms
+            if atom.symbol == "N"
+        ]
+        assert nitrogen_stereo == [expected_stereo]
 
     def test_openeye_from_smiles_radical(self):
         """Test that parsing an SMILES with a radical raises RadicalsNotSupportedError."""
@@ -2018,6 +2055,47 @@ class TestRDKitToolkitWrapper:
             Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper, allow_undefined_stereo=True)
         else:
             Molecule.from_smiles(smiles, toolkit_registry=toolkit_wrapper)
+
+    @pytest.mark.parametrize(
+        "smiles",
+        [
+            "C[N@](CC)c1c(Br)cccc1",
+            "CN(CC)c1c(Br)cccc1",
+            "C[N@](CC)CCC",
+            "CN(CC)CCC",
+        ],
+    )
+    def test_smiles_nitrogen_chirality_not_perceived(self, smiles):
+        """
+        RDKitToolkitWrapper does not perceive stereochemistry for these trivalent nitrogens,
+        whether or not they have a trivalent carbon neighbor and whether or not the SMILES
+        specifies @/@@ -- unlike OpenEyeToolkitWrapper, see
+        TestOpenEyeToolkitWrapper.test_smiles_nitrogen_chirality_skip.
+        """
+        toolkit_wrapper = RDKitToolkitWrapper()
+        molecule = toolkit_wrapper.from_smiles(smiles)
+        assert all(atom.stereochemistry is None for atom in molecule.atoms if atom.symbol == "N")
+
+    @pytest.mark.parametrize(
+        "filename",
+        [
+            "bromoaniline_pyramidal_n.sdf",
+            "bromoaniline_planar_n.sdf",
+            "trialkylamine_pyramidal_n.sdf",
+            "trialkylamine_planar_n.sdf",
+        ],
+    )
+    def test_from_file_nitrogen_chirality_not_perceived(self, filename):
+        """
+        RDKitToolkitWrapper does not perceive stereochemistry for these trivalent nitrogens from
+        3D coordinates either -- unlike OpenEyeToolkitWrapper, see
+        TestOpenEyeToolkitWrapper.test_from_file_nitrogen_chirality_skip.
+        """
+        toolkit_wrapper = RDKitToolkitWrapper()
+        file_path = get_data_file_path(f"molecules/{filename}")
+        molecules = toolkit_wrapper.from_file(file_path, file_format="sdf")
+        for molecule in molecules:
+            assert all(atom.stereochemistry is None for atom in molecule.atoms if atom.symbol == "N")
 
     # TODO: test_smiles_round_trip
 
