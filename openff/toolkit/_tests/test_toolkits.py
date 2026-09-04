@@ -382,10 +382,7 @@ class TestOpenEyeToolkitWrapper:
             molecules = toolkit_wrapper.from_file(file_path, file_format="sdf")
 
         nitrogen_stereo = [
-            atom.stereochemistry
-            for molecule in molecules
-            for atom in molecule.atoms
-            if atom.symbol == "N"
+            atom.stereochemistry for molecule in molecules for atom in molecule.atoms if atom.symbol == "N"
         ]
         assert nitrogen_stereo == [expected_stereo]
 
