@@ -228,17 +228,11 @@ mini_drug_bank.molecules = None  # type: ignore
 # All the molecules that raise UndefinedStereochemistryError when read by OETK()
 openeye_drugbank_undefined_stereo_mols = {
     "DrugBank_1634",
-    "DrugBank_1700",
     "DrugBank_1962",
     "DrugBank_2519",
-    "DrugBank_2987",
-    "DrugBank_3502",
     "DrugBank_3930",
-    "DrugBank_4161",
-    "DrugBank_4162",
     "DrugBank_5043",
     "DrugBank_5418",
-    "DrugBank_6531",
 }
 
 # All the molecules that raise UndefinedStereochemistryError when read by RDKTKW().
@@ -254,8 +248,6 @@ rdkit_drugbank_undefined_stereo_mols = {
 }
 
 
-# Missing stereo in OE but not RDK:  'DrugBank_2987', 'DrugBank_3502', 'DrugBank_4161',
-# 'DrugBank_4162', 'DrugBank_6531', 'DrugBank_1700',
 drugbank_stereogenic_in_rdkit_but_not_openeye = {
     "DrugBank_5329",
     "DrugBank_7124",
@@ -1124,22 +1116,10 @@ class TestMolecule:
         Test basic behavior of the IUPAC conversion functions. More rigorous
         testing of the toolkity wrapper behavior is in test_toolkits.py
         """
-        from openff.toolkit.utils.toolkits import (
-            InvalidIUPACNameError,
-            UndefinedStereochemistryError,
-        )
+        from openff.toolkit.utils.toolkits import InvalidIUPACNameError
 
         with pytest.raises(InvalidIUPACNameError):
             Molecule.from_iupac(".BETA.-PINENE")
-
-        # DrugBank_977, tagged as a problem molecule in earlier tests
-        bad_stereo_iupac = (
-            "(~{E},3~{R},5~{S})-7-[4-(4-fluorophenyl)-6-isopropyl-2-"
-            "[methyl(methylsulfonyl)amino]pyrimidin-5-yl]-3,5-"
-            "dihydroxy-hept-6-enoic acid"
-        )
-        with pytest.raises(UndefinedStereochemistryError):
-            Molecule.from_iupac(bad_stereo_iupac)
 
         cholesterol = Molecule.from_smiles(
             "C[C@H](CCCC(C)C)[C@H]1CC[C@@H]2[C@@]1(CC[C@H]3[C@H]2CC=C4[C@@]3(CC[C@@H](C4)O)C)C"
@@ -1379,30 +1359,15 @@ class TestMolecule:
     )
     def test_to_from_file(self, molecule, format):
         """Test that conversion/creation of a molecule to and from a file is consistent."""
-        from openff.toolkit.utils.toolkits import UndefinedStereochemistryError
-
         # TODO: Test all file capabilities; the current test is minimal
         # TODO: This is only for OE. Expand to both OE and RDKit toolkits.
-        # Molecules that are known to raise UndefinedStereochemistryError.
-        undefined_stereo_mols = {
-            "DrugBank_1700",
-            "DrugBank_2987",
-            "DrugBank_3502",
-            "DrugBank_4161",
-            "DrugBank_4162",
-            "DrugBank_6531",
-        }
-        undefined_stereo = molecule.name in undefined_stereo_mols
 
         # The file is automatically deleted outside the with-clause.
         with NamedTemporaryFile(suffix="." + format) as iofile:
             # If this has undefined stereo, check that the exception is raised.
             extension = os.path.splitext(iofile.name)[1][1:]
             molecule.to_file(iofile.name, extension)
-            if undefined_stereo:
-                with pytest.raises(UndefinedStereochemistryError):
-                    Molecule.from_file(iofile.name)
-            molecule2 = Molecule.from_file(iofile.name, allow_undefined_stereo=undefined_stereo)
+            molecule2 = Molecule.from_file(iofile.name)
             assert molecule == molecule2
             # TODO: Test to make sure properties are preserved?
             # NOTE: We can't read pdb files and expect chemical information to be preserved
