@@ -12,7 +12,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Behavior changes
 
-- [PR #2231](https://github.com/openforcefield/openff-toolkit/pull/2231): Makes `OpenEyeToolkitWrapper.from_openeye` not raise an undefined-stereo error/warning for planar Ns if they have at least one trivalent carbon neighbor (This isn't a perfect solution but does handle a large fraction of the annoying over-policing of nitrogen stereo by OpenEyeToolkitWrapper). Resolves [Issue #725](https://github.com/openforcefield/openff-toolkit/issues/725).
+- [PR #2231](https://github.com/openforcefield/openff-toolkit/pull/2231): Makes `OpenEyeToolkitWrapper.from_openeye` not raise an undefined-stereo error/warning for planar Ns if they have at least one trivalent carbon neighbor (This isn't a perfect solution but does handle a large fraction of the annoying over-policing of nitrogen stereo by OpenEyeToolkitWrapper). Resolves [Issue #626](https://github.com/openforcefield/openff-toolkit/issues/626) and [Issue #725](https://github.com/openforcefield/openff-toolkit/issues/725).
 
 ### Bugfixes
 
