@@ -3762,7 +3762,7 @@ class TestAmberToolsToolkitWrapper:
         assert with_oe == pytest.approx(without_oe, abs=1e-5)
 
     def test_ambertools_provenance(self):
-        version = AmberToolsToolkitWrapper.toolkit_version
+        version = AmberToolsToolkitWrapper().toolkit_version
 
         assert version not in (None, "None", "Unknown")
 
@@ -3779,7 +3779,7 @@ class TestAmberToolsToolkitWrapper:
             side_effect=exception_class(),
         )
 
-        version = AmberToolsToolkitWrapper.toolkit_version
+        version = AmberToolsToolkitWrapper().toolkit_version
 
         assert version == "Unknown"
 
