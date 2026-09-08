@@ -74,12 +74,18 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
 
     @functools.cached_property
     def _toolkit_version(self):
+        # See https://github.com/openforcefield/openff-bespokefit/pull/440
         try:
-           from openff.utilities.provenance import get_ambertools_version
+            from openff.utilities.provenance import get_ambertools_version
 
-           return get_ambertools_version()
-        except Exception:
-            return 'Unknown'
+            ambertools_version = get_ambertools_version()
+        except (
+            ImportError,  # any number of failures
+            TypeError,  # https://github.com/openforcefield/openff-utilities/issues/156
+        ):
+            ambertools_version = "Unknown"
+
+        return ambertools_version
 
     @staticmethod
     def is_available() -> bool:
