@@ -3783,6 +3783,16 @@ class TestAmberToolsToolkitWrapper:
 
         assert version == "Unknown"
 
+    def teest_ambertools_provenance_non_version(self, mocker):
+        mocker.patch(
+            "openff.utilities.provenance.get_ambertools_version",
+            return_value=None,
+        )
+
+        version = AmberToolsToolkitWrapper().toolkit_version
+
+        assert version == "Unknown"
+
 
 class TestBuiltInToolkitWrapper:
     """Test the BuiltInToolkitWrapper"""

@@ -85,6 +85,9 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
         ):
             ambertools_version = "Unknown"
 
+        if ambertools_version is None:
+            ambertools_version = "Unknown"
+
         return ambertools_version
 
     @staticmethod
