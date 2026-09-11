@@ -11,6 +11,7 @@ from tempfile import NamedTemporaryFile
 import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
+from packaging.version import Version
 
 from openff.toolkit import Quantity, unit
 from openff.toolkit._tests.create_molecules import (
@@ -3759,6 +3760,38 @@ class TestAmberToolsToolkitWrapper:
         GLOBAL_TOOLKIT_REGISTRY.register_toolkit(OpenEyeToolkitWrapper)
 
         assert with_oe == pytest.approx(without_oe, abs=1e-5)
+
+    def test_ambertools_provenance(self):
+        version = AmberToolsToolkitWrapper().toolkit_version
+
+        assert version not in (None, "None", "Unknown")
+
+        # just make sure it can be parsed like a version number
+        Version(version)
+
+    @pytest.mark.parametrize(
+        "exception_class",
+        [TypeError, ImportError],
+    )
+    def test_ambertools_provenance_fallback(self, mocker, exception_class):
+        mocker.patch(
+            "openff.utilities.provenance.get_ambertools_version",
+            side_effect=exception_class(),
+        )
+
+        version = AmberToolsToolkitWrapper().toolkit_version
+
+        assert version == "Unknown"
+
+    def teest_ambertools_provenance_non_version(self, mocker):
+        mocker.patch(
+            "openff.utilities.provenance.get_ambertools_version",
+            return_value=None,
+        )
+
+        version = AmberToolsToolkitWrapper().toolkit_version
+
+        assert version == "Unknown"
 
 
 class TestBuiltInToolkitWrapper:

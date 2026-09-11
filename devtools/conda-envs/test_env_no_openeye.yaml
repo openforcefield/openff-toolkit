@@ -28,6 +28,7 @@ dependencies:
   - pytest-xdist
   - pytest-rerunfailures
   - pytest-timeout
+  - pytest-mock
   - pyyaml
   - toml
   - bson
