@@ -3296,7 +3296,7 @@ class TestQCArchiveInterface:
             "Molecule roundtrip to/from_qcschema failed",
         )
 
-        mol_dict = off_qcschema.dict()
+        mol_dict = off_qcschema.model_dump()
         del mol_dict["extras"]["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
         del mol_dict["identifiers"]["canonical_isomeric_explicit_hydrogen_mapped_smiles"]
         with pytest.raises(MissingCMILESError):

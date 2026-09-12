@@ -4705,7 +4705,7 @@ class FrozenMolecule(Serializable):
         # Process input as dict; convert if necessary
         if not isinstance(qca_object, dict):
             try:
-                qca_object = qca_object.dict()
+                qca_object = qca_object.model_dump()
             except AttributeError:
                 raise AttributeError(
                     f"The input object (type {type(qca_object)=} "
