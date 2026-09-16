@@ -1822,15 +1822,20 @@ class TestForceField(_ForceFieldFixtures):
 """
 
         with temporary_cd(str(tmp_path)):
+            # this file has 62 library charge parameters (most are for ions)
             expected_n_library_charges = len(ForceField("opc3.offxml")["LibraryCharges"].parameters)
 
-            # tmp_path fixture already puts us in a temporary directory, so can just write the file out here
             with open(tmp_path / "fake-opc3.offxml", "w") as f:
                 f.write(DUMMY_OFFXML_CONTENTS)
 
+            # See Issue #2235, `fake-opc3.offxml` in local path (with only 1 library charge parameter)
+            # gets picked up before `opc3.offxml` is found in entry point paths
             found_n_library_charges = len(ForceField("opc3.offxml")["LibraryCharges"].parameters)
 
-            assert expected_n_library_charges == found_n_library_charges
+            assert expected_n_library_charges == found_n_library_charges, (
+                f"Wrong file probably loaded; found {found_n_library_charges} library charges, "
+                f"expected {expected_n_library_charges}"
+            )
 
     def test_handy_handler_creation(self):
         """See issue #1757"""
