@@ -15,6 +15,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 ### Bugfixes
 
 - [PR #2234](https://github.com/openforcefield/openff-toolkit/pull/2234): Fixes some deprecation warnings thrown by using deprecated Pydantic V1 methods in tests.
+- [PR #2236](https://github.com/openforcefield/openff-toolkit/pull/2236): Fixes a rare case in which force field files with similar names were incorrectly loaded.
 
 ### New features
 
