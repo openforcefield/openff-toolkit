@@ -13,6 +13,7 @@ import openmm
 import pytest
 from numpy.testing import assert_almost_equal
 from openff.units.openmm import from_openmm, to_openmm
+from openff.utilities import temporary_cd
 from openmm import NonbondedForce, Platform, XmlSerializer, app
 from openmm import unit as openmm_unit
 from pydantic import ValidationError
@@ -1809,6 +1810,27 @@ class TestForceField(_ForceFieldFixtures):
         assert BogusHandler in force_field._parameter_handler_classes.values()
 
         assert force_field["bogus"] is not None
+
+    def test_issue_2235(self, tmp_path):
+        """Test that file names, not just the ending of file names, are used when loading."""
+        DUMMY_OFFXML_CONTENTS = """<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <LibraryCharges version="0.3">
+        <LibraryCharge smirks="[#11+1:1]" charge1="1.0 * elementary_charge ** 1" id="Na+-from-dummy-file"></LibraryCharge>
+    </LibraryCharges>
+</SMIRNOFF>
+"""
+
+        with temporary_cd(str(tmp_path)):
+            expected_n_library_charges = len(ForceField("opc3.offxml")["LibraryCharges"].parameters)
+
+            # tmp_path fixture already puts us in a temporary directory, so can just write the file out here
+            with open(tmp_path / "fake-opc3.offxml", "w") as f:
+                f.write(DUMMY_OFFXML_CONTENTS)
+
+            found_n_library_charges = len(ForceField("opc3.offxml")["LibraryCharges"].parameters)
+
+            assert expected_n_library_charges == found_n_library_charges
 
     def test_handy_handler_creation(self):
         """See issue #1757"""
