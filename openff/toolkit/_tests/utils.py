@@ -25,6 +25,7 @@ from openff.toolkit.utils import (
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
     get_data_file_path,
+    has_executable,
     has_package,
 )
 
@@ -60,27 +61,6 @@ def _get_readme_path() -> pathlib.Path | None:
 
     else:
         return pathlib.Path(__file__).parents[3] / "README.md"
-
-
-def has_executable(program_name: str) -> bool:
-    import os
-
-    def _is_executable(fpath: str) -> bool:
-        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
-
-    fpath, _ = os.path.split(program_name)
-
-    if fpath:
-        if _is_executable(program_name):
-            return True
-    else:
-        for path in os.environ["PATH"].split(os.pathsep):
-            path = path.strip('"')
-            exe_file = os.path.join(path, program_name)
-            if _is_executable(exe_file):
-                return True
-
-    return False
 
 
 def requires_pkg(pkg_name: str, reason: str | None = None) -> pytest.MarkDecorator:

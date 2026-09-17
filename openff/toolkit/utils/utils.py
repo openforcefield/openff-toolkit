@@ -883,6 +883,27 @@ def has_pkg(pkg_name: str) -> bool:
 has_package = has_pkg
 
 
+def has_executable(program_name: str) -> bool:
+    import os
+
+    def _is_executable(fpath: str) -> bool:
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, _ = os.path.split(program_name)
+
+    if fpath:
+        if _is_executable(program_name):
+            return True
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program_name)
+            if _is_executable(exe_file):
+                return True
+
+    return False
+
+
 def requires_package(package_name: str) -> Callable[..., Any]:
     """
     Helper function to denote that a funciton requires some optional
