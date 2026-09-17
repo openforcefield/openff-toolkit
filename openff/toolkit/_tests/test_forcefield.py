@@ -13,7 +13,7 @@ import openmm
 import pytest
 from numpy.testing import assert_almost_equal
 from openff.units.openmm import from_openmm, to_openmm
-from openff.utilities import temporary_cd
+from openff.toolkit.utils import temporary_cd
 from openmm import NonbondedForce, Platform, XmlSerializer, app
 from openmm import unit as openmm_unit
 from pydantic import ValidationError
