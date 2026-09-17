@@ -11,7 +11,7 @@ def _get_conda_list_package_versions() -> dict[str, str]:
     Returns the versions of any packages found while executing `conda list`.
     If no conda executable is found, emits CondaExecutableNotFoundWarning
     """
-    from openff.toolkit._utilities.warnings import CondaExecutableNotFoundWarning
+    from openff.toolkit.utils.exceptions import CondaExecutableNotFoundWarning
 
     if os.environ.get("PIXI_IN_SHELL") == "1" and os.environ.get("PIXI_EXE"):
         conda_command = "{} list --json --manifest-path {}".format(
@@ -60,7 +60,7 @@ def get_ambertools_version() -> str | None:
         ValueError,  # Issue 98
         subprocess.CalledProcessError,  # Issue 101
     ):
-        from openff.toolkit._utilities.warnings import CondaExecutableNotFoundWarning
+        from openff.toolkit.utils.exceptions import CondaExecutableNotFoundWarning
 
         warnings.warn(
             "Something went wrong parsing the output of `conda list` or similar. Unable to "

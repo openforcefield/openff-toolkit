@@ -76,7 +76,7 @@ class AmberToolsToolkitWrapper(base_wrapper.ToolkitWrapper):
     def _toolkit_version(self):
         # See https://github.com/openforcefield/openff-bespokefit/pull/440
         try:
-            from openff.toolkit._utilities.provenance import get_ambertools_version
+            from openff.toolkit.utils._provenance import get_ambertools_version
 
             ambertools_version = get_ambertools_version()
         except (

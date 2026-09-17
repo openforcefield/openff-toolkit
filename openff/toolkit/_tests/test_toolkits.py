@@ -3775,7 +3775,7 @@ class TestAmberToolsToolkitWrapper:
     )
     def test_ambertools_provenance_fallback(self, mocker, exception_class):
         mocker.patch(
-            "openff.toolkit._utilities.provenance.get_ambertools_version",
+            "openff.toolkit.utils._provenance.get_ambertools_version",
             side_effect=exception_class(),
         )
 
@@ -3785,7 +3785,7 @@ class TestAmberToolsToolkitWrapper:
 
     def teest_ambertools_provenance_non_version(self, mocker):
         mocker.patch(
-            "openff.toolkit._utilities.provenance.get_ambertools_version",
+            "openff.toolkit.utils._provenance.get_ambertools_version",
             return_value=None,
         )
 

@@ -39,8 +39,8 @@ from openff.toolkit._tests.utils import (
     requires_openeye,
     requires_pkg,
     requires_rdkit,
+    skip_if_missing,
 )
-from openff.toolkit._utilities import skip_if_missing
 from openff.toolkit.topology import (
     Atom,
     ImproperDict,

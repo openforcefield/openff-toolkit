@@ -50,7 +50,6 @@ from openff.units import Unit
 from openff.units.elements import MASSES, SYMBOLS
 
 from openff.toolkit import Quantity, unit
-from openff.toolkit._utilities.exceptions import MissingOptionalDependencyError
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
     AtomMappingWarning,
@@ -68,6 +67,7 @@ from openff.toolkit.utils.exceptions import (
     InvalidQCInputError,
     MissingCMILESError,
     MissingConformersError,
+    MissingOptionalDependencyError,
     MissingPartialChargesError,
     MoleculeParseError,
     MultipleMoleculesInPDBError,

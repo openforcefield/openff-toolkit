@@ -24,17 +24,20 @@ __all__ = [
 ]
 import contextlib
 import functools
+import importlib
 import logging
+import os
 from collections.abc import Callable, Iterable
 from functools import wraps
-from typing import TYPE_CHECKING, Any, TypeVar, overload
+from importlib.resources import as_file, files
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 
 import numpy as np
 import pint
 from numpy.typing import NDArray
 from openff.units import Quantity, Unit
 
-from openff.toolkit._utilities.exceptions import MissingOptionalDependencyError
+from openff.toolkit.utils.exceptions import MissingOptionalDependencyError
 
 if TYPE_CHECKING:
     from openff.toolkit import ForceField, Molecule
@@ -86,7 +89,6 @@ def temporary_cd(dir_path):
     ...     pass  # do something in dir_path
 
     """
-    import os
 
     prev_dir = os.getcwd()
     os.chdir(os.path.abspath(dir_path))
@@ -119,6 +121,44 @@ def get_data_file_path(relative_path: str) -> str:
         raise ValueError(f"Sorry! {file_path} does not exist. If you just added it, you'll have to re-install")
 
     return str(file_path)
+
+
+def get_data_dir_path(relative_path: str, package_name: str) -> str:
+    """Get the full path to a directory within a module's tree.
+
+    If no directory is found at `relative_path`, a second attempt will be made
+    with `data/` preprended. If no directory is found at path, a NotADirectoryError
+    is raised.
+
+    Parameters
+    ----------
+    relative_path : str
+        The relative path of the file to load.
+    package_name : str
+        The name of the package in which a file is to be loaded, i.e. "openff.toolkit" or "openff.evaluator".
+
+    Returns
+    -------
+        The absolute path to the file.
+
+    Raises
+    ------
+    NotADirectoryError
+
+    See Also
+    --------
+    get_data_file_path, for getting the path to a particular file in a data directory.
+
+    """
+    with as_file(files(package_name) / relative_path) as dir_path:
+        if dir_path.is_dir():
+            return dir_path.as_posix()
+
+    with as_file(files(package_name) / "data" / relative_path) as dir_path:
+        if dir_path.is_dir():
+            return dir_path.as_posix()
+
+    raise NotADirectoryError(f"Directory {relative_path} not found in {package_name}.")
 
 
 @pint.register_unit_format("simple")
@@ -840,5 +880,50 @@ def requires_package(package_name: str) -> Callable[..., Any]:
             return function(*args, **kwargs)
 
         return wrapper  # type: ignore[return-value]
+
+    return inner_decorator
+
+
+def requires_oe_module(
+    module_name: Literal["oechem", "oeomega", "oequacpac", "oeiupac", "oedepict"],
+) -> Callable[..., Any]:
+    """
+    Helper function to denote that a funciton requires a particular OpenEye library.
+    A function decorated with this decorator will raise `MissingOptionalDependencyError` if
+    the module is not found by @requires_package or the module is not found to be
+    licensed.
+
+    Parameters
+    ----------
+    module_name : str
+        The name of the OpenEye module to be imported.
+
+    Raises
+    ------
+    MissingOptionalDependencyError
+    """
+
+    def inner_decorator(function: F) -> F:
+        @requires_package(f"openeye.{module_name}")
+        @wraps(function)
+        def wrapper(*args, **kwargs):  # type: ignore[no-untyped-def]
+            oe_module = importlib.import_module(f"openeye.{module_name}")
+
+            license_functions = {
+                "oechem": "OEChemIsLicensed",
+                "oequacpac": "OEQuacPacIsLicensed",
+                "oeiupac": "OEIUPACIsLicensed",
+                "oeomega": "OEOmegaIsLicensed",
+                "oedepict": "OEDepictIsLicensed",
+            }
+
+            is_licensed = getattr(oe_module, license_functions[module_name])()
+
+            if not is_licensed:
+                raise MissingOptionalDependencyError(library_name=f"openeye.{module_name}", license_issue=True)
+
+            return function(*args, **kwargs)
+
+        return wrapper  # type: ignore
 
     return inner_decorator
