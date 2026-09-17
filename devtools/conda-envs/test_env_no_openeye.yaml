@@ -8,8 +8,7 @@ dependencies:
   - numpy
   - networkx
   - cachetools
-  # https://github.com/openforcefield/openff-toolkit/issues/2150
-  - xmltodict <=1.0.2
+  - xmltodict
   - python-constraint
   - openmm >=7.6
   - openff-forcefields >=2023.05.1
@@ -18,7 +17,6 @@ dependencies:
   - openff-interchange-base >=0.5
   - openff-nagl-base >=0.4.0
   - openff-nagl-models >=0.3.0
-  - typing_extensions
     # Toolkit-specific
   - ambertools >=22
     # https://github.com/rdkit/rdkit/issues/7221 and https://github.com/rdkit/rdkit/issues/7583
@@ -29,12 +27,22 @@ dependencies:
   - pytest-xdist
   - pytest-rerunfailures
   - pytest-timeout
+  - pytest-mock
   - pyyaml
   - toml
   - bson
   - msgpack-python
-  - pydantic
+  - pydantic =2
   - qcelemental
   - qcportal >=0.50
   - qcengine
   - nglview
+  - pip:
+    - mypy ==2
+    - types-setuptools
+    - types-toml
+    - types-PyYAML
+    - types-networkx
+    - types-xmltodict
+    - types-cachetools
+    - mongo-types
