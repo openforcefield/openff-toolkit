@@ -6,7 +6,6 @@ Utilities for testing.
 import collections
 import copy
 import functools
-import importlib
 import itertools
 import os
 import pathlib
@@ -26,6 +25,8 @@ from openff.toolkit.utils import (
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
     get_data_file_path,
+    has_executable,
+    has_package,
 )
 
 requires_ambertools = pytest.mark.skipif(
@@ -62,39 +63,11 @@ def _get_readme_path() -> pathlib.Path | None:
         return pathlib.Path(__file__).parents[3] / "README.md"
 
 
-def has_pkg(pkg_name):
+def requires_pkg(pkg_name: str, reason: str | None = None) -> pytest.MarkDecorator:
     """
-    Helper function to generically check if a package is installed. Intended
-    to be used to check for optional dependencies.
+    This is for deocratign TESTS ONLY. For public functions, use
+    `openff.toolkit.utils.utils.requires_package`
 
-    Parameters
-    ----------
-    pkg_name : str
-        The name of the package to check the availability of
-
-    Returns
-    -------
-    pkg_available : bool
-        Boolean indicator if the package is available or not
-
-    Examples
-    --------
-    >>> has_numpy = has_pkg('numpy')
-    >>> has_numpy
-    True
-    >>> has_foo = has_pkg('other_non_installed_pkg')
-    >>> has_foo
-    False
-    """
-    try:
-        importlib.import_module(pkg_name)
-    except ModuleNotFoundError:
-        return False
-    return True
-
-
-def requires_pkg(pkg_name, reason=None):
-    """
     Helper function to generate a pytest.mark.skipif decorator
     for any package. This allows tests to be skipped if some
     optional dependency is not found.
@@ -108,12 +81,12 @@ def requires_pkg(pkg_name, reason=None):
 
     Returns
     -------
-    requires_pkg : _pytest.mark.structures.MarkDecorator
+    requires_pkg : pytest.MarkDecorator
         A pytest decorator that will skip tests if the package is not available
     """
     if not reason:
         reason = f"Package {pkg_name} is required, but was not found."
-    requires_pkg = pytest.mark.skipif(not has_pkg(pkg_name), reason=reason)
+    requires_pkg = pytest.mark.skipif(not has_package(pkg_name), reason=reason)
     return requires_pkg
 
 
@@ -1745,3 +1718,49 @@ def compare_partial_charges(system1, system2):
             charges2 = [force2.getParticleParameters(i)[0] for i in range(n_particles)]
 
     assert charges1 == charges2, [(x - y) for x, y in zip(charges1, charges2)]
+
+
+def skip_if_missing(package_name: str, reason: str | None = None) -> pytest.MarkDecorator:
+    """
+    Helper function to generate a pytest.mark.skipif decorator
+    for any package. This allows tests to be skipped if some
+    optional dependency is not found.
+
+    Parameters
+    ----------
+    package_name : str
+        The name of the package that is required for a test(s)
+    reason : str, optional
+        Explanation of why the skipped it to be tested
+
+    Returns
+    -------
+    requires_package : pytest.MarkDecorator
+        A pytest decorator that will skip tests if the package is not available
+    """
+
+    if not reason:
+        reason = f"Package {package_name} is required, but was not found."
+    requires_package = pytest.mark.skipif(not has_package(package_name), reason=reason)
+    return requires_package
+
+
+def skip_if_missing_exec(exec: str | list[str]) -> pytest.MarkDecorator:
+    """Helper function to generate a pytest.mark.skipif decorator
+    if an executable(s) is not found."""
+
+    execs: list[str]
+    if isinstance(exec, str):
+        execs = [exec]
+    elif isinstance(exec, list):
+        execs = exec
+    else:
+        raise ValueError(f"Bad type passed to skip_if_missing_exec. Found type {type(exec)}")
+
+    found_exec = False
+    for exec_ in execs:
+        found_exec = found_exec or has_executable(exec_)
+
+    reason = f"Package {exec!s} is required, but was not found."
+    mark = pytest.mark.skipif(not found_exec, reason=reason)
+    return mark

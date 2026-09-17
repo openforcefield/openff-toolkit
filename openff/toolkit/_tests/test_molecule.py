@@ -36,7 +36,6 @@ from openff.toolkit._tests.create_molecules import (
     create_reversed_ethanol,
 )
 from openff.toolkit._tests.utils import (
-    has_pkg,
     requires_ambertools,
     requires_openeye,
     requires_pkg,
@@ -56,7 +55,7 @@ from openff.toolkit.topology.molecule import (
     SmilesParsingError,
     _networkx_graph_to_hill_formula,
 )
-from openff.toolkit.utils import get_data_file_path
+from openff.toolkit.utils import get_data_file_path, has_pkg
 from openff.toolkit.utils.exceptions import (
     AtomMappingWarning,
     BadMoleculeAssumptionError,

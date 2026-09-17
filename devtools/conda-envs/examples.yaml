@@ -14,7 +14,6 @@ dependencies:
   - openff-forcefields >=2025
   - openff-amber-ff-ports >=0.0.3
   - openff-units
-  - openff-utilities >=0.1.5
   - openff-interchange-base >=0.5
   - openff-nagl-base >=0.5.3
   - openff-nagl-models >=2025

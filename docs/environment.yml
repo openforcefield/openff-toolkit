@@ -23,7 +23,6 @@ dependencies:
     - ambertools
     - packaging
     - openff-units
-    - openff-utilities
     - cachetools
     - python-constraint
     - mdtraj
