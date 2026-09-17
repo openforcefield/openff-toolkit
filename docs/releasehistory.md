@@ -12,6 +12,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Behavior changes
 
+- [PR #2213](https://github.com/openforcefield/openff-toolkit/pull/2213): Components of the `openff-utilities` package are now included in the toolkit.
+
 ### Bugfixes
 
 - [PR #2234](https://github.com/openforcefield/openff-toolkit/pull/2234): Fixes some deprecation warnings thrown by using deprecated Pydantic V1 methods in tests.
