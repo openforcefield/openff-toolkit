@@ -6,7 +6,6 @@ Utilities for testing.
 import collections
 import copy
 import functools
-import importlib
 import itertools
 import os
 import pathlib
@@ -26,6 +25,7 @@ from openff.toolkit.utils import (
     OpenEyeToolkitWrapper,
     RDKitToolkitWrapper,
     get_data_file_path,
+    has_package,
 )
 
 requires_ambertools = pytest.mark.skipif(
@@ -83,41 +83,7 @@ def has_executable(program_name: str) -> bool:
     return False
 
 
-def has_pkg(pkg_name):
-    """
-    Helper function to generically check if a package is installed. Intended
-    to be used to check for optional dependencies.
-
-    Parameters
-    ----------
-    pkg_name : str
-        The name of the package to check the availability of
-
-    Returns
-    -------
-    pkg_available : bool
-        Boolean indicator if the package is available or not
-
-    Examples
-    --------
-    >>> has_numpy = has_pkg('numpy')
-    >>> has_numpy
-    True
-    >>> has_foo = has_pkg('other_non_installed_pkg')
-    >>> has_foo
-    False
-    """
-    try:
-        importlib.import_module(pkg_name)
-    except ModuleNotFoundError:
-        return False
-    return True
-
-
-has_package = has_pkg
-
-
-def requires_pkg(pkg_name, reason=None):
+def requires_pkg(pkg_name: str, reason: str | None = None) -> pytest.MarkDecorator:
     """
     This is for deocratign TESTS ONLY. For public functions, use
     `openff.toolkit.utils.utils.requires_package`
@@ -140,11 +106,8 @@ def requires_pkg(pkg_name, reason=None):
     """
     if not reason:
         reason = f"Package {pkg_name} is required, but was not found."
-    requires_pkg = pytest.mark.skipif(not has_pkg(pkg_name), reason=reason)
+    requires_pkg = pytest.mark.skipif(not has_package(pkg_name), reason=reason)
     return requires_pkg
-
-
-requires_package = requires_pkg
 
 
 @contextmanager
@@ -1795,7 +1758,6 @@ def skip_if_missing(package_name: str, reason: str | None = None) -> pytest.Mark
     requires_package : pytest.MarkDecorator
         A pytest decorator that will skip tests if the package is not available
     """
-    import pytest
 
     if not reason:
         reason = f"Package {package_name} is required, but was not found."
@@ -1806,7 +1768,6 @@ def skip_if_missing(package_name: str, reason: str | None = None) -> pytest.Mark
 def skip_if_missing_exec(exec: str | list[str]) -> pytest.MarkDecorator:
     """Helper function to generate a pytest.mark.skipif decorator
     if an executable(s) is not found."""
-    import pytest
 
     execs: list[str]
     if isinstance(exec, str):

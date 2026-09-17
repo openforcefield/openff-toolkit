@@ -12,6 +12,8 @@ __all__ = [
     "deserialize_numpy",
     "get_data_file_path",
     "get_molecule_parameterIDs",
+    "has_package",
+    "has_pkg",
     "inherit_docstrings",
     "object_to_quantity",
     "quantity_to_string",
@@ -845,6 +847,40 @@ def sort_smirnoff_dict(data):
             # Handle metadata or the bottom of a recursive dict
             sorted_dict[key] = val
     return sorted_dict
+
+
+def has_pkg(pkg_name: str) -> bool:
+    """
+    Helper function to generically check if a package is installed. Intended
+    to be used to check for optional dependencies.
+
+    Parameters
+    ----------
+    pkg_name : str
+        The name of the package to check the availability of
+
+    Returns
+    -------
+    pkg_available : bool
+        Boolean indicator if the package is available or not
+
+    Examples
+    --------
+    >>> has_numpy = has_pkg('numpy')
+    >>> has_numpy
+    True
+    >>> has_foo = has_pkg('other_non_installed_pkg')
+    >>> has_foo
+    False
+    """
+    try:
+        importlib.import_module(pkg_name)
+    except ModuleNotFoundError:
+        return False
+    return True
+
+
+has_package = has_pkg
 
 
 def requires_package(package_name: str) -> Callable[..., Any]:
