@@ -30,6 +30,12 @@ def _get_conda_list_package_versions() -> dict[str, str]:
 
     output = json.loads(subprocess.check_output(conda_command.split()).decode())
 
+    # micromamba >= 2.9.0 nests the package list under a "packages" key instead
+    # of returning it as the top-level array (mamba-org/mamba#4202, issue #156).
+    # conda, mamba, pixi, and micromamba < 2.9.0 all return the bare array.
+    if isinstance(output, dict):
+        output = output.get("packages", [])
+
     package_versions = {}
     for _package in output:
         package_versions[_package["name"]] = _package["version"]
