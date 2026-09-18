@@ -4451,7 +4451,7 @@ class FrozenMolecule(Serializable):
 
         Returns
         ---------
-        qcelemental.models.Molecule
+        qcelemental.models.v2.Molecule
             A validated QCElemental Molecule.
 
         Examples
