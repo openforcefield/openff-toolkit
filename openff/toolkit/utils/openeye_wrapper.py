@@ -23,9 +23,8 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from cachetools import LRUCache, cached
-from openff.units.elements import SYMBOLS
 
-from openff.toolkit import Quantity, unit
+from openff.toolkit.utils._elements import SYMBOLS
 from openff.toolkit.utils.base_wrapper import (
     ToolkitWrapper,
     _ChargeSettings,
@@ -56,6 +55,7 @@ from openff.toolkit.utils.exceptions import (
     UnassignedChemistryInPDBError,
     UndefinedStereochemistryError,
 )
+from openff.toolkit.utils.units import Quantity, unit
 from openff.toolkit.utils.utils import inherit_docstrings
 
 if TYPE_CHECKING:

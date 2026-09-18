@@ -43,9 +43,10 @@ lint.per-file-ignores."openff/toolkit/typing/engines/smirnoff.parameters.py" = [
 lint.isort.known-first-party = [ "openff.toolkit" ]
 # can't find a clean way to get Rust's globset to handle this via regex ...
 # https://docs.astral.sh/ruff/settings/#lint_isort_known-third-party
-lint.isort.known-third-party = [ "openff.interchange", "openff.utilities", "openff.units" ]
+lint.isort.known-third-party = [ "openff.interchange", "openff.utilities" ]
 
 [tool.mypy]
+mypy_path = "stubs/"
 exclude = "openff/toolkit/_tests/|openff/toolkit/data/"
 python_version = 3.12
 # would be nice to flip back to true
@@ -65,8 +66,6 @@ module = [
   "openeye.oechem",
   "openff.nagl.*",
   "openff.nagl_models.*",
-  "openff.units",
-  "openff.units.*",
   "openmm",
   "openmm.app",
   "openmm.unit",

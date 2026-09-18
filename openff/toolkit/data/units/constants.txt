@@ -1,0 +1,44 @@
+# Based on the default Pint constants definition file (0.16.1)
+#   https://github.com/hgrecco/pint/tree/master/pint
+#
+# Based on the International System of Units
+# Language: english
+# Source: https://physics.nist.gov/cuu/Constants/
+#         https://physics.nist.gov/PhysRefData/XrayTrans/Html/search.html
+# :copyright: 2013,2019 by Pint Authors, see https://github.com/hgrecco/pint/blob/0.16.1/AUTHORS for more details.
+
+#### MATHEMATICAL CONSTANTS ####
+# As computed by Maxima with fpprec:50
+
+pi     = 3.1415926535897932384626433832795028841971693993751 = π  # pi
+
+#### DEFINED EXACT CONSTANTS ####
+# Recommended CODATA-2018 values
+
+speed_of_light = 299792458 m/s = c = c_0                      # since 1983
+planck_constant = 6.62607015e-34 J s = h                      # since May 2019
+elementary_charge = 1.602176634e-19 C = e                     # since May 2019
+avogadro_number = 6.02214076e23                               # since May 2019
+boltzmann_constant = 1.380649e-23 J K^-1 = k = k_B            # since May 2019
+standard_atmosphere = 1.01325e5 Pa = atm = atmosphere         # since 1954
+
+#### DERIVED EXACT CONSTANTS ####
+# Floating-point conversion may introduce inaccuracies
+
+zeta = c / (cm/s) = ζ
+dirac_constant = h / (2 * π) = ħ = hbar = atomic_unit_of_action = a_u_action
+avogadro_constant = avogadro_number * mol^-1 = N_A
+molar_gas_constant = k * N_A = R
+
+#### MEASURED CONSTANTS ####
+# Recommended CODATA-2018 values
+
+rydberg_constant = 1.0973731568160e7 * m^-1 = R_∞ = R_inf                                  # (21)
+atomic_mass_constant = 1.66053906660e-27 kg = m_u                                          # (50)
+electron_mass = 9.1093837015e-31 kg = m_e = atomic_unit_of_mass = a_u_mass                 # (28)
+
+#### DERIVED CONSTANTS ####
+
+fine_structure_constant = (2 * h * R_inf / (m_e * c)) ** 0.5 = α = alpha
+vacuum_permeability = 2 * α * h / (e ** 2 * c) = µ_0 = mu_0 = mu0 = magnetic_constant
+vacuum_permittivity = e ** 2 / (2 * α * h * c) = ε_0 = epsilon_0 = eps_0 = eps0 = electric_constant

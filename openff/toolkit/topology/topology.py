@@ -27,9 +27,7 @@ from typing import (
 
 import numpy as np
 from numpy.typing import NDArray
-from openff.units import Unit
 
-from openff.toolkit import Quantity, unit
 from openff.toolkit.topology import Molecule
 from openff.toolkit.topology._mm_molecule import (
     _SimpleAtom,
@@ -60,6 +58,7 @@ from openff.toolkit.utils.exceptions import (
 )
 from openff.toolkit.utils.serialization import Serializable
 from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
+from openff.toolkit.utils.units import Quantity, Unit, unit
 from openff.toolkit.utils.utils import get_data_file_path, requires_package
 
 if TYPE_CHECKING:
@@ -621,7 +620,7 @@ class Topology(Serializable):
             return
         if not hasattr(box_vectors, "units"):
             if hasattr(box_vectors, "unit"):
-                from openff.units import ensure_quantity
+                from openff.toolkit.utils.units import ensure_quantity
 
                 # this is probably an openmm.unit.Quantity; we should gracefully import OpenMM but
                 # the chances of this being an object with the two previous conditions met is low
@@ -1380,9 +1379,9 @@ class Topology(Serializable):
             If a chemically impossible molecule is detected in the topology
         """
         import networkx as nx
-        from openff.units.openmm import from_openmm
 
         from openff.toolkit.topology.molecule import Molecule
+        from openff.toolkit.utils.units import from_openmm
 
         # Check to see if the openMM system has defined bond orders, by looping over all Bonds in the Topology.
         omm_has_bond_orders = True
@@ -1514,7 +1513,7 @@ class Topology(Serializable):
             topology.box_vectors = from_openmm(openmm_topology.getPeriodicBoxVectors())
 
         if positions is not None:
-            from openff.units import ensure_quantity
+            from openff.toolkit.utils.units import ensure_quantity
 
             topology.set_positions(ensure_quantity(positions, "openff"))
 
@@ -1926,7 +1925,7 @@ class Topology(Serializable):
                 )
 
         if off_topology.box_vectors is not None:
-            from openff.units.openmm import to_openmm
+            from openff.toolkit.utils.units import to_openmm
 
             omm_topology.setPeriodicBoxVectors(to_openmm(off_topology.box_vectors))
         return omm_topology
@@ -1963,7 +1962,7 @@ class Topology(Serializable):
 
             - ``openmm.unit.Quantity`` object which has atomic positions as a
               List of unit-tagged ``Vec3`` objects
-            - ``openff.units.unit.Quantity`` object which wraps a
+            - ``openff.toolkit.utils.units.unit.Quantity`` object which wraps a
               ``numpy.ndarray`` with dimensions of length
             - (unitless) 2D ``numpy.ndarray``, in which it is assumed that the
               positions are in units of Angstroms.

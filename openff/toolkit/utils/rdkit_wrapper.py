@@ -19,10 +19,9 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 from cachetools import LRUCache, cached
 from numpy.typing import NDArray
-from openff.units.elements import SYMBOLS
 
-from openff.toolkit import Quantity, unit
 from openff.toolkit.utils import base_wrapper
+from openff.toolkit.utils._elements import SYMBOLS
 from openff.toolkit.utils.constants import (
     ALLOWED_AROMATICITY_MODELS,
     DEFAULT_AROMATICITY_MODEL,
@@ -49,6 +48,7 @@ from openff.toolkit.utils.exceptions import (
     UnassignedChemistryInPDBError,
     UndefinedStereochemistryError,
 )
+from openff.toolkit.utils.units import Quantity, unit
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import Atom, Bond, Molecule
@@ -293,9 +293,10 @@ class RDKitToolkitWrapper(base_wrapper.ToolkitWrapper):
     ):
         import json
 
-        from openff.units.openmm import from_openmm
         from rdkit import Chem, Geometry
         from rdkit.DataStructs.cDataStructs import BitVectToBinaryText
+
+        from openff.toolkit.utils.units import from_openmm
 
         omm_top = pdbfile.topology
 

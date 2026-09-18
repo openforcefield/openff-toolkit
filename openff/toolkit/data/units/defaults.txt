@@ -1,0 +1,205 @@
+# Based on the default Pint defaults definition file (0.16.1)
+#   https://github.com/hgrecco/pint/tree/master/pint
+#
+# Based on the International System of Units
+# Language: english
+# :copyright: 2013,2019 by Pint Authors, see https://github.com/hgrecco/pint/blob/0.16.1/AUTHORS for more details.
+
+@defaults
+    group = international
+    system = mks
+@end
+
+
+#### PREFIXES ####
+
+# decimal prefixes
+yocto- = 1e-24 = y-
+zepto- = 1e-21 = z-
+atto- =  1e-18 = a-
+femto- = 1e-15 = f-
+pico- =  1e-12 = p-
+nano- =  1e-9  = n-
+micro- = 1e-6  = µ- = u-
+milli- = 1e-3  = m-
+centi- = 1e-2  = c-
+deci- =  1e-1  = d-
+deca- =  1e+1  = da- = deka-
+hecto- = 1e2   = h-
+kilo- =  1e3   = k-
+mega- =  1e6   = M-
+giga- =  1e9   = G-
+tera- =  1e12  = T-
+peta- =  1e15  = P-
+exa- =   1e18  = E-
+zetta- = 1e21  = Z-
+yotta- = 1e24  = Y-
+
+# binary_prefixes
+kibi- = 2**10 = Ki-
+mebi- = 2**20 = Mi-
+gibi- = 2**30 = Gi-
+tebi- = 2**40 = Ti-
+pebi- = 2**50 = Pi-
+exbi- = 2**60 = Ei-
+zebi- = 2**70 = Zi-
+yobi- = 2**80 = Yi-
+
+
+#### BASE UNITS ####
+
+meter = [length] = m = metre
+second = [time] = s = sec
+ampere = [current] = A = amp
+gram = [mass] = g
+mole = [substance] = mol
+kelvin = [temperature]; offset: 0 = K = degK = °K = degree_Kelvin = degreeK = Kelvin
+radian = [] = rad
+bit = []
+count = []
+
+
+#### CONSTANTS ####
+
+@import constants.txt
+
+
+#### UNITS ####
+
+# Angle
+degree = π / 180 * radian = deg = arcdeg = arcdegree = angular_degree
+
+# Information
+byte = 8 * bit = B = octet
+
+# Length
+angstrom = 1e-10 * meter = Å = ångström = Å
+micron = micrometer = µ
+fermi = femtometer = fm
+bohr = hbar / (alpha * m_e * c) = a_0 = a0 = bohr_radius = atomic_unit_of_length = a_u_length
+
+# Mass
+unified_atomic_mass_unit = atomic_mass_constant = u = amu
+dalton = atomic_mass_constant = Da
+
+# Time
+minute = 60 * second = min
+hour = 60 * minute = hr
+day = 24 * hour = d
+week = 7 * day
+year = 365.25 * day = a = yr = julian_year
+month = year / 12
+
+# MD Time
+timestep = [timestep] = _ = timesteps
+
+# Temperature
+degree_Celsius = kelvin; offset: 273.15 = °C = celsius = degC = degreeC
+
+# Volume
+[volume] = [length] ** 3
+liter = decimeter ** 3 = l = L = litre
+
+# Frequency
+[frequency] = 1 / [time]
+hertz = 1 / second = Hz
+
+# Wavenumber
+[wavenumber] = 1 / [length]
+reciprocal_centimeter = 1 / cm = cm_1 = kayser
+
+# Velocity
+# As of 0.20, derived dimensions cannot have aliases
+[velocity] = [length] / [time]
+
+# Acceleration
+[acceleration] = [velocity] / [time]
+
+# Force
+[force] = [mass] * [acceleration]
+newton = kilogram * meter / second ** 2 = N
+dyne = gram * centimeter / second ** 2 = dyn
+
+# Energy
+[energy] = [force] * [length]
+joule = newton * meter = J
+erg = dyne * centimeter
+rydberg = h * c * R_inf = Ry
+hartree = 2 * rydberg = E_h = Eh = hartree_energy = atomic_unit_of_energy = a_u_energy
+calorie = 4.184 * joule = cal = thermochemical_calorie = cal_th
+
+# Energy per mole
+calorie_per_mole = calorie / mol
+joule_per_mole = joule / mol
+calories_per_mole = calorie / mol
+joules_per_mole = joule / mol
+
+# OpenMM compatibility
+kilocalorie_per_mole = kilocalorie / mol
+kilojoule_per_mole = kilojoule / mol
+kilocalories_per_mole = kilocalorie / mol
+kilojoules_per_mole = kilojoule / mol
+
+# Power
+[power] = [energy] / [time]
+watt = kilogram * meter ** 2 * second ** -3 = W
+
+# Resistance
+[resistance] = [electric_potential] / [current]
+ohm = kilogram * meter ** 2 * second ** -3 * ampere ** -2 = Ω
+
+# Conductance
+[conductance] = [current] / [electric_potential]
+siemens = kilogram ** -1 * meter ** -2 * second ** 3 * ampere ** 2 = S
+
+# Inductance
+[inductance] = [resistance] * [time]
+henry = kilogram * meter ** 2 * second ** -2 * ampere ** -2 = H
+
+# Magnetic flux
+[magnetic_flux] = [energy] / [current]
+weber = kilogram * meter ** 2 * second ** -2 * ampere ** -1 = Wb
+
+# Magnetic flux density
+[magnetic_flux_density] = [magnetic_flux] / [area]
+tesla = kilogram * second ** -2 * ampere ** -1 = T
+
+# Momentum
+[momentum] = [length] * [mass] / [time]
+
+# Density (as auxiliary for pressure)
+[density] = [mass] / [volume]
+
+# Pressure
+[pressure] = [force] / [area]
+pascal = newton / meter ** 2 = Pa
+bar = 1e5 * pascal
+
+# Concentration
+[concentration] = [substance] / [volume]
+molar = mole / liter = M
+
+# Charge
+[charge] = [current] * [time]
+coulomb = ampere * second = C
+faraday = e * N_A * mole
+
+# Electric potential
+[electric_potential] = [energy] / [charge]
+volt = joule / coulomb = V
+
+# Capacitance
+[capacitance] = [charge] / [electric_potential]
+farad = coulomb / volt = F
+
+# Electric dipole moment
+[electric_dipole] = [charge] * [length]
+debye = 1e-9 / ζ * coulomb * angstrom = D  # formally 1 D = 1e-10 Fr*Å, but we generally want to use it outside the Gaussian context
+
+#### SYSTEMS OF UNITS ####
+
+@system mks using international
+    meter
+    kilogram
+    second
+@end

@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from openff.toolkit import Quantity, unit
 from openff.toolkit.utils import base_wrapper, rdkit_wrapper
 from openff.toolkit.utils.exceptions import (
     AntechamberNotFoundError,
@@ -21,6 +20,7 @@ from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
     ToolkitUnavailableException,
 )
+from openff.toolkit.utils.units import Quantity, unit
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import Molecule

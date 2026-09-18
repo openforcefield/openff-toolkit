@@ -17,7 +17,6 @@ from contextlib import contextmanager
 import numpy as np
 import openmm
 import pytest
-from openff.units.openmm import to_openmm
 from openmm import unit as openmm_unit
 
 from openff.toolkit import unit
@@ -27,6 +26,7 @@ from openff.toolkit.utils import (
     RDKitToolkitWrapper,
     get_data_file_path,
 )
+from openff.toolkit.utils.units import to_openmm
 
 requires_ambertools = pytest.mark.skipif(
     not AmberToolsToolkitWrapper.is_available(),

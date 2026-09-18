@@ -63,10 +63,8 @@ from collections.abc import Callable
 from typing import Any, Literal, Union, cast, get_args
 
 import numpy
-from openff.units.units import Unit
 from packaging.version import Version
 
-from openff.toolkit import Quantity, unit
 from openff.toolkit.topology import ImproperDict, TagSortedDict, Topology, ValenceDict
 from openff.toolkit.topology.molecule import Molecule
 from openff.toolkit.utils.collections import ValidatedDict, ValidatedList
@@ -89,6 +87,7 @@ from openff.toolkit.utils.exceptions import (
     UnassignedValenceParameterException,
 )
 from openff.toolkit.utils.toolkits import GLOBAL_TOOLKIT_REGISTRY
+from openff.toolkit.utils.units import Quantity, Unit, unit
 from openff.toolkit.utils.utils import object_to_quantity
 
 logger = logging.getLogger(__name__)
@@ -116,7 +115,7 @@ def _linear_inter_or_extrapolate(points_dict, x_query):
     """
     Linearly interpolate or extrapolate based on a piecewise linear function
     defined by a set of points. This function is designed to work with
-    key:value pairs where the value may be a ``openff.units.Quantity``.
+    key:value pairs where the value may be a ``openff.toolkit.utils.units.Quantity``.
 
     Parameters
     ----------

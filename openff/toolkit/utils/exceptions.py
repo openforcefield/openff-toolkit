@@ -7,6 +7,8 @@ if TYPE_CHECKING:
     from openmm.app import Residue as OpenMMResidue
     from openmm.app import Topology as OpenMMTopology
 
+# no __all__ ?
+
 
 class OpenFFToolkitException(Exception):
     """Base exception for custom exceptions raised by the OpenFF Toolkit"""

@@ -10,8 +10,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     # These types are imported lazily at runtime, but we need to tell type
     # checkers what they are
-    from openff.units import Quantity, unit
-
     from openff.toolkit.topology import Molecule, Topology
     from openff.toolkit.typing.engines.smirnoff import (
         ForceField,
@@ -26,6 +24,7 @@ if TYPE_CHECKING:
         RDKitToolkitWrapper,
         ToolkitRegistry,
     )
+    from openff.toolkit.utils.units import Quantity, unit
 
 __version__ = version("openff.toolkit")
 
@@ -58,8 +57,8 @@ _lazy_imports_obj = {
     "OpenEyeToolkitWrapper": "openff.toolkit.utils.toolkits",
     "RDKitToolkitWrapper": "openff.toolkit.utils.toolkits",
     "ToolkitRegistry": "openff.toolkit.utils.toolkits",
-    "Quantity": "openff.units",
-    "unit": "openff.units",
+    "Quantity": "openff.toolkit.utils.units",
+    "unit": "openff.toolkit.utils.units",
     # Remember to add new lazy imports to __all__ and the if TYPE_CHECKING imports
 }
 
@@ -68,7 +67,6 @@ _lazy_imports_mod = {
     "topology": "openff.toolkit.topology",
     "typing": "openff.toolkit.typing",
     "utils": "openff.toolkit.utils",
-    "unit": "openff.units.units",
 }
 
 

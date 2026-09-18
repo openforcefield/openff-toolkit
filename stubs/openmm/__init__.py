@@ -1,0 +1,2 @@
+class System:
+    pass

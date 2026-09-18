@@ -24,7 +24,6 @@ from unittest.mock import Mock
 
 import numpy as np
 import pytest
-from openff.units.elements import MASSES, SYMBOLS
 
 from openff.toolkit import unit
 from openff.toolkit._tests.create_molecules import (
@@ -57,6 +56,7 @@ from openff.toolkit.topology.molecule import (
     _networkx_graph_to_hill_formula,
 )
 from openff.toolkit.utils import get_data_file_path
+from openff.toolkit.utils._elements import MASSES, SYMBOLS
 from openff.toolkit.utils.exceptions import (
     AtomMappingWarning,
     BadMoleculeAssumptionError,
