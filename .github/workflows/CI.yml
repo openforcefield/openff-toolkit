@@ -23,12 +23,9 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["3.12", "3.13"]
+        python-version: ["3.12", "3.13", "3.14"]
         openeye: [true, false]
         nagl: [true, false]
-        exclude:
-          - openeye: true
-            python-version: "3.13"
 
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
