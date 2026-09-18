@@ -14,8 +14,6 @@ import functools
 from collections.abc import Generator, Iterable
 from typing import TYPE_CHECKING, NoReturn, Union
 
-from openff.units.elements import MASSES, SYMBOLS
-
 from openff.toolkit import unit
 from openff.toolkit.topology.molecule import (
     AtomMetadataDict,
@@ -25,14 +23,16 @@ from openff.toolkit.topology.molecule import (
     _atom_nums_to_hill_formula,
     _has_unique_atom_names,
 )
+from openff.toolkit.utils._elements import MASSES, SYMBOLS
 from openff.toolkit.utils.exceptions import UnsupportedMoleculeConversionError
 from openff.toolkit.utils.utils import deserialize_numpy, serialize_numpy
 
 if TYPE_CHECKING:
     import networkx as nx
 
-    from openff.toolkit import Quantity, Topology
+    from openff.toolkit.topology import Topology
     from openff.toolkit.topology.molecule import FrozenMolecule
+    from openff.toolkit.utils.units import Quantity
 
 
 class _SimpleMolecule:

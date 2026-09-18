@@ -6,9 +6,9 @@ __all__ = ("BuiltInToolkitWrapper",)
 
 from typing import TYPE_CHECKING
 
-from openff.toolkit import Quantity, unit
 from openff.toolkit.utils import base_wrapper
 from openff.toolkit.utils.exceptions import ChargeMethodUnavailableError
+from openff.toolkit.utils.units import Quantity, unit
 from openff.toolkit.utils.utils import inherit_docstrings
 
 if TYPE_CHECKING:

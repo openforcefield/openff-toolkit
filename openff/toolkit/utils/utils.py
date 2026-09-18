@@ -32,8 +32,9 @@ from typing import TYPE_CHECKING, Any, TypeVar, overload
 import numpy as np
 import pint
 from numpy.typing import NDArray
-from openff.units import Quantity, Unit
 from openff.utilities import requires_package
+
+from openff.toolkit.utils.units import Quantity, Unit
 
 if TYPE_CHECKING:
     from openff.toolkit import ForceField, Molecule
@@ -145,7 +146,7 @@ def dict_to_quantity(input_dict):
 
 def quantity_to_string(input_quantity: Quantity) -> str:
     """
-    Serialize a ``openff.units.Quantity`` to a string representation that is backwards-compatible
+    Serialize a ``openff.toolkit.utils.units.Quantity`` to a string representation that is backwards-compatible
     with older versions of the OpenFF Toolkit. This includes a " * " between numerical values and
     their units and "A" being used in place of the unicode Å ("\N{ANGSTROM SIGN}").
 
@@ -174,14 +175,14 @@ def quantity_to_string(input_quantity: Quantity) -> str:
 @functools.lru_cache
 def string_to_unit(unit_string) -> Unit:
     """
-    Deserializes a ``openff.units.Quantity`` from a string representation, for
+    Deserializes a ``openff.toolkit.utils.units.Quantity`` from a string representation, for
     example: "kilocalories_per_mole / angstrom ** 2"
 
 
     Parameters
     ----------
     unit_string
-        Serialized representation of a ``openff.units.Quantity``.
+        Serialized representation of a ``openff.toolkit.utils.units.Quantity``.
 
     Returns
     -------
@@ -227,10 +228,10 @@ def convert_all_strings_to_quantity(
 ) -> dict:
     """
     Traverses a SMIRNOFF data structure, attempting to convert all
-    quantity-defining strings into ``openff.units.Quantity`` objects.
+    quantity-defining strings into ``openff.toolkit.utils.units.Quantity`` objects.
 
     Integers and floats are ignored and not converted into a dimensionless
-    ``openff.units.Quantity`` object.
+    ``openff.toolkit.utils.units.Quantity`` object.
 
     Some good keys to ignore include `ignore_keys=["smirks", "name", "id", "parent_id"]`
     since these are commonly used in SMIRNOFF force fields in ways that are meant to
@@ -249,7 +250,7 @@ def convert_all_strings_to_quantity(
     -------
     converted_smirnoff_data
         A hierarchical dict structured in compliance with the SMIRNOFF spec,
-        with quantity-defining strings converted to ``openff.units.Quantity`` objects
+        with quantity-defining strings converted to ``openff.toolkit.utils.units.Quantity`` objects
     """
     from pint import DefinitionSyntaxError
 
@@ -318,7 +319,7 @@ def convert_all_quantities_to_string(
     -------
     converted_smirnoff_data
         A hierarchical dict structured in compliance with the SMIRNOFF spec,
-        with ``openff.units.Quantity``s converted to string
+        with ``openff.toolkit.utils.units.Quantity``s converted to string
     """
 
     if isinstance(smirnoff_data, dict):
@@ -338,7 +339,7 @@ def convert_all_quantities_to_string(
 @functools.singledispatch
 def object_to_quantity(object):
     """
-    Attempts to turn the provided object into `openff.units.Quantity`s.
+    Attempts to turn the provided object into `openff.toolkit.utils.units.Quantity`s.
 
     Can handle float, int, str, `Quantity`, `openmm.unit.Quantity`, or iterators over
     the same. Raises an exception if unable to convert all inputs.
@@ -380,7 +381,8 @@ def _(obj):
 
 try:
     import openmm.unit
-    from openff.units.openmm import from_openmm
+
+    from openff.toolkit.utils.units import from_openmm
 
     @object_to_quantity.register(openmm.unit.Quantity)
     def _(obj):

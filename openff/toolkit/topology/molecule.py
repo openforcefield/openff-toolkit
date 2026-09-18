@@ -46,11 +46,9 @@ from typing import (
 )
 
 import numpy as np
-from openff.units import Unit
-from openff.units.elements import MASSES, SYMBOLS
 from openff.utilities.exceptions import MissingOptionalDependencyError
 
-from openff.toolkit import Quantity, unit
+from openff.toolkit.utils._elements import MASSES, SYMBOLS
 from openff.toolkit.utils.constants import DEFAULT_AROMATICITY_MODEL
 from openff.toolkit.utils.exceptions import (
     AtomMappingWarning,
@@ -85,6 +83,7 @@ from openff.toolkit.utils.toolkits import (
     ToolkitWrapper,
     UndefinedStereochemistryError,
 )
+from openff.toolkit.utils.units import Quantity, Unit, unit
 from openff.toolkit.utils.utils import get_data_file_path, requires_package
 
 if TYPE_CHECKING:
@@ -363,7 +362,7 @@ class Atom(Particle):
                     f"Unsupported type passed to formal_charge setter. Found object of type {type(other)}."
                 )
 
-            from openff.units.openmm import from_openmm
+            from openff.toolkit.utils.units import from_openmm
 
             converted = from_openmm(other)
             if converted.units in _CHARGE_UNITS:
@@ -469,7 +468,7 @@ class Atom(Particle):
         The mass is reported in units of Dalton.
         """
         # This is assumed elsewhere in the codebase to be in units of Dalton, which is what is
-        # reported by MASSES as of openff-units v0.1.5. There may be performance implications if
+        # reported by MASSES as of openff.toolkit.utils.units v0.1.5. There may be performance implications if
         # other functions need to verify or convert units.
         # https://github.com/openforcefield/openff-toolkit/pull/1182#discussion_r802078273
         return MASSES[self.atomic_number]
@@ -1156,11 +1155,11 @@ class FrozenMolecule(Serializable):
             - **hierarchy_schemes** (dict[dict]): Dictionary where keys (such as ``"residues"`` and ``"chains"``)
               represent dictionary outputs from :meth:`HierarchyScheme.to_dict()`
             - **conformers_unit** (str, default="angstrom"): Valid unit of length input for the
-              `OpenFF Units module <https://docs.openforcefield.org/projects/units/en/stable/api/generated/openff.units.html>`_.
+              `OpenFF Units module <https://docs.openforcefield.org/projects/units/en/stable/api/generated/openff.toolkit.utils.units.html>`_.
             - **partial_charges** (list[float], default=None): Array of partial charge (in unit defined by
               ``partial_charge_unit``) for atoms in the same order as the output,``atoms``.
             - **partial_charge_unit** (str, default=None): Valid unit of charge input for the
-              `OpenFF Units module <https://docs.openforcefield.org/projects/units/en/stable/api/generated/openff.units.html>`_.
+              `OpenFF Units module <https://docs.openforcefield.org/projects/units/en/stable/api/generated/openff.toolkit.utils.units.html>`_.
               If ``partial_charges`` is also included, the default is ``"elementary_charge"`` instead.
 
         """
@@ -3117,8 +3116,9 @@ class FrozenMolecule(Serializable):
                 )
 
         elif hasattr(coordinates, "unit"):
-            from openff.units.openmm import from_openmm
             from openmm import unit as openmm_unit
+
+            from openff.toolkit.utils.units import from_openmm
 
             if not isinstance(coordinates, openmm_unit.Quantity):
                 raise IncompatibleUnitError(
@@ -3138,7 +3138,7 @@ class FrozenMolecule(Serializable):
         else:
             raise IncompatibleUnitError(
                 "Unknown object passed to Molecule._add_conformer. Expected types include "
-                f"openmm.unit.Quantity and openff.units.unit.Quantity, found type {type(coordinates)}."
+                f"openmm.unit.Quantity and openff.toolkit.utils.units.unit.Quantity, found type {type(coordinates)}."
             )
 
         tmp_conf = Quantity(np.zeros(shape=(self.n_atoms, 3), dtype=float), unit.angstrom)
@@ -3186,7 +3186,7 @@ class FrozenMolecule(Serializable):
             raise IncompatibleTypeError(
                 "Unsupported type passed to partial_charges setter. "
                 f"Found object of type {type(charges)}. "
-                "Expected openff.units.unit.Quantity"
+                "Expected openff.toolkit.utils.units.unit.Quantity"
             )
 
         if not charges.shape == (self.n_atoms,):
@@ -3213,7 +3213,7 @@ class FrozenMolecule(Serializable):
                 )
 
             else:
-                from openff.units.openmm import from_openmm
+                from openff.toolkit.utils.units import from_openmm
 
                 converted = from_openmm(charges)
                 if converted.units in _CHARGE_UNITS:
@@ -3228,7 +3228,7 @@ class FrozenMolecule(Serializable):
             raise IncompatibleTypeError(
                 "Unsupported type passed to partial_charges setter. "
                 f"Found object of type {type(charges)}, "
-                "expected openff.units.unit.Quantity"
+                "expected openff.toolkit.utils.units.unit.Quantity"
             )
 
     @property

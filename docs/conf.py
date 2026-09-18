@@ -87,7 +87,7 @@ intersphinx_mapping = {
         "https://docs.openforcefield.org/projects/fragmenter/en/stable/",
         None,
     ),
-    "openff.units": (
+    "openff.toolkit.utils.units": (
         "https://docs.openforcefield.org/projects/units/en/stable/",
         None,
     ),

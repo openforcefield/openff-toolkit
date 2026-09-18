@@ -13,7 +13,6 @@ import pytest
 from numpy.testing import assert_almost_equal
 from packaging.version import Version
 
-from openff.toolkit import Quantity, unit
 from openff.toolkit._tests.create_molecules import (
     create_acetaldehyde,
     create_acetate,
@@ -56,6 +55,7 @@ from openff.toolkit.utils.toolkits import (
     ToolkitRegistry,
     ToolkitWrapper,
 )
+from openff.toolkit.utils.units import Quantity, unit
 
 _rng = np.random.default_rng()
 

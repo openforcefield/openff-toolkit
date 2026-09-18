@@ -15,7 +15,6 @@ import numpy as np
 import openmm.app
 import openmm.unit
 import pytest
-from openff.units.openmm import from_openmm
 from openff.utilities import skip_if_missing
 
 from openff.toolkit import Molecule, Quantity, Topology, unit
@@ -76,6 +75,7 @@ from openff.toolkit.utils.exceptions import (
     VirtualSitesUnsupportedError,
     WrongShapeError,
 )
+from openff.toolkit.utils.units import from_openmm
 
 
 def assert_tuple_of_atoms_equal(atom_tuples1, atom_tuples2, transformed_dict_cls=ValenceDict):
@@ -946,8 +946,8 @@ class TestTopology:
     def test_to_file_units_check(self):
         """
         Checks that writing a PDB file with different coordinate representations results in the same output.
-        - Angstrom "openff units" (default behavior if using Molecule.conformers[0])
-        - nanometer "openff units"
+        - Angstrom "openff.toolkit.utils.units" (default behavior if using Molecule.conformers[0])
+        - nanometer "openff.toolkit.utils.units"
         - unitless NumPy array
         - converted OpenMM quantity
         """

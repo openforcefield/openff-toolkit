@@ -3,11 +3,11 @@ import pathlib
 import warnings
 from typing import TYPE_CHECKING
 
-from openff.toolkit import Quantity, unit
 from openff.toolkit.utils.base_wrapper import ToolkitWrapper
 from openff.toolkit.utils.exceptions import (
     ToolkitUnavailableException,
 )
+from openff.toolkit.utils.units import Quantity, unit
 
 if TYPE_CHECKING:
     from openff.toolkit.topology.molecule import FrozenMolecule, Molecule

@@ -1,8 +1,8 @@
 import numpy
 
-from openff.toolkit import Quantity, unit
 from openff.toolkit.topology import Molecule
 from openff.toolkit.typing.engines.smirnoff import VirtualSiteHandler
+from openff.toolkit.utils.units import Quantity, unit
 
 
 class VirtualSiteMocking:

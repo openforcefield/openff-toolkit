@@ -19,7 +19,6 @@ from typing import IO, TYPE_CHECKING, Any, Union
 
 from packaging.version import Version
 
-from openff.toolkit import Quantity
 from openff.toolkit.typing.engines.smirnoff.io import ParameterIOHandler
 from openff.toolkit.typing.engines.smirnoff.parameters import ParameterHandler
 from openff.toolkit.typing.engines.smirnoff.plugins import load_handler_plugins
@@ -34,6 +33,7 @@ from openff.toolkit.utils.exceptions import (
     SMIRNOFFParseError,
     SMIRNOFFVersionError,
 )
+from openff.toolkit.utils.units import Quantity
 from openff.toolkit.utils.utils import (
     all_subclasses,
     convert_0_1_smirnoff_to_0_2,

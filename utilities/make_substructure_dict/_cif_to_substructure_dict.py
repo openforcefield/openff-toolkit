@@ -11,7 +11,7 @@ from copy import deepcopy
 
 import rdkit
 from CifFile import ReadCif
-from openff.units.elements import SYMBOLS
+from openff.toolkit.utils._elements import SYMBOLS
 from rdkit import Chem
 
 from openff.toolkit import Molecule

@@ -22,7 +22,6 @@ dependencies:
     - rdkit
     - ambertools
     - packaging
-    - openff-units
     - openff-utilities
     - cachetools
     - python-constraint

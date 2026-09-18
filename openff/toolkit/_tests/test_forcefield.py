@@ -12,7 +12,6 @@ import numpy as np
 import openmm
 import pytest
 from numpy.testing import assert_almost_equal
-from openff.units.openmm import from_openmm, to_openmm
 from openmm import NonbondedForce, Platform, XmlSerializer, app
 from openmm import unit as openmm_unit
 from pydantic import ValidationError
@@ -61,6 +60,7 @@ from openff.toolkit.utils.exceptions import (
     SMIRNOFFSpecUnimplementedError,
     SMIRNOFFVersionError,
 )
+from openff.toolkit.utils.units import from_openmm, to_openmm
 
 XML_FF_GENERICS = """<?xml version='1.0' encoding='ASCII'?>
 <SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
