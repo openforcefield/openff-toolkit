@@ -167,7 +167,7 @@ class XMLParameterIOHandler(ParameterIOHandler):
         """
         xml_string = self.to_string(smirnoff_data)
         with open(file_path, "w") as of:
-            of.write(xml_string)
+            of.write(xml_string + "\n")
 
     def to_string(self, smirnoff_data: dict) -> str:
         """
