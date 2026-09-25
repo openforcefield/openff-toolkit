@@ -16,6 +16,8 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Bugfixes
 
+- [PR #2231](https://github.com/openforcefield/openff-toolkit/pull/2231): `OpenEyeToolkitWrapper.to_openeye` now sets atom and bond stereochemistry directly with `OESetCIPStereo` instead of setting arbitrary stereo and flipping it until the CIP label matches, and no longer raises `InconsistentStereochemistryError` from that path.
+
 ### New features
 
 ### Improved documentation and warnings
