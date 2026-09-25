@@ -2,7 +2,10 @@ import pytest
 from rdkit import Chem
 
 from openff.toolkit import Molecule
+from openff.toolkit._tests.utils import requires_openeye, requires_rdkit
 from openff.toolkit.utils.toolkits import OpenEyeToolkitWrapper
+
+pytestmark = [requires_openeye, requires_rdkit]
 
 ATOM_MOLBLOCK = """
      RDKit          3D
