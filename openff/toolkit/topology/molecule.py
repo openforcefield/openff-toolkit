@@ -4504,11 +4504,7 @@ class FrozenMolecule(Serializable):
             "identifiers": identifiers,
         }
 
-        try:
-            return qcel.models.v2.Molecule.from_data(schema_dict, validate=True)
-        except AttributeError:  # other errors to capture here?
-            # fallback for older QCElemental models (Pydantic V1 or V1/V2 compatibility)
-            return qcel.models.Molecule.from_data(schema_dict, validate=True)
+        return qcel.models.v2.Molecule.from_data(schema_dict, validate=True)
 
     @classmethod
     def from_mapped_smiles(
