@@ -12,7 +12,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Behavior changes
 
-- [PR #2238](https://github.com/openforcefield/openff-toolkit/pull/2238): Adds support for QCSchema V2 in `Molecule.to_qcschema`. An attempt is made to fall back to existing behavior (QCSchema V1) if necessary.
+- [PR #2238](https://github.com/openforcefield/openff-toolkit/pull/2238): Adds support for QCSchema V2 in `Molecule.to_qcschema`, which now only returns QCSchema V2 models.
 
 ### Bugfixes
 
