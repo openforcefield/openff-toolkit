@@ -20,8 +20,7 @@ dependencies:
   - openff-nagl-models >=2025
   - nglview
     # Toolkit-specific
-    # https://github.com/rdkit/rdkit/issues/7221 and https://github.com/rdkit/rdkit/issues/7583
-  - rdkit =2024
+  - rdkit
     # Test-only/optional/dev/typing/examples
   - pytest =8
   - pytest-xdist

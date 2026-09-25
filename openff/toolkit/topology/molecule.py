@@ -4451,7 +4451,7 @@ class FrozenMolecule(Serializable):
 
         Returns
         ---------
-        qcelemental.models.Molecule
+        qcelemental.models.v2.Molecule
             A validated QCElemental Molecule.
 
         Examples
@@ -4504,7 +4504,7 @@ class FrozenMolecule(Serializable):
             "identifiers": identifiers,
         }
 
-        return qcel.models.Molecule.from_data(schema_dict, validate=True)
+        return qcel.models.v2.Molecule.from_data(schema_dict, validate=True)
 
     @classmethod
     def from_mapped_smiles(
