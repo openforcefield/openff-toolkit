@@ -24,7 +24,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: [ "3.12", "3.13", "3.14" ]
+        python-version: [ "3.12", "3.14" ]
 
     env:
       PYTEST_ARGS: -r fE -v -x --tb=short -nauto --durations=10
