@@ -12,12 +12,16 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Behavior changes
 
+- [PR #2238](https://github.com/openforcefield/openff-toolkit/pull/2238): Adds support for QCSchema V2 in `Molecule.to_qcschema`, which now only returns QCSchema V2 models.
+
 ### Bugfixes
 
 - [PR #2234](https://github.com/openforcefield/openff-toolkit/pull/2234): Fixes some deprecation warnings thrown by using deprecated Pydantic V1 methods in tests.
 - [PR #2236](https://github.com/openforcefield/openff-toolkit/pull/2236): Fixes a rare case in which force field files with similar names were incorrectly loaded.
 
-### New features
+### Tests updated
+
+- [PR #2238](https://github.com/openforcefield/openff-toolkit/pull/2238): Run tests on Python 3.14.
 
 ### Improved documentation and warnings
 
