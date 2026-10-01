@@ -1815,8 +1815,9 @@ class TestvdWType:
         param.sigma = param.sigma
 
         assert numpy.isclose(param.rmin_half.m_as(unit.angstrom), 0.5)
-        assert "sigma" in param.to_dict()
-        assert "rmin_half" not in param.to_dict()
+        # the constructor-specified attribute stays canonical; see #2241
+        assert "rmin_half" in param.to_dict()
+        assert "sigma" not in param.to_dict()
 
         param.rmin_half = param.rmin_half
 
@@ -1826,6 +1827,17 @@ class TestvdWType:
         )
         assert "sigma" not in param.to_dict()
         assert "rmin_half" in param.to_dict()
+
+    def test_sigma_rmin_half_serialization_stability(self):
+        """Writes through the derived attribute must not change which attribute serializes."""
+        param = vdWHandler.vdWType(
+            smirks="[*:1]",
+            sigma=0.5 * unit.angstrom,
+            epsilon=0.5 * unit.kilocalorie / unit.mole,
+        )
+        param.rmin_half = param.rmin_half * 1.5
+        assert "sigma" in param.to_dict()
+        assert "rmin_half" not in param.to_dict()
 
 
 class TestElectrostaticsHandler:

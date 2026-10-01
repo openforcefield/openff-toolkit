@@ -1700,6 +1700,24 @@ class TestForceField(_ForceFieldFixtures):
         for ff1, ff2 in itertools.combinations(ffs, 2):
             assert hash(ff1) != hash(ff2)
 
+    def test_hash_equivalent_sigma_rmin_half(self, force_field):
+        """
+        A value-equivalent write to sigma/rmin_half must not change the hash.
+        See https://github.com/openforcefield/openff-toolkit/issues/2241
+        """
+        parameter = force_field["vdW"].parameters[0]
+
+        hash_before = hash(force_field)
+        repr_before = str(parameter)
+
+        parameter.sigma = 2.0 * parameter.rmin_half / 2 ** (1 / 6)
+
+        assert str(parameter) == repr_before
+        assert hash(force_field) == hash_before
+
+        parameter.sigma = 2 * parameter.sigma
+        assert hash(force_field) != hash_before
+
     def test_hash_cosmetic(self, force_field):
         """Test that adding a cosmetic attribute does not change the hash"""
         hash_without_cosmetic = hash(force_field)
