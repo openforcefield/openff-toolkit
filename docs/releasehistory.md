@@ -18,6 +18,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 - [PR #2234](https://github.com/openforcefield/openff-toolkit/pull/2234): Fixes some deprecation warnings thrown by using deprecated Pydantic V1 methods in tests.
 - [PR #2236](https://github.com/openforcefield/openff-toolkit/pull/2236): Fixes a rare case in which force field files with similar names were incorrectly loaded.
+- [PR #2244](https://github.com/openforcefield/openff-toolkit/pull/2244): Fixes [Issue 2241](https://github.com/openforcefield/openff-toolkit/issues/2241), in which a value-equivalent assignment to `sigma` or `rmin_half` on a `vdWType` changed its serialized representation and the containing force field's hash.
 
 ### Tests updated
 
