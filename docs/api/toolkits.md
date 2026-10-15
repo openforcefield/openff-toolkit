@@ -65,8 +65,11 @@ The [`toolkit_registry_manager`] context manager allows `GLOBAL_TOOLKIT_REGISTRY
 >>> from openff.toolkit.utils import toolkit_registry_manager
 >>> print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
 5
->>> with toolkit_registry_manager(ToolkitRegistry([RDKitToolkitWrapper(), AmberToolsToolkitWrapper()])):
+>>> with toolkit_registry_manager(
+...     ToolkitRegistry([RDKitToolkitWrapper(), AmberToolsToolkitWrapper()])
+... ):
 ...     print(len(GLOBAL_TOOLKIT_REGISTRY.registered_toolkits))
+...
 2
 
 ```
