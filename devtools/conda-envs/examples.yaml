@@ -9,7 +9,7 @@ dependencies:
   - networkx
   - cachetools
   - xmltodict
-  - python-constraint2
+  - python-constraint
   - openmm >=7.6
   - openff-forcefields >=2025
   - openff-amber-ff-ports >=0.0.3
