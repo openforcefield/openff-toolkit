@@ -1170,14 +1170,14 @@ class FrozenMolecule(Serializable):
         # https://mypy.readthedocs.io/en/latest/typed_dict.html#typeddict
         molecule_dict: dict[
             str,
-            None
-            | str
+            str
             | bytes
             | dict[str, Any]
             | list[str]
             | list[bytes]
             | list[HierarchyElement]
-            | list[dict[str, Any]],
+            | list[dict[str, Any]]
+            | None,
         ] = dict()
         molecule_dict["name"] = self._name
 
@@ -4451,7 +4451,7 @@ class FrozenMolecule(Serializable):
 
         Returns
         ---------
-        qcelemental.models.Molecule
+        qcelemental.models.v2.Molecule
             A validated QCElemental Molecule.
 
         Examples
@@ -4504,7 +4504,7 @@ class FrozenMolecule(Serializable):
             "identifiers": identifiers,
         }
 
-        return qcel.models.Molecule.from_data(schema_dict, validate=True)
+        return qcel.models.v2.Molecule.from_data(schema_dict, validate=True)
 
     @classmethod
     def from_mapped_smiles(
@@ -4705,7 +4705,7 @@ class FrozenMolecule(Serializable):
         # Process input as dict; convert if necessary
         if not isinstance(qca_object, dict):
             try:
-                qca_object = qca_object.dict()
+                qca_object = qca_object.model_dump()
             except AttributeError:
                 raise AttributeError(
                     f"The input object (type {type(qca_object)=} "

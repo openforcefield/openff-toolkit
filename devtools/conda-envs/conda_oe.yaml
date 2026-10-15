@@ -11,4 +11,5 @@ dependencies:
   - pytest=7.4
   - pytest-rerunfailures
   - pytest-timeout
+  - pytest-mock
   - nbval
