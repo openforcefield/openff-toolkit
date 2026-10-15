@@ -6,7 +6,7 @@ The following policies hold for all repositories in the OpenFF ecosystem:
 
 1. Repository Maintainers always reserve the right to make exceptions to any of the following rules on a case-by-case basis.
 2. LLMs use must be always disclosed. At minimum in the PR description, but preferably reflected in a “Co-Authored-By” line in the commit.
-3. LLMs may be used for translation (disclosing LLM use is important here, so that maintainers can be more considerate when encountering translation inaccuracies).
+3. LLMs may always be used for translation (disclosing LLM use is important here, so that maintainers can be more considerate when encountering translation inaccuracies).
 4. All content must have a human identified as being accountable for the contribution. The human takes responsibility for the contribution and stands by its correctness. No agent-only commits. 
 5. Code authors must retain full authorship for any contributed code and contributions must be covered by the [MIT license](https://github.com/openforcefield/openff-toolkit/blob/main/LICENSE), and [Developer Certificate of Origin](https://developercertificate.org/).
 
