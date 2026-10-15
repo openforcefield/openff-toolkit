@@ -346,7 +346,7 @@ class TestOpenEyeToolkitWrapper:
                 marks=pytest.mark.xfail(
                     strict=True,
                     reason="Conjugated bridgehead N stereo isn't enforced (matches RDKit, see rdkit#7434); "
-                           "would be nice to catch this in the future",
+                    "would be nice to catch this in the future",
                 ),
             ),
         ],
