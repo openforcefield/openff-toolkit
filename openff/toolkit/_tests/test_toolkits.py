@@ -344,8 +344,8 @@ class TestOpenEyeToolkitWrapper:
                 "unspecified stereochemistry",
                 marks=pytest.mark.xfail(
                     strict=True,
-                    reason="Conjugated bridgehead N stereo isn't enforced (matches RDKit, see rdkit#7434); "
-                           "would be nice to catch this in the future",
+                    reason="Conjugated bridgehead N stereo isn't enforced (matches RDKit, see rdkit#7434, "
+                           "openff-toolkit#2231); would be nice to catch this in the future",
                 ),
             ),
         ],
