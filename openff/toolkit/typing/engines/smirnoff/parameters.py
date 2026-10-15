@@ -36,7 +36,6 @@ __all__ = [
     "ParameterList",
     "ParameterLookupError",
     "ParameterType",
-    "ParameterType",
     "ProperTorsionHandler",
     "ProperTorsionType",
     "SMIRNOFFSpecError",

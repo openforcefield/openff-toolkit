@@ -1214,7 +1214,7 @@ class Topology(Serializable):
 
         return_dict: dict[
             str,
-            None | str | bytes | bool | tuple | list[dict] | dict[tuple[int, int], str],
+            str | bytes | bool | tuple | list[dict] | dict[tuple[int, int], str] | None,
         ] = dict()
 
         return_dict["aromaticity_model"] = self._aromaticity_model
