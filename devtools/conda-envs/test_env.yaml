@@ -41,12 +41,12 @@ dependencies:
   - nglview
   - mdtraj
   - nbval
+  - mypy =2
+  - types-setuptools
+  - types-toml
+  - types-PyYAML
+  - types-networkx
+  - types-xmltodict
+  - types-cachetools
   - pip:
-    - mypy ==2
-    - types-setuptools
-    - types-toml
-    - types-PyYAML
-    - types-networkx
-    - types-xmltodict
-    - types-cachetools
     - mongo-types
