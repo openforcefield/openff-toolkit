@@ -7,4 +7,3 @@
 See our [AI Policy](https://github.com/openforcefield/openff-toolkit/blob/main/AI_POLICY.md). Please indicate whether LLMs or other AI-powered tools (beyond simple IDE use cases) were used in this contribution:
 - [ ] No
 - [ ] Yes: [If yes, please provide details here]
-- 
