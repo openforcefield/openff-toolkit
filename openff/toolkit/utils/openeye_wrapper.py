@@ -42,7 +42,6 @@ from openff.toolkit.utils.exceptions import (
     EmptyInChiError,
     GAFFAtomTypeWarning,
     InChIParseError,
-    InconsistentStereochemistryError,
     InvalidAromaticityModelError,
     InvalidIUPACNameError,
     LicenseError,
@@ -1393,23 +1392,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
             if not atom.stereochemistry:
                 continue
 
-            # Set arbitrary initial stereochemistry
-            neighs = [n for n in oeatom.GetAtoms()]
-            oeatom.SetStereo(neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Right)
-
-            # Flip chirality if stereochemistry is incorrect
-            oeatom_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(oemol, oeatom)
-            if oeatom_stereochemistry != atom.stereochemistry:
-                # Flip the stereochemistry
-                oeatom.SetStereo(neighs, oechem.OEAtomStereo_Tetra, oechem.OEAtomStereo_Left)
-                # Verify it matches now as a sanity check
-                oeatom_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_atom_stereochemistry(oemol, oeatom)
-                if oeatom_stereochemistry != atom.stereochemistry:
-                    raise InconsistentStereochemistryError(
-                        "Programming error: OpenEye atom stereochemistry assumptions failed. "
-                        f"The atom in the oemol has stereochemistry {oeatom_stereochemistry} and "
-                        f"the atom in the offmol has stereochemistry {atom.stereochemistry}."
-                    )
+            if atom.stereochemistry == "S":
+                oechem.OESetCIPStereo(oemol, oeatom, oechem.OECIPAtomStereo_S)
+            elif atom.stereochemistry == "R":
+                oechem.OESetCIPStereo(oemol, oeatom, oechem.OECIPAtomStereo_R)
+            else:
+                raise Exception("Not S or R, this shouldn't happen")
 
         # Set bond stereochemistry
         for bond, oebond in zip(molecule.bonds, oemol_bonds):
@@ -1429,23 +1417,12 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 oechem.OEBondStereo_Cis,
             )
 
-            # Flip stereochemistry if incorrect
-            oebond_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(oemol, oebond)
-            if oebond_stereochemistry != bond.stereochemistry:
-                # Flip the stereochemistry
-                oebond.SetStereo(
-                    [oeatom1_neighbor, oeatom2_neighbor],
-                    oechem.OEBondStereo_CisTrans,
-                    oechem.OEBondStereo_Trans,
-                )
-                # Verify it matches now as a sanity check
-                oebond_stereochemistry = OpenEyeToolkitWrapper._openeye_cip_bond_stereochemistry(oemol, oebond)
-                if oebond_stereochemistry != bond.stereochemistry:
-                    raise InconsistentStereochemistryError(
-                        "Programming error: OpenEye bond stereochemistry assumptions failed. "
-                        f"The bond in the oemol has stereochemistry {oebond_stereochemistry} and "
-                        f"the bond in the offmol has stereochemistry {bond.stereochemistry}."
-                    )
+            if bond.stereochemistry == "E":
+                oechem.OESetCIPStereo(oemol, oebond, oechem.OECIPBondStereo_E)
+            elif bond.stereochemistry == "Z":
+                oechem.OESetCIPStereo(oemol, oebond, oechem.OECIPBondStereo_Z)
+            else:
+                raise Exception("Not E or Z, this shouldn't happen")
 
         # Clean Up phase
         # The only feature of a molecule that wasn't perceived above seemed to be ring connectivity, better to run it
