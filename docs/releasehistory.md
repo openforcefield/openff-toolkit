@@ -26,6 +26,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Improved documentation and warnings
 
+- [PR #2248](https://github.com/openforcefield/openff-toolkit/pull/2248): Add initial AI policy.
+
+
 ## 0.19.0
 
 ### Behavior changes
