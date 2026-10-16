@@ -1153,6 +1153,18 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
 
         for oeatom in oemol.GetAtoms():
             if oeatom.IsChiral():
+                # OpenEye is a bit more expansive than RDKit in its definition of "chiral", which leads to a
+                # large number of false alarms for planar trivalent nitrogens. So here we check to see whether
+                # a trivalent nitrogen has a trivalent carbon neighbor and squelch the warning/error if so.
+                skip_tricky_nitrogen = False
+                if oeatom.IsNitrogen() and oeatom.GetDegree() == 3:
+                    for oebond in oeatom.GetBonds():
+                        neighbor = oebond.GetNbr(oeatom)
+                        if neighbor.IsCarbon() and (neighbor.GetDegree() == 3):
+                            skip_tricky_nitrogen = True
+                if skip_tricky_nitrogen:
+                    continue
+
                 if not (oeatom.HasStereoSpecified()):
                     unspec_chiral = True
                     problematic_atoms.append(oeatom)
@@ -1182,7 +1194,7 @@ class OpenEyeToolkitWrapper(ToolkitWrapper):
                 return description
 
             if (len(problematic_atoms) != 0 or len(problematic_bonds) != 0) and not allow_undefined_stereo:
-                msg = f"OEMol has unspecified stereochemistry. {oemol.GetTitle()=}"
+                msg = f"OEMol has unspecified stereochemistry. {oemol.GetTitle()=}\n"
 
                 if len(problematic_atoms) != 0:
                     msg += "Problematic atoms are:\n"
