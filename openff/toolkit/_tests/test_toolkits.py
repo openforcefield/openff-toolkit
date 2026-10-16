@@ -331,7 +331,6 @@ class TestOpenEyeToolkitWrapper:
             # perceives this N as stereogenic, however actual molecular forces may make it
             # planar. These first two cases ensures that either planar or pyramidal
             # configurations are accepted.
-
             ("C[N@](CC)c1c(Br)cccc1", ["R"], None),
             ("CN(CC)c1c(Br)cccc1", [None], None),
             # Trivalent N with no trivalent carbon neighbor: an ordinary stereocenter, so
