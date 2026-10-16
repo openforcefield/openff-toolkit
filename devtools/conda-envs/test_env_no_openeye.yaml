@@ -20,29 +20,29 @@ dependencies:
   - openff-nagl-models >=0.3.0
     # Toolkit-specific
   - ambertools >=22
-    # https://github.com/rdkit/rdkit/issues/7221 and https://github.com/rdkit/rdkit/issues/7583
-  - rdkit !=2024.03.6,!=2024.03.5
+  - rdkit >=2025
     # Test-only/optional/dev/typing
   - pytest =8
   - pytest-cov
   - pytest-xdist
   - pytest-rerunfailures
   - pytest-timeout
+  - pytest-mock
   - pyyaml
   - toml
   - bson
   - msgpack-python
-  - pydantic
+  - pydantic =2
   - qcelemental
-  - qcportal >=0.50
+  - qcportal >=0.70
   - qcengine
   - nglview
+  - mypy =2
+  - types-setuptools
+  - types-toml
+  - types-PyYAML
+  - types-networkx
+  - types-xmltodict
+  - types-cachetools
   - pip:
-    - mypy ==2
-    - types-setuptools
-    - types-toml
-    - types-PyYAML
-    - types-networkx
-    - types-xmltodict
-    - types-cachetools
     - mongo-types

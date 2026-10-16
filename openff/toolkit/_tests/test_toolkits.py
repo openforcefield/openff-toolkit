@@ -11,6 +11,7 @@ from tempfile import NamedTemporaryFile
 import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
+from packaging.version import Version
 
 from openff.toolkit import Quantity, unit
 from openff.toolkit._tests.create_molecules import (
@@ -330,12 +331,25 @@ class TestOpenEyeToolkitWrapper:
             # perceives this N as stereogenic, however actual molecular forces may make it
             # planar. These first two cases ensures that either planar or pyramidal
             # configurations are accepted.
-            ("C[N@](CC)c1c(Br)cccc1", "R", None),
-            ("CN(CC)c1c(Br)cccc1", None, None),
+
+            ("C[N@](CC)c1c(Br)cccc1", ["R"], None),
+            ("CN(CC)c1c(Br)cccc1", [None], None),
             # Trivalent N with no trivalent carbon neighbor: an ordinary stereocenter, so
             # unspecified stereo here must still raise as normal.
-            ("C[N@](CC)CCC", "R", None),
-            ("CN(CC)CCC", None, "unspecified stereochemistry"),
+            ("C[N@](CC)CCC", ["R"], None),
+            ("CN(CC)CCC", [None], "unspecified stereochemistry"),
+            # Troger's base (bridgehead conjugated tertiary amine)
+            ("c1(ccc3c(c1)C[N@]4c2ccc(cc2C[N@]3C4)C)C", ["S", "R"], None),
+            pytest.param(
+                "c1(ccc3c(c1)CN4c2ccc(cc2CN3C4)C)C",
+                [None, None],
+                "unspecified stereochemistry",
+                marks=pytest.mark.xfail(
+                    strict=True,
+                    reason="Conjugated bridgehead N stereo isn't enforced (matches RDKit, see rdkit#7434, "
+                    "openff-toolkit#2231); would be nice to catch this in the future",
+                ),
+            ),
         ],
     )
     def test_smiles_nitrogen_chirality_skip(self, smiles, expected_stereo, exception_regex):
@@ -354,7 +368,7 @@ class TestOpenEyeToolkitWrapper:
             molecule = toolkit_wrapper.from_smiles(smiles)
 
         nitrogen_stereo = [atom.stereochemistry for atom in molecule.atoms if atom.symbol == "N"]
-        assert nitrogen_stereo == [expected_stereo]
+        assert nitrogen_stereo == expected_stereo
 
     @pytest.mark.parametrize(
         "filename,expected_stereo,exception_regex",
@@ -3834,6 +3848,38 @@ class TestAmberToolsToolkitWrapper:
         GLOBAL_TOOLKIT_REGISTRY.register_toolkit(OpenEyeToolkitWrapper)
 
         assert with_oe == pytest.approx(without_oe, abs=1e-5)
+
+    def test_ambertools_provenance(self):
+        version = AmberToolsToolkitWrapper().toolkit_version
+
+        assert version not in (None, "None", "Unknown")
+
+        # just make sure it can be parsed like a version number
+        Version(version)
+
+    @pytest.mark.parametrize(
+        "exception_class",
+        [TypeError, ImportError],
+    )
+    def test_ambertools_provenance_fallback(self, mocker, exception_class):
+        mocker.patch(
+            "openff.utilities.provenance.get_ambertools_version",
+            side_effect=exception_class(),
+        )
+
+        version = AmberToolsToolkitWrapper().toolkit_version
+
+        assert version == "Unknown"
+
+    def teest_ambertools_provenance_non_version(self, mocker):
+        mocker.patch(
+            "openff.utilities.provenance.get_ambertools_version",
+            return_value=None,
+        )
+
+        version = AmberToolsToolkitWrapper().toolkit_version
+
+        assert version == "Unknown"
 
 
 class TestBuiltInToolkitWrapper:

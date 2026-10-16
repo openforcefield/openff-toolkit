@@ -975,7 +975,7 @@ class ForceField:
             # TODO: What is desired toolkit behavior if two files with the desired name are available?
             for dir_path in searched_dirs_paths:
                 for file_path in pathlib.Path(dir_path).glob("*.offxml"):
-                    if str(file_path).lower().endswith(source.lower()):
+                    if str(file_path.name).lower() == source.lower():
                         source = str(file_path.absolute())
                         break
 

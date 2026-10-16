@@ -819,7 +819,7 @@ class TestParameterList:
             parameters.index("[#2:1]")
 
         p4 = ParameterType(smirks="[#2:1]")
-        with pytest.raises(ValueError, match="is not in list"):
+        with pytest.raises(ValueError, match=" not in list"):
             parameters.index(p4)
 
         with pytest.raises(TypeError, match="non-None values for start"):

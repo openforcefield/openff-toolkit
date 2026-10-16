@@ -50,6 +50,7 @@ from openff.toolkit.utils import (
     RDKitToolkitWrapper,
     ToolkitRegistry,
     get_data_file_path,
+    temporary_cd,
 )
 from openff.toolkit.utils.exceptions import (
     ChargeMethodUnavailableError,
@@ -1809,6 +1810,32 @@ class TestForceField(_ForceFieldFixtures):
         assert BogusHandler in force_field._parameter_handler_classes.values()
 
         assert force_field["bogus"] is not None
+
+    def test_issue_2235(self, tmp_path):
+        """Test that file names, not just the ending of file names, are used when loading."""
+        DUMMY_OFFXML_CONTENTS = """<?xml version="1.0" encoding="utf-8"?>
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+    <LibraryCharges version="0.3">
+        <LibraryCharge smirks="[#11+1:1]" charge1="1.0 * elementary_charge ** 1" id="Na+-from-dummy-file"></LibraryCharge>
+    </LibraryCharges>
+</SMIRNOFF>
+"""
+
+        with temporary_cd(str(tmp_path)):
+            # this file has 62 library charge parameters (most are for ions)
+            expected_n_library_charges = len(ForceField("opc3.offxml")["LibraryCharges"].parameters)
+
+            with open(tmp_path / "fake-opc3.offxml", "w") as f:
+                f.write(DUMMY_OFFXML_CONTENTS)
+
+            # See Issue #2235, `fake-opc3.offxml` in local path (with only 1 library charge parameter)
+            # gets picked up before `opc3.offxml` is found in entry point paths
+            found_n_library_charges = len(ForceField("opc3.offxml")["LibraryCharges"].parameters)
+
+            assert expected_n_library_charges == found_n_library_charges, (
+                f"Wrong file probably loaded; found {found_n_library_charges} library charges, "
+                f"expected {expected_n_library_charges}"
+            )
 
     def test_handy_handler_creation(self):
         """See issue #1757"""

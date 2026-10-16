@@ -1214,7 +1214,7 @@ class Topology(Serializable):
 
         return_dict: dict[
             str,
-            None | str | bytes | bool | tuple | list[dict] | dict[tuple[int, int], str],
+            str | bytes | bool | tuple | list[dict] | dict[tuple[int, int], str] | None,
         ] = dict()
 
         return_dict["aromaticity_model"] = self._aromaticity_model
@@ -1329,7 +1329,7 @@ class Topology(Serializable):
         cls,
         openmm_topology: "openmm.app.Topology",
         unique_molecules: Iterable[FrozenMolecule] | None = None,
-        positions: Union[None, Quantity, "OMMQuantity"] = None,
+        positions: Union[Quantity, "OMMQuantity", None] = None,
     ) -> "Topology":
         """
         Construct an OpenFF Topology object from an OpenMM Topology object.
@@ -2124,7 +2124,7 @@ class Topology(Serializable):
         cls,
         mdtraj_topology: "mdtraj.Topology",
         unique_molecules: Iterable[MoleculeLike] | None = None,
-        positions: Union[None, "OMMQuantity", Quantity] = None,
+        positions: Union["OMMQuantity", Quantity, None] = None,
     ):
         """
         Construct an OpenFF ``Topology`` from an MDTraj ``Topology``

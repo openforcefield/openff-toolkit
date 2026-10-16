@@ -14,13 +14,24 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 - [PR #2231](https://github.com/openforcefield/openff-toolkit/pull/2231): Makes `OpenEyeToolkitWrapper.from_openeye` not raise an undefined-stereo error/warning for planar Ns if they have at least one trivalent carbon neighbor (This isn't a perfect solution but does handle a large fraction of the annoying over-policing of nitrogen stereo by OpenEyeToolkitWrapper). Resolves , [Issue #1547](https://github.com/openforcefield/openff-toolkit/issues/1547), and [Issue #725](https://github.com/openforcefield/openff-toolkit/issues/725).
 
+### New features
+- [PR #2231](https://github.com/openforcefield/openff-toolkit/pull/2231): Makes `OpenEyeToolkitWrapper.from_openeye` not raise an undefined-stereo error/warning for planar Ns if they have at least one trivalent carbon neighbor (This isn't a perfect solution but does handle a large fraction of the annoying over-policing of nitrogen stereo by our implementation in OpenEyeToolkitWrapper). Resolves [Issue #1547](https://github.com/openforcefield/openff-toolkit/issues/1547), [Issue #725](https://github.com/openforcefield/openff-toolkit/issues/725), and [Issue #626](https://github.com/openforcefield/openff-toolkit/issues/626).
+- [PR #2238](https://github.com/openforcefield/openff-toolkit/pull/2238): Adds support for QCSchema V2 in `Molecule.to_qcschema`, which now only returns QCSchema V2 models.
+
 ### Bugfixes
 
 - [PR #2231](https://github.com/openforcefield/openff-toolkit/pull/2231): `OpenEyeToolkitWrapper.to_openeye` now sets atom and bond stereochemistry directly with `OESetCIPStereo` instead of setting arbitrary stereo and flipping it until the CIP label matches, and no longer raises `InconsistentStereochemistryError` from that path.
+- [PR #2234](https://github.com/openforcefield/openff-toolkit/pull/2234): Fixes some deprecation warnings thrown by using deprecated Pydantic V1 methods in tests.
+- [PR #2236](https://github.com/openforcefield/openff-toolkit/pull/2236): Fixes a rare case in which force field files with similar names were incorrectly loaded.
 
-### New features
+### Tests updated
+
+- [PR #2238](https://github.com/openforcefield/openff-toolkit/pull/2238): Run tests on Python 3.14.
 
 ### Improved documentation and warnings
+
+- [PR #2248](https://github.com/openforcefield/openff-toolkit/pull/2248): Add initial AI policy.
+
 
 ## 0.19.0
 
