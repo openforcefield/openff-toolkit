@@ -8,11 +8,6 @@ repos:
     - id: ruff-format
     - id: ruff-check
       args: [--fix]
-- repo: https://github.com/adamchainz/blacken-docs
-  rev: 1.20.0
-  hooks:
-    - id: blacken-docs
-      files: ^docs/.*\.(rst|md)$
 - repo: https://github.com/tox-dev/pyproject-fmt
   rev: v2.30.1
   hooks:
