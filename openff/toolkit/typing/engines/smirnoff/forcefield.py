@@ -233,14 +233,20 @@ class ForceField:
         Parameters
         ----------
         sources
-            A list of files defining the SMIRNOFF force field to be loaded.
+            One or more sources defining the SMIRNOFF force field to be loaded.
             Currently, only `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/>`_
-            is supported.  Each entry may be an absolute file path, a path relative to the current working directory, a
-            path relative to this module's data subdirectory (for built in force fields), or an open file-like object
-            with a ``read()`` method from which the force field XML data can be loaded.  If multiple files are
-            specified, any top-level tags that are repeated will be merged if they are compatible, with files appearing
-            later in the sequence resulting in parameters that have higher precedence.  Support for multiple files is
-            primarily intended to allow solvent parameters to be specified by listing them last in the sequence.
+            is supported.  Each entry may be:
+
+            * an absolute file path, a path relative to the current working directory, or a path relative to this
+              module's data subdirectory (for built in force fields);
+            * an open file-like object with a ``read()`` method from which the force field XML data can be loaded; or
+            * a string containing the SMIRNOFF XML (OFFXML) content itself.  A string that does not resolve to a file
+              is parsed directly as OFFXML.
+
+            If multiple sources are specified, any top-level tags that are repeated will be merged if they are
+            compatible, with sources appearing later in the sequence resulting in parameters that have higher
+            precedence.  Support for multiple sources is primarily intended to allow solvent parameters to be specified
+            by listing them last in the sequence.
         aromaticity_model
             The aromaticity model to use. Only OEAroModel_MDL is supported.
         parameter_handler_classes
@@ -748,14 +754,16 @@ class ForceField:
         Parameters
         ----------
         sources
-            An iterable of files defining the SMIRNOFF force field to be loaded.
-            Currently, only `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/>`_
-            is supported.  Each entry may be an absolute file path, a path relative to the current working directory, a
-            path relative to this module's data subdirectory (for built in force fields), or an open file-like object
-            with a ``read()`` method from which the force field XML data can be loaded.  If multiple files are
-            specified, any top-level tags that are repeated will be merged if they are compatible, with files appearing
-            later in the sequence resulting in parameters that have higher precedence.  Support for multiple files is
-            primarily intended to allow solvent parameters to be specified by listing them last in the sequence.
+            An iterable of sources defining the SMIRNOFF force field to be loaded.  A bare string is iterated
+            character by character, so a single string source must be wrapped in a list.  Currently, only
+            `the SMIRNOFF XML format <https://openforcefield.github.io/standards/standards/smirnoff/>`_ is supported.
+            Each entry may be a file path (absolute, relative to the current working directory, or relative to this
+            module's data subdirectory for built in force fields), an open file-like object with a ``read()`` method,
+            or a string containing the SMIRNOFF XML (OFFXML) content itself; see :meth:`parse_smirnoff_from_source`.
+            If multiple sources are specified, any top-level tags that are repeated will be merged if they are
+            compatible, with sources appearing later in the sequence resulting in parameters that have higher
+            precedence.  Support for multiple sources is primarily intended to allow solvent parameters to be
+            specified by listing them last in the sequence.
         allow_cosmetic_attributes
             Whether to permit non-spec kwargs present in the source.
 
@@ -951,11 +959,12 @@ class ForceField:
         Parameters
         ----------
         source
-            File defining the SMIRNOFF force field to be loaded Currently, only `the SMIRNOFF XML format
-            <https://openforcefield.github.io/standards/standards/smirnoff/>`_ is supported.  The file may be an
+            Source defining the SMIRNOFF force field to be loaded.  Currently, only `the SMIRNOFF XML format
+            <https://openforcefield.github.io/standards/standards/smirnoff/>`_ is supported.  The source may be an
             absolute file path, a path relative to the current working directory, a path relative to this module's data
-            subdirectory (for built in force fields), or an open file-like object with a ``read()`` method from which
-            the force field XML data can be loaded.
+            subdirectory (for built in force fields), an open file-like object with a ``read()`` method from which
+            the force field XML data can be loaded, or a string containing the SMIRNOFF XML (OFFXML) content itself.
+            A string is first looked up as a file name; if no such file exists it is parsed directly as OFFXML.
 
         Returns
         -------
