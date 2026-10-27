@@ -29,6 +29,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 - [PR #2250](https://github.com/openforcefield/openff-toolkit/pull/2250): Documents that `ForceField`, `ForceField.parse_sources` and `ForceField.parse_smirnoff_from_source` accept a string containing OFFXML content in addition to file paths and file-like objects. Resolves [Issue #2021](https://github.com/openforcefield/openff-toolkit/issues/2021).
 - [PR #2248](https://github.com/openforcefield/openff-toolkit/pull/2248): Add initial AI policy.
 
+### Miscellaneous improvements
+
+- [PR #2251](https://github.com/openforcefield/openff-toolkit/pull/2251): Use `python-constraint2` package in place of outdated `python-constraint`.
 
 ## 0.19.0
 

@@ -25,7 +25,7 @@ dependencies:
     - openff-units
     - openff-utilities
     - cachetools
-    - python-constraint
+    - python-constraint2
     - mdtraj
     - qcportal
     - nglview
