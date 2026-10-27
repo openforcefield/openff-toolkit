@@ -28,6 +28,9 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 - [PR #2248](https://github.com/openforcefield/openff-toolkit/pull/2248): Add initial AI policy.
 
+### Miscellaneous improvements
+
+- [PR #2251](https://github.com/openforcefield/openff-toolkit/pull/2251): Use `python-constraint2` package in place of outdated `python-constraint`.
 
 ## 0.19.0
 
