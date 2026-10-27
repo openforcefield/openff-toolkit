@@ -228,7 +228,7 @@ class ForceField:
         allow_cosmetic_attributes: bool = False,
         load_plugins: bool = False,
     ):
-        """Create a new :class:`ForceField` object from one or more SMIRNOFF parameter definition files.
+        """Create a new :class:`ForceField` object from one or more SMIRNOFF parameter definition sources.
 
         Parameters
         ----------
