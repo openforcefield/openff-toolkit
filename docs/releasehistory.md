@@ -26,6 +26,7 @@ Releases follow the `major.minor.micro` scheme recommended by [PEP440](https://w
 
 ### Improved documentation and warnings
 
+- [PR #2250](https://github.com/openforcefield/openff-toolkit/pull/2250): Documents that `ForceField`, `ForceField.parse_sources` and `ForceField.parse_smirnoff_from_source` accept a string containing OFFXML content in addition to file paths and file-like objects. Resolves [Issue #2021](https://github.com/openforcefield/openff-toolkit/issues/2021).
 - [PR #2248](https://github.com/openforcefield/openff-toolkit/pull/2248): Add initial AI policy.
 
 
