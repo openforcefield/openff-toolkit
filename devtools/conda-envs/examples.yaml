@@ -32,7 +32,7 @@ dependencies:
   - msgpack-python
   - pydantic =2
   - qcelemental
-  - qcportal >=0.50
+  - qcportal >=0.70
   - qcengine
   - nbval
   - mdtraj
