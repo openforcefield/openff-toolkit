@@ -256,7 +256,7 @@ Development of new toolkit features generally proceeds in the following stages:
 (install_dev)=
 ### Setting up a development environment
 
-1. Install the `mamba` package manager as part of the [Miniforge or Mambaforge distributions](https://github.com/conda-forge/miniforge) (an alternative to the [Anaconda Distribution](https://www.anaconda.com/distribution/))
+1. Install the `mamba` package manager as part of the [Miniforge distribution](https://github.com/conda-forge/miniforge) (an alternative to the [Anaconda Distribution](https://www.anaconda.com/distribution/))
 
 2. Set up conda environment:
 
