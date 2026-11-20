@@ -131,8 +131,7 @@ jobs:
             echo "Expected exactly one wheel, found ${#wheels[@]}"
             exit 1
           fi
-          python -m pip install "${wheels[0]}" --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple
-          python -m pip install ".[test]" --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple 
+          python -m pip install "${wheels[0]}[test]" --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple
 
       - name: Verify installed wheel version
         env:
