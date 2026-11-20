@@ -4,6 +4,9 @@ build:
   os: ubuntu-24.04
   tools:
     python: "mambaforge-4.10"
+  jobs:
+    install:
+      - pip install --no-deps .
 
 python:
   install:
