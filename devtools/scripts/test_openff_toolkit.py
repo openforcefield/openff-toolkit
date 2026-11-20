@@ -18,6 +18,8 @@ def test_versions_sane():
 
     print(f"found version {found_version}")
 
+
+def test_wrapped_toolkits_loaded():
     print(f"{GLOBAL_TOOLKIT_REGISTRY.registered_toolkit_versions=}")
 
     assert RDKitToolkitWrapper().is_available()
