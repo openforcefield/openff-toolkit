@@ -38,15 +38,15 @@ dependencies = [
   "xmltodict",
 ]
 optional-dependencies.test = [
+  "msgpack",
+  "nglview",
   "pydantic",
+  "pymongo==4.20.1",      # un-pin when not looking at testpypi
   "pytest>=6",
   "pytest-randomly",
   "pytest-rerunfailures",
   "pytest-timeout",
   "pytest-xdist",
-  "nglview",
-  "msgpack",
-  "pymongo==4.20.1",  # un-pin when not looking at testpypi
 ]
 urls = { Homepage = "https://github.com/openforcefield/openff-toolkit" }
 
