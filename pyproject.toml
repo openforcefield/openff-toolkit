@@ -26,10 +26,9 @@ dependencies = [
   "numpy",
   "openff-amber-ff-ports",
   "openff-forcefields",
+  "openff-interchange",
   "openff-nagl",
   "openff-nagl-models",
-  "openff-interchange",
-  "pydantic",
   "openff-units",
   "openff-utilities",
   "openmm",
@@ -42,6 +41,7 @@ optional-dependencies.test = [
   "pytest>=6",
   "pytest-randomly",
   "pytest-xdist",
+  "pydantic",
 ]
 urls = { Homepage = "https://github.com/openforcefield/openff-toolkit" }
 
