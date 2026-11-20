@@ -159,8 +159,11 @@ jobs:
           PY
 
       - name: Run tests
+        # Use isolated directory and --import-mode=importlib to avoid hiding
+        # packing bugs by running in checked out repo
+        working-directory: /tmp
         # just run "build-time" tests, copied from conda-forge
-        run: python -m pytest -v --color=yes --durations=10 devtools/scripts/test_openff_toolkit.py
+        run: python -m pytest -v --color=yes --durations=10 --import-mode=importlib "$GITHUB_WORKSPACE/devtools/scripts/test_openff_toolkit.py"
 
   publish:
     name: Publish to PyPI
