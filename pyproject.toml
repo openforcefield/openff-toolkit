@@ -20,13 +20,14 @@ classifiers = [
   "Topic :: Utilities",
 ]
 dynamic = [ "version" ]
-urls = { Homepage = "https://github.com/openforcefield/openff-toolkit" }
 dependencies = [
   "cachetools",
   "networkx",
   "numpy",
   "openff-amber-ff-ports",
   "openff-forcefields",
+  # "openff-nagl",
+  "openff-nagl-models",
   # "openff-interchange",
   "openff-units",
   "openff-utilities",
@@ -35,14 +36,13 @@ dependencies = [
   "python-constraint2",
   "rdkit",
   "xmltodict",
-  # "openff-nagl",
-  "openff-nagl-models",
 ]
 optional-dependencies.test = [
   "pytest>=6",
-  "pytest-xdist",
   "pytest-randomly",
+  "pytest-xdist",
 ]
+urls = { Homepage = "https://github.com/openforcefield/openff-toolkit" }
 
 [tool.setuptools]
 packages.find.include = [ "openff.toolkit*" ]
