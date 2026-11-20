@@ -159,7 +159,8 @@ jobs:
           PY
 
       - name: Run tests
-        run: python -m pytest -v --color=yes --durations=10 openff/
+        # just run "build-time" tests, copied from conda-forge
+        run: python -m pytest -v --color=yes --durations=10 devtools/scripts/test_openff_toolkit.py
 
   publish:
     name: Publish to PyPI
